@@ -1,0 +1,6 @@
+<?xml version="1.0" encoding="utf-8"?>
+<network-security-config>
+    <!-- Dynamic private-LAN HTTP hosts are user-configurable; app code validates LAN addresses and stores per-origin consent. -->
+    <!-- Network Security Config cannot apply that runtime host allowlist, so HTTP remains platform-permitted. -->
+    <base-config cleartextTrafficPermitted="true" />
+</network-security-config>

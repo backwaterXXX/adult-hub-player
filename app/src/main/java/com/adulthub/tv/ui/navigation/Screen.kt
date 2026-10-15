@@ -1,0 +1,30 @@
+package com.adulthub.tv.ui.navigation
+
+sealed class Screen(val route: String) {
+    data object Splash : Screen("splash")
+    data object Server : Screen("server")
+    data object Login : Screen("login")
+    data object QuickConnect : Screen("quick_connect")
+    data object LibrarySelect : Screen("library_select")
+    data object Home : Screen("home")
+    data object Library : Screen("library")
+    data object ItemDetail : Screen("item_detail/{itemId}") {
+        fun createRoute(itemId: String): String = "item_detail/${android.net.Uri.encode(itemId)}"
+    }
+    data object PersonDetail : Screen("person_detail/{personId}/{personName}") {
+        fun createRoute(personId: String, personName: String): String =
+            "person_detail/$personId/${java.net.URLEncoder.encode(personName, "UTF-8")}"
+    }
+    data object Search : Screen("search?query={query}") {
+        fun createRoute(query: String = ""): String =
+            if (query.isNotBlank()) "search?query=${java.net.URLEncoder.encode(query, "UTF-8")}" else "search"
+    }
+    data object Settings : Screen("settings")
+    data object Player : Screen("player/{itemId}?resume={resume}") {
+        fun createRoute(itemId: String, resume: Boolean? = null): String {
+            val encodedItemId = java.net.URLEncoder.encode(itemId, "UTF-8")
+            val route = "player/$encodedItemId"
+            return if (resume == null) route else "$route?resume=$resume"
+        }
+    }
+}

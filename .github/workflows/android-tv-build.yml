@@ -1,0 +1,148 @@
+name: Android TV CI / CD
+
+on:
+  push:
+    branches: [ main ]
+    tags:
+      - 'v*-tv'
+  pull_request:
+    branches: [ main ]
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  build:
+    name: Build & Test Android TV APK
+    runs-on: ubuntu-24.04
+    permissions:
+      contents: read
+
+    steps:
+      - name: Checkout Code
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+
+      - name: Set up JDK 17
+        uses: actions/setup-java@de7274f081f381c8f8158605e0321c36c376e2e6 # v6.0.1
+        with:
+          distribution: 'temurin'
+          java-version: '17'
+
+      - name: Setup Gradle
+        uses: gradle/actions/setup-gradle@3f5f9adaf7d9fecd50b5935e54106014257a94e6 # v6.4.0
+
+      - name: Grant execute permission for gradlew
+        run: chmod +x gradlew
+
+      - name: Run Unit Tests
+        run: ./gradlew testDebugUnitTest --no-daemon
+
+      - name: Run Android Lint
+        run: ./gradlew lintDebug --no-daemon
+
+      - name: Build Debug APK
+        env:
+          UPDATE_GITHUB_OWNER: ${{ github.repository_owner }}
+          UPDATE_GITHUB_REPO: ${{ github.event.repository.name }}
+        run: ./gradlew assembleDebug --no-daemon
+
+      - name: Prepare Debug Artifact
+        run: |
+          mkdir -p debug-artifacts
+          cp app/build/outputs/apk/debug/app-debug.apk debug-artifacts/
+          cd debug-artifacts
+          sha256sum app-debug.apk > app-debug.apk.sha256
+
+      - name: Upload Debug APK
+        uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2
+        with:
+          name: adult-hub-tv-debug
+          path: debug-artifacts/
+          if-no-files-found: error
+          retention-days: 14
+
+  release:
+    name: Build & Publish Signed Release
+    if: startsWith(github.ref, 'refs/tags/v')
+    needs: build
+    runs-on: ubuntu-24.04
+    permissions:
+      contents: write
+
+    steps:
+      - name: Checkout Code
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+
+      - name: Set up JDK 17
+        uses: actions/setup-java@de7274f081f381c8f8158605e0321c36c376e2e6 # v6.0.1
+        with:
+          distribution: 'temurin'
+          java-version: '17'
+
+      - name: Setup Gradle
+        uses: gradle/actions/setup-gradle@3f5f9adaf7d9fecd50b5935e54106014257a94e6 # v6.4.0
+
+      - name: Grant execute permission for gradlew
+        run: chmod +x gradlew
+
+      - name: Build and verify signed Release APK
+        env:
+          KEYSTORE_BASE64: ${{ secrets.ANDROID_KEYSTORE_BASE64 }}
+          KEYSTORE_PASSWORD: ${{ secrets.ANDROID_KEYSTORE_PASSWORD }}
+          KEY_ALIAS: ${{ secrets.ANDROID_KEY_ALIAS }}
+          KEY_PASSWORD: ${{ secrets.ANDROID_KEY_PASSWORD }}
+          UPDATE_GITHUB_OWNER: ${{ github.repository_owner }}
+          UPDATE_GITHUB_REPO: ${{ github.event.repository.name }}
+        run: |
+          for name in KEYSTORE_BASE64 KEYSTORE_PASSWORD KEY_ALIAS KEY_PASSWORD; do
+            if [ -z "${!name}" ]; then
+              echo "Missing required release secret: $name" >&2
+              exit 1
+            fi
+          done
+
+          umask 077
+          printf '%s' "$KEYSTORE_BASE64" | base64 --decode > release.jks
+          printf 'storeFile=release.jks\nstorePassword=%s\nkeyAlias=%s\nkeyPassword=%s\n' \
+            "$KEYSTORE_PASSWORD" "$KEY_ALIAS" "$KEY_PASSWORD" > keystore.properties
+
+          ./gradlew assembleRelease --no-daemon
+
+          apk="app/build/outputs/apk/release/app-release.apk"
+          test -s "$apk"
+          apksigner="$(find "${ANDROID_HOME:-$ANDROID_SDK_ROOT}/build-tools" -type f -name apksigner -print | sort -V | tail -n 1)"
+          if [ -z "$apksigner" ]; then
+            echo "Android build-tools apksigner was not found" >&2
+            exit 1
+          fi
+          "$apksigner" verify --verbose "$apk"
+
+          mkdir -p release-artifacts
+          cp "$apk" release-artifacts/
+          cd release-artifacts
+          sha256sum app-release.apk > app-release.apk.sha256
+          cd ..
+          python3 scripts/create_update_manifest.py "$apk" release-artifacts/updates "${ANDROID_HOME:-$ANDROID_SDK_ROOT}"
+
+      - name: Remove signing material
+        if: always()
+        run: rm -f release.jks keystore.properties
+
+      - name: Upload Release APK
+        uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2
+        with:
+          name: adult-hub-tv-release
+          path: release-artifacts/
+          if-no-files-found: error
+          retention-days: 14
+
+      - name: Create GitHub Release
+        uses: softprops/action-gh-release@efb35369e0ad2afab669f228072c1b0d510eae64 # v3.0.3
+        with:
+          files: |
+            release-artifacts/updates/stable.json
+            release-artifacts/updates/releases/*.apk
+          draft: false
+          prerelease: false
+          generate_release_notes: true

@@ -1,0 +1,174 @@
+package com.adulthub.tv.ui.search
+
+import androidx.lifecycle.ViewModel
+import androidx.lifecycle.viewModelScope
+import com.adulthub.tv.data.local.SearchHistoryStore
+import com.adulthub.tv.data.local.SettingsDataStore
+import com.adulthub.tv.data.model.TvItem
+import com.adulthub.tv.data.model.TvPerson
+import com.adulthub.tv.data.repository.ChannelRepository
+import com.adulthub.tv.data.repository.LibraryRepository
+import com.adulthub.tv.data.repository.PersonRepository
+import com.adulthub.tv.data.resolver.VideoDto
+import kotlinx.coroutines.FlowPreview
+import kotlinx.coroutines.CancellationException
+import kotlinx.coroutines.async
+import kotlinx.coroutines.coroutineScope
+import kotlinx.coroutines.flow.MutableStateFlow
+import kotlinx.coroutines.flow.StateFlow
+import kotlinx.coroutines.flow.asStateFlow
+import kotlinx.coroutines.flow.collectLatest
+import kotlinx.coroutines.flow.debounce
+import kotlinx.coroutines.flow.distinctUntilChanged
+import kotlinx.coroutines.flow.firstOrNull
+import kotlinx.coroutines.flow.update
+import kotlinx.coroutines.launch
+
+data class SearchUiState(
+    val query: String = "",
+    val isSearching: Boolean = false,
+    val movies: List<TvItem> = emptyList(),
+    val actors: List<TvPerson> = emptyList(),
+    val channelVideos: List<VideoDto> = emptyList(),
+    val resolverBaseUrl: String = SettingsDataStore.DEFAULT_RESOLVER_URL,
+    val errorMessage: String? = null,
+    val hasSearched: Boolean = false,
+    val lastSelectedKey: String? = null,
+    val recentQueries: List<String> = emptyList(),
+)
+
+@OptIn(FlowPreview::class)
+class SearchViewModel(
+    private val libraryRepository: LibraryRepository,
+    private val personRepository: PersonRepository,
+    private val settingsDataStore: SettingsDataStore,
+    private val channelRepository: ChannelRepository? = null,
+    private val searchHistoryStore: SearchHistoryStore? = null,
+) : ViewModel() {
+
+    private val _query = MutableStateFlow("")
+    val query: StateFlow<String> = _query.asStateFlow()
+
+    private val _uiState = MutableStateFlow(SearchUiState())
+    val uiState: StateFlow<SearchUiState> = _uiState.asStateFlow()
+
+    init {
+        searchHistoryStore?.let { store ->
+            viewModelScope.launch {
+                store.queries.collect { queries ->
+                    _uiState.update { it.copy(recentQueries = queries) }
+                }
+            }
+        }
+        viewModelScope.launch {
+            _query
+                .debounce(300L)
+                .distinctUntilChanged()
+                .collectLatest { q ->
+                    if (q.isBlank()) {
+                        _uiState.update {
+                            it.copy(
+                                query = "",
+                                isSearching = false,
+                                movies = emptyList(),
+                                actors = emptyList(),
+                                channelVideos = emptyList(),
+                                hasSearched = false,
+                                errorMessage = null,
+                            )
+                        }
+                    } else {
+                        performSearch(q)
+                    }
+                }
+        }
+    }
+
+    fun onQueryChanged(newQuery: String) {
+        _query.value = newQuery
+        _uiState.update { it.copy(query = newQuery) }
+    }
+
+    fun clearQuery() {
+        onQueryChanged("")
+    }
+
+    fun retry() {
+        val q = _query.value
+        if (q.isNotBlank()) {
+            viewModelScope.launch {
+                performSearch(q)
+            }
+        }
+    }
+
+    private suspend fun performSearch(searchTerm: String) {
+        _uiState.update { it.copy(isSearching = true, errorMessage = null) }
+
+        val libraryId = settingsDataStore.selectedLibraryId.firstOrNull()
+
+        coroutineScope {
+            val moviesDeferred = async {
+                libraryRepository.getItems(
+                    parentId = libraryId,
+                    searchTerm = searchTerm,
+                    limit = 30,
+                )
+            }
+
+            val personsDeferred = async {
+                personRepository.getPersons(
+                    parentId = libraryId,
+                    searchTerm = searchTerm,
+                    limit = 30,
+                )
+            }
+            val channelVideosDeferred = async {
+                channelRepository?.search(searchTerm)
+            }
+
+            val moviesResult = moviesDeferred.await()
+            val personsResult = personsDeferred.await()
+            val channelVideosResult = channelVideosDeferred.await()
+
+            val rawMovies = moviesResult.getOrNull()?.items ?: emptyList()
+            val movies = rawMovies.distinctBy { it.providerVideoId?.ifBlank { null } ?: it.id }
+
+            val actors = personsResult.getOrNull() ?: emptyList()
+
+            val rawChannelVideos = channelVideosResult?.getOrNull() ?: emptyList()
+            val channelVideos = rawChannelVideos.distinctBy { it.providerVideoId.ifBlank { it.id } }
+
+            val error = if (moviesResult.isFailure && personsResult.isFailure && channelVideosResult?.isFailure != false) {
+                moviesResult.exceptionOrNull()?.message ?: "Search failed. Please try again."
+            } else null
+
+            val resolverBaseUrl = try {
+                settingsDataStore.getResolverBaseUrl()
+            } catch (error: CancellationException) {
+                throw error
+            } catch (_: Exception) {
+                SettingsDataStore.DEFAULT_RESOLVER_URL
+            }
+
+            searchHistoryStore?.recordQuery(searchTerm)
+
+            _uiState.update {
+                it.copy(
+                    query = searchTerm,
+                    isSearching = false,
+                    movies = movies,
+                    actors = actors,
+                    channelVideos = channelVideos,
+                    resolverBaseUrl = resolverBaseUrl,
+                    hasSearched = true,
+                    errorMessage = error,
+                )
+            }
+        }
+    }
+
+    fun setLastSelectedKey(key: String?) {
+        _uiState.update { it.copy(lastSelectedKey = key) }
+    }
+}

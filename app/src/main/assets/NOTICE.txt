@@ -1,0 +1,67 @@
+Adult Hub TV
+Copyright (c) 2026
+
+This product includes software developed by open-source communities and projects.
+
+-------------------------------------------------------------------------------
+1. Jellyfin Kotlin SDK
+-------------------------------------------------------------------------------
+This project uses the Jellyfin Kotlin SDK (org.jellyfin.sdk:*), which is licensed
+under the GNU Lesser General Public License, Version 3.0 (LGPL-3.0).
+
+- Source code: https://github.com/jellyfin/jellyfin-sdk-kotlin
+- License: GNU Lesser General Public License v3.0 (http://www.gnu.org/licenses/lgpl-3.0.html)
+
+In accordance with LGPL-3.0:
+- The Jellyfin SDK is dynamically linked as a precompiled dependency.
+- This application does not modify the source code of the Jellyfin SDK.
+- The complete source code of the Jellyfin SDK is publicly available at the upstream URL above.
+
+-------------------------------------------------------------------------------
+2. AndroidX, Jetpack & Compose Libraries
+-------------------------------------------------------------------------------
+Developed by The Android Open Source Project.
+Licensed under the Apache License, Version 2.0.
+http://www.apache.org/licenses/LICENSE-2.0
+
+-------------------------------------------------------------------------------
+3. AndroidX Media3 / ExoPlayer
+-------------------------------------------------------------------------------
+Developed by The Android Open Source Project.
+Licensed under the Apache License, Version 2.0.
+http://www.apache.org/licenses/LICENSE-2.0
+
+-------------------------------------------------------------------------------
+4. OkHttp & Retrofit
+-------------------------------------------------------------------------------
+Copyright 2012-2024 Square, Inc.
+Licensed under the Apache License, Version 2.0.
+http://www.apache.org/licenses/LICENSE-2.0
+
+-------------------------------------------------------------------------------
+5. Coil (Coroutine Image Loader)
+-------------------------------------------------------------------------------
+Copyright 2024 Coil Contributors.
+Licensed under the Apache License, Version 2.0.
+http://www.apache.org/licenses/LICENSE-2.0
+
+-------------------------------------------------------------------------------
+6. Koin
+-------------------------------------------------------------------------------
+Copyright 2017-2024 Arnaud Giuliani and Koin contributors.
+Licensed under the Apache License, Version 2.0.
+http://www.apache.org/licenses/LICENSE-2.0
+
+-------------------------------------------------------------------------------
+7. Kotlinx Coroutines & Serialization
+-------------------------------------------------------------------------------
+Copyright 2000-2024 JetBrains s.r.o. and contributors.
+Licensed under the Apache License, Version 2.0.
+http://www.apache.org/licenses/LICENSE-2.0
+
+-------------------------------------------------------------------------------
+8. SLF4J Android
+-------------------------------------------------------------------------------
+Copyright (c) 2004-2024 QOS.ch
+Licensed under the MIT License.
+http://www.slf4j.org/license.html

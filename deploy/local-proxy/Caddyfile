@@ -1,0 +1,16 @@
+{
+	admin off
+}
+
+http://{$PROXY_BIND_IP:192.168.1.100}:8098 {
+	bind {$PROXY_BIND_IP:192.168.1.100}
+	reverse_proxy {$JELLYFIN_UPSTREAM:192.168.1.50:8096}
+}
+
+http://{$PROXY_BIND_IP:192.168.1.100}:8099 {
+	bind {$PROXY_BIND_IP:192.168.1.100}
+	reverse_proxy {$RESOLVER_UPSTREAM:https://resolver.example.com} {
+		header_up Host {$RESOLVER_HOST:resolver.example.com}
+	}
+}
+
