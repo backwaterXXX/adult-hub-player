@@ -322,6 +322,7 @@ private fun SearchInputField(
                 color = if (isFocused) NeonPink else Color.White.copy(alpha = 0.2f),
                 shape = RoundedCornerShape(14.dp),
             )
+            .focusRequester(focusRequester)
             .padding(horizontal = 20.dp)
             .then(
                 if (isEditing) Modifier else Modifier.clickable(
