@@ -162,7 +162,7 @@ fun SearchScreen(
 
         // Search Content / Results
         when {
-            uiState.isSearching -> {
+            uiState.isSearching && uiState.movies.isEmpty() && uiState.actors.isEmpty() && uiState.channelVideos.isEmpty() -> {
                 Box(
                     modifier = Modifier
                         .fillMaxWidth()
@@ -272,6 +272,7 @@ fun SearchScreen(
                     movies = uiState.movies,
                     actors = uiState.actors,
                     channelVideos = uiState.channelVideos,
+                    isLoading = uiState.isSearching,
                     resolverBaseUrl = uiState.resolverBaseUrl,
                     resultsFocusRequester = resultsFocusRequester,
                     onNavigateToItemDetail = { id ->
@@ -381,6 +382,7 @@ private fun SearchResultsList(
     movies: List<TvItem>,
     actors: List<TvPerson>,
     channelVideos: List<VideoDto>,
+    isLoading: Boolean,
     resolverBaseUrl: String,
     resultsFocusRequester: FocusRequester,
     onNavigateToItemDetail: (itemId: String) -> Unit,
@@ -473,6 +475,15 @@ private fun SearchResultsList(
                     onClick = {
                         onNavigateToPlayer(video.providerVideoId.ifBlank { video.id })
                     },
+                )
+            }
+        }
+
+        if (isLoading) {
+            item(key = "search_in_progress", span = { GridItemSpan(maxLineSpan) }) {
+                LoadingIndicator(
+                    message = "Searching remaining sources…",
+                    modifier = Modifier.fillMaxWidth().padding(vertical = 24.dp),
                 )
             }
         }

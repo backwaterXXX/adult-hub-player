@@ -20,9 +20,6 @@ import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withTimeout
 import retrofit2.HttpException
-import java.util.BitSet
-import java.util.LinkedHashMap
-import kotlin.math.min
 
 private const val PHASH_TAG = "PlaybackPhash"
 const val STASH_COMPATIBLE_PHASH_FRAME_COUNT = 25
@@ -48,67 +45,6 @@ internal fun adultHubVideoId(item: TvItem): String? {
     val fullId = if (raw.startsWith("telegram:")) raw else "telegram:$raw"
     return fullId.takeIf { it.matches(TELEGRAM_VIDEO_ID_REGEX) }
 }
-
-
-
-private const val RANGE_BLOCK_BYTES = 64 * 1024
-private const val CACHE_BYTES = 16 * 1024 * 1024
-
-/** Sparse bounded cache shared by ExoPlayer reads and any future local inspection. */
-class PlaybackRangeCache {
-    private data class Block(val bytes: ByteArray, val valid: BitSet)
-    private val lock = Any()
-    private var bytesStored = 0
-    private val blocks = object : LinkedHashMap<Long, Block>(32, 0.75f, true) {
-        override fun removeEldestEntry(eldest: MutableMap.MutableEntry<Long, Block>?): Boolean {
-            if (bytesStored <= CACHE_BYTES) return false
-            eldest?.let { bytesStored -= it.value.bytes.size }
-            return true
-        }
-    }
-
-    fun put(offset: Long, bytes: ByteArray, start: Int = 0, length: Int = bytes.size - start) = synchronized(lock) {
-        var sourceOffset = start
-        var absolute = offset
-        var remaining = length
-        while (remaining > 0) {
-            val base = absolute / RANGE_BLOCK_BYTES * RANGE_BLOCK_BYTES
-            val within = (absolute - base).toInt()
-            val count = min(remaining, RANGE_BLOCK_BYTES - within)
-            val block = blocks.getOrPut(base) {
-                bytesStored += RANGE_BLOCK_BYTES
-                Block(ByteArray(RANGE_BLOCK_BYTES), BitSet(RANGE_BLOCK_BYTES))
-            }
-            block.valid.set(within, within + count)
-            bytes.copyInto(block.bytes, within, sourceOffset, sourceOffset + count)
-            sourceOffset += count
-            absolute += count
-            remaining -= count
-        }
-    }
-
-    fun readCached(offset: Long, target: ByteArray, targetOffset: Int, length: Int): Int = synchronized(lock) {
-        var absolute = offset
-        var destination = targetOffset
-        val end = offset + length
-        while (absolute < end) {
-            val base = absolute / RANGE_BLOCK_BYTES * RANGE_BLOCK_BYTES
-            val within = (absolute - base).toInt()
-            val block = blocks[base] ?: break
-            val count = min((end - absolute).toInt(), RANGE_BLOCK_BYTES - within)
-            val available = (block.valid.nextClearBit(within) - within).coerceAtLeast(0)
-            val valid = min(count, available)
-            if (valid == 0) break
-            block.bytes.copyInto(target, destination, within, within + valid)
-            absolute += valid
-            destination += valid
-        }
-        destination - targetOffset
-    }
-
-    fun clear() = synchronized(lock) { blocks.clear(); bytesStored = 0 }
-}
-
 class PhashCoordinator(
     private val authDataStore: AuthDataStore,
     private val jellyfinClientManager: JellyfinClientManager,

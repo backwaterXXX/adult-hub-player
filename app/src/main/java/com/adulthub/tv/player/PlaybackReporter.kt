@@ -17,6 +17,7 @@ import java.util.concurrent.atomic.AtomicLong
 
 private const val TAG = "PlaybackReporter"
 private const val REPORTING_INTERVAL_MS = 10_000L
+private const val PROGRESS_COALESCE_MS = 500L
 
 class PlaybackReporter(
     private val playbackRepository: PlaybackRepository,
@@ -25,6 +26,9 @@ class PlaybackReporter(
     private var reportingJob: Job? = null
     private val sessionCounter = AtomicLong(0)
     private val commands = Channel<ReportCommand>(Channel.UNLIMITED)
+    private val pendingProgressLock = Any()
+    private var pendingProgress: ReportCommand.Progress? = null
+    private var pendingProgressJob: Job? = null
 
     init {
         coroutineScope.launch {
@@ -111,16 +115,38 @@ class PlaybackReporter(
 
     fun reportProgressNow(positionMs: Long, isPaused: Boolean) {
         val session = currentSession ?: return
-        enqueue(ReportCommand.Progress(session, positionMs, isPaused))
+        synchronized(pendingProgressLock) {
+            pendingProgress = ReportCommand.Progress(session, positionMs, isPaused)
+            if (pendingProgressJob?.isActive == true) return
+            pendingProgressJob = coroutineScope.launch {
+                delay(PROGRESS_COALESCE_MS)
+                flushPendingProgress()
+            }
+        }
     }
 
     fun stopSession(finalPositionMs: Long) {
         reportingJob?.cancel()
         reportingJob = null
 
+        val lastPendingProgress = synchronized(pendingProgressLock) {
+            pendingProgressJob?.cancel()
+            pendingProgressJob = null
+            pendingProgress.also { pendingProgress = null }
+        }
+        lastPendingProgress?.let(::enqueue)
+
         val session = currentSession ?: return
         currentSession = null
         enqueue(ReportCommand.Stop(session, finalPositionMs))
+    }
+
+    private fun flushPendingProgress() {
+        val command = synchronized(pendingProgressLock) {
+            pendingProgressJob = null
+            pendingProgress.also { pendingProgress = null }
+        }
+        command?.let(::enqueue)
     }
 
     private fun enqueue(command: ReportCommand) {

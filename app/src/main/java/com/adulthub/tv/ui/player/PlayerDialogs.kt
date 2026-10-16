@@ -483,6 +483,16 @@ fun PlaybackInfoOverlay(
                 if (technicalInfo.retryCount > 0) {
                     TechnicalInfoRow(label = "Retries", value = "${technicalInfo.retryCount}")
                 }
+                technicalInfo.firstFrameMs?.let { startupMs ->
+                    TechnicalInfoRow(label = "First Frame", value = "${startupMs} ms")
+                }
+                TechnicalInfoRow(
+                    label = "Rebuffering",
+                    value = "${technicalInfo.rebufferCount} events / ${technicalInfo.rebufferDurationMs / 1000}s",
+                )
+                technicalInfo.lastSeekBufferDurationMs?.let { seekBufferMs ->
+                    TechnicalInfoRow(label = "Last Seek Buffer", value = "${seekBufferMs} ms")
+                }
                 TechnicalInfoRow(label = "Dropped Frames", value = "${technicalInfo.droppedFrames}")
                 TechnicalInfoRow(label = "Resolution", value = technicalInfo.resolution)
                 TechnicalInfoRow(label = "Video Codec", value = technicalInfo.videoCodec)

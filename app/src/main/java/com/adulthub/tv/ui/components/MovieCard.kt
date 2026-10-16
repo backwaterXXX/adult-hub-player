@@ -66,6 +66,8 @@ fun MovieCard(
     val settingsDataStore: SettingsDataStore = koinInject()
     val jellyfinClientManager: JellyfinClientManager = koinInject()
     val lowRamMode by settingsDataStore.lowRamMode.collectAsStateWithLifecycle(initialValue = false)
+    val telegramVideoId = item.providerVideoId?.takeIf { it.isNotBlank() }
+        ?: item.id.takeIf { it.startsWith("telegram:") }?.removePrefix("telegram:")
     var phashThumbnailUrl by remember(item.id) { mutableStateOf<String?>(null) }
     var phashThumbnailFailed by remember(item.id) { mutableStateOf(false) }
     var usePhashThumbnail by remember(item.id, imageUrl, item.progressFraction) {
@@ -75,16 +77,14 @@ fun MovieCard(
         )
     }
 
-    LaunchedEffect(item.id, item.providerVideoId) {
-        val rawId = item.providerVideoId?.takeIf { it.isNotBlank() }
-            ?: item.id.takeIf { it.startsWith("telegram:") }?.removePrefix("telegram:")
-        if (rawId != null) {
-            runCatching {
-                val configured = settingsDataStore.getResolverBaseUrl().trimEnd('/')
-                val base = settingsDataStore.requireAllowedServiceUrl(configured).normalized.trimEnd('/')
-                val videoId = if (rawId.startsWith("telegram:")) rawId else "telegram:$rawId"
-                phashThumbnailUrl = "$base/admin/api/v2/video-phash/thumbnail?video_id=${Uri.encode(videoId)}"
-            }
+    LaunchedEffect(item.id, telegramVideoId, usePhashThumbnail) {
+        val rawId = telegramVideoId ?: return@LaunchedEffect
+        if (!usePhashThumbnail || phashThumbnailUrl != null) return@LaunchedEffect
+        runCatching {
+            val configured = settingsDataStore.getResolverBaseUrl().trimEnd('/')
+            val base = settingsDataStore.requireAllowedServiceUrl(configured).normalized.trimEnd('/')
+            val videoId = if (rawId.startsWith("telegram:")) rawId else "telegram:$rawId"
+            phashThumbnailUrl = "$base/admin/api/v2/video-phash/thumbnail?video_id=${Uri.encode(videoId)}"
         }
     }
 
@@ -134,7 +134,7 @@ fun MovieCard(
                     contentScale = ContentScale.Crop,
                     modifier = Modifier.fillMaxSize(),
                     onSuccess = { state ->
-                        if (!usePhashThumbnail && !phashThumbnailFailed && phashThumbnailUrl != null) {
+                        if (!usePhashThumbnail && !phashThumbnailFailed && telegramVideoId != null) {
                             usePhashThumbnail = isPoorThumbnail(state.result.drawable)
                         }
                     },
@@ -142,7 +142,7 @@ fun MovieCard(
                         if (usePhashThumbnail) {
                             phashThumbnailFailed = true
                             usePhashThumbnail = false
-                        } else if (!phashThumbnailFailed && phashThumbnailUrl != null) {
+                        } else if (!phashThumbnailFailed && telegramVideoId != null) {
                             usePhashThumbnail = true
                         }
                     },

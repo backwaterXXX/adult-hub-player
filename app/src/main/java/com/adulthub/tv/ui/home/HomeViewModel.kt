@@ -93,7 +93,7 @@ class HomeViewModel(
 
     init {
         viewModelScope.launch {
-            settingsDataStore.excludedTags.collect { excluded ->
+            settingsDataStore.excludedTags.distinctUntilChanged().collect { excluded ->
                 _uiState.update { state ->
                     state.copy(
                         excludedTags = excluded,
@@ -110,14 +110,16 @@ class HomeViewModel(
             }
         }
         viewModelScope.launch {
-            settingsDataStore.selectedHomeCategoryIds.collectLatest { selectedIds ->
-                loadCategoryRows(selectedIds)
-            }
+            settingsDataStore.selectedHomeCategoryIds
+                .distinctUntilChanged()
+                .collectLatest { selectedIds ->
+                    loadCategoryRows(selectedIds)
+                }
         }
         viewModelScope.launch {
             settingsDataStore.selectedLibraryId
-                .drop(1)
                 .distinctUntilChanged()
+                .drop(1)
                 .collect {
                     loadAll()
                     loadCategoryRows(settingsDataStore.selectedHomeCategoryIds.firstOrNull())

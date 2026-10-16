@@ -63,6 +63,7 @@ class PlayerManager(
     private var retryJob: Job? = null
     private var playbackGeneration = 0L
     private var automaticRetryCount = 0
+    private var totalRetryCount = 0
     private var playbackRequest: PlaybackRequest? = null
     private var released = false
     private var preparingStartedAt: Long? = null
@@ -70,11 +71,16 @@ class PlayerManager(
     private var videoDecoderName: String? = null
     private var audioDecoderName: String? = null
     private var totalDroppedFrames = 0
+    private var firstFrameMs: Long? = null
+    private var hasRenderedFirstFrame = false
+    private var bufferingStartedAtMs: Long? = null
+    private var rebufferCount = 0
+    private var totalRebufferDurationMs = 0L
+    private var pendingSeekAtMs: Long? = null
+    private var seekBufferingStartedAtMs: Long? = null
+    private var lastSeekBufferDurationMs: Long? = null
     @Volatile private var streamFileSizeBytes: Long? = null
     val currentStreamFileSizeBytes: Long? get() = streamFileSizeBytes
-    private val playbackRangeCache = PlaybackRangeCache()
-    val currentPlaybackRangeCache: PlaybackRangeCache get() = playbackRangeCache
-
     private val analyticsListener = object : AnalyticsListener {
         override fun onVideoDecoderInitialized(
             eventTime: AnalyticsListener.EventTime,
@@ -139,7 +145,22 @@ class PlayerManager(
             }
 
             when (playbackState) {
+                Player.STATE_BUFFERING -> {
+                    val now = SystemClock.elapsedRealtime()
+                    if (hasRenderedFirstFrame && bufferingStartedAtMs == null) {
+                        bufferingStartedAtMs = now
+                        rebufferCount++
+                    }
+                    val seekAt = pendingSeekAtMs
+                    if (seekAt != null && now - seekAt <= SEEK_BUFFER_CORRELATION_WINDOW_MS) {
+                        seekBufferingStartedAtMs = now
+                        pendingSeekAtMs = null
+                    } else if (seekAt != null) {
+                        pendingSeekAtMs = null
+                    }
+                }
                 Player.STATE_READY -> {
+                    finishBufferingMeasurement()
                     automaticRetryCount = 0
                     retryJob?.cancel()
                     retryJob = null
@@ -156,9 +177,20 @@ class PlayerManager(
                     onPlaybackReady?.invoke(currentPos)
                 }
                 Player.STATE_ENDED -> {
+                    finishBufferingMeasurement()
                     onPlaybackEnded?.invoke()
                 }
-                Player.STATE_IDLE, Player.STATE_BUFFERING -> {}
+                Player.STATE_IDLE -> finishBufferingMeasurement()
+            }
+        }
+
+        override fun onPositionDiscontinuity(
+            oldPosition: Player.PositionInfo,
+            newPosition: Player.PositionInfo,
+            reason: Int,
+        ) {
+            if (reason == Player.DISCONTINUITY_REASON_SEEK && hasRenderedFirstFrame) {
+                pendingSeekAtMs = SystemClock.elapsedRealtime()
             }
         }
 
@@ -173,9 +205,12 @@ class PlayerManager(
         }
 
         override fun onRenderedFirstFrame() {
+            val now = SystemClock.elapsedRealtime()
             preparingStartedAt?.let { startedAt ->
-                Log.i(TAG, "first_frame_ms=${SystemClock.elapsedRealtime() - startedAt}")
+                if (firstFrameMs == null) firstFrameMs = now - startedAt
+                Log.i(TAG, "first_frame_ms=$firstFrameMs")
             }
+            hasRenderedFirstFrame = true
             preparingStartedAt = null
         }
 
@@ -263,9 +298,10 @@ class PlayerManager(
         retryJob?.cancel()
         retryJob = null
         automaticRetryCount = 0
+        totalRetryCount = 0
         _retryStatus.value = null
         playbackRequest = PlaybackRequest(streamUrl, title, headers.toMap())
-        startPlayback(streamUrl, startPositionMs, title, headers, clearRangeCache = true, resumePlayback = true)
+        startPlayback(streamUrl, startPositionMs, title, headers, resetPlaybackSpeed = true, resumePlayback = true)
     }
 
     private fun startPlayback(
@@ -273,7 +309,7 @@ class PlayerManager(
         startPositionMs: Long,
         title: String?,
         headers: Map<String, String>,
-        clearRangeCache: Boolean,
+        resetPlaybackSpeed: Boolean,
         resumePlayback: Boolean,
     ) {
         released = false
@@ -281,9 +317,16 @@ class PlayerManager(
         streamFileSizeBytes = null
         videoDecoderName = null
         audioDecoderName = null
-        totalDroppedFrames = 0
-        if (clearRangeCache) {
-            playbackRangeCache.clear()
+        if (resetPlaybackSpeed) {
+            totalDroppedFrames = 0
+            firstFrameMs = null
+            hasRenderedFirstFrame = false
+            bufferingStartedAtMs = null
+            rebufferCount = 0
+            totalRebufferDurationMs = 0L
+            pendingSeekAtMs = null
+            seekBufferingStartedAtMs = null
+            lastSeekBufferDurationMs = null
             exoPlayer.setPlaybackSpeed(1.0f)
         }
         preparingStartedAt = SystemClock.elapsedRealtime()
@@ -334,8 +377,8 @@ class PlayerManager(
             httpDataSourceFactory.setDefaultRequestProperties(headers)
         }
 
-        val trackingDataSourceFactory = DataSource.Factory {
-            FileSizeTrackingDataSource(httpDataSourceFactory.createDataSource(), playbackRangeCache) { size ->
+        val trackingDataSourceFactory = androidx.media3.datasource.DataSource.Factory {
+            FileSizeTrackingDataSource(httpDataSourceFactory.createDataSource()) { size ->
                 if (size > 0L) streamFileSizeBytes = size
             }
         }
@@ -362,6 +405,7 @@ class PlayerManager(
         val request = playbackRequest ?: return false
         val generation = playbackGeneration
         automaticRetryCount += 1
+        totalRetryCount += 1
         val attempt = automaticRetryCount
         val delayMs = 1_000L shl (attempt - 1)
         _retryStatus.value = "Connection interrupted. Retrying automatically ($attempt/$MAX_AUTOMATIC_RETRIES)…"
@@ -376,7 +420,7 @@ class PlayerManager(
                 startPositionMs = exoPlayer.currentPosition.coerceAtLeast(0L),
                 title = request.title,
                 headers = request.headers,
-                clearRangeCache = false,
+                resetPlaybackSpeed = false,
                 resumePlayback = resumePlayback,
             )
         }
@@ -601,11 +645,31 @@ class PlayerManager(
             fileSize = formatFileSize(
                 streamFileSizeBytes ?: playbackInfo.fileSizeBytes?.takeIf { it >= MIN_TRUSTWORTHY_FILE_SIZE_BYTES }
             ),
-            retryCount = automaticRetryCount,
+            retryCount = totalRetryCount,
             resolverLatencyMs = resolverLatencyMs,
             decoderMode = decoderMode,
             droppedFrames = totalDroppedFrames,
+            firstFrameMs = firstFrameMs,
+            rebufferCount = rebufferCount,
+            rebufferDurationMs = totalRebufferDurationMs +
+                (bufferingStartedAtMs?.let { (SystemClock.elapsedRealtime() - it).coerceAtLeast(0L) } ?: 0L),
+            lastSeekBufferDurationMs = lastSeekBufferDurationMs,
         )
+    }
+
+    private fun finishBufferingMeasurement() {
+        val now = SystemClock.elapsedRealtime()
+        bufferingStartedAtMs?.let { startedAt ->
+            val durationMs = (now - startedAt).coerceAtLeast(0L)
+            totalRebufferDurationMs += durationMs
+            Log.i(TAG, "rebuffer_event_ms=$durationMs total_rebuffers=$rebufferCount")
+            bufferingStartedAtMs = null
+        }
+        seekBufferingStartedAtMs?.let { startedAt ->
+            lastSeekBufferDurationMs = (now - startedAt).coerceAtLeast(0L)
+            Log.i(TAG, "seek_buffer_ms=$lastSeekBufferDurationMs")
+            seekBufferingStartedAtMs = null
+        }
     }
 }
 
@@ -626,16 +690,13 @@ private const val MEDIA_SESSION_ID = "AdultHubTvSession"
 
 private class FileSizeTrackingDataSource(
     private val upstream: DataSource,
-    private val rangeCache: PlaybackRangeCache,
     private val onFileSize: (Long) -> Unit,
 ) : DataSource {
-    private var nextReadPosition = 0L
     override fun addTransferListener(transferListener: androidx.media3.datasource.TransferListener) {
         upstream.addTransferListener(transferListener)
     }
 
     override fun open(dataSpec: DataSpec): Long {
-        nextReadPosition = dataSpec.position
         val length = upstream.open(dataSpec)
         val headers = upstream.responseHeaders
         val contentRange = headers.entries.firstOrNull { it.key.equals("Content-Range", ignoreCase = true) }
@@ -654,14 +715,8 @@ private class FileSizeTrackingDataSource(
         return length
     }
 
-    override fun read(buffer: ByteArray, offset: Int, length: Int): Int {
-        val read = upstream.read(buffer, offset, length)
-        if (read > 0) {
-            rangeCache.put(nextReadPosition, buffer, offset, read)
-            nextReadPosition += read
-        }
-        return read
-    }
+    override fun read(buffer: ByteArray, offset: Int, length: Int): Int =
+        upstream.read(buffer, offset, length)
 
     override fun getUri(): Uri? = upstream.uri
 
@@ -687,4 +742,10 @@ data class PlaybackTechnicalInfo(
     val resolverLatencyMs: Long? = null,
     val decoderMode: String = "Hardware (HW)",
     val droppedFrames: Int = 0,
+    val firstFrameMs: Long? = null,
+    val rebufferCount: Int = 0,
+    val rebufferDurationMs: Long = 0L,
+    val lastSeekBufferDurationMs: Long? = null,
 )
+
+private const val SEEK_BUFFER_CORRELATION_WINDOW_MS = 3_000L

@@ -25,6 +25,7 @@ import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asSharedFlow
 import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.flow.collect
+import kotlinx.coroutines.flow.distinctUntilChanged
 import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.launch
 import org.jellyfin.sdk.model.api.ItemFilter
@@ -189,7 +190,7 @@ class LibraryViewModel(
         loadAllItems(reset = true)
         settingsDataStore?.let { settings ->
             viewModelScope.launch {
-                settings.resolverBaseUrl.collect { url ->
+                settings.resolverBaseUrl.distinctUntilChanged().collect { url ->
                     _uiState.update { state ->
                         state.copy(
                             channelsState = state.channelsState.copy(resolverBaseUrl = url),
@@ -198,7 +199,7 @@ class LibraryViewModel(
                 }
             }
             viewModelScope.launch {
-                settings.channelSortMode.collect { mode ->
+                settings.channelSortMode.distinctUntilChanged().collect { mode ->
                     _uiState.update { state ->
                         val sorted = applyChannelFilters(
                             state.channelsState.rawChannelVideos,
@@ -216,7 +217,7 @@ class LibraryViewModel(
                 }
             }
             viewModelScope.launch {
-                settings.excludedTags.collect { excluded ->
+                settings.excludedTags.distinctUntilChanged().collect { excluded ->
                     _uiState.update { state ->
                         val as_ = state.allState
                         val cs = state.channelsState
@@ -230,7 +231,7 @@ class LibraryViewModel(
                 }
             }
             viewModelScope.launch {
-                settings.hiddenChannelIds.collect { hidden ->
+                settings.hiddenChannelIds.distinctUntilChanged().collect { hidden ->
                     _uiState.update { state ->
                         val cs = state.channelsState
                         val visible = cs.channels.filter { it.id !in hidden }

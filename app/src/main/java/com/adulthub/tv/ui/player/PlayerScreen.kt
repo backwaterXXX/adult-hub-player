@@ -176,7 +176,7 @@ fun PlayerScreen(
     LaunchedEffect(readyState?.playbackRequestId, playerManager) {
         if (readyState == null) return@LaunchedEffect
         while (true) {
-            delay(15_000L)
+            delay(60_000L)
             if (playerManager.isPlaying.value) {
                 viewModel.checkpointTelegramProgress(playerManager.currentPositionMs.value)
             }

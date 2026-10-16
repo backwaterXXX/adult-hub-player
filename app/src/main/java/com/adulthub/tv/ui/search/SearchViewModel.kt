@@ -23,6 +23,7 @@ import kotlinx.coroutines.flow.debounce
 import kotlinx.coroutines.flow.distinctUntilChanged
 import kotlinx.coroutines.flow.firstOrNull
 import kotlinx.coroutines.flow.update
+import kotlinx.coroutines.joinAll
 import kotlinx.coroutines.launch
 
 data class SearchUiState(
@@ -108,7 +109,17 @@ class SearchViewModel(
     }
 
     private suspend fun performSearch(searchTerm: String) {
-        _uiState.update { it.copy(isSearching = true, errorMessage = null) }
+        _uiState.update {
+            it.copy(
+                query = searchTerm,
+                isSearching = true,
+                hasSearched = false,
+                movies = emptyList(),
+                actors = emptyList(),
+                channelVideos = emptyList(),
+                errorMessage = null,
+            )
+        }
 
         val libraryId = settingsDataStore.selectedLibraryId.firstOrNull()
 
@@ -132,21 +143,49 @@ class SearchViewModel(
                 channelRepository?.search(searchTerm)
             }
 
-            val moviesResult = moviesDeferred.await()
-            val personsResult = personsDeferred.await()
-            val channelVideosResult = channelVideosDeferred.await()
+            val failures = mutableListOf<Throwable>()
+            var successfulSections = 0
+            val movieUpdates = launch {
+                moviesDeferred.await().fold(
+                    onSuccess = { page ->
+                        successfulSections++
+                        val movies = page.items.distinctBy { it.providerVideoId?.ifBlank { null } ?: it.id }
+                        _uiState.update { state ->
+                            if (state.query == searchTerm) state.copy(movies = movies) else state
+                        }
+                    },
+                    onFailure = failures::add,
+                )
+            }
+            val personUpdates = launch {
+                personsDeferred.await().fold(
+                    onSuccess = { actors ->
+                        successfulSections++
+                        _uiState.update { state ->
+                            if (state.query == searchTerm) state.copy(actors = actors) else state
+                        }
+                    },
+                    onFailure = failures::add,
+                )
+            }
+            val channelUpdates = launch {
+                channelVideosDeferred.await()?.fold(
+                    onSuccess = { videos ->
+                        successfulSections++
+                        val channelVideos = videos.distinctBy { it.providerVideoId.ifBlank { it.id } }
+                        _uiState.update { state ->
+                            if (state.query == searchTerm) state.copy(channelVideos = channelVideos) else state
+                        }
+                    },
+                    onFailure = failures::add,
+                )
+            }
+            joinAll(movieUpdates, personUpdates, channelUpdates)
             if (searchTerm != _query.value) return@coroutineScope
 
-            val rawMovies = moviesResult.getOrNull()?.items ?: emptyList()
-            val movies = rawMovies.distinctBy { it.providerVideoId?.ifBlank { null } ?: it.id }
-
-            val actors = personsResult.getOrNull() ?: emptyList()
-
-            val rawChannelVideos = channelVideosResult?.getOrNull() ?: emptyList()
-            val channelVideos = rawChannelVideos.distinctBy { it.providerVideoId.ifBlank { it.id } }
-
-            val error = if (moviesResult.isFailure && personsResult.isFailure && channelVideosResult?.isFailure != false) {
-                moviesResult.exceptionOrNull()?.message ?: "Search failed. Please try again."
+            val totalSections = 2 + if (channelRepository != null) 1 else 0
+            val error = if (successfulSections == 0 && failures.size == totalSections) {
+                failures.firstOrNull()?.message ?: "Search failed. Please try again."
             } else null
 
             val resolverBaseUrl = try {
@@ -162,11 +201,7 @@ class SearchViewModel(
 
             _uiState.update {
                 it.copy(
-                    query = searchTerm,
                     isSearching = false,
-                    movies = movies,
-                    actors = actors,
-                    channelVideos = channelVideos,
                     resolverBaseUrl = resolverBaseUrl,
                     hasSearched = true,
                     errorMessage = error,
