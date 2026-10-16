@@ -73,7 +73,7 @@ fun LibraryScreen(
 
     LaunchedEffect(viewModel) {
         viewModel.navEvents.collect { event ->
-            contentFocusRequester.saveFocusedChild()
+            runCatching { contentFocusRequester.saveFocusedChild() }
             when (event) {
                 is LibraryNavEvent.NavigateToItemDetail -> onNavigateToItemDetail(event.itemId)
                 is LibraryNavEvent.NavigateToPersonDetail -> onNavigateToPersonDetail(event.personId, event.personName)

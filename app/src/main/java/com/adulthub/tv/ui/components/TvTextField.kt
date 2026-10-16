@@ -55,7 +55,7 @@ fun TvTextField(
     val editFocusRequester = remember { FocusRequester() }
 
     LaunchedEffect(isEditing) {
-        if (isEditing) editFocusRequester.requestFocus()
+        if (isEditing) runCatching { editFocusRequester.requestFocus() }
     }
 
     Column(modifier = modifier) {

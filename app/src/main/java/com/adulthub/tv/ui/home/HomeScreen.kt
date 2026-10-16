@@ -87,7 +87,7 @@ fun HomeScreen(
 
     LaunchedEffect(viewModel) {
         viewModel.navEvents.collect { event ->
-            homeFocusRequester.saveFocusedChild()
+            runCatching { homeFocusRequester.saveFocusedChild() }
             when (event) {
                 is HomeNavEvent.NavigateToItemDetail -> onNavigateToItemDetail(event.itemId)
                 is HomeNavEvent.NavigateToPlayer -> onNavigateToPlayer(event.itemId)

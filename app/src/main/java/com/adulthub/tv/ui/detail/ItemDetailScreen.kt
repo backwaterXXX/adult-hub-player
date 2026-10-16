@@ -115,15 +115,15 @@ fun ItemDetailScreen(
         viewModel.navEvents.collect { event ->
             when (event) {
                 is ItemDetailNavEvent.NavigateToPlayer -> {
-                    contentFocusRequester.saveFocusedChild()
+                    runCatching { contentFocusRequester.saveFocusedChild() }
                     onNavigateToPlayer(event.itemId, event.resume)
                 }
                 is ItemDetailNavEvent.NavigateToItemDetail -> {
-                    contentFocusRequester.saveFocusedChild()
+                    runCatching { contentFocusRequester.saveFocusedChild() }
                     onNavigateToItemDetail(event.itemId)
                 }
                 is ItemDetailNavEvent.NavigateToPersonDetail -> {
-                    contentFocusRequester.saveFocusedChild()
+                    runCatching { contentFocusRequester.saveFocusedChild() }
                     onNavigateToPersonDetail(event.personId, event.personName)
                 }
                 is ItemDetailNavEvent.NavigateBack -> onNavigateBack()
@@ -549,7 +549,7 @@ fun ItemDetailScreen(
                         onClick = {
                             val t = tag
                             selectedTagForAction = null
-                            contentFocusRequester.saveFocusedChild()
+                            runCatching { contentFocusRequester.saveFocusedChild() }
                             onNavigateToSearch(t)
                         },
                         modifier = Modifier.height(40.dp),

@@ -86,7 +86,7 @@ fun PersonDetailScreen(
         viewModel.navEvents.collect { event ->
             when (event) {
                 is PersonDetailNavEvent.NavigateToItemDetail -> {
-                    contentFocusRequester.saveFocusedChild()
+                    runCatching { contentFocusRequester.saveFocusedChild() }
                     onNavigateToItemDetail(event.itemId)
                 }
                 is PersonDetailNavEvent.NavigateBack -> onNavigateBack()

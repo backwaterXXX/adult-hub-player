@@ -14,6 +14,8 @@ import androidx.compose.foundation.border
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.ExperimentalLayoutApi
+import androidx.compose.foundation.layout.FlowRow
 import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
@@ -204,14 +206,15 @@ fun SettingsScreen(
                         Spacer(modifier = Modifier.height(14.dp))
 
                         if (uiState.availableLibraries.isNotEmpty()) {
-                            LazyRow(
+                            @OptIn(ExperimentalLayoutApi::class)
+                            FlowRow(
                                 horizontalArrangement = Arrangement.spacedBy(12.dp),
-                                modifier = Modifier.fillMaxWidth(),
+                                verticalArrangement = Arrangement.spacedBy(10.dp),
+                                modifier = Modifier
+                                    .fillMaxWidth()
+                                    .padding(horizontal = 2.dp, vertical = 4.dp),
                             ) {
-                                items(
-                                    items = uiState.availableLibraries,
-                                    key = { it.id },
-                                ) { library ->
+                                uiState.availableLibraries.forEach { library ->
                                     val isSelected = library.id == uiState.selectedLibraryId
                                     TvChoiceChip(
                                         label = library.name,
@@ -247,11 +250,15 @@ fun SettingsScreen(
                                 style = MaterialTheme.typography.bodySmall.copy(color = TextSecondary),
                             )
                         } else {
-                            LazyRow(
+                            @OptIn(ExperimentalLayoutApi::class)
+                            FlowRow(
                                 horizontalArrangement = Arrangement.spacedBy(10.dp),
-                                modifier = Modifier.fillMaxWidth(),
+                                verticalArrangement = Arrangement.spacedBy(10.dp),
+                                modifier = Modifier
+                                    .fillMaxWidth()
+                                    .padding(horizontal = 2.dp, vertical = 4.dp),
                             ) {
-                                items(uiState.availableHomeCategories, key = { it.id }) { category ->
+                                uiState.availableHomeCategories.forEach { category ->
                                     TvChoiceChip(
                                         label = category.name,
                                         isSelected = category.id in uiState.selectedHomeCategoryIds,
@@ -777,7 +784,7 @@ fun SettingsScreen(
                             } else {
                                 LazyRow(
                                     horizontalArrangement = Arrangement.spacedBy(8.dp),
-                                    contentPadding = PaddingValues(vertical = 4.dp),
+                                    contentPadding = PaddingValues(horizontal = 4.dp, vertical = 8.dp),
                                 ) {
                                     items(items = uiState.excludedTags.toList()) { tag ->
                                         TvSecondaryButton(
@@ -809,7 +816,7 @@ fun SettingsScreen(
                             } else {
                                 LazyRow(
                                     horizontalArrangement = Arrangement.spacedBy(8.dp),
-                                    contentPadding = PaddingValues(vertical = 4.dp),
+                                    contentPadding = PaddingValues(horizontal = 4.dp, vertical = 8.dp),
                                 ) {
                                     items(items = uiState.hiddenChannelIds.toList()) { channelId ->
                                         TvSecondaryButton(

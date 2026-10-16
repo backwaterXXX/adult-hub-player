@@ -377,7 +377,7 @@ private fun CatalogFilterDialog(
     val searchEditFocus = remember(title) { FocusRequester() }
     LaunchedEffect(title) { runCatching { searchFocus.requestFocus() } }
     LaunchedEffect(isSearchEditing) {
-        if (isSearchEditing) searchEditFocus.requestFocus()
+        if (isSearchEditing) runCatching { searchEditFocus.requestFocus() }
     }
     val filteredOptions = remember(options, query) {
         options.filter { it.name.contains(query, ignoreCase = true) }

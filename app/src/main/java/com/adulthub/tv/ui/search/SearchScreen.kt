@@ -105,9 +105,10 @@ fun SearchScreen(
             if (hasBeenCurrentDestination) {
                 delay(100L)
                 val restored = runCatching { resultsFocusRequester.restoreFocusedChild() }.getOrDefault(false)
-                if (!restored) searchInputFocusRequester.requestFocus()
+                if (!restored) runCatching { searchInputFocusRequester.requestFocus() }
             } else {
-                searchInputFocusRequester.requestFocus()
+                delay(100L)
+                runCatching { searchInputFocusRequester.requestFocus() }
             }
             hasBeenCurrentDestination = true
         }
@@ -274,15 +275,15 @@ fun SearchScreen(
                     resolverBaseUrl = uiState.resolverBaseUrl,
                     resultsFocusRequester = resultsFocusRequester,
                     onNavigateToItemDetail = { id ->
-                        resultsFocusRequester.saveFocusedChild()
+                        runCatching { resultsFocusRequester.saveFocusedChild() }
                         onNavigateToItemDetail(id)
                     },
                     onNavigateToPersonDetail = { id, name ->
-                        resultsFocusRequester.saveFocusedChild()
+                        runCatching { resultsFocusRequester.saveFocusedChild() }
                         onNavigateToPersonDetail(id, name)
                     },
                     onNavigateToPlayer = { id ->
-                        resultsFocusRequester.saveFocusedChild()
+                        runCatching { resultsFocusRequester.saveFocusedChild() }
                         onNavigateToPlayer(id)
                     },
                     modifier = Modifier
@@ -308,7 +309,7 @@ private fun SearchInputField(
     val editFocusRequester = remember { FocusRequester() }
 
     LaunchedEffect(isEditing) {
-        if (isEditing) editFocusRequester.requestFocus()
+        if (isEditing) runCatching { editFocusRequester.requestFocus() }
     }
 
     Box(

@@ -39,6 +39,7 @@ fun TvChoiceChip(
     OutlinedButton(
         onClick = onClick,
         interactionSource = interactionSource,
+        scale = OutlinedButtonDefaults.scale(scale = 1f, focusedScale = 1.04f),
         colors = OutlinedButtonDefaults.colors(
             containerColor = if (isSelected) NeonPink.copy(alpha = 0.2f) else androidx.compose.ui.graphics.Color.Transparent,
             focusedContainerColor = CardSurfaceFocused,
