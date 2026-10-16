@@ -17,6 +17,7 @@ import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.flow.firstOrNull
+import kotlinx.coroutines.Job
 import kotlinx.coroutines.launch
 
 sealed interface PlayerUiState {
@@ -56,10 +57,13 @@ class PlayerViewModel(
     val isLoadingRandom: StateFlow<Boolean> = _isLoadingRandom.asStateFlow()
 
     private var playbackRequestCounter = 0L
+    private var loadItemJob: Job? = null
 
     fun loadItem(itemId: String, resume: Boolean? = null) {
-        viewModelScope.launch {
-            val playbackRequestId = ++playbackRequestCounter
+        val playbackRequestId = ++playbackRequestCounter
+        loadItemJob?.cancel()
+        _isLoadingRandom.value = false
+        loadItemJob = viewModelScope.launch {
             val loadStartedAt = SystemClock.elapsedRealtime()
             _uiState.value = PlayerUiState.Loading
             _isPlaybackEnded.value = false
@@ -67,6 +71,7 @@ class PlayerViewModel(
             val itemLookupStartedAt = SystemClock.elapsedRealtime()
             val itemResult = libraryRepository.getItemDetails(itemId)
             Log.i(PERF_TAG, "item_lookup_ms=${SystemClock.elapsedRealtime() - itemLookupStartedAt}")
+            if (playbackRequestId != playbackRequestCounter) return@launch
             var item = itemResult.getOrNull()
 
             if (item == null) {
@@ -104,6 +109,7 @@ class PlayerViewModel(
             val playbackResult = playbackRepository.resolvePlaybackInfo(item)
             val resolverLatencyMs = SystemClock.elapsedRealtime() - playbackLookupStartedAt
             Log.i(PERF_TAG, "playback_info_ms=$resolverLatencyMs")
+            if (playbackRequestId != playbackRequestCounter) return@launch
             val playbackInfo = playbackResult.getOrNull()
             if (playbackInfo == null) {
                 _uiState.value = PlayerUiState.Error(
@@ -127,6 +133,7 @@ class PlayerViewModel(
             } else {
                 item.playbackPositionTicks / 10_000L
             }
+            if (playbackRequestId != playbackRequestCounter) return@launch
 
             // Resume only meaningful progress and avoid jumping to the end credits.
             val shouldPromptResume = resumeMs > 15_000L && (durationMs <= 0L || resumeMs < durationMs - 30_000L)
@@ -152,22 +159,23 @@ class PlayerViewModel(
             _uiState.value = readyState
 
             // Record in watch history
-            watchHistoryStore?.recordWatch(item)
+            if (playbackRequestId == playbackRequestCounter) watchHistoryStore?.recordWatch(item)
         }
     }
 
     fun playRandomMovie(currentPositionMs: Long = 0L) {
+        if (_isLoadingRandom.value) return
+        val playbackRequestId = ++playbackRequestCounter
+        loadItemJob?.cancel()
+        _isLoadingRandom.value = true
         viewModelScope.launch {
-            if (_isLoadingRandom.value) return@launch
-            _isLoadingRandom.value = true
-            val playbackRequestId = ++playbackRequestCounter
-
             // Stop current playback reporting session
             playbackReporter.stopSession(currentPositionMs)
 
             val currentItem = (_uiState.value as? PlayerUiState.Ready)?.item
             val currentId = currentItem?.id
             val libraryId = settingsDataStore.selectedLibraryId.firstOrNull()
+            if (playbackRequestId != playbackRequestCounter) return@launch
 
             var randomItem = currentItem?.genres?.firstOrNull()?.let { genre ->
                 libraryRepository.getRandomItemFiltered(
@@ -221,6 +229,7 @@ class PlayerViewModel(
             }
 
             if (randomItem == null) {
+                if (playbackRequestId != playbackRequestCounter) return@launch
                 _isLoadingRandom.value = false
                 _uiState.value = PlayerUiState.Error("No random video available")
                 return@launch
@@ -229,6 +238,7 @@ class PlayerViewModel(
             val randomPlaybackLookupStartedAt = SystemClock.elapsedRealtime()
             val playbackResult = playbackRepository.resolvePlaybackInfo(randomItem)
             val randomResolverLatencyMs = SystemClock.elapsedRealtime() - randomPlaybackLookupStartedAt
+            if (playbackRequestId != playbackRequestCounter) return@launch
             val playbackInfo = playbackResult.getOrNull()
 
             _isLoadingRandom.value = false

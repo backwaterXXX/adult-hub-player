@@ -89,6 +89,8 @@ class AuthViewModel(
     val navEvents: Flow<AuthNavEvent> = _navEvents.receiveAsFlow()
 
     private var quickConnectJob: Job? = null
+    private var quickConnectInitJob: Job? = null
+    private var quickConnectGeneration = 0L
     private var discoveryJob: Job? = null
 
     init {
@@ -290,9 +292,11 @@ class AuthViewModel(
 
     fun startQuickConnect() {
         val serverUrl = _loginState.value.serverUrl.ifBlank { _serverState.value.serverUrl }
+        val generation = ++quickConnectGeneration
+        quickConnectInitJob?.cancel()
         quickConnectJob?.cancel()
 
-        viewModelScope.launch {
+        quickConnectInitJob = viewModelScope.launch {
             _quickConnectState.update {
                 it.copy(
                     serverUrl = serverUrl,
@@ -305,7 +309,9 @@ class AuthViewModel(
             _navEvents.send(AuthNavEvent.NavigateToQuickConnect)
 
             val initResult = authRepository.initiateQuickConnect(serverUrl)
+            if (generation != quickConnectGeneration) return@launch
             initResult.onSuccess { init ->
+                if (generation != quickConnectGeneration) return@onSuccess
                 _quickConnectState.update {
                     it.copy(
                         code = init.code,
@@ -313,8 +319,9 @@ class AuthViewModel(
                         isPolling = true,
                     )
                 }
-                startQuickConnectPolling(serverUrl, init.secret)
+                startQuickConnectPolling(serverUrl, init.secret, generation)
             }.onFailure { error ->
+                if (generation != quickConnectGeneration) return@onFailure
                 _quickConnectState.update {
                     it.copy(errorMessage = "Quick Connect unavailable: ${error.localizedMessage ?: "Error"}")
                 }
@@ -322,7 +329,7 @@ class AuthViewModel(
         }
     }
 
-    private fun startQuickConnectPolling(serverUrl: String, secret: String) {
+    private fun startQuickConnectPolling(serverUrl: String, secret: String, generation: Long) {
         quickConnectJob?.cancel()
         quickConnectJob = viewModelScope.launch {
             var elapsedSeconds = 0
@@ -333,10 +340,12 @@ class AuthViewModel(
                 elapsedSeconds += 5
 
                 val checkResult = authRepository.checkQuickConnectState(serverUrl, secret)
+                if (generation != quickConnectGeneration) return@launch
                 if (checkResult.getOrDefault(false)) {
                     _quickConnectState.update { it.copy(isAuthorized = true, isPolling = false) }
                     // Exchange secret for actual token
                     val authResult = authRepository.authenticateQuickConnect(serverUrl, secret)
+                    if (generation != quickConnectGeneration) return@launch
                     authResult.onSuccess {
                         loadLibraries()
                     }.onFailure { error ->
@@ -348,6 +357,7 @@ class AuthViewModel(
                 }
             }
 
+            if (generation != quickConnectGeneration) return@launch
             // Timed out
             _quickConnectState.update {
                 it.copy(isPolling = false, isExpired = true, errorMessage = "Code expired. Please request a new code.")
@@ -356,6 +366,9 @@ class AuthViewModel(
     }
 
     fun stopQuickConnect() {
+        quickConnectGeneration += 1
+        quickConnectInitJob?.cancel()
+        quickConnectInitJob = null
         quickConnectJob?.cancel()
         quickConnectJob = null
         _quickConnectState.update { it.copy(secret = "", isPolling = false) }

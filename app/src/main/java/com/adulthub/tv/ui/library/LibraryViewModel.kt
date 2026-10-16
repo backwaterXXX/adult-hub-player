@@ -179,6 +179,9 @@ class LibraryViewModel(
     private var actorsLoadJob: Job? = null
     private var categoryMoviesJob: Job? = null
     private var studioMoviesJob: Job? = null
+    private var allItemsLoadJob: Job? = null
+    private var allItemsGeneration = 0L
+    private var allItemsRequestInFlight = false
 
     init {
         loadAllItems(reset = true)
@@ -424,11 +427,20 @@ class LibraryViewModel(
     // --- ALL ITEMS TAB ---
 
     fun loadAllItems(reset: Boolean = false, autoFetchEmptyAttempts: Int = 0) {
-        viewModelScope.launch {
-            val currentState = _uiState.value.allState
-            val startIndex = if (reset) 0 else currentState.rawItems.size
-            if (!reset && (!currentState.hasMore || currentState.isLoadingMore)) return@launch
+        if (reset) {
+            allItemsGeneration += 1
+            allItemsLoadJob?.cancel()
+            allItemsRequestInFlight = false
+        } else if (allItemsRequestInFlight) {
+            return
+        }
 
+        val generation = allItemsGeneration
+        val currentState = _uiState.value.allState
+        val startIndex = if (reset) 0 else currentState.rawItems.size
+        if (!reset && (!currentState.hasMore || currentState.isLoadingMore)) return
+        allItemsRequestInFlight = true
+        allItemsLoadJob = viewModelScope.launch {
             _uiState.update { state ->
                 state.copy(
                     allState = if (reset) {
@@ -453,6 +465,9 @@ class LibraryViewModel(
                 studioIds = listOfNotNull(currentState.selectedStudio?.id?.toUuidOrNull()),
                 personIds = listOfNotNull(currentState.selectedPerformer?.id?.toUuidOrNull()),
             )
+
+            if (generation != allItemsGeneration) return@launch
+            allItemsRequestInFlight = false
 
             var shouldAutoFetch = false
             _uiState.update { state ->

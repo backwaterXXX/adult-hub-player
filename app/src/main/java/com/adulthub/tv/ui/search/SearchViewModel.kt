@@ -12,6 +12,7 @@ import com.adulthub.tv.data.repository.PersonRepository
 import com.adulthub.tv.data.resolver.VideoDto
 import kotlinx.coroutines.FlowPreview
 import kotlinx.coroutines.CancellationException
+import kotlinx.coroutines.Job
 import kotlinx.coroutines.async
 import kotlinx.coroutines.coroutineScope
 import kotlinx.coroutines.flow.MutableStateFlow
@@ -51,6 +52,7 @@ class SearchViewModel(
 
     private val _uiState = MutableStateFlow(SearchUiState())
     val uiState: StateFlow<SearchUiState> = _uiState.asStateFlow()
+    private var retryJob: Job? = null
 
     init {
         searchHistoryStore?.let { store ->
@@ -85,6 +87,8 @@ class SearchViewModel(
     }
 
     fun onQueryChanged(newQuery: String) {
+        retryJob?.cancel()
+        retryJob = null
         _query.value = newQuery
         _uiState.update { it.copy(query = newQuery) }
     }
@@ -96,7 +100,8 @@ class SearchViewModel(
     fun retry() {
         val q = _query.value
         if (q.isNotBlank()) {
-            viewModelScope.launch {
+            retryJob?.cancel()
+            retryJob = viewModelScope.launch {
                 performSearch(q)
             }
         }
@@ -130,6 +135,7 @@ class SearchViewModel(
             val moviesResult = moviesDeferred.await()
             val personsResult = personsDeferred.await()
             val channelVideosResult = channelVideosDeferred.await()
+            if (searchTerm != _query.value) return@coroutineScope
 
             val rawMovies = moviesResult.getOrNull()?.items ?: emptyList()
             val movies = rawMovies.distinctBy { it.providerVideoId?.ifBlank { null } ?: it.id }
@@ -152,6 +158,7 @@ class SearchViewModel(
             }
 
             searchHistoryStore?.recordQuery(searchTerm)
+            if (searchTerm != _query.value) return@coroutineScope
 
             _uiState.update {
                 it.copy(

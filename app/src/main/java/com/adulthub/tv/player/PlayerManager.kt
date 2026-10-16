@@ -14,8 +14,8 @@ import androidx.media3.common.Player
 import androidx.media3.common.util.UnstableApi
 import androidx.media3.datasource.DataSource
 import androidx.media3.datasource.DataSpec
-import androidx.media3.datasource.DefaultHttpDataSource
 import androidx.media3.datasource.HttpDataSource
+import androidx.media3.datasource.okhttp.OkHttpDataSource
 import androidx.media3.exoplayer.DefaultLoadControl
 import androidx.media3.exoplayer.DefaultRenderersFactory
 import androidx.media3.exoplayer.ExoPlayer
@@ -34,6 +34,10 @@ import kotlinx.coroutines.isActive
 import kotlinx.coroutines.launch
 
 import com.adulthub.tv.data.local.BufferProfile
+import com.adulthub.tv.data.network.ServiceUrlPolicy
+import com.adulthub.tv.data.network.ServiceUrlValidation
+import okhttp3.OkHttpClient
+import java.io.IOException
 
 private const val TAG = "PlayerManager"
 private const val SEEK_INCREMENT_MS = 10_000L
@@ -283,11 +287,29 @@ class PlayerManager(
         readyLoggedForCurrentMedia = false
         stopPositionPolling()
 
-        val httpDataSourceFactory = DefaultHttpDataSource.Factory()
+        val httpClient = OkHttpClient.Builder()
+            .connectTimeout(15, java.util.concurrent.TimeUnit.SECONDS)
+            .readTimeout(20, java.util.concurrent.TimeUnit.SECONDS)
+            .addNetworkInterceptor { chain ->
+                val request = chain.request()
+                if (request.url.isHttps) {
+                    chain.proceed(request)
+                } else {
+                    when (val validation = ServiceUrlPolicy.inspect(request.url.toString(), allowQuery = true)) {
+                        is ServiceUrlValidation.Valid -> {
+                            if (!validation.value.usesCleartext) {
+                                throw IOException("Blocked an insecure stream redirect")
+                            }
+                            chain.proceed(request)
+                        }
+                        is ServiceUrlValidation.Invalid -> throw IOException("Blocked an insecure stream redirect: ${validation.reason}")
+                    }
+                }
+            }
+            .build()
+
+        val httpDataSourceFactory = OkHttpDataSource.Factory(httpClient)
             .setUserAgent("Adult Hub TV/${BuildConfig.VERSION_NAME} (AndroidTV)")
-            .setAllowCrossProtocolRedirects(true)
-            .setConnectTimeoutMs(15_000)
-            .setReadTimeoutMs(20_000)
 
         if (headers.isNotEmpty()) {
             httpDataSourceFactory.setDefaultRequestProperties(headers)
