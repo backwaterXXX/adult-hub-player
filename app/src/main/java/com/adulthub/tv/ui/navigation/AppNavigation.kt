@@ -210,7 +210,7 @@ fun AppNavigation(
                     navController.navigate(Screen.Player.createRoute(playItemId))
                 },
                 onNavigateToLibrary = {
-                    navController.navigate(Screen.Library.route)
+                    navController.navigate(Screen.Library.createRoute())
                 },
                 onNavigateToSearch = {
                     navController.navigate(Screen.Search.createRoute())
@@ -218,8 +218,8 @@ fun AppNavigation(
                 onNavigateToSettings = {
                     navController.navigate(Screen.Settings.route)
                 },
-                onNavigateToLibraryCategory = { _ ->
-                    navController.navigate(Screen.Library.route)
+                onNavigateToLibraryCategory = { categoryId ->
+                    navController.navigate(Screen.Library.createRoute(categoryId))
                 },
             )
         }
@@ -284,8 +284,18 @@ fun AppNavigation(
                 onBack = { navController.popBackStack() },
             )
         }
-        composable(Screen.Library.route) { backStackEntry ->
+        composable(
+            route = Screen.Library.route,
+            arguments = listOf(
+                navArgument("categoryId") {
+                    type = NavType.StringType
+                    nullable = true
+                    defaultValue = null
+                }
+            ),
+        ) { backStackEntry ->
             com.adulthub.tv.ui.library.LibraryScreen(
+                initialCategoryId = backStackEntry.arguments?.getString("categoryId"),
                 isCurrentDestination = currentBackStackEntry?.id == backStackEntry.id,
                 onNavigateBack = { navController.popBackStack() },
                 onNavigateToItemDetail = { itemId ->

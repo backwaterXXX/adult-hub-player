@@ -169,10 +169,11 @@ class PlayerViewModel(
         loadItemJob?.cancel()
         _isLoadingRandom.value = true
         viewModelScope.launch {
+            val currentItem = (_uiState.value as? PlayerUiState.Ready)?.item
+            if (currentItem != null) persistTelegramProgress(currentItem, currentPositionMs, isEnded = false)
             // Stop current playback reporting session
             playbackReporter.stopSession(currentPositionMs)
 
-            val currentItem = (_uiState.value as? PlayerUiState.Ready)?.item
             val currentId = currentItem?.id
             val libraryId = settingsDataStore.selectedLibraryId.firstOrNull()
             if (playbackRequestId != playbackRequestCounter) return@launch
@@ -293,31 +294,37 @@ class PlayerViewModel(
 
     private fun saveTelegramProgress(positionMs: Long, isEnded: Boolean) {
         val ready = _uiState.value as? PlayerUiState.Ready ?: return
-        val item = ready.item
+        viewModelScope.launch { persistTelegramProgress(ready.item, positionMs, isEnded) }
+    }
+
+    suspend fun checkpointTelegramProgress(positionMs: Long) {
+        val ready = _uiState.value as? PlayerUiState.Ready ?: return
+        persistTelegramProgress(ready.item, positionMs, isEnded = false)
+    }
+
+    private suspend fun persistTelegramProgress(item: TvItem, positionMs: Long, isEnded: Boolean) {
         val provVideoId = item.providerVideoId ?: return
         if (runCatching { java.util.UUID.fromString(item.id) }.isSuccess) return
 
         val durationMs = item.runtimeTicks?.div(10_000L) ?: 0L
-        viewModelScope.launch {
-            if (isEnded || (durationMs > 0L && positionMs >= durationMs * 0.90f)) {
-                telegramProgressStore?.markPlayed(
-                    providerVideoId = provVideoId,
-                    isPlayed = true,
-                    title = item.title,
-                    thumbnailUrl = item.posterUrl,
-                    channelId = item.channelId,
-                )
-            } else if (positionMs > 15_000L) {
-                telegramProgressStore?.saveProgress(
-                    providerVideoId = provVideoId,
-                    positionMs = positionMs,
-                    durationMs = durationMs,
-                    title = item.title,
-                    thumbnailUrl = item.posterUrl,
-                    channelId = item.channelId,
-                    isPlayed = false,
-                )
-            }
+        if (isEnded || (durationMs > 0L && positionMs >= durationMs * 0.90f)) {
+            telegramProgressStore?.markPlayed(
+                providerVideoId = provVideoId,
+                isPlayed = true,
+                title = item.title,
+                thumbnailUrl = item.posterUrl,
+                channelId = item.channelId,
+            )
+        } else if (positionMs > 15_000L) {
+            telegramProgressStore?.saveProgress(
+                providerVideoId = provVideoId,
+                positionMs = positionMs,
+                durationMs = durationMs,
+                title = item.title,
+                thumbnailUrl = item.posterUrl,
+                channelId = item.channelId,
+                isPlayed = false,
+            )
         }
     }
 }

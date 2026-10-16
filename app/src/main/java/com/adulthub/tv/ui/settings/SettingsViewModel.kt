@@ -144,9 +144,18 @@ class SettingsViewModel(
     fun selectLibrary(library: TvLibrary) {
         viewModelScope.launch {
             settingsDataStore.setSelectedLibrary(library.id, library.name)
-            val categories = libraryRepository.getGenres(limit = 200).getOrDefault(emptyList())
-            val selectedIds = settingsDataStore.selectedHomeCategoryIds.firstOrNull()
-                ?: categories.take(2).map { it.id }.toSet()
+            val categoriesResult = libraryRepository.getGenres(limit = 200)
+            val categories = categoriesResult.getOrDefault(emptyList())
+            val savedCategoryIds = settingsDataStore.selectedHomeCategoryIds.firstOrNull()
+            val availableCategoryIds = categories.map { it.id }.toSet()
+            val selectedIds = when {
+                categoriesResult.isFailure -> savedCategoryIds.orEmpty()
+                savedCategoryIds == null -> categories.take(2).map { it.id }.toSet()
+                savedCategoryIds.isNotEmpty() && savedCategoryIds.intersect(availableCategoryIds).isEmpty() ->
+                    categories.take(2).map { it.id }.toSet()
+                else -> savedCategoryIds.intersect(availableCategoryIds)
+            }
+            if (categoriesResult.isSuccess) settingsDataStore.setSelectedHomeCategoryIds(selectedIds)
             _uiState.update {
                 it.copy(
                     selectedLibraryId = library.id,

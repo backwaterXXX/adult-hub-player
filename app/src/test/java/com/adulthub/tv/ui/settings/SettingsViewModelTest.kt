@@ -93,6 +93,30 @@ class SettingsViewModelTest {
     }
 
     @Test
+    fun `selectLibrary replaces category selections that do not exist in the new library`() = runTest(testDispatcher) {
+        fakeDataStore.selectedHomeCategoryIds.value = setOf("old-library-category")
+        fakeLibraryRepo.genresResult = Result.success(
+            listOf(
+                com.adulthub.tv.data.model.TvCategory("new-a", "A"),
+                com.adulthub.tv.data.model.TvCategory("new-b", "B"),
+                com.adulthub.tv.data.model.TvCategory("new-c", "C"),
+            )
+        )
+        val viewModel = SettingsViewModel(
+            authRepository = fakeAuthRepo,
+            libraryRepository = fakeLibraryRepo,
+            settingsDataStore = fakeDataStore,
+        )
+        advanceUntilIdle()
+
+        viewModel.selectLibrary(TvLibrary(id = "lib-2", name = "New Library"))
+        advanceUntilIdle()
+
+        assertEquals(setOf("new-a", "new-b"), fakeDataStore.selectedHomeCategoryIds.value)
+        assertEquals(setOf("new-a", "new-b"), viewModel.uiState.value.selectedHomeCategoryIds)
+    }
+
+    @Test
     fun `setCacheLimit updates DataStore`() = runTest(testDispatcher) {
         val viewModel = SettingsViewModel(
             authRepository = fakeAuthRepo,
@@ -396,13 +420,14 @@ private class FakeSettingsAuthRepo : AuthRepository(mockk(relaxed = true), mockk
 
 private class FakeSettingsLibraryRepo : LibraryRepository(mockk(relaxed = true), mockk(relaxed = true)) {
     var librariesResult: Result<List<TvLibrary>> = Result.success(emptyList())
+    var genresResult: Result<List<com.adulthub.tv.data.model.TvCategory>> = Result.success(emptyList())
 
     override suspend fun getLibraries(): Result<List<TvLibrary>> {
         return librariesResult
     }
 
     override suspend fun getGenres(parentId: String?, limit: Int): Result<List<com.adulthub.tv.data.model.TvCategory>> =
-        Result.success(emptyList())
+        genresResult
 }
 
 private class FakeSettingsChannelRepo : ChannelRepository(mockk<ResolverApi>(relaxed = true)) {

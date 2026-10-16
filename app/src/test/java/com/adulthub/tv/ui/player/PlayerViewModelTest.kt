@@ -11,6 +11,7 @@ import com.adulthub.tv.data.repository.PlaybackRepository
 import com.adulthub.tv.data.resolver.VideoDto
 import com.adulthub.tv.player.PlaybackReporter
 import io.mockk.coEvery
+import io.mockk.coVerify
 import io.mockk.every
 import io.mockk.mockk
 import kotlinx.coroutines.CoroutineScope
@@ -292,6 +293,48 @@ class PlayerViewModelTest {
         viewModel.onResumeDialogHandled()
         val updated = viewModel.uiState.value as PlayerUiState.Ready
         assertEquals(null, updated.pendingResumePositionMs)
+    }
+
+    @Test
+    fun `switching to a random video saves current telegram progress first`() = runTest(testDispatcher) {
+        val videoId = "-1001188284602:100:12345"
+        val telegramStore = mockk<TelegramProgressStore>(relaxed = true)
+        fakeLibraryRepo.itemResult = Result.failure(IllegalArgumentException("Not a Jellyfin item"))
+        val channelRepo = ChannelRepository(mockk(relaxed = true)).apply {
+            cacheVideo(
+                VideoDto(
+                    id = videoId,
+                    providerVideoId = videoId,
+                    title = "Current channel video",
+                    duration = 120.0,
+                )
+            )
+        }
+        val viewModel = PlayerViewModel(
+            libraryRepository = fakeLibraryRepo,
+            playbackRepository = fakePlaybackRepo,
+            settingsDataStore = settingsDataStore,
+            playbackReporter = PlaybackReporter(fakePlaybackRepo, CoroutineScope(testDispatcher)),
+            channelRepository = channelRepo,
+            telegramProgressStore = telegramStore,
+        )
+
+        viewModel.loadItem(videoId)
+        advanceUntilIdle()
+        viewModel.playRandomMovie(currentPositionMs = 60_000L)
+        advanceUntilIdle()
+
+        coVerify(exactly = 1) {
+            telegramStore.saveProgress(
+                providerVideoId = videoId,
+                positionMs = 60_000L,
+                durationMs = 120_000L,
+                title = "Current channel video",
+                thumbnailUrl = null,
+                channelId = null,
+                isPlayed = false,
+            )
+        }
     }
 }
 

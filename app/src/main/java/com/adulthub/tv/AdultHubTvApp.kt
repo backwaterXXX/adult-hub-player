@@ -10,8 +10,6 @@ import coil.request.CachePolicy
 import com.adulthub.tv.data.jellyfin.JellyfinClientManager
 import com.adulthub.tv.data.local.SettingsDataStore
 import com.adulthub.tv.data.update.AppUpdateManager
-import com.adulthub.tv.data.network.ServiceUrlPolicy
-import com.adulthub.tv.data.network.ServiceUrlValidation
 import com.adulthub.tv.di.appModule
 import com.adulthub.tv.di.repositoryModule
 import com.adulthub.tv.di.viewModelModule
@@ -27,13 +25,11 @@ import kotlinx.coroutines.launch
 import okhttp3.OkHttpClient
 import okhttp3.HttpUrl.Companion.toHttpUrlOrNull
 import java.io.IOException
-import java.util.concurrent.CopyOnWriteArraySet
 import java.util.concurrent.atomic.AtomicInteger
 
 class AdultHubTvApp : Application(), ImageLoaderFactory {
     private val applicationScope = CoroutineScope(SupervisorJob() + Dispatchers.IO)
     private val imageCacheLimitMb = AtomicInteger(SettingsDataStore.DEFAULT_CACHE_LIMIT_MB)
-    private val approvedCleartextOrigins = CopyOnWriteArraySet<String>()
     private val settingsDataStore: SettingsDataStore by lazy { GlobalContext.get().get() }
 
     override fun onCreate() {
@@ -57,14 +53,6 @@ class AdultHubTvApp : Application(), ImageLoaderFactory {
                     settingsDataStore.cacheLimitMb.collect(imageCacheLimitMb::set)
                 }
             }
-            launch {
-                runCatching {
-                    settingsDataStore.approvedCleartextOrigins.collect { origins ->
-                        approvedCleartextOrigins.clear()
-                        approvedCleartextOrigins.addAll(origins)
-                    }
-                }
-            }
         }
     }
 
@@ -72,27 +60,12 @@ class AdultHubTvApp : Application(), ImageLoaderFactory {
         val cacheLimitMb = imageCacheLimitMb.get()
         val clientManager = GlobalContext.get().get<JellyfinClientManager>()
         val imageHttpClient = OkHttpClient.Builder()
-            .addInterceptor { chain ->
+            .addNetworkInterceptor { chain ->
                 val request = chain.request()
                 val urlString = request.url.toString()
-                try {
-                    val validation = ServiceUrlPolicy.inspect(urlString, allowQuery = true)
-                    when (validation) {
-                        is ServiceUrlValidation.Invalid -> throw IllegalArgumentException(validation.reason)
-                        is ServiceUrlValidation.Valid -> {
-                            val serviceUrl = validation.value
-                            if (serviceUrl.usesCleartext) {
-                                val isApproved = serviceUrl.origin in approvedCleartextOrigins ||
-                                    runCatching {
-                                        runBlocking(Dispatchers.IO) {
-                                            settingsDataStore.isCleartextOriginApproved(urlString)
-                                        }
-                                    }.getOrDefault(false)
-                                if (!isApproved) {
-                                    throw IllegalStateException("Confirm unencrypted HTTP for this private LAN host before connecting")
-                                }
-                            }
-                        }
+                val serviceUrl = try {
+                    runBlocking(Dispatchers.IO) {
+                        settingsDataStore.requireAllowedServiceUrl(urlString, allowQuery = true)
                     }
                 } catch (error: Exception) {
                     throw IOException("Blocked image request to an unapproved HTTP origin", error)
@@ -106,7 +79,7 @@ class AdultHubTvApp : Application(), ImageLoaderFactory {
                 val authenticatedRequest = if (isJellyfinRequest && !token.isNullOrBlank()) {
                     request.newBuilder().header("X-Emby-Token", token).build()
                 } else {
-                    request
+                    request.newBuilder().removeHeader("X-Emby-Token").build()
                 }
                 chain.proceed(authenticatedRequest)
             }

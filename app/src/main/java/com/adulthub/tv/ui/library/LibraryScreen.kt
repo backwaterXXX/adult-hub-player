@@ -36,6 +36,7 @@ fun LibraryScreen(
     onNavigateToItemDetail: (String) -> Unit,
     onNavigateToPersonDetail: (String, String) -> Unit,
     onNavigateToPlayer: (String) -> Unit = {},
+    initialCategoryId: String? = null,
     isCurrentDestination: Boolean = true,
     modifier: Modifier = Modifier,
     viewModel: LibraryViewModel = koinViewModel(),
@@ -43,6 +44,10 @@ fun LibraryScreen(
     val state by viewModel.uiState.collectAsStateWithLifecycle()
     val contentFocusRequester = remember { FocusRequester() }
     var hasBeenCurrentDestination by remember { mutableStateOf(false) }
+
+    LaunchedEffect(initialCategoryId) {
+        initialCategoryId?.let(viewModel::openCategory)
+    }
 
     val handleBack: () -> Unit = {
         when {

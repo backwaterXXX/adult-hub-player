@@ -7,7 +7,11 @@ sealed class Screen(val route: String) {
     data object QuickConnect : Screen("quick_connect")
     data object LibrarySelect : Screen("library_select")
     data object Home : Screen("home")
-    data object Library : Screen("library")
+    data object Library : Screen("library?categoryId={categoryId}") {
+        fun createRoute(categoryId: String? = null): String =
+            if (categoryId.isNullOrBlank()) "library"
+            else "library?categoryId=${android.net.Uri.encode(categoryId)}"
+    }
     data object ItemDetail : Screen("item_detail/{itemId}") {
         fun createRoute(itemId: String): String = "item_detail/${android.net.Uri.encode(itemId)}"
     }

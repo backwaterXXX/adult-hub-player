@@ -18,9 +18,14 @@ class ResolverApiClient(
         encodeDefaults = true
     }
 
-    private val client = okHttpClient ?: OkHttpClient.Builder()
+    private val client = (okHttpClient ?: OkHttpClient.Builder()
         .connectTimeout(15, TimeUnit.SECONDS)
         .readTimeout(30, TimeUnit.SECONDS)
+        .build())
+        // Resolver endpoints return JSON. Do not forward X-Emby-Token to redirect targets.
+        .newBuilder()
+        .followRedirects(false)
+        .followSslRedirects(false)
         .build()
     private val longRunningClient = client.newBuilder()
         .readTimeout(11, TimeUnit.MINUTES)

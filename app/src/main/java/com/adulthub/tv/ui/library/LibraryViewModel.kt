@@ -83,6 +83,7 @@ data class CategoriesTabState(
     val isLoadingMoreCategoryMovies: Boolean = false,
     val hasMoreCategoryMovies: Boolean = false,
     val totalCount: Int = 0,
+    val categoryMoviesOffset: Int = 0,
     val categoryMoviesError: String? = null,
     val lastSelectedCategoryId: String? = null,
     val lastSelectedMovieId: String? = null,
@@ -116,6 +117,7 @@ data class StudiosTabState(
     val isLoadingMoreStudioMovies: Boolean = false,
     val hasMoreStudioMovies: Boolean = false,
     val totalCount: Int = 0,
+    val studioMoviesOffset: Int = 0,
     val studioMoviesError: String? = null,
     val lastSelectedStudioId: String? = null,
     val lastSelectedMovieId: String? = null,
@@ -297,6 +299,21 @@ class LibraryViewModel(
         }
     }
 
+    fun openCategory(categoryId: String) {
+        _uiState.update { it.copy(selectedTab = LibraryTab.CATEGORIES) }
+        viewModelScope.launch {
+            val categories = libraryRepository.getGenres().getOrDefault(emptyList())
+            _uiState.update { state ->
+                state.copy(categoriesState = state.categoriesState.copy(
+                    categories = categories.sortedBy { it.name.lowercase() },
+                    isLoading = false,
+                    errorMessage = null,
+                ))
+            }
+            categories.firstOrNull { it.id == categoryId }?.let(::selectCategory)
+        }
+    }
+
     // --- CATEGORIES TAB ---
 
     fun loadCategories() {
@@ -341,6 +358,7 @@ class LibraryViewModel(
                     isLoadingMoreCategoryMovies = false,
                     hasMoreCategoryMovies = false,
                     totalCount = 0,
+                    categoryMoviesOffset = 0,
                 )
             )
         }
@@ -379,7 +397,7 @@ class LibraryViewModel(
                 } else state
             }
 
-            val startIndex = if (reset) 0 else _uiState.value.categoriesState.categoryMovies.size
+            val startIndex = if (reset) 0 else _uiState.value.categoriesState.categoryMoviesOffset
             val pageSize = 60
             val result = libraryRepository.getGenreMoviesPage(
                 genreName = category.name,
@@ -403,6 +421,7 @@ class LibraryViewModel(
                             categoriesState = state.categoriesState.copy(
                                 categoryMovies = combined,
                                 totalCount = page.totalRecordCount,
+                                categoryMoviesOffset = page.startIndex + page.items.size,
                                 isLoadingCategoryMovies = false,
                                 isLoadingMoreCategoryMovies = false,
                                 categoryMoviesError = null,
@@ -770,6 +789,7 @@ private fun filterActors(
                     isLoadingMoreStudioMovies = false,
                     hasMoreStudioMovies = false,
                     totalCount = 0,
+                    studioMoviesOffset = 0,
                 )
             )
         }
@@ -808,7 +828,7 @@ private fun filterActors(
                 } else state
             }
 
-            val startIndex = if (reset) 0 else _uiState.value.studiosState.studioMovies.size
+            val startIndex = if (reset) 0 else _uiState.value.studiosState.studioMoviesOffset
             val pageSize = 50
             val result = studioRepository.getStudioMoviesPage(
                 studioName = studio.name,
@@ -831,6 +851,7 @@ private fun filterActors(
                             studiosState = state.studiosState.copy(
                                 studioMovies = combined,
                                 totalCount = page.totalRecordCount,
+                                studioMoviesOffset = page.startIndex + page.items.size,
                                 isLoadingStudioMovies = false,
                                 isLoadingMoreStudioMovies = false,
                                 studioMoviesError = null,
@@ -1095,6 +1116,7 @@ private fun filterActors(
                 )
             }
             if (shouldAutoFetch) {
+                channelVideosJob = null
                 loadChannelVideos(channel, reset = false, autoFetchEmptyAttempts = autoFetchEmptyAttempts + 1)
             }
         }

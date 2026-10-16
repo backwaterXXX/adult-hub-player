@@ -350,6 +350,42 @@ class LibraryViewModelTest {
     }
 
     @Test
+    fun `category pagination advances by server records after removing duplicates`() = runTest(testDispatcher) {
+        val category = TvCategory(id = "cat-duplicates", name = "Drama")
+        val firstPage = listOf(
+            TvItem(id = "same-a", title = "Same A", providerVideoId = "provider-1"),
+            TvItem(id = "same-b", title = "Same B", providerVideoId = "provider-1"),
+        )
+        fakeLibraryRepository.genreMoviesPageResult = Result.success(
+            TvItemsPage(items = firstPage, totalRecordCount = 4, startIndex = 0)
+        )
+        val viewModel = LibraryViewModel(
+            libraryRepository = fakeLibraryRepository,
+            personRepository = fakePersonRepository,
+            studioRepository = fakeStudioRepository,
+            channelRepository = fakeChannelRepository,
+            clientManager = clientManager,
+        )
+
+        viewModel.selectCategory(category)
+        advanceUntilIdle()
+        assertEquals(1, viewModel.uiState.value.categoriesState.categoryMovies.size)
+
+        fakeLibraryRepository.genreMoviesPageResult = Result.success(
+            TvItemsPage(
+                items = listOf(TvItem(id = "page-two", title = "Page Two"), TvItem(id = "page-three", title = "Page Three")),
+                totalRecordCount = 4,
+                startIndex = 2,
+            )
+        )
+        viewModel.loadMoreCategoryMovies()
+        advanceUntilIdle()
+
+        assertEquals(listOf(0, 2), fakeLibraryRepository.genreMoviesStartIndexes)
+        assertEquals(3, viewModel.uiState.value.categoriesState.categoryMovies.size)
+    }
+
+    @Test
     fun `selectStudio supports pagination and load more`() = runTest(testDispatcher) {
         val stdMovie1 = TvItem(id = "sm-1", title = "Studio Movie 1")
         val stdMovie2 = TvItem(id = "sm-2", title = "Studio Movie 2")
@@ -446,6 +482,32 @@ class LibraryViewModelTest {
         assertEquals(200L, stateSecondPage.nextOffsetId)
         assertFalse(stateSecondPage.isLoadingMoreVideos)
         assertEquals(500L, fakeChannelRepository.lastRequestedOffsetId)
+    }
+
+    @Test
+    fun `channel filtering automatically advances when a page has no visible videos`() = runTest(testDispatcher) {
+        val shortVideo = VideoDto(id = "short", title = "Short video", duration = 30.0)
+        val longVideo = VideoDto(id = "long", title = "Long video", duration = 3_600.0)
+        fakeChannelRepository.channelHistoryResults[null] = Result.success(
+            ChannelHistoryPage(listOf(shortVideo), 500L, true, 2)
+        )
+        fakeChannelRepository.channelHistoryResults[500L] = Result.success(
+            ChannelHistoryPage(listOf(longVideo), null, false, 1)
+        )
+        val viewModel = LibraryViewModel(
+            libraryRepository = fakeLibraryRepository,
+            personRepository = fakePersonRepository,
+            studioRepository = fakeStudioRepository,
+            channelRepository = fakeChannelRepository,
+            clientManager = clientManager,
+        )
+        viewModel.setChannelDurationFilter(com.adulthub.tv.data.model.DurationFilter.LONG)
+
+        viewModel.selectChannel(sampleChannel)
+        advanceUntilIdle()
+
+        assertEquals(2, fakeChannelRepository.channelHistoryRequests)
+        assertEquals(listOf(longVideo), viewModel.uiState.value.channelsState.channelVideos)
     }
 
     @Test
@@ -654,6 +716,7 @@ class LibraryViewModelTest {
 
         var genreMoviesPageResult: Result<TvItemsPage>? = null
         var genreMoviesResult: Result<List<TvItem>> = Result.success(emptyList())
+        val genreMoviesStartIndexes = mutableListOf<Int>()
 
         override suspend fun getGenres(parentId: String?, limit: Int): Result<List<TvCategory>> {
             genreRequestCount += 1
@@ -675,6 +738,7 @@ class LibraryViewModelTest {
             startIndex: Int,
             limit: Int,
         ): Result<TvItemsPage> {
+            genreMoviesStartIndexes += startIndex
             val pageRes = genreMoviesPageResult
             if (pageRes != null) return pageRes
             return genreMoviesResult.map { items ->
@@ -768,6 +832,7 @@ class LibraryViewModelTest {
         var categoryVideosResult: Result<List<VideoDto>> = Result.success(emptyList())
         var categoryVideoRequests = 0
         var channelHistoryResult: Result<ChannelHistoryPage>? = null
+        val channelHistoryResults = mutableMapOf<Long?, Result<ChannelHistoryPage>>()
         var channelHistoryRequests = 0
         var lastRequestedOffsetId: Long? = null
 
@@ -776,6 +841,7 @@ class LibraryViewModelTest {
         override suspend fun getChannelHistory(channelId: String, offsetId: Long?, limit: Int): Result<ChannelHistoryPage> {
             channelHistoryRequests++
             lastRequestedOffsetId = offsetId
+            channelHistoryResults[offsetId]?.let { return it }
             val res = channelHistoryResult
             if (res != null) return res
             return Result.failure(UnsupportedOperationException("Fallback to categoryVideos"))

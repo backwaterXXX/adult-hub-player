@@ -18,7 +18,9 @@ import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asSharedFlow
 import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.flow.collectLatest
+import kotlinx.coroutines.flow.distinctUntilChanged
 import kotlinx.coroutines.flow.firstOrNull
+import kotlinx.coroutines.flow.drop
 import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.launch
 
@@ -82,11 +84,29 @@ class HomeViewModel(
 
     private val _navEvents = MutableSharedFlow<HomeNavEvent>()
     val navEvents: SharedFlow<HomeNavEvent> = _navEvents.asSharedFlow()
+    private var libraryNameJob: kotlinx.coroutines.Job? = null
+    private var resumeJob: kotlinx.coroutines.Job? = null
+    private var watchHistoryJob: kotlinx.coroutines.Job? = null
+    private var latestJob: kotlinx.coroutines.Job? = null
+    private var randomJob: kotlinx.coroutines.Job? = null
+    private var performersJob: kotlinx.coroutines.Job? = null
 
     init {
         viewModelScope.launch {
             settingsDataStore.excludedTags.collect { excluded ->
-                _uiState.update { it.copy(excludedTags = excluded) }
+                _uiState.update { state ->
+                    state.copy(
+                        excludedTags = excluded,
+                        resumeSection = state.resumeSection.copy(items = filterExcluded(state.resumeSection.items, excluded)),
+                        watchHistorySection = state.watchHistorySection.copy(items = filterExcluded(state.watchHistorySection.items, excluded)),
+                        latestSection = state.latestSection.copy(items = filterExcluded(state.latestSection.items, excluded)),
+                        randomSection = state.randomSection.copy(items = filterExcluded(state.randomSection.items, excluded)),
+                        categoryRows = state.categoryRows.mapNotNull { row ->
+                            val items = filterExcluded(row.items, excluded)
+                            if (items.isEmpty()) null else row.copy(items = items)
+                        },
+                    )
+                }
             }
         }
         viewModelScope.launch {
@@ -94,11 +114,19 @@ class HomeViewModel(
                 loadCategoryRows(selectedIds)
             }
         }
+        viewModelScope.launch {
+            settingsDataStore.selectedLibraryId
+                .drop(1)
+                .distinctUntilChanged()
+                .collect {
+                    loadAll()
+                    loadCategoryRows(settingsDataStore.selectedHomeCategoryIds.firstOrNull())
+                }
+        }
         loadAll()
     }
 
-    private fun filterExcluded(items: List<TvItem>): List<TvItem> {
-        val excluded = _uiState.value.excludedTags
+    private fun filterExcluded(items: List<TvItem>, excluded: Set<String> = _uiState.value.excludedTags): List<TvItem> {
         if (excluded.isEmpty()) return items
         return items.filter { item ->
             val hasExcludedGenre = item.genres.any { g -> excluded.any { it.equals(g, ignoreCase = true) } }
@@ -108,7 +136,8 @@ class HomeViewModel(
     }
 
     fun loadAll() {
-        viewModelScope.launch {
+        libraryNameJob?.cancel()
+        libraryNameJob = viewModelScope.launch {
             val libName = settingsDataStore.getSavedLibraryName().orEmpty()
             _uiState.update { it.copy(libraryName = libName) }
         }
@@ -120,7 +149,8 @@ class HomeViewModel(
     }
 
     fun loadResume() {
-        viewModelScope.launch {
+        resumeJob?.cancel()
+        resumeJob = viewModelScope.launch {
             _uiState.update { it.copy(resumeSection = it.resumeSection.copy(isLoading = true, errorMessage = null)) }
             val result = libraryRepository.getResumeItems(limit = 15)
             val telegramItems = telegramProgressStore?.allProgress?.firstOrNull().orEmpty()
@@ -160,7 +190,8 @@ class HomeViewModel(
     }
 
     fun loadWatchHistory() {
-        viewModelScope.launch {
+        watchHistoryJob?.cancel()
+        watchHistoryJob = viewModelScope.launch {
             _uiState.update { it.copy(watchHistorySection = it.watchHistorySection.copy(isLoading = true, errorMessage = null)) }
             val records = watchHistoryStore?.history?.firstOrNull().orEmpty()
             val items = filterExcluded(
@@ -171,7 +202,8 @@ class HomeViewModel(
     }
 
     fun loadLatest() {
-        viewModelScope.launch {
+        latestJob?.cancel()
+        latestJob = viewModelScope.launch {
             _uiState.update { it.copy(latestSection = it.latestSection.copy(isLoading = true, errorMessage = null)) }
             val result = libraryRepository.getLatestItems(limit = 20)
             _uiState.update { state ->
@@ -189,7 +221,8 @@ class HomeViewModel(
     }
 
     fun loadRandom() {
-        viewModelScope.launch {
+        randomJob?.cancel()
+        randomJob = viewModelScope.launch {
             _uiState.update { it.copy(randomSection = it.randomSection.copy(isLoading = true, errorMessage = null)) }
             val filters = if (_uiState.value.randomUnwatchedOnly) setOf(ItemFilter.IS_UNPLAYED) else emptySet()
             val result = libraryRepository.getRandomItems(limit = 20, filters = filters)
@@ -235,7 +268,8 @@ class HomeViewModel(
     }
 
     fun loadPerformers() {
-        viewModelScope.launch {
+        performersJob?.cancel()
+        performersJob = viewModelScope.launch {
             _uiState.update { it.copy(performersSection = it.performersSection.copy(isLoading = true, errorMessage = null)) }
             val result = personRepository.getRandomPersonsWithPhotos(limit = 20)
             _uiState.update { state ->

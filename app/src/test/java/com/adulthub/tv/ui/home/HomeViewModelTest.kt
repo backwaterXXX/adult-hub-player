@@ -7,9 +7,11 @@ import com.adulthub.tv.data.model.TvPerson
 import com.adulthub.tv.data.repository.LibraryRepository
 import com.adulthub.tv.data.repository.PersonRepository
 import io.mockk.coEvery
+import io.mockk.every
 import io.mockk.mockk
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.ExperimentalCoroutinesApi
+import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.test.StandardTestDispatcher
 import kotlinx.coroutines.test.advanceUntilIdle
@@ -119,6 +121,48 @@ class HomeViewModelTest {
     }
 
     @Test
+    fun `changing excluded tags immediately filters already loaded home sections`() = runTest(testDispatcher) {
+        val excludedTags = MutableStateFlow(emptySet<String>())
+        every { settingsDataStore.excludedTags } returns excludedTags
+        fakeLibraryRepository.latestResult = Result.success(listOf(sampleItem))
+        val viewModel = HomeViewModel(
+            libraryRepository = fakeLibraryRepository,
+            personRepository = fakePersonRepository,
+            settingsDataStore = settingsDataStore,
+            clientManager = clientManager,
+        )
+
+        advanceUntilIdle()
+        assertEquals(1, viewModel.uiState.value.latestSection.items.size)
+
+        excludedTags.value = setOf("Action")
+        advanceUntilIdle()
+
+        assertTrue(viewModel.uiState.value.latestSection.items.isEmpty())
+        assertTrue(viewModel.uiState.value.randomSection.items.isEmpty())
+    }
+
+    @Test
+    fun `changing selected library reloads home sections`() = runTest(testDispatcher) {
+        val selectedLibraryId = MutableStateFlow<String?>("library-1")
+        every { settingsDataStore.selectedLibraryId } returns selectedLibraryId
+        val viewModel = HomeViewModel(
+            libraryRepository = fakeLibraryRepository,
+            personRepository = fakePersonRepository,
+            settingsDataStore = settingsDataStore,
+            clientManager = clientManager,
+        )
+
+        advanceUntilIdle()
+        assertEquals(1, fakeLibraryRepository.latestRequests)
+
+        selectedLibraryId.value = "library-2"
+        advanceUntilIdle()
+
+        assertEquals(2, fakeLibraryRepository.latestRequests)
+    }
+
+    @Test
     fun `retry on failed section reloads only that section`() = runTest(testDispatcher) {
         fakeLibraryRepository.resumeResult = Result.failure(RuntimeException("First attempt failed"))
 
@@ -221,9 +265,13 @@ class HomeViewModelTest {
         var latestResult: Result<List<TvItem>> = Result.success(emptyList())
         var randomResult: Result<List<TvItem>> = Result.success(emptyList())
         var singleRandomResult: Result<TvItem?> = Result.success(null)
+        var latestRequests = 0
 
         override suspend fun getResumeItems(limit: Int): Result<List<TvItem>> = resumeResult
-        override suspend fun getLatestItems(parentId: String?, limit: Int): Result<List<TvItem>> = latestResult
+        override suspend fun getLatestItems(parentId: String?, limit: Int): Result<List<TvItem>> {
+            latestRequests += 1
+            return latestResult
+        }
         override suspend fun getRandomItems(
             parentId: String?,
             limit: Int,

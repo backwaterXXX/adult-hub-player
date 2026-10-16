@@ -37,6 +37,7 @@ import com.adulthub.tv.data.local.BufferProfile
 import com.adulthub.tv.data.network.ServiceUrlPolicy
 import com.adulthub.tv.data.network.ServiceUrlValidation
 import okhttp3.OkHttpClient
+import okhttp3.HttpUrl.Companion.toHttpUrlOrNull
 import java.io.IOException
 
 private const val TAG = "PlayerManager"
@@ -63,6 +64,7 @@ class PlayerManager(
     private var playbackGeneration = 0L
     private var automaticRetryCount = 0
     private var playbackRequest: PlaybackRequest? = null
+    private var released = false
     private var preparingStartedAt: Long? = null
     private var readyLoggedForCurrentMedia = false
     private var videoDecoderName: String? = null
@@ -274,6 +276,7 @@ class PlayerManager(
         clearRangeCache: Boolean,
         resumePlayback: Boolean,
     ) {
+        released = false
         _errorMessage.value = null
         streamFileSizeBytes = null
         videoDecoderName = null
@@ -287,18 +290,34 @@ class PlayerManager(
         readyLoggedForCurrentMedia = false
         stopPositionPolling()
 
+        val initialUrl = streamUrl.toHttpUrlOrNull()
+            ?: throw IllegalArgumentException("Invalid stream URL")
+        val initialOrigin = "${initialUrl.scheme}://${initialUrl.host}:${initialUrl.port}"
+        val forwardedHeaderNames = headers.keys.toList()
         val httpClient = OkHttpClient.Builder()
             .connectTimeout(15, java.util.concurrent.TimeUnit.SECONDS)
             .readTimeout(20, java.util.concurrent.TimeUnit.SECONDS)
             .addNetworkInterceptor { chain ->
                 val request = chain.request()
                 if (request.url.isHttps) {
-                    chain.proceed(request)
+                    val redirectedOrigin = "${request.url.scheme}://${request.url.host}:${request.url.port}"
+                    val safeRequest = if (redirectedOrigin == initialOrigin) request else {
+                        request.newBuilder().apply {
+                            forwardedHeaderNames.forEach(::removeHeader)
+                            removeHeader("Authorization")
+                            removeHeader("Cookie")
+                            removeHeader("X-Emby-Token")
+                        }.build()
+                    }
+                    chain.proceed(safeRequest)
                 } else {
                     when (val validation = ServiceUrlPolicy.inspect(request.url.toString(), allowQuery = true)) {
                         is ServiceUrlValidation.Valid -> {
                             if (!validation.value.usesCleartext) {
                                 throw IOException("Blocked an insecure stream redirect")
+                            }
+                            if (validation.value.origin != initialOrigin) {
+                                throw IOException("Blocked a cleartext redirect to a different host")
                             }
                             chain.proceed(request)
                         }
@@ -448,6 +467,8 @@ class PlayerManager(
     }
 
     fun release() {
+        if (released) return
+        released = true
         playbackGeneration += 1
         retryJob?.cancel()
         retryJob = null

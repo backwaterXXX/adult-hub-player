@@ -173,6 +173,16 @@ fun PlayerScreen(
         osdTimerTrigger = System.currentTimeMillis()
     }
 
+    LaunchedEffect(readyState?.playbackRequestId, playerManager) {
+        if (readyState == null) return@LaunchedEffect
+        while (true) {
+            delay(15_000L)
+            if (playerManager.isPlaying.value) {
+                viewModel.checkpointTelegramProgress(playerManager.currentPositionMs.value)
+            }
+        }
+    }
+
     // Auto-play next countdown when scene ends
     LaunchedEffect(isPlaybackEnded, autoplayNext) {
         if (isPlaybackEnded && autoplayNext) {
@@ -254,7 +264,7 @@ fun PlayerScreen(
     }
 
     // Cleanup when leaving screen
-    DisposableEffect(Unit) {
+    DisposableEffect(playerManager) {
         onDispose {
             viewModel.onExitPlayer(playerManager.currentPositionMs.value)
             playerManager.release()
