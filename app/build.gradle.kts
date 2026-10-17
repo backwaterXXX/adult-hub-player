@@ -16,8 +16,8 @@ android {
         applicationId = "com.adulthub.tv"
         minSdk = 28
         targetSdk = 35
-        versionCode = 63
-        versionName = "0.1.62"
+        versionCode = 68
+        versionName = "0.1.68"
 
         testInstrumentationRunner = "androidx.test.runner.AndroidJUnitRunner"
         val updateOwner = providers.environmentVariable("UPDATE_GITHUB_OWNER")
@@ -26,10 +26,28 @@ android {
             .get()
         val updateRepo = providers.environmentVariable("UPDATE_GITHUB_REPO")
             .orElse(providers.gradleProperty("updateGithubRepo"))
-            .orElse("adult-hub-tv")
+            .orElse("adult-hub-player")
             .get()
         buildConfigField("String", "UPDATE_GITHUB_OWNER", "\"$updateOwner\"")
         buildConfigField("String", "UPDATE_GITHUB_REPO", "\"$updateRepo\"")
+    }
+
+    flavorDimensions += "device"
+    productFlavors {
+        create("tv") {
+            dimension = "device"
+            applicationId = "com.adulthub.tv"
+            buildConfigField("String", "CLIENT_NAME", "\"Adult Hub TV\"")
+            buildConfigField("String", "DEVICE_NAME", "\"Android TV\"")
+            buildConfigField("String", "UPDATE_MANIFEST_ASSET", "\"stable.json\"")
+        }
+        create("mobile") {
+            dimension = "device"
+            applicationId = "com.adulthub.mobile"
+            buildConfigField("String", "CLIENT_NAME", "\"Adult Hub Mobile\"")
+            buildConfigField("String", "DEVICE_NAME", "\"Android Mobile\"")
+            buildConfigField("String", "UPDATE_MANIFEST_ASSET", "\"stable-mobile.json\"")
+        }
     }
 
     signingConfigs {
@@ -48,6 +66,12 @@ android {
     }
 
     buildTypes {
+        debug {
+            val keystorePropertiesFile = rootProject.file("keystore.properties")
+            if (keystorePropertiesFile.exists()) {
+                signingConfig = signingConfigs.getByName("release")
+            }
+        }
         release {
             isMinifyEnabled = true
             isShrinkResources = true
@@ -99,6 +123,7 @@ dependencies {
     implementation(libs.androidx.compose.ui)
     implementation(libs.androidx.compose.ui.graphics)
     implementation(libs.androidx.compose.ui.tooling.preview)
+    implementation("androidx.compose.material3:material3")
     implementation(libs.androidx.tv.material)
     implementation(libs.androidx.lifecycle.viewmodel.compose)
     implementation(libs.androidx.lifecycle.runtime.compose)

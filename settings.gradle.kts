@@ -14,5 +14,5 @@ dependencyResolutionManagement {
     }
 }
 
-rootProject.name = "adult-hub-tv"
+rootProject.name = "adult-hub-player"
 include(":app")

@@ -112,6 +112,8 @@ open class PlaybackRepository(
                 },
                 title = item.title,
                 fileSizeBytes = mediaSource?.size ?: item.fileSizeBytes,
+                container = mediaSource?.container ?: item.container,
+                durationMs = item.runtimeTicks?.div(10_000L),
             )
             Result.success(playbackInfo)
         } catch (e: CancellationException) {

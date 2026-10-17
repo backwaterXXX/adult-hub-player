@@ -46,7 +46,7 @@ object AppLog {
     fun exportText(): String {
         val snapshot = synchronized(lock) { entries.toList() }
         return buildString {
-            appendLine("Adult Hub TV diagnostics")
+            appendLine("Adult Hub diagnostics")
             appendLine("App version: ${BuildConfig.VERSION_NAME} (${BuildConfig.VERSION_CODE})")
             appendLine("Android API: ${android.os.Build.VERSION.SDK_INT}")
             appendLine("Exported at: ${timestampFormatter.format(Instant.now())}")

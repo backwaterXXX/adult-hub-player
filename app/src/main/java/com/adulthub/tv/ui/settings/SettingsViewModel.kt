@@ -318,12 +318,13 @@ class SettingsViewModel(
 
     private suspend fun persistResolverUrl(url: String) {
         settingsDataStore.setResolverBaseUrl(url)
+        val effectiveUrl = url.ifBlank { _uiState.value.serverUrl }
         _uiState.update {
             it.copy(
-                resolverBaseUrl = url,
-                resolverUrlDraft = url,
+                resolverBaseUrl = effectiveUrl,
+                resolverUrlDraft = effectiveUrl,
                 resolverConnectionStatus = "Not checked",
-                statusMessage = if (url.isBlank()) "Resolver URL cleared" else "Resolver URL updated",
+                statusMessage = if (url.isBlank()) "Using Jellyfin server URL" else "Resolver URL updated",
             )
         }
     }

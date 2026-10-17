@@ -11,6 +11,7 @@ import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.activity.result.contract.ActivityResultContracts
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
+import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
@@ -31,6 +32,7 @@ import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.text.KeyboardActions
 import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.CompositionLocalProvider
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
@@ -65,6 +67,7 @@ import com.adulthub.tv.ui.components.TvPageHeader
 import com.adulthub.tv.ui.components.TvChoiceChip
 import com.adulthub.tv.ui.components.TvSecondaryButton
 import com.adulthub.tv.ui.components.TvTextField
+import com.adulthub.tv.ui.components.LocalTouchUi
 import com.adulthub.tv.ui.theme.CardSurface
 import com.adulthub.tv.ui.theme.NeonPink
 import com.adulthub.tv.ui.theme.OledBlack
@@ -87,6 +90,7 @@ fun SettingsScreen(
     onNavigateBack: () -> Unit,
     onSignOut: () -> Unit,
     modifier: Modifier = Modifier,
+    isMobile: Boolean = false,
     viewModel: SettingsViewModel = koinViewModel(),
 ) {
     val context = LocalContext.current
@@ -102,6 +106,7 @@ fun SettingsScreen(
     ) { uri ->
         if (uri != null) viewModel.exportDiagnostics(context, uri)
     }
+    val contentHorizontalPadding = if (isMobile) 16.dp else 48.dp
 
     // Handle logout navigation
     LaunchedEffect(uiState.isLoggedOut) {
@@ -120,6 +125,7 @@ fun SettingsScreen(
         }
     }
 
+    CompositionLocalProvider(LocalTouchUi provides isMobile) {
     Column(
         modifier = modifier
             .fillMaxSize()
@@ -127,13 +133,14 @@ fun SettingsScreen(
     ) {
         TvPageHeader(
             title = "Settings",
-            subtitle = "Adult Hub TV v${BuildConfig.VERSION_NAME}",
+            subtitle = "${BuildConfig.CLIENT_NAME} v${BuildConfig.VERSION_NAME}",
             onBack = onNavigateBack,
+            isMobile = isMobile,
         )
 
         // Notification Banner
         AnimatedVisibility(
-            modifier = Modifier.padding(horizontal = 48.dp),
+            modifier = Modifier.padding(horizontal = contentHorizontalPadding),
             visible = uiState.statusMessage != null,
             enter = fadeIn(),
             exit = fadeOut(),
@@ -158,13 +165,13 @@ fun SettingsScreen(
             }
         }
 
-        Spacer(modifier = Modifier.padding(horizontal = 48.dp).height(20.dp))
+        Spacer(modifier = Modifier.padding(horizontal = contentHorizontalPadding).height(if (isMobile) 8.dp else 20.dp))
 
         // Settings Content List
         LazyColumn(
-            verticalArrangement = Arrangement.spacedBy(20.dp),
-            contentPadding = PaddingValues(bottom = 40.dp),
-            modifier = Modifier.weight(1f).fillMaxWidth().padding(horizontal = 48.dp),
+            verticalArrangement = Arrangement.spacedBy(if (isMobile) 8.dp else 20.dp),
+            contentPadding = PaddingValues(bottom = if (isMobile) 20.dp else 40.dp),
+            modifier = Modifier.weight(1f).fillMaxWidth().padding(horizontal = contentHorizontalPadding),
         ) {
             // 1. Session & Server Section
             item(key = "section_session") {
@@ -181,7 +188,7 @@ fun SettingsScreen(
                             Spacer(modifier = Modifier.height(6.dp))
                             SettingsInfoRow(label = "Username", value = uiState.username.ifEmpty { "Guest" })
                             Spacer(modifier = Modifier.height(6.dp))
-                            SettingsInfoRow(label = "Streaming Mode", value = "Direct Play (Resolver Proxy)")
+                            SettingsInfoRow(label = "Playback", value = "Jellyfin + Adult Hub streams")
                         }
 
                         TvSecondaryButton(
@@ -333,7 +340,26 @@ fun SettingsScreen(
 
                         Spacer(modifier = Modifier.height(14.dp))
 
-                        Row(
+                        if (isMobile) Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
+                            BufferProfile.entries.forEach { profile ->
+                                val selected = uiState.bufferProfile == profile
+                                Row(
+                                    modifier = Modifier.fillMaxWidth()
+                                        .clip(RoundedCornerShape(10.dp))
+                                        .background(if (selected) NeonPink.copy(alpha = 0.14f) else SurfaceDark)
+                                        .border(1.dp, if (selected) NeonPink else Color.White.copy(alpha = 0.14f), RoundedCornerShape(10.dp))
+                                        .clickable { viewModel.setBufferProfile(profile) }
+                                        .padding(horizontal = 14.dp, vertical = 10.dp),
+                                    verticalAlignment = Alignment.CenterVertically,
+                                ) {
+                                    Column(Modifier.weight(1f)) {
+                                        Text(profile.label.substringBefore(" ("), color = TextPrimary, fontWeight = FontWeight.SemiBold)
+                                        Text("${profile.minBufferMs / 1000}s minimum · ${profile.maxBufferMs / 1000}s maximum", color = TextSecondary, fontSize = 12.sp)
+                                    }
+                                    Text(if (selected) "✓" else "", color = NeonPink, fontWeight = FontWeight.Bold)
+                                }
+                            }
+                        } else Row(
                             horizontalArrangement = Arrangement.spacedBy(10.dp),
                             modifier = Modifier.fillMaxWidth(),
                         ) {
@@ -463,6 +489,13 @@ fun SettingsScreen(
             item(key = "section_resolver") {
                 SettingsCard(title = "Resolver API") {
                     Column {
+                        if (isMobile) {
+                            Text(
+                                text = "By default, this origin follows the Jellyfin server address. Enter a different URL only if your Resolver service is hosted separately.",
+                                style = MaterialTheme.typography.bodySmall.copy(color = TextSecondary),
+                            )
+                            Spacer(modifier = Modifier.height(8.dp))
+                        }
                         SettingsInfoRow(label = "Current origin", value = uiState.resolverBaseUrl.ifBlank { "Not configured" })
                         Spacer(modifier = Modifier.height(10.dp))
                         SettingsInfoRow(label = "Jellyfin", value = uiState.jellyfinConnectionStatus)
@@ -507,7 +540,7 @@ fun SettingsScreen(
                                     onClick = { viewModel.setResolverUrl("") },
                                     modifier = Modifier.height(40.dp),
                                 ) {
-                                    Text("Clear Resolver URL", fontWeight = FontWeight.Medium)
+                                    Text("Use Jellyfin Server URL", fontWeight = FontWeight.Medium)
                                 }
                             }
                         }
@@ -889,7 +922,7 @@ fun SettingsScreen(
                 SettingsCard(title = "About & Licenses") {
                     Column {
                         Text(
-                            text = "Adult Hub TV v${BuildConfig.VERSION_NAME} (code ${BuildConfig.VERSION_CODE}). Built with Jetpack Compose for TV, Jellyfin Kotlin SDK, and Media3 ExoPlayer.",
+                            text = "${BuildConfig.CLIENT_NAME} v${BuildConfig.VERSION_NAME} (code ${BuildConfig.VERSION_CODE}). Built with Jetpack Compose, Jellyfin Kotlin SDK, and Media3 ExoPlayer.",
                             style = MaterialTheme.typography.bodyMedium.copy(color = TextSecondary),
                         )
                         Spacer(modifier = Modifier.height(14.dp))
@@ -936,6 +969,7 @@ fun SettingsScreen(
             onDismiss = { pendingClearType = null },
         )
     }
+    }
 }
 
 @Composable
@@ -950,7 +984,7 @@ private fun SettingsCard(
             .clip(RoundedCornerShape(16.dp))
             .background(CardSurface)
             .border(1.dp, Color.White.copy(alpha = 0.1f), RoundedCornerShape(16.dp))
-            .padding(24.dp),
+            .padding(if (LocalTouchUi.current) 12.dp else 24.dp),
     ) {
         Text(
             text = title,
@@ -959,7 +993,7 @@ private fun SettingsCard(
                 color = TextPrimary,
             ),
         )
-        Spacer(modifier = Modifier.height(14.dp))
+        Spacer(modifier = Modifier.height(if (LocalTouchUi.current) 8.dp else 14.dp))
         content()
     }
 }

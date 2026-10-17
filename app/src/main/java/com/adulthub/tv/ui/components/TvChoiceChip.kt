@@ -4,7 +4,6 @@ import androidx.compose.foundation.BorderStroke
 import androidx.compose.foundation.interaction.MutableInteractionSource
 import androidx.compose.foundation.interaction.collectIsFocusedAsState
 import androidx.compose.foundation.layout.height
-import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.remember
@@ -15,6 +14,9 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.TextUnit
 import androidx.compose.ui.unit.dp
+import androidx.compose.foundation.shape.RoundedCornerShape
+import androidx.compose.material3.OutlinedButton as TouchOutlinedButton
+import androidx.compose.material3.ButtonDefaults as TouchOutlinedButtonDefaults
 import androidx.tv.material3.Border
 import androidx.tv.material3.OutlinedButton
 import androidx.tv.material3.OutlinedButtonDefaults
@@ -33,6 +35,22 @@ fun TvChoiceChip(
     fontSize: TextUnit = TextUnit.Unspecified,
     cornerRadius: Dp = 10.dp,
 ) {
+    if (LocalTouchUi.current) {
+        TouchOutlinedButton(
+            onClick = onClick,
+            modifier = modifier.height(height).semantics { selected = isSelected },
+            shape = RoundedCornerShape(cornerRadius),
+            colors = TouchOutlinedButtonDefaults.outlinedButtonColors(
+                containerColor = if (isSelected) NeonPink else androidx.compose.ui.graphics.Color.Transparent,
+                contentColor = if (isSelected) androidx.compose.ui.graphics.Color.White else TextPrimary,
+            ),
+            border = BorderStroke(1.dp, if (isSelected) NeonPink else CardSurfaceFocused),
+            contentPadding = androidx.compose.foundation.layout.PaddingValues(horizontal = 12.dp, vertical = 6.dp),
+        ) {
+            androidx.compose.material3.Text(label, fontSize = fontSize)
+        }
+        return
+    }
     val interactionSource = remember { MutableInteractionSource() }
     val isFocused by interactionSource.collectIsFocusedAsState()
 

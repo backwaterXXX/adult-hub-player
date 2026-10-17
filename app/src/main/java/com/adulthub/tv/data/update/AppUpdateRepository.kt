@@ -66,8 +66,9 @@ class AppUpdateRepository(
         return try {
             val releaseUrl = "$GITHUB_API/repos/${BuildConfig.UPDATE_GITHUB_OWNER}/${BuildConfig.UPDATE_GITHUB_REPO}/releases/latest"
             val release = json.decodeFromString<GitHubRelease>(fetchBytes(releaseUrl, MAX_RELEASE_BYTES).toString(Charsets.UTF_8))
-            val manifestAsset = release.assets.singleOrNull { it.name == MANIFEST_ASSET_NAME }
-                ?: throw IllegalStateException("Latest GitHub release has no $MANIFEST_ASSET_NAME asset")
+        val manifestAssetName = BuildConfig.UPDATE_MANIFEST_ASSET
+        val manifestAsset = release.assets.singleOrNull { it.name == manifestAssetName }
+            ?: throw IllegalStateException("Latest GitHub release has no $manifestAssetName asset")
             val manifestBody = fetchBytes(assetUrl(manifestAsset.id), MAX_MANIFEST_BYTES, OCTET_STREAM)
             val manifest = json.decodeFromString<UpdateManifest>(manifestBody.toString(Charsets.UTF_8))
             validateManifest(manifest)
@@ -271,7 +272,6 @@ class AppUpdateRepository(
         private const val GITHUB_API_VERSION = "2026-03-10"
         private const val GITHUB_JSON = "application/vnd.github+json"
         private const val OCTET_STREAM = "application/octet-stream"
-        private const val MANIFEST_ASSET_NAME = "stable.json"
         private const val MANIFEST_FILE_NAME = "update-manifest.json"
         private const val SUPPORTED_SCHEMA = 2
         private const val MAX_RELEASE_BYTES = 1024 * 1024L

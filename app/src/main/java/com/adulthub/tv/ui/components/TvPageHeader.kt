@@ -25,12 +25,13 @@ fun TvPageHeader(
     onBack: () -> Unit,
     modifier: Modifier = Modifier,
     subtitle: String? = null,
+    isMobile: Boolean = false,
     actions: (@Composable RowScope.() -> Unit)? = null,
 ) {
     Row(
         modifier = modifier
             .fillMaxWidth()
-            .padding(horizontal = 48.dp, vertical = 20.dp),
+            .padding(horizontal = if (isMobile) 16.dp else 48.dp, vertical = if (isMobile) 8.dp else 20.dp),
         verticalAlignment = Alignment.CenterVertically,
     ) {
         TvSecondaryButton(

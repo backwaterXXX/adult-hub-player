@@ -6,6 +6,11 @@ import androidx.compose.runtime.Composable
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.unit.dp
+import androidx.compose.foundation.shape.RoundedCornerShape
+import androidx.compose.material3.ButtonDefaults as TouchButtonDefaults
+import androidx.compose.material3.ButtonDefaults as TouchOutlinedButtonDefaults
+import androidx.compose.material3.Button as TouchButton
+import androidx.compose.material3.OutlinedButton as TouchOutlinedButton
 import androidx.tv.material3.Border
 import androidx.tv.material3.Button
 import androidx.tv.material3.ButtonDefaults
@@ -23,6 +28,23 @@ fun TvPrimaryButton(
     enabled: Boolean = true,
     content: @Composable RowScope.() -> Unit,
 ) {
+    if (LocalTouchUi.current) {
+        TouchButton(
+            onClick = onClick,
+            modifier = modifier,
+            enabled = enabled,
+            shape = RoundedCornerShape(9.dp),
+            colors = TouchButtonDefaults.buttonColors(
+                containerColor = NeonPink,
+                contentColor = Color.White,
+                disabledContainerColor = CardSurfaceFocused,
+                disabledContentColor = TextPrimary.copy(alpha = 0.55f),
+            ),
+            contentPadding = androidx.compose.foundation.layout.PaddingValues(horizontal = 14.dp, vertical = 8.dp),
+            content = content,
+        )
+        return
+    }
     Button(
         onClick = onClick,
         modifier = modifier,
@@ -48,6 +70,22 @@ fun TvSecondaryButton(
     enabled: Boolean = true,
     content: @Composable RowScope.() -> Unit,
 ) {
+    if (LocalTouchUi.current) {
+        TouchOutlinedButton(
+            onClick = onClick,
+            modifier = modifier,
+            enabled = enabled,
+            shape = RoundedCornerShape(9.dp),
+            colors = TouchOutlinedButtonDefaults.outlinedButtonColors(
+                contentColor = TextPrimary,
+                disabledContentColor = TextPrimary.copy(alpha = 0.55f),
+            ),
+            border = BorderStroke(1.dp, CardSurfaceFocused),
+            contentPadding = androidx.compose.foundation.layout.PaddingValues(horizontal = 14.dp, vertical = 8.dp),
+            content = content,
+        )
+        return
+    }
     OutlinedButton(
         onClick = onClick,
         modifier = modifier,

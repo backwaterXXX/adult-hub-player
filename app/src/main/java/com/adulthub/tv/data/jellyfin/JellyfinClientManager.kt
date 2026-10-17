@@ -38,12 +38,12 @@ class JellyfinClientManager(
     private val jellyfin: Jellyfin = createJellyfin {
         this.context = this@JellyfinClientManager.context
         clientInfo = ClientInfo(
-            name = "Adult Hub TV",
+            name = BuildConfig.CLIENT_NAME,
             version = BuildConfig.VERSION_NAME
         )
         deviceInfo = DeviceInfo(
             id = deviceId,
-            name = "AndroidTV"
+            name = BuildConfig.DEVICE_NAME
         )
     }
 

@@ -12,10 +12,12 @@ import androidx.datastore.preferences.core.stringPreferencesKey
 import androidx.datastore.preferences.core.stringSetPreferencesKey
 import androidx.datastore.preferences.preferencesDataStore
 import com.adulthub.tv.data.model.ChannelSortMode
+import com.adulthub.tv.data.model.AuthState
 import com.adulthub.tv.data.network.ServiceUrl
 import com.adulthub.tv.data.network.ServiceUrlPolicy
 import com.adulthub.tv.data.network.ServiceUrlValidation
 import kotlinx.coroutines.flow.Flow
+import kotlinx.coroutines.flow.combine
 import kotlinx.coroutines.flow.catch
 import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.flow.map
@@ -64,6 +66,7 @@ open class SettingsDataStore(
     private val context: Context,
     crypto: KeyStoreCrypto = KeyStoreCrypto(),
     private val dataStore: DataStore<Preferences> = context.settingsDataStore,
+    private val authDataStore: AuthDataStore? = null,
 ) {
     companion object {
         private val KEY_SCHEMA_VERSION = intPreferencesKey("schema_version")
@@ -92,6 +95,8 @@ open class SettingsDataStore(
     }
 
     private val encryptedValue = EncryptedPreferenceValue(crypto)
+    private val settingsPreferences = dataStore.data
+        .catch { if (it is IOException) emit(emptyPreferences()) else throw it }
 
     open val bufferProfile: Flow<BufferProfile> = dataStore.data
         .catch { if (it is IOException) emit(emptyPreferences()) else throw it }
@@ -109,12 +114,17 @@ open class SettingsDataStore(
         .catch { if (it is IOException) emit(emptyPreferences()) else throw it }
         .map { encryptedValue.decode(it[KEY_SELECTED_LIBRARY_NAME]) }
 
-    open val resolverBaseUrl: Flow<String> = dataStore.data
-        .catch { if (it is IOException) emit(emptyPreferences()) else throw it }
-        .map { preferences ->
+    open val resolverBaseUrl: Flow<String> = authDataStore?.let { auth ->
+        combine(settingsPreferences, auth.authState) { preferences, authState ->
             encryptedValue.decode(preferences[KEY_RESOLVER_BASE_URL])
-                ?.takeIf { it.isNotBlank() } ?: DEFAULT_RESOLVER_URL
+                ?.takeIf(String::isNotBlank)
+                ?: (authState as? AuthState.Authenticated)?.serverUrl?.takeIf(String::isNotBlank)
+                ?: DEFAULT_RESOLVER_URL
         }
+    } ?: settingsPreferences.map { preferences ->
+        encryptedValue.decode(preferences[KEY_RESOLVER_BASE_URL])
+            ?.takeIf(String::isNotBlank) ?: DEFAULT_RESOLVER_URL
+    }
 
     open val approvedCleartextOrigins: Flow<Set<String>> = dataStore.data
         .catch { if (it is IOException) emit(emptyPreferences()) else throw it }

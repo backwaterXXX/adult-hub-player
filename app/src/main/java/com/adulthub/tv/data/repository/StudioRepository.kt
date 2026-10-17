@@ -7,6 +7,11 @@ import com.adulthub.tv.data.model.TvItem
 import com.adulthub.tv.data.model.TvStudio
 import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.async
+import kotlinx.coroutines.awaitAll
+import kotlinx.coroutines.coroutineScope
+import kotlinx.coroutines.sync.Semaphore
+import kotlinx.coroutines.sync.withPermit
 import kotlinx.coroutines.withContext
 import org.jellyfin.sdk.api.client.extensions.itemsApi
 import org.jellyfin.sdk.api.client.extensions.studiosApi
@@ -36,13 +41,30 @@ open class StudioRepository(
                 startIndex = startIndex,
                 limit = limit,
             )
-            val studios = response.content.items.map { item ->
-                TvStudio(
-                    id = item.id.toString(),
-                    name = item.name.orEmpty(),
-                    primaryImageTag = item.imageTags?.get(ImageType.PRIMARY),
-                    movieCount = item.childCount ?: 0,
-                )
+            val items = response.content.items
+            val countSemaphore = Semaphore(4)
+            val studios = coroutineScope {
+                items.map { item ->
+                    async {
+                        val name = item.name.orEmpty()
+                        val movieCount = try {
+                            countSemaphore.withPermit {
+                                getStudioMoviesPage(name, targetParentId, startIndex = 0, limit = 1)
+                                    .getOrThrow().totalRecordCount
+                            }
+                        } catch (e: CancellationException) {
+                            throw e
+                        } catch (_: Exception) {
+                            item.childCount ?: 0
+                        }
+                        TvStudio(
+                            id = item.id.toString(),
+                            name = name,
+                            primaryImageTag = item.imageTags?.get(ImageType.PRIMARY),
+                            movieCount = movieCount,
+                        )
+                    }
+                }.awaitAll()
             }
             Result.success(studios)
         } catch (e: CancellationException) {

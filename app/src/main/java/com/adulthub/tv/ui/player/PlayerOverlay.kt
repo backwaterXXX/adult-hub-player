@@ -237,7 +237,7 @@ fun PlayerOverlay(
                         )
 
                         Text(
-                            text = "Adult Hub TV",
+                            text = "Adult Hub",
                             color = NeonPink,
                             fontSize = 14.sp,
                             fontWeight = FontWeight.SemiBold,

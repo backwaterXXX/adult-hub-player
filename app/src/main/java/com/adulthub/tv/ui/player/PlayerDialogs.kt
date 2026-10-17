@@ -2,6 +2,8 @@ package com.adulthub.tv.ui.player
 
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
+import androidx.compose.foundation.verticalScroll
+import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
@@ -10,6 +12,7 @@ import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
+import androidx.compose.foundation.layout.heightIn
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
@@ -420,16 +423,17 @@ fun PlaybackErrorDialog(
 fun PlaybackInfoOverlay(
     technicalInfo: com.adulthub.tv.player.PlaybackTechnicalInfo,
     modifier: Modifier = Modifier,
+    isMobile: Boolean = false,
 ) {
     Box(
         modifier = modifier
             .fillMaxSize()
-            .padding(top = 28.dp, end = 40.dp),
-        contentAlignment = Alignment.TopEnd,
+            .then(if (isMobile) Modifier.padding(16.dp) else Modifier.padding(top = 28.dp, end = 40.dp)),
+        contentAlignment = if (isMobile) Alignment.Center else Alignment.TopEnd,
     ) {
         Column(
             modifier = Modifier
-                .width(360.dp)
+                .then(if (isMobile) Modifier.fillMaxWidth().heightIn(max = 640.dp).verticalScroll(rememberScrollState()) else Modifier.width(360.dp))
                 .clip(RoundedCornerShape(12.dp))
                 .background(Color.Black.copy(alpha = 0.72f))
                 .border(1.dp, NeonPink.copy(alpha = 0.5f), RoundedCornerShape(12.dp))

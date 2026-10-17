@@ -19,7 +19,7 @@ import org.koin.dsl.module
 val appModule = module {
     single { KeyStoreCrypto() }
     single { AuthDataStore(androidContext(), get()) }
-    single { SettingsDataStore(androidContext(), get()) }
+    single { SettingsDataStore(androidContext(), get(), authDataStore = get()) }
     single { TelegramProgressStore(androidContext()) }
     single { PhashJobStore(androidContext()) }
     single { WatchHistoryStore(androidContext()) }

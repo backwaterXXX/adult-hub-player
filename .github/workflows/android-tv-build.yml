@@ -14,7 +14,7 @@ permissions:
 
 jobs:
   build:
-    name: Build & Test Android TV APK
+    name: Build & Test Android TV and Mobile APKs
     runs-on: ubuntu-24.04
     permissions:
       contents: read
@@ -39,35 +39,25 @@ jobs:
       - name: Grant execute permission for gradlew
         run: chmod +x gradlew
 
-      - name: Run Unit Tests
-        run: ./gradlew testDebugUnitTest --no-daemon
-
-      - name: Run Android Lint
-        run: ./gradlew lintDebug --no-daemon
-
-      - name: Build Release APK
+      - name: Test, lint, and build both APKs
         env:
           UPDATE_GITHUB_OWNER: ${{ github.repository_owner }}
           UPDATE_GITHUB_REPO: ${{ github.event.repository.name }}
-        run: ./gradlew assembleRelease --no-daemon
-
-      - name: Build Debug APK
-        env:
-          UPDATE_GITHUB_OWNER: ${{ github.repository_owner }}
-          UPDATE_GITHUB_REPO: ${{ github.event.repository.name }}
-        run: ./gradlew assembleDebug --no-daemon
+        run: ./gradlew testTvDebugUnitTest testMobileDebugUnitTest lintTvDebug lintMobileDebug assembleTvRelease assembleMobileRelease assembleTvDebug assembleMobileDebug --no-daemon
 
       - name: Prepare Debug Artifact
         run: |
           mkdir -p debug-artifacts
-          cp app/build/outputs/apk/debug/app-debug.apk debug-artifacts/
+          cp app/build/outputs/apk/tv/debug/app-tv-debug.apk debug-artifacts/
+          cp app/build/outputs/apk/mobile/debug/app-mobile-debug.apk debug-artifacts/
           cd debug-artifacts
-          sha256sum app-debug.apk > app-debug.apk.sha256
+          sha256sum app-tv-debug.apk > app-tv-debug.apk.sha256
+          sha256sum app-mobile-debug.apk > app-mobile-debug.apk.sha256
 
       - name: Upload Debug APK
         uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2
         with:
-          name: adult-hub-tv-debug
+          name: adult-hub-android-debug
           path: debug-artifacts/
           if-no-files-found: error
           retention-days: 14
@@ -117,23 +107,29 @@ jobs:
           printf 'storeFile=release.jks\nstorePassword=%s\nkeyAlias=%s\nkeyPassword=%s\n' \
             "$KEYSTORE_PASSWORD" "$KEY_ALIAS" "$KEY_PASSWORD" > keystore.properties
 
-          ./gradlew assembleRelease --no-daemon
+          ./gradlew assembleTvRelease assembleMobileRelease --no-daemon
 
-          apk="app/build/outputs/apk/release/app-release.apk"
-          test -s "$apk"
+          tv_apk="app/build/outputs/apk/tv/release/app-tv-release.apk"
+          mobile_apk="app/build/outputs/apk/mobile/release/app-mobile-release.apk"
+          test -s "$tv_apk"
+          test -s "$mobile_apk"
           apksigner="$(find "${ANDROID_HOME:-$ANDROID_SDK_ROOT}/build-tools" -type f -name apksigner -print | sort -V | tail -n 1)"
           if [ -z "$apksigner" ]; then
             echo "Android build-tools apksigner was not found" >&2
             exit 1
           fi
-          "$apksigner" verify --verbose "$apk"
+          "$apksigner" verify --verbose "$tv_apk"
+          "$apksigner" verify --verbose "$mobile_apk"
 
           mkdir -p release-artifacts
-          cp "$apk" release-artifacts/
+          python3 scripts/create_update_manifest.py "$tv_apk" release-artifacts/updates "${ANDROID_HOME:-$ANDROID_SDK_ROOT}" tv
+          python3 scripts/create_update_manifest.py "$mobile_apk" release-artifacts/updates "${ANDROID_HOME:-$ANDROID_SDK_ROOT}" mobile
+          cp release-artifacts/updates/releases/AdultHubTV-*.apk release-artifacts/
+          cp release-artifacts/updates/releases/AdultHubMobile-*.apk release-artifacts/
           cd release-artifacts
-          sha256sum app-release.apk > app-release.apk.sha256
+          sha256sum AdultHubTV-*.apk > AdultHubTV.apk.sha256
+          sha256sum AdultHubMobile-*.apk > AdultHubMobile.apk.sha256
           cd ..
-          python3 scripts/create_update_manifest.py "$apk" release-artifacts/updates "${ANDROID_HOME:-$ANDROID_SDK_ROOT}"
 
       - name: Remove signing material
         if: always()
@@ -142,7 +138,7 @@ jobs:
       - name: Upload Release APK
         uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2
         with:
-          name: adult-hub-tv-release
+          name: adult-hub-android-release
           path: release-artifacts/
           if-no-files-found: error
           retention-days: 14
@@ -152,7 +148,9 @@ jobs:
         with:
           files: |
             release-artifacts/updates/stable.json
-            release-artifacts/updates/releases/*.apk
+            release-artifacts/updates/stable-mobile.json
+            release-artifacts/AdultHubTV-*.apk
+            release-artifacts/AdultHubMobile-*.apk
           draft: false
           prerelease: false
           generate_release_notes: true

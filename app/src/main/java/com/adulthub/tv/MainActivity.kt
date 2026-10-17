@@ -5,6 +5,8 @@ import android.view.WindowManager
 import androidx.activity.ComponentActivity
 import androidx.activity.compose.setContent
 import com.adulthub.tv.ui.navigation.AppNavigation
+import com.adulthub.tv.ui.navigation.MobileAppNavigation
+import com.adulthub.tv.ui.theme.AdultHubMobileTheme
 import com.adulthub.tv.ui.theme.AdultHubTvTheme
 
 class MainActivity : ComponentActivity() {
@@ -15,8 +17,12 @@ class MainActivity : ComponentActivity() {
             WindowManager.LayoutParams.FLAG_HARDWARE_ACCELERATED,
         )
         setContent {
-            AdultHubTvTheme {
-                AppNavigation()
+            if (BuildConfig.FLAVOR == "mobile") {
+                AdultHubMobileTheme {
+                    AdultHubTvTheme { MobileAppNavigation() }
+                }
+            } else {
+                AdultHubTvTheme { AppNavigation() }
             }
         }
     }

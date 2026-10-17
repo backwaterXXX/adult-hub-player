@@ -12,4 +12,6 @@ data class PlaybackInfo(
     val playMethod: PlayMethod,
     val title: String = "",
     val fileSizeBytes: Long? = null,
+    val container: String? = null,
+    val durationMs: Long? = null,
 )

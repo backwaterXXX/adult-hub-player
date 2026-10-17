@@ -63,6 +63,7 @@ fun PlayerScreen(
     resume: Boolean? = null,
     onBack: () -> Unit,
     modifier: Modifier = Modifier,
+    mobileControls: Boolean = false,
     viewModel: PlayerViewModel = koinViewModel(),
 ) {
     val context = LocalContext.current
@@ -137,6 +138,16 @@ fun PlayerScreen(
     }
 
     val readyState = uiState as? PlayerUiState.Ready
+    val phashVideoId = readyState?.item?.let { com.adulthub.tv.player.adultHubVideoId(it) }
+    val phashStatus = phashVideoId?.let { phashJobStatuses[it] }
+    var hiddenPhashStatusMessage by remember(itemId) { mutableStateOf<String?>(null) }
+
+    LaunchedEffect(phashVideoId, phashStatus?.message) {
+        val message = phashStatus?.message ?: return@LaunchedEffect
+        hiddenPhashStatusMessage = null
+        delay(PHASH_STATUS_VISIBLE_MS)
+        hiddenPhashStatusMessage = message
+    }
 
     // Recompose the UI for metadata/favorite changes without restarting this playback request.
     LaunchedEffect(readyState?.playbackRequestId, playerManager) {
@@ -220,7 +231,7 @@ fun PlayerScreen(
 
     // Safely transfer focus when OSD visibility changes
     LaunchedEffect(isOsdVisible) {
-        if (isOsdVisible) {
+        if (isOsdVisible && !mobileControls) {
             delay(100L)
             runCatching {
                 playPauseFocusRequester.requestFocus()
@@ -375,8 +386,49 @@ fun PlayerScreen(
                     modifier = Modifier.fillMaxSize(),
                 )
 
-                // Custom TV OSD Overlay
-                PlayerOverlay(
+                // Use a touch-first overlay on phones. The TV overlay is designed for a remote.
+                if (mobileControls) MobilePlayerOverlay(
+                    title = state.item.title,
+                    isPlaying = isPlaying,
+                    isBuffering = playbackState == Player.STATE_BUFFERING || isLoadingRandom,
+                    currentPositionMs = currentPositionMs,
+                    durationMs = durationMs,
+                    isOsdVisible = isOsdVisible,
+                    onShowOsd = {
+                        isOsdVisible = true
+                        osdTimerTrigger = System.currentTimeMillis()
+                    },
+                    onInteraction = { osdTimerTrigger = System.currentTimeMillis() },
+                    onPlayPauseClick = {
+                        playerManager.togglePlayPause()
+                        viewModel.playbackReporter.reportProgressNow(playerManager.currentPositionMs.value, !playerManager.isPlaying.value)
+                    },
+                    onSeekRelative = { deltaMs ->
+                        playerManager.seekBy(deltaMs)
+                        seekFeedback = if (deltaMs > 0) "+${deltaMs / 1000}s" else "${deltaMs / 1000}s"
+                        viewModel.playbackReporter.reportProgressNow(playerManager.currentPositionMs.value, !playerManager.isPlaying.value)
+                    },
+                    onSeekTo = { positionMs ->
+                        playerManager.seekTo(positionMs)
+                        viewModel.playbackReporter.reportProgressNow(positionMs, !playerManager.isPlaying.value)
+                    },
+                    isMuted = isMuted,
+                    onMuteClick = { playerManager.toggleMute() },
+                    onRandomClick = { viewModel.playRandomMovie(playerManager.currentPositionMs.value) },
+                    onInfoClick = { showInfoDialog = !showInfoDialog },
+                    onBackClick = {
+                        viewModel.onExitPlayer(playerManager.currentPositionMs.value)
+                        playerManager.release()
+                        onBack()
+                    },
+                    isFavorite = state.item.isFavorite,
+                    onToggleFavorite = viewModel::toggleFavorite,
+                    playbackSpeed = playbackSpeed,
+                    onPlaybackSpeedChange = { speed -> playbackSpeed = speed; playerManager.setPlaybackSpeed(speed) },
+                    resizeMode = resizeMode,
+                    onResizeModeChange = { resizeMode = it },
+                    seekFeedback = seekFeedback,
+                ) else PlayerOverlay(
                     title = state.item.title,
                     isPlaying = isPlaying,
                     isBuffering = playbackState == Player.STATE_BUFFERING || isLoadingRandom,
@@ -436,8 +488,7 @@ fun PlayerScreen(
                     },
                 )
 
-                val phashVideoId = com.adulthub.tv.player.adultHubVideoId(state.item)
-                phashVideoId?.let { phashJobStatuses[it] }?.let { phashStatus ->
+                phashStatus?.takeIf { it.message != hiddenPhashStatusMessage }?.let { status ->
                     Box(
                         modifier = Modifier
                             .align(Alignment.TopEnd)
@@ -446,8 +497,8 @@ fun PlayerScreen(
                             .padding(horizontal = 12.dp, vertical = 7.dp),
                     ) {
                         Text(
-                            text = phashStatus.message,
-                            color = if (phashStatus.terminal && phashStatus.message.contains("failed", true)) Color(0xFFFFB4AB) else NeonPink,
+                            text = status.message,
+                            color = if (status.terminal && status.message.contains("failed", true)) Color(0xFFFFB4AB) else NeonPink,
                             fontSize = 12.sp,
                             maxLines = 2,
                         )
@@ -461,6 +512,7 @@ fun PlayerScreen(
                             playbackInfo = state.playbackInfo,
                             resolverLatencyMs = state.resolverLatencyMs,
                         ),
+                        isMobile = mobileControls,
                     )
                 }
 
@@ -526,3 +578,5 @@ fun PlayerScreen(
 
     }
 }
+
+private const val PHASH_STATUS_VISIBLE_MS = 10_000L

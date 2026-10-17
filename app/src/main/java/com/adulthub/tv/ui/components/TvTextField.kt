@@ -28,6 +28,7 @@ import androidx.compose.ui.text.TextStyle
 import androidx.compose.ui.text.input.VisualTransformation
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
+import androidx.compose.material3.OutlinedTextField as TouchOutlinedTextField
 import androidx.tv.material3.MaterialTheme
 import androidx.tv.material3.Text
 import com.adulthub.tv.ui.theme.CardSurface
@@ -49,6 +50,20 @@ fun TvTextField(
     keyboardActions: KeyboardActions = KeyboardActions.Default,
     singleLine: Boolean = true,
 ) {
+    if (LocalTouchUi.current) {
+        TouchOutlinedTextField(
+            value = value,
+            onValueChange = onValueChange,
+            modifier = modifier.fillMaxWidth(),
+            label = { androidx.compose.material3.Text(label) },
+            placeholder = if (hint.isEmpty()) null else ({ androidx.compose.material3.Text(hint) }),
+            visualTransformation = visualTransformation,
+            keyboardOptions = keyboardOptions,
+            keyboardActions = keyboardActions,
+            singleLine = singleLine,
+        )
+        return
+    }
     var isFocused by remember { mutableStateOf(false) }
     var isEditing by remember { mutableStateOf(false) }
     var editorHadFocus by remember { mutableStateOf(false) }

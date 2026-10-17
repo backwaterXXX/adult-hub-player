@@ -80,6 +80,7 @@ class PlayerManager(
     private var seekBufferingStartedAtMs: Long? = null
     private var lastSeekBufferDurationMs: Long? = null
     @Volatile private var streamFileSizeBytes: Long? = null
+    @Volatile private var streamContentType: String? = null
     val currentStreamFileSizeBytes: Long? get() = streamFileSizeBytes
     private val analyticsListener = object : AnalyticsListener {
         override fun onVideoDecoderInitialized(
@@ -315,6 +316,7 @@ class PlayerManager(
         released = false
         _errorMessage.value = null
         streamFileSizeBytes = null
+        streamContentType = null
         videoDecoderName = null
         audioDecoderName = null
         if (resetPlaybackSpeed) {
@@ -371,16 +373,18 @@ class PlayerManager(
             .build()
 
         val httpDataSourceFactory = OkHttpDataSource.Factory(httpClient)
-            .setUserAgent("Adult Hub TV/${BuildConfig.VERSION_NAME} (AndroidTV)")
+            .setUserAgent("${BuildConfig.CLIENT_NAME}/${BuildConfig.VERSION_NAME} (${BuildConfig.DEVICE_NAME})")
 
         if (headers.isNotEmpty()) {
             httpDataSourceFactory.setDefaultRequestProperties(headers)
         }
 
         val trackingDataSourceFactory = androidx.media3.datasource.DataSource.Factory {
-            FileSizeTrackingDataSource(httpDataSourceFactory.createDataSource()) { size ->
-                if (size > 0L) streamFileSizeBytes = size
-            }
+            FileSizeTrackingDataSource(
+                upstream = httpDataSourceFactory.createDataSource(),
+                onFileSize = { size -> if (size > 0L) streamFileSizeBytes = size },
+                onContentType = { contentType -> streamContentType = contentType },
+            )
         }
         val mediaSourceFactory = DefaultMediaSourceFactory(trackingDataSourceFactory)
         val mediaMetadata = MediaMetadata.Builder()
@@ -588,13 +592,17 @@ class PlayerManager(
             else -> "Unknown"
         }
 
-        val vBitrate = if (videoFormat != null && videoFormat.bitrate > 0) {
-            if (videoFormat.bitrate >= 1_000_000) {
-                String.format(java.util.Locale.US, "%.1f Mbps", videoFormat.bitrate / 1_000_000.0)
-            } else {
-                "${videoFormat.bitrate / 1000} kbps"
-            }
-        } else "Unknown"
+        val fileSizeForBitrate = streamFileSizeBytes ?: playbackInfo.fileSizeBytes
+        val durationMs = exoPlayer.duration.takeIf { it > 0L } ?: playbackInfo.durationMs ?: 0L
+        val estimatedBitrate = fileSizeForBitrate?.takeIf { it > 0L && durationMs > 0L }
+            ?.let { (it * 8_000L / durationMs).coerceAtLeast(1L).toInt() }
+        val bitrate = videoFormat?.bitrate?.takeIf { it > 0 } ?: estimatedBitrate
+        val vBitrate = bitrate?.let {
+            val text = if (it >= 1_000_000) {
+                String.format(java.util.Locale.US, "%.1f Mbps", it / 1_000_000.0)
+            } else "${it / 1000} kbps"
+            if (videoFormat?.bitrate?.let { value -> value > 0 } == true) text else "~$text"
+        } ?: "Unknown"
 
         val aCodec = when {
             audioFormat?.sampleMimeType?.contains("mp4a", ignoreCase = true) == true ||
@@ -619,14 +627,8 @@ class PlayerManager(
         } else "Unknown"
 
         val path = runCatching { Uri.parse(playbackInfo.streamUrl).path.orEmpty() }.getOrDefault("")
-        val container = when (path.substringAfterLast('.', "").lowercase()) {
-            "mkv" -> "MKV"
-            "mp4", "m4v" -> "MP4"
-            "webm" -> "WebM"
-            "mov" -> "MOV"
-            "m3u8" -> "HLS"
-            else -> "Unknown"
-        }
+        val container = listOfNotNull(playbackInfo.container, streamContentType, path.substringAfterLast('.', ""))
+            .firstNotNullOfOrNull(::containerLabel) ?: "Unknown"
 
         val bufferHealth = (exoPlayer.bufferedPosition - exoPlayer.currentPosition).coerceAtLeast(0L)
 
@@ -691,6 +693,7 @@ private const val MEDIA_SESSION_ID = "AdultHubTvSession"
 private class FileSizeTrackingDataSource(
     private val upstream: DataSource,
     private val onFileSize: (Long) -> Unit,
+    private val onContentType: (String) -> Unit,
 ) : DataSource {
     override fun addTransferListener(transferListener: androidx.media3.datasource.TransferListener) {
         upstream.addTransferListener(transferListener)
@@ -699,6 +702,8 @@ private class FileSizeTrackingDataSource(
     override fun open(dataSpec: DataSpec): Long {
         val length = upstream.open(dataSpec)
         val headers = upstream.responseHeaders
+        headers.entries.firstOrNull { it.key.equals("Content-Type", ignoreCase = true) }
+            ?.value?.firstOrNull()?.let(onContentType)
         val contentRange = headers.entries.firstOrNull { it.key.equals("Content-Range", ignoreCase = true) }
             ?.value?.firstOrNull()
         val totalFromRange = contentRange
@@ -723,6 +728,17 @@ private class FileSizeTrackingDataSource(
     override fun getResponseHeaders(): Map<String, List<String>> = upstream.responseHeaders
 
     override fun close() = upstream.close()
+}
+
+private fun containerLabel(value: String): String? = when (value.substringBefore(';').trim().lowercase()) {
+    "mkv", "matroska", "video/x-matroska" -> "MKV"
+    "mp4", "m4v", "video/mp4", "application/mp4" -> "MP4"
+    "webm", "video/webm" -> "WebM"
+    "mov", "video/quicktime" -> "MOV"
+    "m3u8", "hls", "application/vnd.apple.mpegurl", "application/x-mpegurl" -> "HLS"
+    "avi", "video/x-msvideo" -> "AVI"
+    "mpeg", "mpg", "video/mpeg" -> "MPEG"
+    else -> null
 }
 
 data class PlaybackTechnicalInfo(
