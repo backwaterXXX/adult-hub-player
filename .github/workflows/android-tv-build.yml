@@ -141,6 +141,10 @@ jobs:
                   raise SystemExit(f"versionCode {code} must exceed the previous TV release code {previous_code}")
           PY
 
+      - name: Install Android Build Tools 36.0.0
+        run: |
+          "$ANDROID_HOME/cmdline-tools/latest/bin/sdkmanager" "build-tools;36.0.0"
+
       - name: Grant execute permission for gradlew
         run: chmod +x gradlew
 
@@ -150,7 +154,7 @@ jobs:
           KEYSTORE_PASSWORD: ${{ secrets.ANDROID_KEYSTORE_PASSWORD }}
           KEY_ALIAS: ${{ secrets.ANDROID_KEY_ALIAS }}
           KEY_PASSWORD: ${{ secrets.ANDROID_KEY_PASSWORD }}
-          EXPECTED_CERT_SHA256: ${{ vars.ANDROID_SIGNING_CERT_SHA256 }}
+          EXPECTED_CERT_SHA256: ${{ secrets.ANDROID_SIGNING_CERT_SHA256 || vars.ANDROID_SIGNING_CERT_SHA256 }}
           UPDATE_GITHUB_OWNER: ${{ github.repository_owner }}
           UPDATE_GITHUB_REPO: ${{ github.event.repository.name }}
         run: |
