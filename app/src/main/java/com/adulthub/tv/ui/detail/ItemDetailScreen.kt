@@ -384,7 +384,7 @@ fun ItemDetailScreen(
                                         contentPadding = PaddingValues(horizontal = 12.dp),
                                         horizontalArrangement = Arrangement.spacedBy(8.dp),
                                     ) {
-                                        items(item.genres) { genre ->
+                                        items(item.genres, key = { "genre_$it" }) { genre ->
                                             TvFilterChip(
                                                 text = genre,
                                                 borderColor = NeonPink,
@@ -400,7 +400,7 @@ fun ItemDetailScreen(
                                         contentPadding = PaddingValues(horizontal = 12.dp),
                                         horizontalArrangement = Arrangement.spacedBy(8.dp),
                                     ) {
-                                        items(item.tags) { tag ->
+                                        items(item.tags, key = { "tag_$it" }) { tag ->
                                             TvFilterChip(
                                                 text = "#$tag",
                                                 borderColor = NeonPink,
@@ -460,7 +460,7 @@ fun ItemDetailScreen(
                                     contentPadding = PaddingValues(horizontal = 48.dp),
                                     horizontalArrangement = Arrangement.spacedBy(16.dp),
                                 ) {
-                                    items(castActors) { role ->
+                                    items(castActors, key = { "person_${it.id}" }) { role ->
                                         val person = TvPerson(
                                             id = role.id,
                                             name = role.name,
@@ -497,7 +497,7 @@ fun ItemDetailScreen(
                                     contentPadding = PaddingValues(horizontal = 48.dp),
                                     horizontalArrangement = Arrangement.spacedBy(16.dp),
                                 ) {
-                                    items(state.similarItems) { similarItem ->
+                                    items(state.similarItems, key = { it.id }) { similarItem ->
                                         MovieCard(
                                             item = similarItem,
                                             imageUrl = viewModel.getItemImageUrl(similarItem),

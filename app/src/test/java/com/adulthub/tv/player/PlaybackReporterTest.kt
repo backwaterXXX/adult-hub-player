@@ -98,6 +98,7 @@ class PlaybackReporterTest {
             getCurrentPositionMs = { currentPos },
             getIsPaused = { false },
         )
+        reporter.reportStart(0L, canSeek = true)
 
         // Advance 10s
         currentPos = 10_000L

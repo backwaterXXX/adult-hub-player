@@ -153,12 +153,14 @@ Clone the repository and run Gradle:
 # Build both debug APKs
 ./gradlew assembleTvDebug assembleMobileDebug
 
-# Build both optimized release APKs (minified with R8)
+# Build both signed, optimized release APKs (requires keystore.properties)
 ./gradlew assembleTvRelease assembleMobileRelease
 ```
 
 ### APK Signing
-When `keystore.properties` exists in the project root, all local TV and mobile debug and release APKs use the configured keystore. Without it, local builds use the Android debug key.
+Debug APKs use the Android debug key and install under separate `.debug` application IDs, so they can coexist with production installs. Release APK packaging requires `keystore.properties` and fails instead of falling back to a debug certificate.
+
+To replace an older sideloaded debug-signed production package with the GitHub release, first back up any local app data, uninstall that package, and then install the release APK. Android does not allow an APK signed by a different certificate to update an existing installation.
 
 Generate a long-lived signing key and copy the example properties file:
 ```sh
@@ -176,13 +178,14 @@ keyPassword=your_key_password
 Keep a secure backup of `release.jks`; losing it prevents future APK updates under the same signing identity. Never commit the keystore or `keystore.properties` to version control.
 
 ### GitHub Release Signing
-The GitHub Actions release workflow reads these repository Actions secrets:
+The GitHub Actions release workflow reads these repository Actions secrets and variable:
 - `ANDROID_KEYSTORE_BASE64`: Base64-encoded `release.jks` (on Linux, run `base64 -w0 release.jks`)
 - `ANDROID_KEYSTORE_PASSWORD`
 - `ANDROID_KEY_ALIAS` (use `adult-hub-release`)
 - `ANDROID_KEY_PASSWORD`
+- Repository variable `ANDROID_SIGNING_CERT_SHA256`: SHA-256 fingerprint of the release signing certificate, without colons.
 
-Push a version tag such as `v0.1.68-tv` to run release signing and publish both APKs. The tag should match the version in `app/build.gradle.kts`.
+Push a version tag matching `v<versionName>-tv` (for example, `v0.1.69-tv`) to run release signing and publish both APKs. The workflow checks the tag and requires the version code to increase.
 
 ### Running Tests & Linting
 ```sh
@@ -190,7 +193,7 @@ Push a version tag such as `v0.1.68-tv` to run release signing and publish both 
 ./gradlew testTvDebugUnitTest testMobileDebugUnitTest
 
 # Run Android Lint static analysis
-./gradlew lintTvDebug lintMobileDebug
+./gradlew lintTvDebug lintMobileDebug lintTvRelease lintMobileRelease
 ```
 
 ### Architecture & Tech Stack

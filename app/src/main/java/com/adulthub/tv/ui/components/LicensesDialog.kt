@@ -16,8 +16,10 @@ import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.getValue
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.remember
+import androidx.compose.runtime.produceState
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
@@ -28,6 +30,8 @@ import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.font.FontFamily
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.withContext
 import androidx.compose.ui.unit.sp
 import androidx.compose.ui.window.Dialog
 import androidx.tv.material3.MaterialTheme
@@ -44,10 +48,12 @@ fun LicensesDialog(
     modifier: Modifier = Modifier,
 ) {
     val context = LocalContext.current
-    val licenseText = remember {
-        runCatching {
-            context.assets.open("NOTICE.txt").bufferedReader().use { it.readText() }
-        }.getOrDefault("Third-party licenses notice is unavailable.")
+    val licenseText by produceState("Loading third-party licenses…", context) {
+        value = withContext(Dispatchers.IO) {
+            runCatching {
+                context.assets.open("NOTICE.txt").bufferedReader().use { it.readText() }
+            }.getOrDefault("Third-party licenses notice is unavailable.")
+        }
     }
     val closeFocusRequester = remember { FocusRequester() }
 

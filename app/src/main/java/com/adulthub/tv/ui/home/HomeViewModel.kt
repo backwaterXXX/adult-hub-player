@@ -23,6 +23,11 @@ import kotlinx.coroutines.flow.firstOrNull
 import kotlinx.coroutines.flow.drop
 import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.launch
+import kotlinx.coroutines.async
+import kotlinx.coroutines.awaitAll
+import kotlinx.coroutines.coroutineScope
+import kotlinx.coroutines.sync.Semaphore
+import kotlinx.coroutines.sync.withPermit
 
 import androidx.compose.runtime.Immutable
 import org.jellyfin.sdk.model.api.ItemFilter
@@ -53,6 +58,8 @@ data class HomeUiState(
     val randomUnwatchedOnly: Boolean = false,
     val performersSection: SectionState<TvPerson> = SectionState(isLoading = true),
     val categoryRows: List<HomeCategoryRow> = emptyList(),
+    val categoryRowsLoading: Boolean = true,
+    val categoryRowsErrorMessage: String? = null,
     val excludedTags: Set<String> = emptySet(),
 )
 
@@ -90,6 +97,8 @@ class HomeViewModel(
     private var latestJob: kotlinx.coroutines.Job? = null
     private var randomJob: kotlinx.coroutines.Job? = null
     private var performersJob: kotlinx.coroutines.Job? = null
+    private var categoryRowsJob: kotlinx.coroutines.Job? = null
+    private var surpriseMeInFlight = false
 
     init {
         viewModelScope.launch {
@@ -113,7 +122,7 @@ class HomeViewModel(
             settingsDataStore.selectedHomeCategoryIds
                 .distinctUntilChanged()
                 .collectLatest { selectedIds ->
-                    loadCategoryRows(selectedIds)
+                    requestCategoryRows(selectedIds)
                 }
         }
         viewModelScope.launch {
@@ -122,7 +131,7 @@ class HomeViewModel(
                 .drop(1)
                 .collect {
                     loadAll()
-                    loadCategoryRows(settingsDataStore.selectedHomeCategoryIds.firstOrNull())
+                    requestCategoryRows(settingsDataStore.selectedHomeCategoryIds.firstOrNull())
                 }
         }
         loadAll()
@@ -247,20 +256,58 @@ class HomeViewModel(
         loadRandom()
     }
 
+    private fun requestCategoryRows(selectedIds: Set<String>?) {
+        categoryRowsJob?.cancel()
+        categoryRowsJob = viewModelScope.launch { loadCategoryRows(selectedIds) }
+    }
+
+    fun reloadCategoryRows() {
+        viewModelScope.launch {
+            requestCategoryRows(settingsDataStore.selectedHomeCategoryIds.firstOrNull())
+        }
+    }
+
     private suspend fun loadCategoryRows(selectedIds: Set<String>?) {
+        _uiState.update { it.copy(categoryRowsLoading = true, categoryRowsErrorMessage = null) }
         val genresResult = libraryRepository.getGenres(limit = 200)
-        val genres = genresResult.getOrDefault(emptyList())
+        val genres = genresResult.getOrElse { error ->
+            _uiState.update {
+                it.copy(
+                    categoryRowsLoading = false,
+                    categoryRowsErrorMessage = error.localizedMessage ?: "Failed to load categories",
+                )
+            }
+            return
+        }
         val categoryIds = selectedIds ?: genres.take(2).map { it.id }.toSet()
-        val rows = mutableListOf<HomeCategoryRow>()
-        for (genre in genres.filter { it.id in categoryIds }) {
-            val moviesResult = libraryRepository.getGenreMovies(genreName = genre.name, genreId = genre.id, limit = 10)
-            val movies = moviesResult.getOrDefault(emptyList())
+        val selectedGenres = genres.filter { it.id in categoryIds }
+        val semaphore = Semaphore(4)
+        val results = coroutineScope {
+            selectedGenres.map { genre ->
+                async {
+                    genre to semaphore.withPermit {
+                        libraryRepository.getGenreMovies(genreName = genre.name, genreId = genre.id, limit = 10)
+                    }
+                }
+            }.awaitAll()
+        }
+        val rows = results.mapNotNull { (genre, moviesResult) ->
+            val movies = moviesResult.getOrNull() ?: return@mapNotNull null
             val filtered = filterExcluded(movies).distinctBy { it.providerVideoId?.ifBlank { null } ?: it.id }
             if (filtered.isNotEmpty()) {
-                rows.add(HomeCategoryRow(categoryId = genre.id, categoryName = genre.name, items = filtered))
+                HomeCategoryRow(categoryId = genre.id, categoryName = genre.name, items = filtered)
+            } else {
+                null
             }
         }
-        _uiState.update { it.copy(categoryRows = rows) }
+        val firstFailure = results.firstNotNullOfOrNull { (_, result) -> result.exceptionOrNull() }
+        _uiState.update {
+            it.copy(
+                categoryRows = rows,
+                categoryRowsLoading = false,
+                categoryRowsErrorMessage = firstFailure?.localizedMessage,
+            )
+        }
     }
 
     fun onCategorySeeAllClicked(categoryId: String) {
@@ -308,16 +355,22 @@ class HomeViewModel(
     }
 
     fun onSurpriseMeClicked() {
+        if (surpriseMeInFlight) return
+        surpriseMeInFlight = true
         viewModelScope.launch {
-            val randomItem = libraryRepository.getRandomItem().getOrNull()
-            if (randomItem != null) {
-                _navEvents.emit(HomeNavEvent.NavigateToItemDetail(randomItem.id))
-            } else {
-                val candidate = _uiState.value.randomSection.items.shuffled().firstOrNull()
-                    ?: _uiState.value.latestSection.items.shuffled().firstOrNull()
-                if (candidate != null) {
-                    _navEvents.emit(HomeNavEvent.NavigateToItemDetail(candidate.id))
+            try {
+                val randomItem = libraryRepository.getRandomItem().getOrNull()
+                if (randomItem != null) {
+                    _navEvents.emit(HomeNavEvent.NavigateToItemDetail(randomItem.id))
+                } else {
+                    val candidate = _uiState.value.randomSection.items.shuffled().firstOrNull()
+                        ?: _uiState.value.latestSection.items.shuffled().firstOrNull()
+                    if (candidate != null) {
+                        _navEvents.emit(HomeNavEvent.NavigateToItemDetail(candidate.id))
+                    }
                 }
+            } finally {
+                surpriseMeInFlight = false
             }
         }
     }

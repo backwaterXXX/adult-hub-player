@@ -131,6 +131,8 @@ open class PersonRepository(
             val uuid = UUID.fromString(personId)
             val jfPerson = try {
                 api.itemsApi.getItems(ids = listOf(uuid)).content.items.firstOrNull()
+            } catch (cancelled: CancellationException) {
+                throw cancelled
             } catch (_: Exception) {
                 null
             }
@@ -138,6 +140,8 @@ open class PersonRepository(
             // Optionally enrich with bio from Resolver
             val bioDto = try {
                 resolverApi.getPerformerBio(personName)
+            } catch (cancelled: CancellationException) {
+                throw cancelled
             } catch (_: Exception) {
                 null
             }

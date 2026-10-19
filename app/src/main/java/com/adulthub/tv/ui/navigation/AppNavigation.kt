@@ -66,6 +66,10 @@ private fun Context.findActivity(): Activity? {
     return null
 }
 
+private fun NavHostController.navigateSingleTop(route: String) {
+    navigate(route) { launchSingleTop = true }
+}
+
 private fun NavHostController.navigateToItemDetail(
     itemId: String,
     returnToPreviousDetail: Boolean = false,
@@ -76,10 +80,10 @@ private fun NavHostController.navigateToItemDetail(
         previousBackStackEntry?.destination?.route == Screen.ItemDetail.route
     ) {
         popBackStack()
-        navigate(route) { launchSingleTop = true }
+        navigateSingleTop(route)
     } else {
         navigate(route) {
-            launchSingleTop = currentDestination?.route == Screen.ItemDetail.route
+            launchSingleTop = true
         }
     }
 }
@@ -204,22 +208,22 @@ fun AppNavigation(
                     navController.navigateToItemDetail(itemId)
                 },
                 onNavigateToPersonDetail = { personId, personName ->
-                    navController.navigate(Screen.PersonDetail.createRoute(personId, personName))
+                    navController.navigateSingleTop(Screen.PersonDetail.createRoute(personId, personName))
                 },
                 onNavigateToPlayer = { playItemId ->
-                    navController.navigate(Screen.Player.createRoute(playItemId))
+                    navController.navigateSingleTop(Screen.Player.createRoute(playItemId))
                 },
                 onNavigateToLibrary = {
-                    navController.navigate(Screen.Library.createRoute())
+                    navController.navigateSingleTop(Screen.Library.createRoute())
                 },
                 onNavigateToSearch = {
-                    navController.navigate(Screen.Search.createRoute())
+                    navController.navigateSingleTop(Screen.Search.createRoute())
                 },
                 onNavigateToSettings = {
-                    navController.navigate(Screen.Settings.route)
+                    navController.navigateSingleTop(Screen.Settings.route)
                 },
                 onNavigateToLibraryCategory = { categoryId ->
-                    navController.navigate(Screen.Library.createRoute(categoryId))
+                    navController.navigateSingleTop(Screen.Library.createRoute(categoryId))
                 },
             )
         }
@@ -233,16 +237,16 @@ fun AppNavigation(
                 isCurrentDestination = currentBackStackEntry?.id == backStackEntry.id,
                 onNavigateBack = { navController.popBackStack() },
                 onNavigateToPlayer = { playItemId, resume ->
-                    navController.navigate(Screen.Player.createRoute(playItemId, resume))
+                    navController.navigateSingleTop(Screen.Player.createRoute(playItemId, resume))
                 },
                 onNavigateToItemDetail = { nextItemId ->
                     navController.navigateToItemDetail(nextItemId)
                 },
                 onNavigateToPersonDetail = { personId, personName ->
-                    navController.navigate(Screen.PersonDetail.createRoute(personId, personName))
+                    navController.navigateSingleTop(Screen.PersonDetail.createRoute(personId, personName))
                 },
                 onNavigateToSearch = { query ->
-                    navController.navigate(Screen.Search.createRoute(query))
+                    navController.navigateSingleTop(Screen.Search.createRoute(query))
                 },
             )
         }
@@ -302,10 +306,10 @@ fun AppNavigation(
                     navController.navigateToItemDetail(itemId)
                 },
                 onNavigateToPersonDetail = { personId, personName ->
-                    navController.navigate(Screen.PersonDetail.createRoute(personId, personName))
+                    navController.navigateSingleTop(Screen.PersonDetail.createRoute(personId, personName))
                 },
                 onNavigateToPlayer = { playItemId ->
-                    navController.navigate(Screen.Player.createRoute(playItemId))
+                    navController.navigateSingleTop(Screen.Player.createRoute(playItemId))
                 },
             )
         }
@@ -328,10 +332,10 @@ fun AppNavigation(
                     navController.navigateToItemDetail(itemId)
                 },
                 onNavigateToPersonDetail = { personId, personName ->
-                    navController.navigate(Screen.PersonDetail.createRoute(personId, personName))
+                    navController.navigateSingleTop(Screen.PersonDetail.createRoute(personId, personName))
                 },
                 onNavigateToPlayer = { itemId ->
-                    navController.navigate(Screen.Player.createRoute(itemId))
+                    navController.navigateSingleTop(Screen.Player.createRoute(itemId))
                 },
             )
         }
@@ -341,6 +345,7 @@ fun AppNavigation(
                 onSignOut = {
                     navController.navigate(Screen.Server.route) {
                         popUpTo(0) { inclusive = true }
+                        launchSingleTop = true
                     }
                 },
             )

@@ -237,7 +237,7 @@ fun PersonDetailScreen(
                                     contentPadding = PaddingValues(horizontal = 48.dp),
                                     horizontalArrangement = Arrangement.spacedBy(16.dp),
                                 ) {
-                                    items(state.movies) { movie ->
+                                    items(state.movies, key = { it.id }) { movie ->
                                         MovieCard(
                                             item = movie,
                                             imageUrl = viewModel.getItemImageUrl(movie),

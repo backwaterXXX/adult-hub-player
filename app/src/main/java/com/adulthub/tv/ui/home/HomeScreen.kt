@@ -324,6 +324,16 @@ fun HomeScreen(
                     }
                 }
             }
+            if (state.categoryRowsLoading || state.categoryRowsErrorMessage != null) {
+                item(key = "home_categories_status") {
+                    SectionRow(
+                        title = "Categories",
+                        isLoading = state.categoryRowsLoading,
+                        errorMessage = state.categoryRowsErrorMessage,
+                        onRetry = viewModel::reloadCategoryRows,
+                    ) {}
+                }
+            }
         }
     }
 }

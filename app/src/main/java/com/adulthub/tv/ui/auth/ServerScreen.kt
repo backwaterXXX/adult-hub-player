@@ -131,7 +131,7 @@ fun ServerScreen(
                         )
                     }
 
-                    items(state.discoveredServers) { server ->
+                    items(state.discoveredServers, key = { it.url }) { server ->
                         Row(
                             modifier = Modifier
                                 .fillMaxWidth()

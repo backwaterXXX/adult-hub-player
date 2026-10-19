@@ -23,6 +23,15 @@ import java.net.URI
 
 private const val PLAYBACK_TAG = "PlaybackRepository"
 
+private suspend inline fun <T> capturePlaybackResult(crossinline block: suspend () -> T): Result<T> =
+    try {
+        Result.success(block())
+    } catch (cancelled: CancellationException) {
+        throw cancelled
+    } catch (error: Exception) {
+        Result.failure(error)
+    }
+
 open class PlaybackRepository(
     private val clientManager: JellyfinClientManager,
     private val settingsDataStore: SettingsDataStore,
@@ -132,7 +141,7 @@ open class PlaybackRepository(
         playMethod: PlayMethod,
     ): Result<Unit> = withContext(Dispatchers.IO) {
         val uuid = runCatching { UUID.fromString(itemId) }.getOrNull() ?: return@withContext Result.success(Unit)
-        runCatching {
+        capturePlaybackResult {
             val api = clientManager.getApi()
             api.playStateApi.reportPlaybackStart(
                 data = PlaybackStartInfo(
@@ -162,7 +171,7 @@ open class PlaybackRepository(
         playMethod: PlayMethod,
     ): Result<Unit> = withContext(Dispatchers.IO) {
         val uuid = runCatching { UUID.fromString(itemId) }.getOrNull() ?: return@withContext Result.success(Unit)
-        runCatching {
+        capturePlaybackResult {
             val api = clientManager.getApi()
             api.playStateApi.reportPlaybackProgress(
                 data = PlaybackProgressInfo(
@@ -189,7 +198,7 @@ open class PlaybackRepository(
         playSessionId: String? = null,
     ): Result<Unit> = withContext(Dispatchers.IO) {
         val uuid = runCatching { UUID.fromString(itemId) }.getOrNull() ?: return@withContext Result.success(Unit)
-        runCatching {
+        capturePlaybackResult {
             val api = clientManager.getApi()
             api.playStateApi.reportPlaybackStopped(
                 data = PlaybackStopInfo(

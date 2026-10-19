@@ -36,6 +36,7 @@ import androidx.compose.runtime.CompositionLocalProvider
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.produceState
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.runtime.setValue
@@ -51,6 +52,8 @@ import androidx.compose.ui.text.input.KeyboardType
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.withContext
 import androidx.tv.material3.MaterialTheme
 import androidx.tv.material3.Text
 import com.adulthub.tv.BuildConfig
@@ -101,6 +104,12 @@ fun SettingsScreen(
     var showLicensesDialog by remember { mutableStateOf(false) }
     var pendingClearType by remember { mutableStateOf<ClearDataType?>(null) }
     val uiState by viewModel.uiState.collectAsStateWithLifecycle()
+    val diagnostics by produceState(
+        initialValue = com.adulthub.tv.diagnostics.DeviceDiagnostics("Loading…", "", 0L, 0L, emptyList()),
+        key1 = context,
+    ) {
+        value = withContext(Dispatchers.IO) { DeviceDiagnosticsHelper.getDiagnostics(context) }
+    }
     val diagnosticsExportLauncher = rememberLauncherForActivityResult(
         contract = ActivityResultContracts.CreateDocument("text/plain"),
     ) { uri ->
@@ -380,7 +389,6 @@ fun SettingsScreen(
 
             // 3c. Low-Memory Mode (Performance)
             item(key = "section_low_ram") {
-                val diagnostics = remember(context) { DeviceDiagnosticsHelper.getDiagnostics(context) }
                 val isLowMemoryDevice = diagnostics.totalRamMb in 1..2048
                 SettingsCard(title = "Performance & Memory") {
                     Column {
@@ -819,7 +827,7 @@ fun SettingsScreen(
                                     horizontalArrangement = Arrangement.spacedBy(8.dp),
                                     contentPadding = PaddingValues(horizontal = 4.dp, vertical = 8.dp),
                                 ) {
-                                    items(items = uiState.excludedTags.toList()) { tag ->
+                                    items(items = uiState.excludedTags.toList(), key = { it }) { tag ->
                                         TvSecondaryButton(
                                             onClick = { viewModel.removeExcludedTag(tag) },
                                             modifier = Modifier.height(34.dp),
@@ -851,7 +859,7 @@ fun SettingsScreen(
                                     horizontalArrangement = Arrangement.spacedBy(8.dp),
                                     contentPadding = PaddingValues(horizontal = 4.dp, vertical = 8.dp),
                                 ) {
-                                    items(items = uiState.hiddenChannelIds.toList()) { channelId ->
+                                    items(items = uiState.hiddenChannelIds.toList(), key = { it }) { channelId ->
                                         TvSecondaryButton(
                                             onClick = { viewModel.unhideChannel(channelId) },
                                             modifier = Modifier.height(34.dp),
@@ -867,7 +875,6 @@ fun SettingsScreen(
             }
 
             item(key = "section_device_info") {
-                val diagnostics = remember(context) { DeviceDiagnosticsHelper.getDiagnostics(context) }
                 SettingsCard(title = "Device & hardware diagnostics") {
                     Column {
                         SettingsInfoRow(label = "Model", value = diagnostics.deviceModel)

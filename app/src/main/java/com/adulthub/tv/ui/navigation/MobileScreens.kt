@@ -182,6 +182,17 @@ fun MobileHomeScreen(vm: HomeViewModel, onItem: (String) -> Unit, onPlay: (Strin
                     }
                 }
             }
+            if (state.categoryRowsLoading) {
+                item(key = "category_rows_loading") { LinearProgressIndicator(Modifier.fillMaxWidth()) }
+            }
+            state.categoryRowsErrorMessage?.let { message ->
+                item(key = "category_rows_error") {
+                    Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
+                        Text(message, color = Color.White)
+                        OutlinedButton(onClick = vm::reloadCategoryRows) { Text("Retry categories") }
+                    }
+                }
+            }
         }
     }
 }

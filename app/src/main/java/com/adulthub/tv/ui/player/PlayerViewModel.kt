@@ -163,7 +163,7 @@ class PlayerViewModel(
         }
     }
 
-    fun playRandomMovie(currentPositionMs: Long = 0L) {
+    fun playRandomMovie(currentPositionMs: Long = 0L, reportingSessionId: Long? = null) {
         if (_isLoadingRandom.value) return
         val playbackRequestId = ++playbackRequestCounter
         loadItemJob?.cancel()
@@ -172,7 +172,7 @@ class PlayerViewModel(
             val currentItem = (_uiState.value as? PlayerUiState.Ready)?.item
             if (currentItem != null) persistTelegramProgress(currentItem, currentPositionMs, isEnded = false)
             // Stop current playback reporting session
-            playbackReporter.stopSession(currentPositionMs)
+            playbackReporter.stopSession(currentPositionMs, reportingSessionId)
 
             val currentId = currentItem?.id
             val libraryId = settingsDataStore.selectedLibraryId.firstOrNull()
@@ -264,10 +264,10 @@ class PlayerViewModel(
         }
     }
 
-    fun onPlaybackEnded(finalPositionMs: Long) {
+    fun onPlaybackEnded(finalPositionMs: Long, reportingSessionId: Long? = null) {
         _isPlaybackEnded.value = true
         saveTelegramProgress(finalPositionMs, isEnded = true)
-        playbackReporter.stopSession(finalPositionMs)
+        playbackReporter.stopSession(finalPositionMs, reportingSessionId)
     }
 
     fun toggleFavorite() {
@@ -282,9 +282,9 @@ class PlayerViewModel(
         }
     }
 
-    fun onExitPlayer(currentPositionMs: Long) {
+    fun onExitPlayer(currentPositionMs: Long, reportingSessionId: Long? = null) {
         saveTelegramProgress(currentPositionMs, isEnded = false)
-        playbackReporter.stopSession(currentPositionMs)
+        playbackReporter.stopSession(currentPositionMs, reportingSessionId)
     }
 
     fun onResumeDialogHandled() {

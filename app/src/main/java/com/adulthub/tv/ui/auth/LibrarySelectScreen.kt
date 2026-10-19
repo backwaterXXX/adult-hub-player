@@ -74,7 +74,7 @@ fun LibrarySelectScreen(
                         horizontalArrangement = Arrangement.spacedBy(20.dp),
                         verticalAlignment = Alignment.CenterVertically,
                     ) {
-                        items(state.libraries) { library ->
+                        items(state.libraries, key = { it.id }) { library ->
                             TvPrimaryButton(
                                 onClick = { viewModel.selectLibrary(library) },
                                 modifier = Modifier

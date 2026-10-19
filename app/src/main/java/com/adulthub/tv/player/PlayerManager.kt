@@ -302,7 +302,12 @@ class PlayerManager(
         totalRetryCount = 0
         _retryStatus.value = null
         playbackRequest = PlaybackRequest(streamUrl, title, headers.toMap())
-        startPlayback(streamUrl, startPositionMs, title, headers, resetPlaybackSpeed = true, resumePlayback = true)
+        try {
+            startPlayback(streamUrl, startPositionMs, title, headers, resetPlaybackSpeed = true, resumePlayback = true)
+        } catch (error: Exception) {
+            _errorMessage.value = error.message?.takeIf(String::isNotBlank) ?: "Could not prepare this video"
+            Log.w(TAG, "Playback preparation failed (${error.javaClass.simpleName})")
+        }
     }
 
     private fun startPlayback(
@@ -315,6 +320,7 @@ class PlayerManager(
     ) {
         released = false
         _errorMessage.value = null
+        _durationMs.value = 0L
         streamFileSizeBytes = null
         streamContentType = null
         videoDecoderName = null
@@ -419,14 +425,19 @@ class PlayerManager(
             if (generation != playbackGeneration) return@launch
             Log.i(TAG, "Automatic playback retry $attempt/$MAX_AUTOMATIC_RETRIES")
             val resumePlayback = exoPlayer.playWhenReady
-            startPlayback(
-                streamUrl = request.streamUrl,
-                startPositionMs = exoPlayer.currentPosition.coerceAtLeast(0L),
-                title = request.title,
-                headers = request.headers,
-                resetPlaybackSpeed = false,
-                resumePlayback = resumePlayback,
-            )
+            try {
+                startPlayback(
+                    streamUrl = request.streamUrl,
+                    startPositionMs = exoPlayer.currentPosition.coerceAtLeast(0L),
+                    title = request.title,
+                    headers = request.headers,
+                    resetPlaybackSpeed = false,
+                    resumePlayback = resumePlayback,
+                )
+            } catch (error: Exception) {
+                _errorMessage.value = error.message?.takeIf(String::isNotBlank) ?: "Could not prepare this video"
+                Log.w(TAG, "Automatic retry preparation failed (${error.javaClass.simpleName})")
+            }
         }
         return true
     }
@@ -469,7 +480,8 @@ class PlayerManager(
     }
 
     fun seekTo(positionMs: Long) {
-        val targetPos = positionMs.coerceIn(0L, (_durationMs.value).coerceAtLeast(0L))
+        val duration = _durationMs.value
+        val targetPos = if (duration > 0L) positionMs.coerceIn(0L, duration) else positionMs.coerceAtLeast(0L)
         exoPlayer.seekTo(targetPos)
         _currentPositionMs.value = targetPos
     }

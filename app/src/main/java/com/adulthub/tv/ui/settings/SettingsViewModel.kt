@@ -363,19 +363,20 @@ class SettingsViewModel(
     @OptIn(coil.annotation.ExperimentalCoilApi::class)
     fun clearCache(context: Context) {
         viewModelScope.launch {
-            clearImageCache(context)
-            _uiState.update { it.copy(statusMessage = "Cache cleared successfully") }
+            val cleared = withContext(Dispatchers.IO) { clearImageCache(context) }
+            _uiState.update {
+                it.copy(statusMessage = if (cleared) "Cache cleared successfully" else "Could not clear the image cache")
+            }
         }
     }
 
     @OptIn(coil.annotation.ExperimentalCoilApi::class)
-    private fun clearImageCache(context: Context) {
+    private fun clearImageCache(context: Context): Boolean =
         runCatching {
             val imageLoader = Coil.imageLoader(context)
             imageLoader.memoryCache?.clear()
             imageLoader.diskCache?.clear()
-        }
-    }
+        }.isSuccess
 
     fun clearStatusMessage() {
         _uiState.update { it.copy(statusMessage = null) }

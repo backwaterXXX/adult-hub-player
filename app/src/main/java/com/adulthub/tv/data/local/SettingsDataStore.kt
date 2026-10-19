@@ -24,6 +24,7 @@ import kotlinx.coroutines.flow.map
 import kotlinx.serialization.Serializable
 import kotlinx.serialization.json.Json
 import java.io.IOException
+import java.util.concurrent.atomic.AtomicReference
 
 private val Context.settingsDataStore: DataStore<Preferences> by preferencesDataStore(name = "settings_prefs")
 
@@ -95,6 +96,7 @@ open class SettingsDataStore(
     }
 
     private val encryptedValue = EncryptedPreferenceValue(crypto)
+    private val approvedCleartextOriginsSnapshot = AtomicReference<Set<String>>(emptySet())
     private val settingsPreferences = dataStore.data
         .catch { if (it is IOException) emit(emptyPreferences()) else throw it }
 
@@ -132,6 +134,7 @@ open class SettingsDataStore(
             preferences[KEY_APPROVED_CLEARTEXT_ORIGINS].orEmpty()
                 .mapNotNull { encryptedValue.decode(it) }
                 .toSet()
+                .also(approvedCleartextOriginsSnapshot::set)
         }
 
     open val autoUpdateEnabled: Flow<Boolean> = dataStore.data
@@ -226,6 +229,7 @@ open class SettingsDataStore(
             preferences.remove(LEGACY_KEY_UPDATE_BASE_URL)
             preferences[KEY_SCHEMA_VERSION] = CURRENT_SCHEMA_VERSION
         }
+        approvedCleartextOriginsSnapshot.set(oldOrigins.mapNotNull { encryptedValue.decode(it) }.toSet())
     }
 
     open suspend fun isCleartextOriginApproved(url: String): Boolean {
@@ -256,7 +260,10 @@ open class SettingsDataStore(
                     updated = true
                 }
             }
-            if (updated) return
+            if (updated) {
+                approvedCleartextOriginsSnapshot.set(currentOrigins + serviceUrl.origin)
+                return
+            }
         }
     }
 
@@ -275,7 +282,10 @@ open class SettingsDataStore(
                     updated = true
                 }
             }
-            if (updated) return
+            if (updated) {
+                approvedCleartextOriginsSnapshot.set(currentOrigins - origin)
+                return
+            }
         }
     }
 
@@ -285,6 +295,17 @@ open class SettingsDataStore(
             is ServiceUrlValidation.Invalid -> throw IllegalArgumentException(validation.reason)
         }
         if (serviceUrl.usesCleartext && serviceUrl.origin !in approvedCleartextOrigins.first()) {
+            throw IllegalStateException("Confirm unencrypted HTTP for this private LAN host before connecting")
+        }
+        return serviceUrl
+    }
+
+    fun requireAllowedImageUrl(url: String): ServiceUrl {
+        val serviceUrl = when (val validation = ServiceUrlPolicy.inspect(url, allowQuery = true)) {
+            is ServiceUrlValidation.Valid -> validation.value
+            is ServiceUrlValidation.Invalid -> throw IllegalArgumentException(validation.reason)
+        }
+        if (serviceUrl.usesCleartext && serviceUrl.origin !in approvedCleartextOriginsSnapshot.get()) {
             throw IllegalStateException("Confirm unencrypted HTTP for this private LAN host before connecting")
         }
         return serviceUrl

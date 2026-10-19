@@ -36,7 +36,9 @@ import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Slider
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableFloatStateOf
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
@@ -78,10 +80,16 @@ fun MobilePlayerOverlay(
     resizeMode: Int,
     onResizeModeChange: (Int) -> Unit,
     seekFeedback: String?,
+    seekStepSec: Int,
 ) {
     val duration = durationMs.coerceAtLeast(0L)
     val position = currentPositionMs.coerceIn(0L, duration.takeIf { it > 0 } ?: Long.MAX_VALUE)
     var expanded by remember { mutableStateOf(false) }
+    var isDraggingSeek by remember { mutableStateOf(false) }
+    var dragPositionMs by remember { mutableFloatStateOf(position.toFloat()) }
+    LaunchedEffect(position, isDraggingSeek) {
+        if (!isDraggingSeek) dragPositionMs = position.toFloat()
+    }
 
     // Keep the video tappable when the controls have faded away.
     Box(
@@ -168,8 +176,17 @@ fun MobilePlayerOverlay(
                     Row(Modifier.fillMaxWidth(), verticalAlignment = Alignment.CenterVertically) {
                         Text(formatTime(position), color = Color.White, fontSize = 12.sp)
                         Slider(
-                            value = position.toFloat(),
-                            onValueChange = { onSeekTo(it.toLong()); onInteraction() },
+                            value = if (isDraggingSeek) dragPositionMs else position.toFloat(),
+                            onValueChange = {
+                                dragPositionMs = it
+                                isDraggingSeek = true
+                                onInteraction()
+                            },
+                            onValueChangeFinished = {
+                                onSeekTo(dragPositionMs.toLong())
+                                isDraggingSeek = false
+                                onInteraction()
+                            },
                             valueRange = 0f..duration.coerceAtLeast(1L).toFloat(),
                             modifier = Modifier.weight(1f).padding(horizontal = 8.dp).graphicsLayer { scaleY = 0.6f },
                         )
@@ -177,7 +194,7 @@ fun MobilePlayerOverlay(
                     }
 
                     Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceEvenly, verticalAlignment = Alignment.CenterVertically) {
-                        IconButton(onClick = { onSeekRelative(-15_000L); onInteraction() }) { Icon(Icons.Rounded.FastRewind, "Rewind 15 seconds", tint = Color.White, modifier = Modifier.size(30.dp)) }
+                        IconButton(onClick = { onSeekRelative(-seekStepSec * 1_000L); onInteraction() }) { Icon(Icons.Rounded.FastRewind, "Rewind $seekStepSec seconds", tint = Color.White, modifier = Modifier.size(30.dp)) }
                         IconButton(
                             onClick = { onPlayPauseClick(); onInteraction() },
                             enabled = !isBuffering,
@@ -185,7 +202,7 @@ fun MobilePlayerOverlay(
                         ) {
                             Icon(if (isPlaying) Icons.Rounded.Pause else Icons.Rounded.PlayArrow, if (isPlaying) "Pause" else "Play", tint = Color.White, modifier = Modifier.size(36.dp))
                         }
-                        IconButton(onClick = { onSeekRelative(15_000L); onInteraction() }) { Icon(Icons.Rounded.FastForward, "Forward 15 seconds", tint = Color.White, modifier = Modifier.size(30.dp)) }
+                        IconButton(onClick = { onSeekRelative(seekStepSec * 1_000L); onInteraction() }) { Icon(Icons.Rounded.FastForward, "Forward $seekStepSec seconds", tint = Color.White, modifier = Modifier.size(30.dp)) }
                         IconButton(onClick = { onRandomClick(); onInteraction() }) { Icon(Icons.Rounded.Shuffle, "Play random", tint = Color.White) }
                         IconButton(onClick = { onMuteClick(); onInteraction() }) { Icon(if (isMuted) Icons.Rounded.VolumeOff else Icons.Rounded.VolumeUp, if (isMuted) "Unmute" else "Mute", tint = Color.White) }
                         IconButton(onClick = { expanded = !expanded; onInteraction() }) { Icon(Icons.Rounded.MoreHoriz, "More playback options", tint = Color.White) }

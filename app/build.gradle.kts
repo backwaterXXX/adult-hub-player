@@ -16,8 +16,8 @@ android {
         applicationId = "com.adulthub.tv"
         minSdk = 28
         targetSdk = 35
-        versionCode = 68
-        versionName = "0.1.68"
+        versionCode = 69
+        versionName = "0.1.69"
 
         testInstrumentationRunner = "androidx.test.runner.AndroidJUnitRunner"
         val updateOwner = providers.environmentVariable("UPDATE_GITHUB_OWNER")
@@ -67,10 +67,10 @@ android {
 
     buildTypes {
         debug {
+            applicationIdSuffix = ".debug"
+            signingConfig = signingConfigs.getByName("debug")
             val keystorePropertiesFile = rootProject.file("keystore.properties")
-            if (keystorePropertiesFile.exists()) {
-                signingConfig = signingConfigs.getByName("release")
-            }
+            // Debug builds remain installable without access to the release key.
         }
         release {
             isMinifyEnabled = true
@@ -82,8 +82,6 @@ android {
             val keystorePropertiesFile = rootProject.file("keystore.properties")
             if (keystorePropertiesFile.exists()) {
                 signingConfig = signingConfigs.getByName("release")
-            } else {
-                signingConfig = signingConfigs.getByName("debug")
             }
         }
     }
@@ -113,7 +111,17 @@ android {
     lint {
         lintConfig = file("lint.xml")
         abortOnError = true
-        checkReleaseBuilds = false
+        checkReleaseBuilds = true
+    }
+}
+
+tasks.configureEach {
+    if (name == "packageTvRelease" || name == "packageMobileRelease") {
+        doFirst {
+            check(rootProject.file("keystore.properties").isFile) {
+                "Release APK packaging requires keystore.properties; refusing to sign with the debug key."
+            }
+        }
     }
 }
 

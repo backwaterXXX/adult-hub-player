@@ -17,6 +17,7 @@ import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
+import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withTimeout
 import retrofit2.HttpException
@@ -262,8 +263,8 @@ class PhashCoordinator(
                         backoffMs = STATUS_POLL_INTERVAL_MS
                     }
                     else -> {
-                        setStatus(videoId, PhashUiStatus("Resolver task state: $state"))
-                        backoffMs = STATUS_POLL_INTERVAL_MS
+                        setStatus(videoId, PhashUiStatus("Unsupported Resolver task state: $state", terminal = true))
+                        return
                     }
                 }
             } catch (_: TimeoutCancellationException) {
@@ -298,7 +299,10 @@ class PhashCoordinator(
     }
 
     private fun setStatus(videoId: String, status: PhashUiStatus) {
-        _jobStatuses.value = _jobStatuses.value + (videoId to status)
+        _jobStatuses.update { current ->
+            val updated = current + (videoId to status)
+            if (updated.size <= 200) updated else updated.entries.toList().takeLast(200).associate { it.key to it.value }
+        }
     }
 
     private fun statusFor(record: StoredPhashJob): PhashUiStatus = when (record.state.lowercase()) {

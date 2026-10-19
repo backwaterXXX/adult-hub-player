@@ -51,7 +51,8 @@ fun MobileAppNavigation(modifier: Modifier = Modifier) {
         }
     }
 
-    val showBar = route in setOf(Screen.Home.route, Screen.Library.route, Screen.Search.route, Screen.Settings.route)
+    val topLevelRoutes = setOf(Screen.Home.route, Screen.Library.route, Screen.Search.route, Screen.Settings.route)
+    val showBar = route in topLevelRoutes
     var lastHomeBackAt by remember { mutableLongStateOf(0L) }
     LaunchedEffect(route) { lastHomeBackAt = 0L }
     BackHandler(enabled = route == Screen.Home.route) {
@@ -68,14 +69,20 @@ fun MobileAppNavigation(modifier: Modifier = Modifier) {
             if (showBar) NavigationBar {
                 listOf(
                     Screen.Home.route to ("Home" to Icons.Filled.Home),
-                    Screen.Library.createRoute() to ("Library" to Icons.AutoMirrored.Filled.MenuBook),
-                    Screen.Search.createRoute() to ("Search" to Icons.Filled.Search),
+                    Screen.Library.route to ("Library" to Icons.AutoMirrored.Filled.MenuBook),
+                    Screen.Search.route to ("Search" to Icons.Filled.Search),
                     Screen.Settings.route to ("Settings" to Icons.Filled.Settings),
                 ).forEach { (destination, pair) ->
-                    val selected = route == destination || (pair.first == "Library" && route?.startsWith("library") == true)
+                    val selected = route == destination
                     NavigationBarItem(
                         selected = selected,
-                        onClick = { nav.navigate(destination) { launchSingleTop = true } },
+                        onClick = {
+                            nav.navigate(destination) {
+                                popUpTo(Screen.Home.route) { saveState = true }
+                                launchSingleTop = true
+                                restoreState = true
+                            }
+                        },
                         icon = { Icon(pair.second, contentDescription = pair.first) },
                         label = { Text(pair.first) },
                     )

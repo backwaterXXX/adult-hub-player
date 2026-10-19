@@ -19,7 +19,6 @@ import org.koin.core.context.GlobalContext
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.Dispatchers
-import kotlinx.coroutines.runBlocking
 import kotlinx.coroutines.SupervisorJob
 import kotlinx.coroutines.launch
 import okhttp3.OkHttpClient
@@ -45,7 +44,7 @@ class AdultHubTvApp : Application(), ImageLoaderFactory {
             )
         }
 
-        GlobalContext.get().get<AppUpdateManager>().checkAutomaticallyIfDue()
+        if (!BuildConfig.DEBUG) GlobalContext.get().get<AppUpdateManager>().checkAutomaticallyIfDue()
 
         applicationScope.launch {
             launch {
@@ -63,10 +62,8 @@ class AdultHubTvApp : Application(), ImageLoaderFactory {
             .addNetworkInterceptor { chain ->
                 val request = chain.request()
                 val urlString = request.url.toString()
-                val serviceUrl = try {
-                    runBlocking(Dispatchers.IO) {
-                        settingsDataStore.requireAllowedServiceUrl(urlString, allowQuery = true)
-                    }
+                try {
+                    settingsDataStore.requireAllowedImageUrl(urlString)
                 } catch (error: Exception) {
                     throw IOException("Blocked image request to an unapproved HTTP origin", error)
                 }

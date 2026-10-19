@@ -6,11 +6,12 @@ import com.adulthub.tv.data.repository.LibraryRepository
 import com.adulthub.tv.data.repository.PersonRepository
 import com.adulthub.tv.data.repository.PlaybackRepository
 import com.adulthub.tv.data.repository.StudioRepository
+import com.adulthub.tv.data.local.TelegramProgressStore
 import org.koin.dsl.module
 
 val repositoryModule = module {
     single { AuthRepository(get(), get(), get()) }
-    single { LibraryRepository(get(), get()) }
+    single { LibraryRepository(get(), get(), get<TelegramProgressStore>()) }
     single { PersonRepository(get(), get(), get()) }
     single { StudioRepository(get(), get()) }
     single { ChannelRepository(get()) }

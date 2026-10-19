@@ -53,11 +53,17 @@ class PlaybackReporter(
         val mediaSourceId: String?,
         val playSessionId: String?,
         val playMethod: PlayMethod,
+        val getCurrentPositionMs: () -> Long,
+        val getIsPaused: () -> Boolean,
         @Volatile
         var canSeek: Boolean = false,
+        @Volatile
         var hasStarted: Boolean = false,
+        @Volatile
+        var stopped: Boolean = false,
     )
 
+    @Synchronized
     fun startSession(
         itemId: String,
         mediaSourceId: String?,
@@ -65,11 +71,10 @@ class PlaybackReporter(
         playMethod: PlayMethod,
         getCurrentPositionMs: () -> Long,
         getIsPaused: () -> Boolean,
-    ) {
+    ): Long {
         // Stop any existing session first
         currentSession?.let { existingSession ->
-            val pos = getCurrentPositionMs()
-            stopSession(pos)
+            stopSession(existingSession.getCurrentPositionMs(), existingSession.sessionId)
         }
 
         val sessionId = sessionCounter.incrementAndGet()
@@ -79,6 +84,8 @@ class PlaybackReporter(
             mediaSourceId = mediaSourceId,
             playSessionId = playSessionId,
             playMethod = playMethod,
+            getCurrentPositionMs = getCurrentPositionMs,
+            getIsPaused = getIsPaused,
         )
         currentSession = newSession
         Log.d(TAG, "Starting playback reporting session")
@@ -89,9 +96,10 @@ class PlaybackReporter(
                     delay(REPORTING_INTERVAL_MS)
                     val activeSession = currentSession
                     if (activeSession != null && activeSession.sessionId == sessionId) {
-                        val positionMs = getCurrentPositionMs()
-                        val isPaused = getIsPaused()
-                        enqueue(ReportCommand.Progress(activeSession, positionMs, isPaused))
+                        if (activeSession.hasStarted) {
+                            val positionMs = activeSession.getCurrentPositionMs()
+                            reportProgressNow(positionMs, activeSession.getIsPaused(), activeSession.sessionId)
+                        }
                     } else {
                         break
                     }
@@ -102,10 +110,12 @@ class PlaybackReporter(
                 Log.w(TAG, "Periodic playback reporting failed (${e.javaClass.simpleName})")
             }
         }
+        return sessionId
     }
 
-    fun reportStart(positionMs: Long, canSeek: Boolean) {
-        val session = currentSession ?: return
+    @Synchronized
+    fun reportStart(positionMs: Long, canSeek: Boolean, sessionId: Long? = null) {
+        val session = currentSession?.takeIf { sessionId == null || it.sessionId == sessionId } ?: return
         if (session.hasStarted) return
         session.canSeek = canSeek
         session.hasStarted = true
@@ -113,8 +123,9 @@ class PlaybackReporter(
         enqueue(ReportCommand.Start(session, positionMs))
     }
 
-    fun reportProgressNow(positionMs: Long, isPaused: Boolean) {
-        val session = currentSession ?: return
+    @Synchronized
+    fun reportProgressNow(positionMs: Long, isPaused: Boolean, sessionId: Long? = null) {
+        val session = currentSession?.takeIf { (sessionId == null || it.sessionId == sessionId) && it.hasStarted } ?: return
         synchronized(pendingProgressLock) {
             pendingProgress = ReportCommand.Progress(session, positionMs, isPaused)
             if (pendingProgressJob?.isActive == true) return
@@ -125,19 +136,21 @@ class PlaybackReporter(
         }
     }
 
-    fun stopSession(finalPositionMs: Long) {
+    @Synchronized
+    fun stopSession(finalPositionMs: Long, sessionId: Long? = null) {
+        val session = currentSession ?: return
+        if (sessionId != null && session.sessionId != sessionId) return
+        currentSession = null
         reportingJob?.cancel()
         reportingJob = null
 
-        val lastPendingProgress = synchronized(pendingProgressLock) {
+        synchronized(pendingProgressLock) {
             pendingProgressJob?.cancel()
             pendingProgressJob = null
-            pendingProgress.also { pendingProgress = null }
+            pendingProgress = null
         }
-        lastPendingProgress?.let(::enqueue)
 
-        val session = currentSession ?: return
-        currentSession = null
+        session.stopped = true
         enqueue(ReportCommand.Stop(session, finalPositionMs))
     }
 
@@ -158,7 +171,7 @@ class PlaybackReporter(
 
     private suspend fun process(command: ReportCommand) {
         val session = command.session
-        if (command !is ReportCommand.Stop && currentSession?.sessionId != session.sessionId) return
+        if (command is ReportCommand.Progress && session.stopped) return
 
         val positionMs = command.positionMs
         val ticks = positionMs.coerceAtLeast(0L) * 10_000L

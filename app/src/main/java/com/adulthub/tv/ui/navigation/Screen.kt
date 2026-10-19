@@ -17,16 +17,16 @@ sealed class Screen(val route: String) {
     }
     data object PersonDetail : Screen("person_detail/{personId}/{personName}") {
         fun createRoute(personId: String, personName: String): String =
-            "person_detail/$personId/${java.net.URLEncoder.encode(personName, "UTF-8")}"
+            "person_detail/${android.net.Uri.encode(personId)}/${android.net.Uri.encode(personName)}"
     }
     data object Search : Screen("search?query={query}") {
         fun createRoute(query: String = ""): String =
-            if (query.isNotBlank()) "search?query=${java.net.URLEncoder.encode(query, "UTF-8")}" else "search"
+            if (query.isNotBlank()) "search?query=${android.net.Uri.encode(query)}" else "search"
     }
     data object Settings : Screen("settings")
     data object Player : Screen("player/{itemId}?resume={resume}") {
         fun createRoute(itemId: String, resume: Boolean? = null): String {
-            val encodedItemId = java.net.URLEncoder.encode(itemId, "UTF-8")
+            val encodedItemId = android.net.Uri.encode(itemId)
             val route = "player/$encodedItemId"
             return if (resume == null) route else "$route?resume=$resume"
         }

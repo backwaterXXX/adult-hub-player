@@ -16,12 +16,18 @@ jobs:
   build:
     name: Build & Test Android TV and Mobile APKs
     runs-on: ubuntu-24.04
+    timeout-minutes: 45
+    concurrency:
+      group: android-validation-${{ github.ref }}
+      cancel-in-progress: true
     permissions:
       contents: read
 
     steps:
       - name: Checkout Code
         uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
 
       - name: Set up JDK 17
         uses: actions/setup-java@de7274f081f381c8f8158605e0321c36c376e2e6 # v6.0.1
@@ -43,7 +49,19 @@ jobs:
         env:
           UPDATE_GITHUB_OWNER: ${{ github.repository_owner }}
           UPDATE_GITHUB_REPO: ${{ github.event.repository.name }}
-        run: ./gradlew testTvDebugUnitTest testMobileDebugUnitTest lintTvDebug lintMobileDebug assembleTvRelease assembleMobileRelease assembleTvDebug assembleMobileDebug --no-daemon
+        run: ./gradlew testTvDebugUnitTest testMobileDebugUnitTest lintTvDebug lintMobileDebug lintTvRelease lintMobileRelease compileTvReleaseKotlin compileMobileReleaseKotlin minifyTvReleaseWithR8 minifyMobileReleaseWithR8 assembleTvDebug assembleMobileDebug --no-daemon
+
+      - name: Archive validation reports
+        if: always()
+        uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2
+        with:
+          name: android-validation-reports
+          path: |
+            app/build/reports/lint-results-*.html
+            app/build/reports/lint-results-*.sarif
+            app/build/test-results/*/*.xml
+          if-no-files-found: warn
+          retention-days: 14
 
       - name: Prepare Debug Artifact
         run: |
@@ -67,12 +85,19 @@ jobs:
     if: startsWith(github.ref, 'refs/tags/v')
     needs: build
     runs-on: ubuntu-24.04
+    timeout-minutes: 30
+    concurrency:
+      group: android-release-${{ github.ref }}
+      cancel-in-progress: false
     permissions:
       contents: write
 
     steps:
       - name: Checkout Code
         uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+          fetch-depth: 0
 
       - name: Set up JDK 17
         uses: actions/setup-java@de7274f081f381c8f8158605e0321c36c376e2e6 # v6.0.1
@@ -83,6 +108,39 @@ jobs:
       - name: Setup Gradle
         uses: gradle/actions/setup-gradle@3f5f9adaf7d9fecd50b5935e54106014257a94e6 # v6.4.0
 
+      - name: Validate release tag and version
+        env:
+          RELEASE_TAG: ${{ github.ref_name }}
+        run: |
+          python3 - <<'PY'
+          import os
+          import re
+          import subprocess
+
+          def version_at(revision):
+              source = subprocess.check_output(
+                  ["git", "show", f"{revision}:app/build.gradle.kts"], text=True
+              )
+              name = re.search(r'versionName = "([^"]+)"', source).group(1)
+              code = int(re.search(r'versionCode = (\d+)', source).group(1))
+              return name, code
+
+          name, code = version_at("HEAD")
+          expected = f"v{name}-tv"
+          if os.environ["RELEASE_TAG"] != expected:
+              raise SystemExit(f"Release tag must be {expected}, found {os.environ['RELEASE_TAG']}")
+
+          tags = subprocess.check_output(
+              ["git", "tag", "--merged", "HEAD", "--list", "v*-tv", "--sort=-version:refname"],
+              text=True,
+          ).splitlines()
+          previous = next((tag for tag in tags if tag != os.environ["RELEASE_TAG"]), None)
+          if previous:
+              previous_code = version_at(previous)[1]
+              if code <= previous_code:
+                  raise SystemExit(f"versionCode {code} must exceed the previous TV release code {previous_code}")
+          PY
+
       - name: Grant execute permission for gradlew
         run: chmod +x gradlew
 
@@ -92,10 +150,11 @@ jobs:
           KEYSTORE_PASSWORD: ${{ secrets.ANDROID_KEYSTORE_PASSWORD }}
           KEY_ALIAS: ${{ secrets.ANDROID_KEY_ALIAS }}
           KEY_PASSWORD: ${{ secrets.ANDROID_KEY_PASSWORD }}
+          EXPECTED_CERT_SHA256: ${{ vars.ANDROID_SIGNING_CERT_SHA256 }}
           UPDATE_GITHUB_OWNER: ${{ github.repository_owner }}
           UPDATE_GITHUB_REPO: ${{ github.event.repository.name }}
         run: |
-          for name in KEYSTORE_BASE64 KEYSTORE_PASSWORD KEY_ALIAS KEY_PASSWORD; do
+          for name in KEYSTORE_BASE64 KEYSTORE_PASSWORD KEY_ALIAS KEY_PASSWORD EXPECTED_CERT_SHA256; do
             if [ -z "${!name}" ]; then
               echo "Missing required release secret: $name" >&2
               exit 1
@@ -120,6 +179,14 @@ jobs:
           fi
           "$apksigner" verify --verbose "$tv_apk"
           "$apksigner" verify --verbose "$mobile_apk"
+          for apk in "$tv_apk" "$mobile_apk"; do
+            actual_cert="$("$apksigner" verify --print-certs "$apk" | awk -F': ' '/Signer #1 certificate SHA-256 digest/ { print $2; exit }' | tr '[:upper:]' '[:lower:]')"
+            expected_cert="$(printf '%s' "$EXPECTED_CERT_SHA256" | tr -d ':' | tr '[:upper:]' '[:lower:]')"
+            if [ "$actual_cert" != "$expected_cert" ]; then
+              echo "Unexpected APK signing certificate for $apk" >&2
+              exit 1
+            fi
+          done
 
           mkdir -p release-artifacts
           python3 scripts/create_update_manifest.py "$tv_apk" release-artifacts/updates "${ANDROID_HOME:-$ANDROID_SDK_ROOT}" tv

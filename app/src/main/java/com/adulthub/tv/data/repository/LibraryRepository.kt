@@ -36,6 +36,15 @@ data class TvItemsPage(
     val startIndex: Int,
 )
 
+internal fun itemSortBy(sortBy: String): ItemSortBy = when (sortBy.lowercase()) {
+    "sortname", "name" -> ItemSortBy.SORT_NAME
+    "communityrating" -> ItemSortBy.COMMUNITY_RATING
+    "datecreated", "latest" -> ItemSortBy.DATE_CREATED
+    "random" -> ItemSortBy.RANDOM
+    "runtime" -> ItemSortBy.RUNTIME
+    else -> ItemSortBy.DATE_CREATED
+}
+
 open class LibraryRepository(
     private val clientManager: JellyfinClientManager,
     private val settingsDataStore: SettingsDataStore,
@@ -77,13 +86,7 @@ open class LibraryRepository(
             val targetParentId = parentId ?: settingsDataStore.getSelectedLibraryId()
             val parentUuid = targetParentId?.let { UUID.fromString(it) }
 
-            val sortByItem = when (sortBy.lowercase()) {
-                "name" -> ItemSortBy.SORT_NAME
-                "datecreated", "latest" -> ItemSortBy.DATE_CREATED
-                "random" -> ItemSortBy.RANDOM
-                "runtime" -> ItemSortBy.RUNTIME
-                else -> ItemSortBy.DATE_CREATED
-            }
+            val sortByItem = itemSortBy(sortBy)
 
             val response = api.itemsApi.getItems(
                 parentId = parentUuid,

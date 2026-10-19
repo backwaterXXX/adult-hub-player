@@ -48,6 +48,7 @@ class ItemDetailViewModel(
     val navEvents: SharedFlow<ItemDetailNavEvent> = _navEvents.asSharedFlow()
 
     private var currentItemId: String? = null
+    private var randomNavigationInFlight = false
 
     fun loadDetails(itemId: String) {
         if (currentItemId == itemId && _uiState.value.item != null) return
@@ -150,65 +151,81 @@ class ItemDetailViewModel(
     }
 
     fun playRandomContextual(mode: ShuffleContextMode = ShuffleContextMode.DEFAULT) {
+        if (randomNavigationInFlight) return
+        randomNavigationInFlight = true
         val current = _uiState.value.item
         viewModelScope.launch {
-            when (mode) {
-                ShuffleContextMode.DEFAULT -> playRandom()
-                ShuffleContextMode.UNWATCHED -> {
-                    val random = libraryRepository.getRandomItemFiltered(
-                        excludeItemId = current?.id,
-                        filters = setOf(ItemFilter.IS_UNPLAYED),
-                    ).getOrNull()
-                    if (random != null) {
-                        _navEvents.emit(ItemDetailNavEvent.NavigateToItemDetail(random.id))
-                    } else {
-                        playRandom()
-                    }
-                }
-                ShuffleContextMode.SAME_PERFORMER -> {
-                    val actor = current?.people?.filter { it.type == "Actor" || it.type == null }?.shuffled()?.firstOrNull()
-                    val actorUuid = actor?.let { runCatching { UUID.fromString(it.id) }.getOrNull() }
-                    val random = if (actorUuid != null) {
-                        libraryRepository.getRandomItemFiltered(
-                            excludeItemId = current.id,
-                            personIds = listOf(actorUuid),
+            try {
+                when (mode) {
+                    ShuffleContextMode.DEFAULT -> navigateToRandom()
+                    ShuffleContextMode.UNWATCHED -> {
+                        val random = libraryRepository.getRandomItemFiltered(
+                            excludeItemId = current?.id,
+                            filters = setOf(ItemFilter.IS_UNPLAYED),
                         ).getOrNull()
-                    } else null
-                    if (random != null) {
-                        _navEvents.emit(ItemDetailNavEvent.NavigateToItemDetail(random.id))
-                    } else {
-                        playRandom()
+                        if (random != null) {
+                            _navEvents.emit(ItemDetailNavEvent.NavigateToItemDetail(random.id))
+                        } else {
+                            navigateToRandom()
+                        }
+                    }
+                    ShuffleContextMode.SAME_PERFORMER -> {
+                        val actor = current?.people?.filter { it.type == "Actor" || it.type == null }?.shuffled()?.firstOrNull()
+                        val actorUuid = actor?.let { runCatching { UUID.fromString(it.id) }.getOrNull() }
+                        val random = if (actorUuid != null) {
+                            libraryRepository.getRandomItemFiltered(
+                                excludeItemId = current.id,
+                                personIds = listOf(actorUuid),
+                            ).getOrNull()
+                        } else null
+                        if (random != null) {
+                            _navEvents.emit(ItemDetailNavEvent.NavigateToItemDetail(random.id))
+                        } else {
+                            navigateToRandom()
+                        }
+                    }
+                    ShuffleContextMode.SAME_CATEGORY -> {
+                        val genre = current?.genres?.shuffled()?.firstOrNull()
+                        val random = if (!genre.isNullOrBlank()) {
+                            libraryRepository.getRandomItemFiltered(
+                                excludeItemId = current.id,
+                                genres = listOf(genre),
+                            ).getOrNull()
+                        } else null
+                        if (random != null) {
+                            _navEvents.emit(ItemDetailNavEvent.NavigateToItemDetail(random.id))
+                        } else {
+                            navigateToRandom()
+                        }
                     }
                 }
-                ShuffleContextMode.SAME_CATEGORY -> {
-                    val genre = current?.genres?.shuffled()?.firstOrNull()
-                    val random = if (!genre.isNullOrBlank()) {
-                        libraryRepository.getRandomItemFiltered(
-                            excludeItemId = current.id,
-                            genres = listOf(genre),
-                        ).getOrNull()
-                    } else null
-                    if (random != null) {
-                        _navEvents.emit(ItemDetailNavEvent.NavigateToItemDetail(random.id))
-                    } else {
-                        playRandom()
-                    }
-                }
+            } finally {
+                randomNavigationInFlight = false
             }
         }
     }
 
     fun playRandom() {
-        val current = _uiState.value.item
+        if (randomNavigationInFlight) return
+        randomNavigationInFlight = true
         viewModelScope.launch {
-            val random = libraryRepository.getRandomItem(excludeItemId = current?.id).getOrNull()
-            if (random != null) {
-                _navEvents.emit(ItemDetailNavEvent.NavigateToItemDetail(random.id))
-            } else {
-                val candidate = _uiState.value.similarItems.shuffled().firstOrNull()
-                if (candidate != null) {
-                    _navEvents.emit(ItemDetailNavEvent.NavigateToItemDetail(candidate.id))
-                }
+            try {
+                navigateToRandom()
+            } finally {
+                randomNavigationInFlight = false
+            }
+        }
+    }
+
+    private suspend fun navigateToRandom() {
+        val current = _uiState.value.item
+        val random = libraryRepository.getRandomItem(excludeItemId = current?.id).getOrNull()
+        if (random != null) {
+            _navEvents.emit(ItemDetailNavEvent.NavigateToItemDetail(random.id))
+        } else {
+            val candidate = _uiState.value.similarItems.shuffled().firstOrNull()
+            if (candidate != null) {
+                _navEvents.emit(ItemDetailNavEvent.NavigateToItemDetail(candidate.id))
             }
         }
     }

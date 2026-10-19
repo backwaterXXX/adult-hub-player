@@ -226,7 +226,7 @@ fun SearchScreen(
                             androidx.compose.foundation.lazy.LazyRow(
                                 horizontalArrangement = Arrangement.spacedBy(8.dp),
                             ) {
-                                items(items = uiState.recentQueries) { recentQuery ->
+                                items(items = uiState.recentQueries, key = { it }) { recentQuery ->
                                     TvSecondaryButton(
                                         onClick = { viewModel.onQueryChanged(recentQuery) },
                                         modifier = Modifier.height(36.dp),

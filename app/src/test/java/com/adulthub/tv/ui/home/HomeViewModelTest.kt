@@ -3,6 +3,7 @@ package com.adulthub.tv.ui.home
 import com.adulthub.tv.data.jellyfin.JellyfinClientManager
 import com.adulthub.tv.data.local.SettingsDataStore
 import com.adulthub.tv.data.model.TvItem
+import com.adulthub.tv.data.model.TvCategory
 import com.adulthub.tv.data.model.TvPerson
 import com.adulthub.tv.data.repository.LibraryRepository
 import com.adulthub.tv.data.repository.PersonRepository
@@ -266,6 +267,17 @@ class HomeViewModelTest {
         var randomResult: Result<List<TvItem>> = Result.success(emptyList())
         var singleRandomResult: Result<TvItem?> = Result.success(null)
         var latestRequests = 0
+
+        override suspend fun getGenres(parentId: String?, limit: Int): Result<List<TvCategory>> =
+            Result.success(emptyList())
+
+        override suspend fun getGenreMovies(
+            genreName: String,
+            genreId: String?,
+            parentId: String?,
+            startIndex: Int,
+            limit: Int,
+        ): Result<List<TvItem>> = Result.success(emptyList())
 
         override suspend fun getResumeItems(limit: Int): Result<List<TvItem>> = resumeResult
         override suspend fun getLatestItems(parentId: String?, limit: Int): Result<List<TvItem>> {
