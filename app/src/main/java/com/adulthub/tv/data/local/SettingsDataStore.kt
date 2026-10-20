@@ -214,10 +214,15 @@ open class SettingsDataStore(
             else Triple(key, oldValue, encryptedValue.encode(oldValue))
         }
         val oldOrigins = snapshot[KEY_APPROVED_CLEARTEXT_ORIGINS].orEmpty()
-        val encryptedOrigins = oldOrigins.map { origin -> encryptedValue.encode(origin) }.toSet()
+        // The snapshot is filled from the persisted state on every run, so the cleartext policy
+        // is known before the first image request instead of after the settings screen is opened.
+        val decodedOrigins = oldOrigins.mapNotNull { encryptedValue.decode(it) }.toSet()
+        approvedCleartextOriginsSnapshot.set(decodedOrigins)
+        val encryptedOrigins = decodedOrigins.map { encryptedValue.encode(it) }.toSet()
+        val originsNeedUpdate = oldOrigins != encryptedOrigins
         val versionNeedsUpdate = snapshot[KEY_SCHEMA_VERSION] != CURRENT_SCHEMA_VERSION
         val hasLegacyUpdateSource = snapshot[LEGACY_KEY_UPDATE_BASE_URL] != null
-        if (replacements.isEmpty() && oldOrigins == encryptedOrigins && !versionNeedsUpdate && !hasLegacyUpdateSource) return
+        if (replacements.isEmpty() && !originsNeedUpdate && !versionNeedsUpdate && !hasLegacyUpdateSource) return
 
         dataStore.edit { preferences ->
             replacements.forEach { (key, oldValue, newValue) ->
@@ -229,7 +234,19 @@ open class SettingsDataStore(
             preferences.remove(LEGACY_KEY_UPDATE_BASE_URL)
             preferences[KEY_SCHEMA_VERSION] = CURRENT_SCHEMA_VERSION
         }
-        approvedCleartextOriginsSnapshot.set(oldOrigins.mapNotNull { encryptedValue.decode(it) }.toSet())
+    }
+
+    /**
+     * Loads the persisted cleartext consent into the snapshot that guards image requests.
+     *
+     * The application calls this at startup, so the policy is known before the first image
+     * request and not only after the settings screen has been opened.
+     */
+    open suspend fun refreshApprovedCleartextOriginsSnapshot() {
+        val persisted = dataStore.data
+            .catch { if (it is IOException) emit(emptyPreferences()) else throw it }
+            .first()[KEY_APPROVED_CLEARTEXT_ORIGINS].orEmpty()
+        approvedCleartextOriginsSnapshot.set(persisted.mapNotNull { encryptedValue.decode(it) }.toSet())
     }
 
     open suspend fun isCleartextOriginApproved(url: String): Boolean {

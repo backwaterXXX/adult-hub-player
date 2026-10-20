@@ -260,10 +260,10 @@ private fun MobileMediaCard(title: String, imageUrl: String?, onClick: () -> Uni
 fun MobileLibraryScreen(vm: LibraryViewModel, initialCategoryId: String?, onItem: (String) -> Unit, onPlay: (String) -> Unit, onPerson: (String, String) -> Unit) {
     val state by vm.uiState.collectAsStateWithLifecycle()
     var tab by remember(initialCategoryId) { mutableStateOf(if (initialCategoryId.isNullOrBlank()) LibraryTab.ALL else LibraryTab.CATEGORIES) }
-    var sortMenu by remember { mutableStateOf(false) }
-    var genreMenu by remember { mutableStateOf(false) }
-    var studioMenu by remember { mutableStateOf(false) }
-    var performerMenu by remember { mutableStateOf(false) }
+    var sortMenu by rememberSaveable { mutableStateOf(false) }
+    var genreMenu by rememberSaveable { mutableStateOf(false) }
+    var studioMenu by rememberSaveable { mutableStateOf(false) }
+    var performerMenu by rememberSaveable { mutableStateOf(false) }
     LaunchedEffect(initialCategoryId) { if (!initialCategoryId.isNullOrBlank()) vm.openCategory(initialCategoryId) }
     MobilePage("Library", horizontalPadding = 12.dp, verticalPadding = 6.dp, contentGap = 4.dp) {
         BoxWithConstraints(Modifier.fillMaxWidth()) {

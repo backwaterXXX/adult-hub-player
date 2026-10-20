@@ -370,16 +370,19 @@ class PlayerManager(
         streamContentType = null
         videoDecoderName = null
         audioDecoderName = null
+        // Playback statistics always describe the current attempt. Automatic retries therefore
+        // restart the counters as well, otherwise several attempts are reported as one session
+        // and the buffering of a retry is counted as a rebuffer of the previous attempt.
+        totalDroppedFrames = 0
+        firstFrameMs = null
+        hasRenderedFirstFrame = false
+        bufferingStartedAtMs = null
+        rebufferCount = 0
+        totalRebufferDurationMs = 0L
+        pendingSeekAtMs = null
+        seekBufferingStartedAtMs = null
+        lastSeekBufferDurationMs = null
         if (resetPlaybackSpeed) {
-            totalDroppedFrames = 0
-            firstFrameMs = null
-            hasRenderedFirstFrame = false
-            bufferingStartedAtMs = null
-            rebufferCount = 0
-            totalRebufferDurationMs = 0L
-            pendingSeekAtMs = null
-            seekBufferingStartedAtMs = null
-            lastSeekBufferDurationMs = null
             exoPlayer.setPlaybackSpeed(1.0f)
         }
         preparingStartedAt = SystemClock.elapsedRealtime()

@@ -144,7 +144,7 @@ Open <strong>Settings</strong> in the app:
 
 ### Prerequisites
 - **JDK 17** (Temurin or OpenJDK recommended)
-- **Android SDK Platform 35** and **Build Tools 36.0.0**
+- **Android SDK Platform 36** and **Build Tools 36.0.0**
 - Git
 
 ### Build APKs
@@ -194,6 +194,9 @@ Push a version tag matching `v<versionName>-tv` (for example, `v0.1.70-tv`) to r
 
 # Run Android Lint static analysis
 ./gradlew lintTvDebug lintMobileDebug lintTvRelease lintMobileRelease
+
+# Run the instrumented tests on a connected device or emulator
+./gradlew connectedTvDebugAndroidTest connectedMobileDebugAndroidTest
 ```
 
 ### Architecture & Tech Stack

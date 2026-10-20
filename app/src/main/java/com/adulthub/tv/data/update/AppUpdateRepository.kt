@@ -126,15 +126,11 @@ class AppUpdateRepository(
     }
 
     fun validateManifest(manifest: UpdateManifest) {
-        require(manifest.schemaVersion == SUPPORTED_SCHEMA) { "Unsupported update manifest version" }
-        require(manifest.applicationId == context.packageName) { "This update is for a different app" }
-        require(manifest.versionCode > 0 && manifest.versionName.isNotBlank()) { "Invalid update version" }
-        require(manifest.minSdk in 1..Build.VERSION.SDK_INT) { "This update needs a newer Android version" }
-        require(manifest.sizeBytes in 1L..MAX_APK_BYTES) { "APK size is outside the allowed limit" }
-        require(manifest.sha256.matches(Regex("[A-Fa-f0-9]{64}"))) { "Invalid APK checksum" }
-        require(manifest.apkAssetName.matches(Regex("[A-Za-z0-9._+-]+\\.apk"))) {
-            "Invalid APK asset name in update manifest"
-        }
+        validateUpdateManifest(
+            manifest = manifest,
+            packageName = context.packageName,
+            sdkInt = Build.VERSION.SDK_INT,
+        )
     }
 
     private suspend fun downloadApk(url: String, manifest: UpdateManifest, onProgress: (Long, Long) -> Unit): File {
@@ -193,7 +189,7 @@ class AppUpdateRepository(
         val installed = context.packageManager.getPackageInfo(context.packageName, PackageManager.GET_SIGNING_CERTIFICATES)
         val installedSigners = installed.signingInfo?.apkContentsSigners.orEmpty().map { it.toByteArray().toList() }.toSet()
         val updateSigners = info.signingInfo?.apkContentsSigners.orEmpty().map { it.toByteArray().toList() }.toSet()
-        require(installedSigners.isNotEmpty() && installedSigners == updateSigners) {
+        require(sameSigningCertificates(installedSigners, updateSigners)) {
             "APK signing certificate does not match the installed app"
         }
     }
@@ -205,18 +201,7 @@ class AppUpdateRepository(
         check(temp.renameTo(File(dir, MANIFEST_FILE_NAME))) { "Could not save update information" }
     }
 
-    private fun sha256(file: File): String {
-        val digest = MessageDigest.getInstance("SHA-256")
-        file.inputStream().buffered().use { input ->
-            val buffer = ByteArray(DEFAULT_BUFFER_SIZE)
-            while (true) {
-                val count = input.read(buffer)
-                if (count < 0) break
-                digest.update(buffer, 0, count)
-            }
-        }
-        return digest.digest().joinToString("") { "%02x".format(it) }
-    }
+    private fun sha256(file: File): String = computeSha256(file)
 
     private suspend fun fetchBytes(url: String, maximum: Long, accept: String = GITHUB_JSON): ByteArray {
         request(url, accept).use { response ->
@@ -253,9 +238,7 @@ class AppUpdateRepository(
             val location = response.header("Location")
             response.close()
             require(redirectCount < MAX_REDIRECTS && !location.isNullOrBlank()) { "Too many or invalid GitHub redirects" }
-            val next = URI(current).resolve(location).toString()
-            require(URI(next).scheme.equals("https", true)) { "GitHub attempted an insecure redirect" }
-            current = next
+            current = resolveRedirectTarget(current, location)
         }
         error("Too many GitHub redirects")
     }
@@ -273,12 +256,59 @@ class AppUpdateRepository(
         private const val GITHUB_JSON = "application/vnd.github+json"
         private const val OCTET_STREAM = "application/octet-stream"
         private const val MANIFEST_FILE_NAME = "update-manifest.json"
-        private const val SUPPORTED_SCHEMA = 2
         private const val MAX_RELEASE_BYTES = 1024 * 1024L
         private const val MAX_MANIFEST_BYTES = 64 * 1024L
-        private const val MAX_APK_BYTES = 300L * 1024 * 1024
         private const val MIN_FREE_SPACE_BYTES = 32L * 1024 * 1024
         private const val MAX_REDIRECTS = 5
         private val REDIRECT_CODES = setOf(301, 302, 303, 307, 308)
     }
 }
+
+/**
+ * Validates an update manifest without touching the Android framework, so that the rules can
+ * be covered by plain unit tests.
+ */
+internal fun validateUpdateManifest(manifest: UpdateManifest, packageName: String, sdkInt: Int) {
+    require(manifest.schemaVersion == SUPPORTED_SCHEMA) { "Unsupported update manifest version" }
+    require(manifest.applicationId == packageName) { "This update is for a different app" }
+    require(manifest.versionCode > 0 && manifest.versionName.isNotBlank()) { "Invalid update version" }
+    require(manifest.minSdk in 1..sdkInt) { "This update needs a newer Android version" }
+    require(manifest.sizeBytes in 1L..MAX_APK_BYTES) { "APK size is outside the allowed limit" }
+    require(manifest.sha256.matches(Regex("[A-Fa-f0-9]{64}"))) { "Invalid APK checksum" }
+    require(manifest.apkAssetName.matches(Regex("[A-Za-z0-9._+-]+\\.apk"))) {
+        "Invalid APK asset name in update manifest"
+    }
+}
+
+/** Computes the SHA-256 checksum of a file as a lower case hex string. */
+internal fun computeSha256(file: File): String {
+    val digest = MessageDigest.getInstance("SHA-256")
+    file.inputStream().buffered().use { input ->
+        val buffer = ByteArray(DEFAULT_BUFFER_SIZE)
+        while (true) {
+            val count = input.read(buffer)
+            if (count < 0) break
+            digest.update(buffer, 0, count)
+        }
+    }
+    return digest.digest().joinToString("") { "%02x".format(it) }
+}
+
+/**
+ * Compares the signing certificates of the installed app and of a downloaded update.
+ * The sets have to be equal, so an update signed by a different identity is rejected.
+ */
+internal fun sameSigningCertificates(
+    installed: Set<List<Byte>>,
+    update: Set<List<Byte>>,
+): Boolean = installed.isNotEmpty() && installed == update
+
+/** Resolves a redirect target and rejects anything that is not served over HTTPS. */
+internal fun resolveRedirectTarget(currentUrl: String, location: String): String {
+    val next = URI(currentUrl).resolve(location).toString()
+    require(URI(next).scheme.equals("https", true)) { "GitHub attempted an insecure redirect" }
+    return next
+}
+
+private const val SUPPORTED_SCHEMA = 2
+private const val MAX_APK_BYTES = 300L * 1024 * 1024

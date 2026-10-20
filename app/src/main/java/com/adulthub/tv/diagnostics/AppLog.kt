@@ -17,9 +17,10 @@ object AppLog {
 
     private val urlPattern = Regex("(?i)https?://[^\\s\\\"'<>]+")
     private val uuidPattern = Regex("(?i)\\b[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}\\b")
-    private val secretPattern = Regex("(?i)\\b(token|authorization|password|api[_-]?key)\\b\\s*[:=]\\s*[^\\s,;]+")
-    private val identifierPattern = Regex("(?i)\\b(item|video|user|session|media[_-]?source)[_-]?id\\b\\s*[:=]\\s*[^\\s,;]+")
-    private val titlePattern = Regex("(?i)\\b(title|filename|file[_-]?name)\\b\\s*[:=]\\s*[^,;\\n]+")
+    // The separator may also be a JSON style colon, optionally quoted.
+    private val secretPattern = Regex("(?i)\\b(token|authorization|password|api[_-]?key)\\b[\\\"']?\\s*[:=]\\s*[\\\"']?[^\\s,;\\\"'}]+")
+    private val identifierPattern = Regex("(?i)\\b(item|video|user|session|media[_-]?source)[_-]?id\\b[\\\"']?\\s*[:=]\\s*[\\\"']?[^\\s,;\\\"'}]+")
+    private val titlePattern = Regex("(?i)\\b(title|filename|file[_-]?name)\\b[\\\"']?\\s*[:=]\\s*[^,;\\n]+")
 
     fun d(tag: String, message: String): Int = write(Log.DEBUG, tag, message)
     fun i(tag: String, message: String): Int = write(Log.INFO, tag, message)

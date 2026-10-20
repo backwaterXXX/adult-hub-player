@@ -60,6 +60,7 @@ class PlayerViewModel(
 
     private var playbackRequestCounter = 0L
     private var loadItemJob: Job? = null
+    private var lastPlaybackPositionMs: Long = 0L
 
     fun loadItem(itemId: String, resume: Boolean? = null) {
         val playbackRequestId = ++playbackRequestCounter
@@ -289,6 +290,33 @@ class PlayerViewModel(
         playbackReporter.stopSession(currentPositionMs, reportingSessionId)
     }
 
+    /**
+     * Keeps the last known playback position so that it can still be reported and persisted
+     * when the view model is cleared without a regular exit from the player.
+     */
+    fun updatePlaybackPosition(positionMs: Long) {
+        if (positionMs >= 0L) lastPlaybackPositionMs = positionMs
+    }
+
+    override fun onCleared() {
+        super.onCleared()
+        val positionMs = lastPlaybackPositionMs
+        val ready = _uiState.value as? PlayerUiState.Ready
+        // The view model scope is cancelled right after this callback, so the persistence work
+        // runs in the application scope whenever one is available.
+        val scope = persistenceScope
+        if (scope != null) {
+            scope.launch {
+                runCatching { playbackReporter.stopSession(positionMs) }
+                if (ready != null) {
+                    runCatching { persistTelegramProgress(ready.item, positionMs, isEnded = false) }
+                }
+            }
+        } else {
+            runCatching { playbackReporter.stopSession(positionMs) }
+        }
+    }
+
     fun onResumeDialogHandled() {
         val ready = _uiState.value as? PlayerUiState.Ready ?: return
         _uiState.value = ready.copy(pendingResumePositionMs = null)
@@ -296,6 +324,7 @@ class PlayerViewModel(
 
     private fun saveTelegramProgress(positionMs: Long, isEnded: Boolean) {
         val ready = _uiState.value as? PlayerUiState.Ready ?: return
+        lastPlaybackPositionMs = positionMs
         (persistenceScope ?: viewModelScope).launch {
             persistTelegramProgress(ready.item, positionMs, isEnded)
         }

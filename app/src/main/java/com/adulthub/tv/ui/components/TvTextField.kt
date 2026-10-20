@@ -16,6 +16,7 @@ import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
+import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.focus.FocusRequester
@@ -64,9 +65,9 @@ fun TvTextField(
         )
         return
     }
-    var isFocused by remember { mutableStateOf(false) }
-    var isEditing by remember { mutableStateOf(false) }
-    var editorHadFocus by remember { mutableStateOf(false) }
+    var isFocused by rememberSaveable { mutableStateOf(false) }
+    var isEditing by rememberSaveable { mutableStateOf(false) }
+    var editorHadFocus by rememberSaveable { mutableStateOf(false) }
     val editFocusRequester = remember { FocusRequester() }
 
     LaunchedEffect(isEditing) {

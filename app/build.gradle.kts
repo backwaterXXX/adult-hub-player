@@ -9,13 +9,13 @@ plugins {
 
 android {
     namespace = "com.adulthub.tv"
-    compileSdk = 35
+    compileSdk = 36
     buildToolsVersion = "36.0.0"
 
     defaultConfig {
         applicationId = "com.adulthub.tv"
         minSdk = 28
-        targetSdk = 35
+        targetSdk = 36
         versionCode = 70
         versionName = "0.1.70"
 
@@ -69,7 +69,6 @@ android {
         debug {
             applicationIdSuffix = ".debug"
             signingConfig = signingConfigs.getByName("debug")
-            val keystorePropertiesFile = rootProject.file("keystore.properties")
             // Debug builds remain installable without access to the release key.
         }
         release {
@@ -131,7 +130,7 @@ dependencies {
     implementation(libs.androidx.compose.ui)
     implementation(libs.androidx.compose.ui.graphics)
     implementation(libs.androidx.compose.ui.tooling.preview)
-    implementation("androidx.compose.material3:material3")
+    implementation(libs.androidx.compose.material3)
     implementation(libs.androidx.tv.material)
     implementation(libs.androidx.lifecycle.viewmodel.compose)
     implementation(libs.androidx.lifecycle.runtime.compose)
@@ -168,9 +167,15 @@ dependencies {
     implementation(libs.slf4j.android)
 
     debugImplementation("androidx.compose.ui:ui-tooling")
+    debugImplementation(libs.androidx.compose.ui.test.manifest)
 
     testImplementation(libs.junit)
     testImplementation(libs.mockk)
     testImplementation(libs.kotlinx.coroutines.test)
 
+    androidTestImplementation(platform(libs.androidx.compose.bom))
+    androidTestImplementation(libs.androidx.test.ext.junit)
+    androidTestImplementation(libs.androidx.test.runner)
+    androidTestImplementation(libs.androidx.test.core)
+    androidTestImplementation(libs.androidx.compose.ui.test.junit4)
 }

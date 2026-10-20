@@ -14,6 +14,7 @@ import androidx.compose.runtime.*
 import androidx.compose.ui.Modifier
 import androidx.compose.foundation.layout.padding
 import androidx.compose.ui.platform.LocalContext
+import androidx.navigation.NavHostController
 import androidx.navigation.NavType
 import androidx.navigation.compose.*
 import androidx.navigation.navArgument
@@ -25,6 +26,7 @@ import com.adulthub.tv.ui.person.PersonDetailViewModel
 import com.adulthub.tv.ui.player.PlayerScreen
 import com.adulthub.tv.ui.search.SearchViewModel
 import com.adulthub.tv.ui.settings.SettingsViewModel
+import com.adulthub.tv.ui.theme.AdultHubTvTheme
 import org.koin.androidx.compose.koinViewModel
 
 internal fun mobileTopLevelNavigationRoute(routePattern: String): String = when (routePattern) {
@@ -33,13 +35,25 @@ internal fun mobileTopLevelNavigationRoute(routePattern: String): String = when 
     else -> routePattern
 }
 
+private val MOBILE_TOP_LEVEL_ROUTES = setOf(
+    Screen.Home.route,
+    Screen.Library.route,
+    Screen.Search.route,
+    Screen.Settings.route,
+)
+
+/**
+ * Every mobile navigation target is opened with `launchSingleTop`, so a double tap cannot
+ * create two copies of the same screen with two view models and two requests.
+ */
+private fun NavHostController.navigateMobile(route: String) {
+    navigate(route) { launchSingleTop = true }
+}
+
 @Composable
 fun MobileAppNavigation(modifier: Modifier = Modifier) {
     val nav = rememberNavController()
     val auth: AuthViewModel = koinViewModel()
-    val context = LocalContext.current
-    val entry by nav.currentBackStackEntryAsState()
-    val route = entry?.destination?.route
 
     LaunchedEffect(auth) {
         auth.navEvents.collect { event ->
@@ -57,43 +71,10 @@ fun MobileAppNavigation(modifier: Modifier = Modifier) {
         }
     }
 
-    val topLevelRoutes = setOf(Screen.Home.route, Screen.Library.route, Screen.Search.route, Screen.Settings.route)
-    val showBar = route in topLevelRoutes
-    var lastHomeBackAt by remember { mutableLongStateOf(0L) }
-    LaunchedEffect(route) { lastHomeBackAt = 0L }
-    BackHandler(enabled = route == Screen.Home.route) {
-        val now = SystemClock.elapsedRealtime()
-        if (now - lastHomeBackAt < 2_000L) (context as? Activity)?.finish()
-        else {
-            lastHomeBackAt = now
-            Toast.makeText(context, "Press Back again to exit", Toast.LENGTH_SHORT).show()
-        }
-    }
     Scaffold(
         modifier = modifier,
         bottomBar = {
-            if (showBar) NavigationBar {
-                listOf(
-                    Screen.Home.route to ("Home" to Icons.Filled.Home),
-                    Screen.Library.route to ("Library" to Icons.AutoMirrored.Filled.MenuBook),
-                    Screen.Search.route to ("Search" to Icons.Filled.Search),
-                    Screen.Settings.route to ("Settings" to Icons.Filled.Settings),
-                ).forEach { (destination, pair) ->
-                    val selected = route == destination
-                    NavigationBarItem(
-                        selected = selected,
-                        onClick = {
-                            nav.navigate(mobileTopLevelNavigationRoute(destination)) {
-                                popUpTo(Screen.Home.route) { saveState = true }
-                                launchSingleTop = true
-                                restoreState = true
-                            }
-                        },
-                        icon = { Icon(pair.second, contentDescription = pair.first) },
-                        label = { Text(pair.first) },
-                    )
-                }
-            }
+            MobileBottomBar(navController = nav)
         },
     ) { padding ->
         NavHost(navController = nav, startDestination = Screen.Splash.route, modifier = Modifier.padding(padding)) {
@@ -104,22 +85,26 @@ fun MobileAppNavigation(modifier: Modifier = Modifier) {
             composable(Screen.LibrarySelect.route) { MobileLibrarySelectScreen(auth) }
             composable(Screen.Home.route) { homeEntry ->
                 val vm: HomeViewModel = koinViewModel()
-                MobileHomeScreen(vm, isCurrentDestination = entry?.id == homeEntry.id, onItem = { nav.navigate(Screen.ItemDetail.createRoute(it)) }, onPlay = { nav.navigate(Screen.Player.createRoute(it)) }, onPerson = { id, name -> nav.navigate(Screen.PersonDetail.createRoute(id, name)) }, onSearch = { nav.navigate(Screen.Search.createRoute()) }, onLibrary = { nav.navigate(Screen.Library.createRoute()) }, onCategory = { nav.navigate(Screen.Library.createRoute(it)) })
+                MobileHomeScreen(vm, isCurrentDestination = rememberIsCurrentDestination(nav, homeEntry), onItem = { nav.navigateMobile(Screen.ItemDetail.createRoute(it)) }, onPlay = { nav.navigateMobile(Screen.Player.createRoute(it)) }, onPerson = { id, name -> nav.navigateMobile(Screen.PersonDetail.createRoute(id, name)) }, onSearch = { nav.navigateMobile(Screen.Search.createRoute()) }, onLibrary = { nav.navigateMobile(Screen.Library.createRoute()) }, onCategory = { nav.navigateMobile(Screen.Library.createRoute(it)) })
             }
             composable(Screen.Library.route, arguments = listOf(navArgument("categoryId") { type = NavType.StringType; nullable = true; defaultValue = null })) { back ->
                 val vm: LibraryViewModel = koinViewModel()
-                MobileLibraryScreen(vm, back.arguments?.getString("categoryId"), onItem = { nav.navigate(Screen.ItemDetail.createRoute(it)) }, onPlay = { nav.navigate(Screen.Player.createRoute(it)) }, onPerson = { id, name -> nav.navigate(Screen.PersonDetail.createRoute(id, name)) })
+                MobileLibraryScreen(vm, back.arguments?.getString("categoryId"), onItem = { nav.navigateMobile(Screen.ItemDetail.createRoute(it)) }, onPlay = { nav.navigateMobile(Screen.Player.createRoute(it)) }, onPerson = { id, name -> nav.navigateMobile(Screen.PersonDetail.createRoute(id, name)) })
             }
             composable(Screen.Search.route, arguments = listOf(navArgument("query") { type = NavType.StringType; nullable = true; defaultValue = null })) { back ->
                 val vm: SearchViewModel = koinViewModel()
-                MobileSearchScreen(vm, back.arguments?.getString("query"), onItem = { nav.navigate(Screen.ItemDetail.createRoute(it)) }, onPlay = { nav.navigate(Screen.Player.createRoute(it)) }, onPerson = { id, name -> nav.navigate(Screen.PersonDetail.createRoute(id, name)) })
+                MobileSearchScreen(vm, back.arguments?.getString("query"), onItem = { nav.navigateMobile(Screen.ItemDetail.createRoute(it)) }, onPlay = { nav.navigateMobile(Screen.Player.createRoute(it)) }, onPerson = { id, name -> nav.navigateMobile(Screen.PersonDetail.createRoute(id, name)) })
             }
             composable(Screen.Settings.route) {
-                com.adulthub.tv.ui.settings.SettingsScreen(
-                    onNavigateBack = { nav.popBackStack() },
-                    onSignOut = { nav.navigate(Screen.Server.route) { popUpTo(0) } },
-                    isMobile = true,
-                )
+                // The settings screen is shared with the TV build and uses the TV material
+                // components, so it is wrapped in the TV theme explicitly.
+                AdultHubTvTheme {
+                    com.adulthub.tv.ui.settings.SettingsScreen(
+                        onNavigateBack = { nav.popBackStack() },
+                        onSignOut = { nav.navigate(Screen.Server.route) { popUpTo(0) } },
+                        isMobile = true,
+                    )
+                }
             }
             composable(Screen.ItemDetail.route, arguments = listOf(navArgument("itemId") { type = NavType.StringType })) { back ->
                 val vm: ItemDetailViewModel = koinViewModel()
@@ -127,19 +112,71 @@ fun MobileAppNavigation(modifier: Modifier = Modifier) {
                     vm = vm,
                     itemId = back.arguments?.getString("itemId").orEmpty(),
                     onBack = { nav.popBackStack() },
-                    onPlay = { id, resume -> nav.navigate(Screen.Player.createRoute(id, resume)) },
-                    onItem = { nav.navigate(Screen.ItemDetail.createRoute(it)) },
-                    onPerson = { id, name -> nav.navigate(Screen.PersonDetail.createRoute(id, name)) },
-                    onSearch = { nav.navigate(Screen.Search.createRoute(it)) },
+                    onPlay = { id, resume -> nav.navigateMobile(Screen.Player.createRoute(id, resume)) },
+                    onItem = { nav.navigateMobile(Screen.ItemDetail.createRoute(it)) },
+                    onPerson = { id, name -> nav.navigateMobile(Screen.PersonDetail.createRoute(id, name)) },
+                    onSearch = { nav.navigateMobile(Screen.Search.createRoute(it)) },
                 )
             }
             composable(Screen.PersonDetail.route, arguments = listOf(navArgument("personId") { type = NavType.StringType }, navArgument("personName") { type = NavType.StringType })) { back ->
                 val vm: PersonDetailViewModel = koinViewModel()
-                MobilePersonScreen(vm, back.arguments?.getString("personId").orEmpty(), back.arguments?.getString("personName").orEmpty(), onItem = { nav.navigate(Screen.ItemDetail.createRoute(it)) })
+                MobilePersonScreen(vm, back.arguments?.getString("personId").orEmpty(), back.arguments?.getString("personName").orEmpty(), onItem = { nav.navigateMobile(Screen.ItemDetail.createRoute(it)) })
             }
             composable(Screen.Player.route, arguments = listOf(navArgument("itemId") { type = NavType.StringType }, navArgument("resume") { type = NavType.StringType; nullable = true; defaultValue = null })) { back ->
-                PlayerScreen(back.arguments?.getString("itemId").orEmpty(), back.arguments?.getString("resume")?.toBooleanStrictOrNull(), { nav.popBackStack() }, mobileControls = true)
+                AdultHubTvTheme {
+                    PlayerScreen(back.arguments?.getString("itemId").orEmpty(), back.arguments?.getString("resume")?.toBooleanStrictOrNull(), { nav.popBackStack() }, mobileControls = true)
+                }
             }
+        }
+    }
+}
+
+/**
+ * Bottom navigation bar of the mobile variant.
+ *
+ * The current route is read inside this composable, so navigating in the graph does not
+ * recompose the whole graph but only the bar itself.
+ */
+@Composable
+private fun MobileBottomBar(navController: NavHostController) {
+    val entry by navController.currentBackStackEntryAsState()
+    val route = entry?.destination?.route
+    val showBar = route in MOBILE_TOP_LEVEL_ROUTES
+    val context = LocalContext.current
+    var lastHomeBackAt by remember { mutableLongStateOf(0L) }
+    LaunchedEffect(route) { lastHomeBackAt = 0L }
+
+    BackHandler(enabled = route == Screen.Home.route) {
+        val now = SystemClock.elapsedRealtime()
+        if (now - lastHomeBackAt < 2_000L) (context as? Activity)?.finish()
+        else {
+            lastHomeBackAt = now
+            Toast.makeText(context, "Press Back again to exit", Toast.LENGTH_SHORT).show()
+        }
+    }
+
+    if (!showBar) return
+
+    NavigationBar {
+        listOf(
+            Screen.Home.route to ("Home" to Icons.Filled.Home),
+            Screen.Library.route to ("Library" to Icons.AutoMirrored.Filled.MenuBook),
+            Screen.Search.route to ("Search" to Icons.Filled.Search),
+            Screen.Settings.route to ("Settings" to Icons.Filled.Settings),
+        ).forEach { (destination, pair) ->
+            val selected = route == destination
+            NavigationBarItem(
+                selected = selected,
+                onClick = {
+                    navController.navigate(mobileTopLevelNavigationRoute(destination)) {
+                        popUpTo(Screen.Home.route) { saveState = true }
+                        launchSingleTop = true
+                        restoreState = true
+                    }
+                },
+                icon = { Icon(pair.second, contentDescription = pair.first) },
+                label = { Text(pair.first) },
+            )
         }
     }
 }

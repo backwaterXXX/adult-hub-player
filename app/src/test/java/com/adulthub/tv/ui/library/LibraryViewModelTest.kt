@@ -2,6 +2,7 @@ package com.adulthub.tv.ui.library
 
 import com.adulthub.tv.data.jellyfin.JellyfinClientManager
 import com.adulthub.tv.data.model.ChannelSortMode
+import com.adulthub.tv.data.model.DurationFilter
 import com.adulthub.tv.data.model.TvChannel
 import com.adulthub.tv.data.model.TvCategory
 import com.adulthub.tv.data.model.TvItem
@@ -16,6 +17,7 @@ import com.adulthub.tv.data.repository.TvItemsPage
 import com.adulthub.tv.data.repository.TvPersonPage
 import com.adulthub.tv.data.resolver.VideoDto
 import io.mockk.mockk
+import androidx.lifecycle.SavedStateHandle
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.ExperimentalCoroutinesApi
 import kotlinx.coroutines.launch
@@ -825,6 +827,44 @@ class LibraryViewModelTest {
                 TvItemsPage(items = slice, totalRecordCount = items.size, startIndex = startIndex)
             }
         }
+    }
+
+    @Test
+    fun `library filters survive a process death through the saved state handle`() = runTest(testDispatcher) {
+        val handle = SavedStateHandle()
+        val viewModel = LibraryViewModel(
+            libraryRepository = fakeLibraryRepository,
+            personRepository = fakePersonRepository,
+            studioRepository = fakeStudioRepository,
+            channelRepository = fakeChannelRepository,
+            clientManager = clientManager,
+            savedStateHandle = handle,
+        )
+        advanceUntilIdle()
+
+        viewModel.setDurationFilter(DurationFilter.SHORT)
+        viewModel.toggleHdOnly()
+        viewModel.toggleFavoritesOnly()
+        viewModel.selectAlphabetLetter('A')
+        viewModel.selectTab(LibraryTab.ACTORS)
+        advanceUntilIdle()
+
+        val restored = LibraryViewModel(
+            libraryRepository = fakeLibraryRepository,
+            personRepository = fakePersonRepository,
+            studioRepository = fakeStudioRepository,
+            channelRepository = fakeChannelRepository,
+            clientManager = clientManager,
+            savedStateHandle = handle,
+        )
+        advanceUntilIdle()
+
+        val state = restored.uiState.value
+        assertEquals(DurationFilter.SHORT, state.allState.durationFilter)
+        assertTrue(state.allState.hdOnly)
+        assertTrue(state.allState.favoritesOnly)
+        assertEquals(LibraryTab.ACTORS, state.selectedTab)
+        assertEquals('A', state.actorsState.selectedLetter)
     }
 
     private class FakeChannelRepository : ChannelRepository(mockk(relaxed = true)) {

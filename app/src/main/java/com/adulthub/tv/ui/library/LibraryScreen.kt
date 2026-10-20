@@ -12,6 +12,7 @@ import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
+import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.ExperimentalComposeUiApi
@@ -43,7 +44,7 @@ fun LibraryScreen(
 ) {
     val state by viewModel.uiState.collectAsStateWithLifecycle()
     val contentFocusRequester = remember { FocusRequester() }
-    var hasBeenCurrentDestination by remember { mutableStateOf(false) }
+    var hasBeenCurrentDestination by rememberSaveable { mutableStateOf(false) }
 
     LaunchedEffect(initialCategoryId) {
         initialCategoryId?.let(viewModel::openCategory)

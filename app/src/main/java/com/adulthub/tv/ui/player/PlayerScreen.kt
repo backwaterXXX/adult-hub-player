@@ -21,6 +21,7 @@ import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.produceState
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.rememberCoroutineScope
+import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
@@ -75,8 +76,10 @@ fun PlayerScreen(
     // Keep screen on during playback
     DisposableEffect(Unit) {
         activity?.window?.addFlags(WindowManager.LayoutParams.FLAG_KEEP_SCREEN_ON)
+        PlayerScreenState.isPlayerScreenVisible = true
         onDispose {
             activity?.window?.clearFlags(WindowManager.LayoutParams.FLAG_KEEP_SCREEN_ON)
+            PlayerScreenState.isPlayerScreenVisible = false
         }
     }
 
@@ -105,14 +108,13 @@ fun PlayerScreen(
     val isPlaying by playerManager.isPlaying.collectAsStateWithLifecycle()
     val isMuted by playerManager.isMuted.collectAsStateWithLifecycle()
     val playbackState by playerManager.playbackState.collectAsStateWithLifecycle()
-    val currentPositionMs by playerManager.currentPositionMs.collectAsStateWithLifecycle()
     val durationMs by playerManager.durationMs.collectAsStateWithLifecycle()
     val playerError by playerManager.errorMessage.collectAsStateWithLifecycle()
     val retryStatus by playerManager.retryStatus.collectAsStateWithLifecycle()
 
     DisposableEffect(activity, playerManager) {
         val observer = LifecycleEventObserver { _, event ->
-            if (event == Lifecycle.Event.ON_STOP) {
+            if (event == Lifecycle.Event.ON_PAUSE || event == Lifecycle.Event.ON_STOP) {
                 playerManager.pause()
             }
         }
@@ -120,12 +122,12 @@ fun PlayerScreen(
         onDispose { lifecycleOwner?.lifecycle?.removeObserver(observer) }
     }
 
-    var isOsdVisible by remember { mutableStateOf(true) }
+    var isOsdVisible by rememberSaveable { mutableStateOf(true) }
     var osdTimerTrigger by remember { mutableLongStateOf(0L) }
     var seekFeedback by remember { mutableStateOf<String?>(null) }
-    var showInfoDialog by remember { mutableStateOf(false) }
-    var resizeMode by remember { mutableIntStateOf(AspectRatioFrameLayout.RESIZE_MODE_FIT) }
-    var playbackSpeed by remember { mutableFloatStateOf(1.0f) }
+    var showInfoDialog by rememberSaveable { mutableStateOf(false) }
+    var resizeMode by rememberSaveable { mutableIntStateOf(AspectRatioFrameLayout.RESIZE_MODE_FIT) }
+    var playbackSpeed by rememberSaveable { mutableFloatStateOf(1.0f) }
     var autoplayCountdownSec by remember { mutableStateOf<Int?>(null) }
     val playPauseFocusRequester = remember { FocusRequester() }
     val rootFocusRequester = remember { FocusRequester() }
@@ -154,6 +156,24 @@ fun PlayerScreen(
     val phashVideoId = readyState?.item?.let { com.adulthub.tv.player.adultHubVideoId(it) }
     val phashStatus = phashVideoId?.let { phashJobStatuses[it] }
     var hiddenPhashStatusMessage by remember(itemId) { mutableStateOf<String?>(null) }
+
+    // Technical stats are refreshed on their own timer so that the HUD does not force a
+    // recomposition of the whole player screen.
+    var technicalInfo by remember { mutableStateOf<com.adulthub.tv.player.PlaybackTechnicalInfo?>(null) }
+    LaunchedEffect(showInfoDialog, readyState?.playbackRequestId, playerManager) {
+        if (!showInfoDialog) {
+            technicalInfo = null
+            return@LaunchedEffect
+        }
+        val state = readyState ?: return@LaunchedEffect
+        while (true) {
+            technicalInfo = playerManager.getTechnicalInfo(
+                playbackInfo = state.playbackInfo,
+                resolverLatencyMs = state.resolverLatencyMs,
+            )
+            delay(1_000L)
+        }
+    }
 
     LaunchedEffect(phashVideoId, phashStatus?.message) {
         val message = phashStatus?.message ?: return@LaunchedEffect
@@ -204,6 +224,15 @@ fun PlayerScreen(
             if (playerManager.isPlaying.value) {
                 viewModel.checkpointTelegramProgress(playerManager.currentPositionMs.value)
             }
+        }
+    }
+
+    // Track the position for the view model without touching Compose state, so the 1 Hz
+    // updates never recompose this screen.
+    LaunchedEffect(playerManager) {
+        while (true) {
+            viewModel.updatePlaybackPosition(playerManager.currentPositionMs.value)
+            delay(1_000L)
         }
     }
 
@@ -274,18 +303,21 @@ fun PlayerScreen(
 
     // Handle Back button
     BackHandler {
-        if (autoplayCountdownSec != null) {
-            autoplayCountdownSec = null
-        } else if (showInfoDialog) {
-            showInfoDialog = false
-        } else if (pendingResumeDialogPosition != null) {
-            viewModel.onResumeDialogHandled()
-        } else if (isOsdVisible) {
-            isOsdVisible = false
-        } else {
-            viewModel.onExitPlayer(playerManager.currentPositionMs.value, reportingSessionId.takeIf { it > 0L })
-            playerManager.release()
-            onBack()
+        when (resolvePlayerBackAction(
+            autoplayCountdownSec = autoplayCountdownSec,
+            showInfoDialog = showInfoDialog,
+            hasPendingResumeDialog = pendingResumeDialogPosition != null,
+            isOsdVisible = isOsdVisible,
+        )) {
+            PlayerBackAction.CANCEL_AUTOPLAY -> autoplayCountdownSec = null
+            PlayerBackAction.CLOSE_INFO_DIALOG -> showInfoDialog = false
+            PlayerBackAction.DISMISS_RESUME_DIALOG -> viewModel.onResumeDialogHandled()
+            PlayerBackAction.HIDE_OSD -> isOsdVisible = false
+            PlayerBackAction.EXIT_PLAYER -> {
+                viewModel.onExitPlayer(playerManager.currentPositionMs.value, reportingSessionId.takeIf { it > 0L })
+                playerManager.release()
+                onBack()
+            }
         }
     }
 
@@ -410,7 +442,7 @@ fun PlayerScreen(
                     title = state.item.title,
                     isPlaying = isPlaying,
                     isBuffering = playbackState == Player.STATE_BUFFERING || isLoadingRandom,
-                    currentPositionMs = currentPositionMs,
+                    positionFlow = playerManager.currentPositionMs,
                     durationMs = durationMs,
                     isOsdVisible = isOsdVisible,
                     onShowOsd = {
@@ -452,7 +484,7 @@ fun PlayerScreen(
                     title = state.item.title,
                     isPlaying = isPlaying,
                     isBuffering = playbackState == Player.STATE_BUFFERING || isLoadingRandom,
-                    currentPositionMs = currentPositionMs,
+                    positionFlow = playerManager.currentPositionMs,
                     durationMs = durationMs,
                     isOsdVisible = isOsdVisible,
                     seekFeedback = seekFeedback,
@@ -528,12 +560,9 @@ fun PlayerScreen(
                 }
 
                 // Technical Playback Info HUD Overlay
-                if (showInfoDialog) {
+                technicalInfo?.let { info ->
                     PlaybackInfoOverlay(
-                        technicalInfo = playerManager.getTechnicalInfo(
-                            playbackInfo = state.playbackInfo,
-                            resolverLatencyMs = state.resolverLatencyMs,
-                        ),
+                        technicalInfo = info,
                         isMobile = mobileControls,
                     )
                 }
@@ -583,7 +612,7 @@ fun PlayerScreen(
                         onRetry = {
                             playerManager.prepareAndPlay(
                                 streamUrl = state.playbackInfo.streamUrl,
-                                startPositionMs = currentPositionMs,
+                                startPositionMs = playerManager.currentPositionMs.value,
                                 title = state.playbackInfo.title,
                                 headers = state.playbackInfo.headers,
                             )

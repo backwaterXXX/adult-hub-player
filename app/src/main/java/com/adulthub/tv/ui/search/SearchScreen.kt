@@ -306,8 +306,8 @@ private fun SearchInputField(
 ) {
     val interactionSource = remember { MutableInteractionSource() }
     val isFocused by interactionSource.collectIsFocusedAsState()
-    var isEditing by remember { mutableStateOf(false) }
-    var editorHadFocus by remember { mutableStateOf(false) }
+    var isEditing by rememberSaveable { mutableStateOf(false) }
+    var editorHadFocus by rememberSaveable { mutableStateOf(false) }
     val editFocusRequester = remember { FocusRequester() }
 
     LaunchedEffect(isEditing) {

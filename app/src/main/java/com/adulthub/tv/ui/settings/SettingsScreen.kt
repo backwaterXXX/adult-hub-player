@@ -38,6 +38,7 @@ import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.produceState
 import androidx.compose.runtime.remember
+import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
@@ -101,8 +102,8 @@ fun SettingsScreen(
     val updateRepository: AppUpdateRepository = koinInject()
     val updateState by updateManager.state.collectAsStateWithLifecycle()
     val updateScope = rememberCoroutineScope()
-    var showLicensesDialog by remember { mutableStateOf(false) }
-    var pendingClearType by remember { mutableStateOf<ClearDataType?>(null) }
+    var showLicensesDialog by rememberSaveable { mutableStateOf(false) }
+    var pendingClearType by rememberSaveable { mutableStateOf<ClearDataType?>(null) }
     val uiState by viewModel.uiState.collectAsStateWithLifecycle()
     val diagnostics by produceState(
         initialValue = com.adulthub.tv.diagnostics.DeviceDiagnostics("Loading…", "", 0L, 0L, emptyList()),
@@ -590,10 +591,9 @@ fun SettingsScreen(
                                         )
                                     } else {
                                         val apkUri = updateRepository.installerUri(update.apkFile)
-                                        val installIntent = Intent(Intent.ACTION_INSTALL_PACKAGE)
+                                        val installIntent = Intent(Intent.ACTION_VIEW)
                                             .setDataAndType(apkUri, "application/vnd.android.package-archive")
                                             .addFlags(Intent.FLAG_GRANT_READ_URI_PERMISSION)
-                                            .putExtra(Intent.EXTRA_RETURN_RESULT, true)
                                         context.startActivity(installIntent)
                                     }
                                 },

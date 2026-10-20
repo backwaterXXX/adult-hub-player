@@ -1,5 +1,6 @@
 package com.adulthub.tv.ui.library
 
+import androidx.lifecycle.SavedStateHandle
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import com.adulthub.tv.data.jellyfin.JellyfinClientManager
@@ -172,6 +173,7 @@ class LibraryViewModel(
     private val channelRepository: ChannelRepository,
     private val clientManager: JellyfinClientManager,
     private val settingsDataStore: SettingsDataStore? = null,
+    private val savedStateHandle: SavedStateHandle = SavedStateHandle(),
 ) : ViewModel() {
 
     private val _uiState = MutableStateFlow(LibraryUiState())
@@ -187,7 +189,11 @@ class LibraryViewModel(
     private var allItemsRequestInFlight = false
 
     init {
+        restoreSavedFilters()
         loadAllItems(reset = true)
+        viewModelScope.launch {
+            _uiState.collect { state -> persistSavedFilters(state) }
+        }
         settingsDataStore?.let { settings ->
             viewModelScope.launch {
                 settings.resolverBaseUrl.distinctUntilChanged().collect { url ->
@@ -1172,6 +1178,94 @@ private fun filterActors(
         viewModelScope.launch {
             _navEvents.emit(LibraryNavEvent.NavigateToPlayer(playId))
         }
+    }
+
+    /**
+     * Keeps the library filters in the saved state, so that they survive a process death.
+     */
+    private fun persistSavedFilters(state: LibraryUiState) {
+        savedStateHandle[KEY_SELECTED_TAB] = state.selectedTab.name
+        savedStateHandle[KEY_SORT_BY] = state.allState.sortBy
+        savedStateHandle[KEY_SORT_ORDER] = state.allState.sortOrder.name
+        savedStateHandle[KEY_FAVORITES_ONLY] = state.allState.favoritesOnly
+        savedStateHandle[KEY_UNWATCHED_ONLY] = state.allState.unwatchedOnly
+        savedStateHandle[KEY_HD_ONLY] = state.allState.hdOnly
+        savedStateHandle[KEY_DURATION_FILTER] = state.allState.durationFilter.name
+        savedStateHandle[KEY_GENRE_ID] = state.allState.selectedGenre?.id
+        savedStateHandle[KEY_GENRE_NAME] = state.allState.selectedGenre?.name
+        savedStateHandle[KEY_STUDIO_ID] = state.allState.selectedStudio?.id
+        savedStateHandle[KEY_STUDIO_NAME] = state.allState.selectedStudio?.name
+        savedStateHandle[KEY_PERFORMER_ID] = state.allState.selectedPerformer?.id
+        savedStateHandle[KEY_PERFORMER_NAME] = state.allState.selectedPerformer?.name
+        savedStateHandle[KEY_ACTOR_LETTER] = state.actorsState.selectedLetter?.toString()
+        savedStateHandle[KEY_ONLY_WITH_PHOTO] = state.actorsState.onlyWithPhoto
+        savedStateHandle[KEY_CHANNEL_DURATION_FILTER] = state.channelsState.durationFilter.name
+        savedStateHandle[KEY_HIDDEN_CHANNELS] = ArrayList(state.channelsState.hiddenChannelIds)
+    }
+
+    private fun restoreSavedFilters() {
+        val current = _uiState.value
+        val restoredTab = savedStateHandle.get<String>(KEY_SELECTED_TAB)
+            ?.let { name -> LibraryTab.entries.firstOrNull { it.name == name } }
+            ?: current.selectedTab
+        val restoredAll = current.allState.copy(
+            sortBy = savedStateHandle.get<String>(KEY_SORT_BY) ?: current.allState.sortBy,
+            sortOrder = savedStateHandle.get<String>(KEY_SORT_ORDER)
+                ?.let { name -> SortOrder.entries.firstOrNull { it.name == name } }
+                ?: current.allState.sortOrder,
+            favoritesOnly = savedStateHandle.get<Boolean>(KEY_FAVORITES_ONLY) ?: current.allState.favoritesOnly,
+            unwatchedOnly = savedStateHandle.get<Boolean>(KEY_UNWATCHED_ONLY) ?: current.allState.unwatchedOnly,
+            hdOnly = savedStateHandle.get<Boolean>(KEY_HD_ONLY) ?: current.allState.hdOnly,
+            durationFilter = savedStateHandle.get<String>(KEY_DURATION_FILTER)
+                ?.let { name -> DurationFilter.entries.firstOrNull { it.name == name } }
+                ?: current.allState.durationFilter,
+            selectedGenre = restoreSelection(KEY_GENRE_ID, KEY_GENRE_NAME) { id, name -> TvCategory(id, name) },
+            selectedStudio = restoreSelection(KEY_STUDIO_ID, KEY_STUDIO_NAME) { id, name -> TvStudio(id, name) },
+            selectedPerformer = restoreSelection(KEY_PERFORMER_ID, KEY_PERFORMER_NAME) { id, name -> TvPerson(id, name) },
+        )
+        val restoredActors = current.actorsState.copy(
+            selectedLetter = savedStateHandle.get<String>(KEY_ACTOR_LETTER)?.firstOrNull(),
+            onlyWithPhoto = savedStateHandle.get<Boolean>(KEY_ONLY_WITH_PHOTO) ?: current.actorsState.onlyWithPhoto,
+        )
+        val restoredChannels = current.channelsState.copy(
+            durationFilter = savedStateHandle.get<String>(KEY_CHANNEL_DURATION_FILTER)
+                ?.let { name -> DurationFilter.entries.firstOrNull { it.name == name } }
+                ?: current.channelsState.durationFilter,
+            hiddenChannelIds = savedStateHandle.get<ArrayList<String>>(KEY_HIDDEN_CHANNELS)?.toSet()
+                ?: current.channelsState.hiddenChannelIds,
+        )
+        _uiState.value = current.copy(
+            selectedTab = restoredTab,
+            allState = restoredAll,
+            actorsState = restoredActors,
+            channelsState = restoredChannels,
+        )
+    }
+
+    private fun <T> restoreSelection(idKey: String, nameKey: String, factory: (String, String) -> T): T? {
+        val id = savedStateHandle.get<String>(idKey) ?: return null
+        val name = savedStateHandle.get<String>(nameKey) ?: return null
+        return factory(id, name)
+    }
+
+    companion object {
+        private const val KEY_SELECTED_TAB = "library_tab"
+        private const val KEY_SORT_BY = "library_sort_by"
+        private const val KEY_SORT_ORDER = "library_sort_order"
+        private const val KEY_FAVORITES_ONLY = "library_favorites_only"
+        private const val KEY_UNWATCHED_ONLY = "library_unwatched_only"
+        private const val KEY_HD_ONLY = "library_hd_only"
+        private const val KEY_DURATION_FILTER = "library_duration_filter"
+        private const val KEY_GENRE_ID = "library_genre_id"
+        private const val KEY_GENRE_NAME = "library_genre_name"
+        private const val KEY_STUDIO_ID = "library_studio_id"
+        private const val KEY_STUDIO_NAME = "library_studio_name"
+        private const val KEY_PERFORMER_ID = "library_performer_id"
+        private const val KEY_PERFORMER_NAME = "library_performer_name"
+        private const val KEY_ACTOR_LETTER = "library_actor_letter"
+        private const val KEY_ONLY_WITH_PHOTO = "library_only_with_photo"
+        private const val KEY_CHANNEL_DURATION_FILTER = "library_channel_duration_filter"
+        private const val KEY_HIDDEN_CHANNELS = "library_hidden_channels"
     }
 }
 

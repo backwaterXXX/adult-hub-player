@@ -52,6 +52,17 @@ class AdultHubTvApp : Application(), ImageLoaderFactory {
                     settingsDataStore.cacheLimitMb.collect(imageCacheLimitMb::set)
                 }
             }
+            launch {
+                // Keeps the cleartext consent snapshot in sync with the persisted policy.
+                runCatching {
+                    settingsDataStore.approvedCleartextOrigins.collect { }
+                }
+            }
+            launch {
+                runCatching {
+                    settingsDataStore.refreshApprovedCleartextOriginsSnapshot()
+                }
+            }
         }
     }
 

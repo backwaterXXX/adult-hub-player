@@ -65,6 +65,7 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
+import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import androidx.tv.material3.Border
 import androidx.tv.material3.Icon
 import androidx.tv.material3.MaterialTheme
@@ -76,6 +77,7 @@ import androidx.tv.material3.Text
 import androidx.media3.ui.AspectRatioFrameLayout
 import android.os.SystemClock
 import kotlinx.coroutines.delay
+import kotlinx.coroutines.flow.StateFlow
 import com.adulthub.tv.ui.theme.NeonPink
 import com.adulthub.tv.ui.theme.SurfaceDark
 
@@ -87,7 +89,7 @@ fun PlayerOverlay(
     title: String,
     isPlaying: Boolean,
     isBuffering: Boolean,
-    currentPositionMs: Long,
+    positionFlow: StateFlow<Long>,
     durationMs: Long,
     isOsdVisible: Boolean,
     seekFeedback: String?,
@@ -110,6 +112,9 @@ fun PlayerOverlay(
     onResizeModeChange: (Int) -> Unit = {},
     modifier: Modifier = Modifier,
 ) {
+    // The position flow is collected here (and not in the parent screen) so that the 1 Hz
+    // position updates only recompose the overlay instead of the whole player screen.
+    val currentPositionMs by positionFlow.collectAsStateWithLifecycle()
     val duration = durationMs.coerceAtLeast(0L)
     val position = currentPositionMs.coerceIn(0L, if (duration > 0L) duration else Long.MAX_VALUE)
     val progress = if (duration > 0L) (position.toFloat() / duration.toFloat()).coerceIn(0f, 1f) else 0f

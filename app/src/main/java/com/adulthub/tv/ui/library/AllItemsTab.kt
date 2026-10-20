@@ -33,6 +33,7 @@ import kotlinx.coroutines.delay
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
+import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
@@ -85,7 +86,7 @@ fun AllItemsTab(
     getImageUrl: (TvItem) -> String,
     modifier: Modifier = Modifier,
 ) {
-    var filterPicker by remember { mutableStateOf<CatalogFilter?>(null) }
+    var filterPicker by rememberSaveable { mutableStateOf<CatalogFilter?>(null) }
     val gridState = rememberLazyGridState()
     val focusRequesterMap = remember { mutableMapOf<String, FocusRequester>() }
 

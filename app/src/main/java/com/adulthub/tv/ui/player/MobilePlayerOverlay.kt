@@ -52,15 +52,17 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
+import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import androidx.media3.ui.AspectRatioFrameLayout
 import com.adulthub.tv.ui.theme.NeonPink
+import kotlinx.coroutines.flow.StateFlow
 
 @Composable
 fun MobilePlayerOverlay(
     title: String,
     isPlaying: Boolean,
     isBuffering: Boolean,
-    currentPositionMs: Long,
+    positionFlow: StateFlow<Long>,
     durationMs: Long,
     isOsdVisible: Boolean,
     onShowOsd: () -> Unit,
@@ -82,6 +84,8 @@ fun MobilePlayerOverlay(
     seekFeedback: String?,
     seekStepSec: Int,
 ) {
+    // Collected inside the overlay so the 1 Hz position updates do not recompose the whole screen.
+    val currentPositionMs by positionFlow.collectAsStateWithLifecycle()
     val duration = durationMs.coerceAtLeast(0L)
     val position = currentPositionMs.coerceIn(0L, duration.takeIf { it > 0 } ?: Long.MAX_VALUE)
     var expanded by remember { mutableStateOf(false) }
