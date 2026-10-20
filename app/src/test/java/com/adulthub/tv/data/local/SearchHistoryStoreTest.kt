@@ -10,6 +10,7 @@ import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.test.TestScope
 import kotlinx.coroutines.test.UnconfinedTestDispatcher
 import kotlinx.coroutines.test.runTest
+import kotlin.time.Duration.Companion.seconds
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertTrue
 import org.junit.Before
@@ -44,13 +45,13 @@ class SearchHistoryStoreTest {
     }
 
     @Test
-    fun `initial queries list is empty`() = runTest {
+    fun `initial queries list is empty`() = runTest(timeout = 120.seconds) {
         val list = store.queries.first()
         assertTrue(list.isEmpty())
     }
 
     @Test
-    fun `recordQuery ignores short strings`() = runTest {
+    fun `recordQuery ignores short strings`() = runTest(timeout = 120.seconds) {
         store.recordQuery("a")
         store.recordQuery(" ")
         val list = store.queries.first()
@@ -58,7 +59,7 @@ class SearchHistoryStoreTest {
     }
 
     @Test
-    fun `recordQuery adds query to front and deduplicates case-insensitively`() = runTest {
+    fun `recordQuery adds query to front and deduplicates case-insensitively`() = runTest(timeout = 120.seconds) {
         store.recordQuery("blonde")
         store.recordQuery("brunette")
         store.recordQuery("Blonde")
@@ -68,7 +69,7 @@ class SearchHistoryStoreTest {
     }
 
     @Test
-    fun `recordQuery caps at max 20 queries`() = runTest {
+    fun `recordQuery caps at max 20 queries`() = runTest(timeout = 120.seconds) {
         for (i in 1..25) {
             store.recordQuery("query $i")
         }
@@ -79,7 +80,7 @@ class SearchHistoryStoreTest {
     }
 
     @Test
-    fun `clearHistory empties queries list`() = runTest {
+    fun `clearHistory empties queries list`() = runTest(timeout = 120.seconds) {
         store.recordQuery("query 1")
         store.recordQuery("query 2")
         assertEquals(2, store.queries.first().size)

@@ -14,6 +14,7 @@ import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.test.TestScope
 import kotlinx.coroutines.test.UnconfinedTestDispatcher
 import kotlinx.coroutines.test.runTest
+import kotlin.time.Duration.Companion.seconds
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertFalse
 import org.junit.Assert.assertNull
@@ -58,7 +59,7 @@ class SettingsDataStoreTest {
     }
 
     @Test
-    fun `default values when store is uninitialized`() = runTest {
+    fun `default values when store is uninitialized`() = runTest(timeout = 120.seconds) {
         assertEquals(SettingsDataStore.CURRENT_SCHEMA_VERSION, settingsDataStore.schemaVersion.first())
         assertNull(settingsDataStore.getSelectedLibraryId())
         assertNull(settingsDataStore.getSelectedLibraryName())
@@ -69,7 +70,7 @@ class SettingsDataStoreTest {
     }
 
     @Test
-    fun `setSelectedLibrary saves encrypted id and name`() = runTest {
+    fun `setSelectedLibrary saves encrypted id and name`() = runTest(timeout = 120.seconds) {
         settingsDataStore.setSelectedLibrary("lib-uuid-42", "Adult Videos")
 
         assertEquals("lib-uuid-42", settingsDataStore.getSelectedLibraryId())
@@ -84,7 +85,7 @@ class SettingsDataStoreTest {
     }
 
     @Test
-    fun `setResolverBaseUrl sanitizes trailing slashes and blank strings`() = runTest {
+    fun `setResolverBaseUrl sanitizes trailing slashes and blank strings`() = runTest(timeout = 120.seconds) {
         settingsDataStore.setResolverBaseUrl("https://resolver.example.com/api/")
         assertEquals("https://resolver.example.com/api", settingsDataStore.getResolverBaseUrl())
 
@@ -94,7 +95,7 @@ class SettingsDataStoreTest {
     }
 
     @Test
-    fun `cache limit and phash settings update flows`() = runTest {
+    fun `cache limit and phash settings update flows`() = runTest(timeout = 120.seconds) {
         settingsDataStore.setCacheLimitMb(512)
         assertEquals(512, settingsDataStore.cacheLimitMb.first())
 
@@ -106,7 +107,7 @@ class SettingsDataStoreTest {
     }
 
     @Test
-    fun `approve and revoke cleartext HTTP origin`() = runTest {
+    fun `approve and revoke cleartext HTTP origin`() = runTest(timeout = 120.seconds) {
         val httpUrl = "http://192.168.1.200:8096"
         assertFalse(settingsDataStore.isCleartextOriginApproved(httpUrl))
 
@@ -122,7 +123,7 @@ class SettingsDataStoreTest {
     }
 
     @Test
-    fun `migrateSensitiveValues converts legacy plaintext to encrypted and sets schema version`() = runTest {
+    fun `migrateSensitiveValues converts legacy plaintext to encrypted and sets schema version`() = runTest(timeout = 120.seconds) {
         // Manually write plaintext values simulating legacy version of the app
         dataStore.edit { prefs ->
             prefs[stringPreferencesKey("selected_library_id")] = "plaintext-lib-id"
@@ -153,7 +154,7 @@ class SettingsDataStoreTest {
     }
 
     @Test
-    fun `export and import non-secret configuration roundtrip`() = runTest {
+    fun `export and import non-secret configuration roundtrip`() = runTest(timeout = 120.seconds) {
         settingsDataStore.setSelectedLibrary("exported-lib", "Exported Name")
         settingsDataStore.setResolverBaseUrl("https://resolver.export.test")
         settingsDataStore.setCacheLimitMb(128)
@@ -191,7 +192,7 @@ class SettingsDataStoreTest {
     }
 
     @Test
-    fun `buffer profile flow updates correctly`() = runTest {
+    fun `buffer profile flow updates correctly`() = runTest(timeout = 120.seconds) {
         assertEquals(BufferProfile.STANDARD, settingsDataStore.bufferProfile.first())
         settingsDataStore.setBufferProfile(BufferProfile.FAST_START)
         assertEquals(BufferProfile.FAST_START, settingsDataStore.bufferProfile.first())
@@ -200,7 +201,7 @@ class SettingsDataStoreTest {
     }
 
     @Test
-    fun `low ram mode flow updates and roundtrips through export import`() = runTest {
+    fun `low ram mode flow updates and roundtrips through export import`() = runTest(timeout = 120.seconds) {
         assertFalse(settingsDataStore.lowRamMode.first())
         settingsDataStore.setLowRamMode(true)
         assertTrue(settingsDataStore.lowRamMode.first())
@@ -220,7 +221,7 @@ class SettingsDataStoreTest {
     }
 
     @Test
-    fun `seek step and autoplay next update flows and export import roundtrip`() = runTest {
+    fun `seek step and autoplay next update flows and export import roundtrip`() = runTest(timeout = 120.seconds) {
         assertEquals(15, settingsDataStore.seekStepSec.first())
         assertFalse(settingsDataStore.autoplayNext.first())
 

@@ -93,6 +93,7 @@ fun ItemDetailScreen(
     val contentFocusRequester = remember(itemId) { FocusRequester() }
     var hasBeenCurrentDestination by rememberSaveable(itemId) { mutableStateOf(false) }
     val context = LocalContext.current
+    val tagExcludedMessage = stringResource(R.string.tag_excluded_snackbar)
     val settingsDataStore: SettingsDataStore = koinInject()
     val jellyfinClientManager: JellyfinClientManager = koinInject()
     var phashThumbnailUrl by remember(itemId) { mutableStateOf<String?>(null) }
@@ -565,7 +566,7 @@ fun ItemDetailScreen(
                             viewModel.excludeTag(t)
                             android.widget.Toast.makeText(
                                 context,
-                                context.getString(R.string.tag_excluded_snackbar),
+                                tagExcludedMessage,
                                 android.widget.Toast.LENGTH_SHORT,
                             ).show()
                         },

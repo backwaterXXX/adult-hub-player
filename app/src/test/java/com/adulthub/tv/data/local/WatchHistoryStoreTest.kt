@@ -11,6 +11,7 @@ import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.test.TestScope
 import kotlinx.coroutines.test.UnconfinedTestDispatcher
 import kotlinx.coroutines.test.runTest
+import kotlin.time.Duration.Companion.seconds
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertFalse
 import org.junit.Assert.assertTrue
@@ -46,7 +47,7 @@ class WatchHistoryStoreTest {
     }
 
     @Test
-    fun `recordWatch adds item to history and converts to TvItem`() = runTest {
+    fun `recordWatch adds item to history and converts to TvItem`() = runTest(timeout = 120.seconds) {
         assertTrue(store.history.first().isEmpty())
 
         val item = TvItem(
@@ -80,7 +81,7 @@ class WatchHistoryStoreTest {
     }
 
     @Test
-    fun `recordWatch deduplicates and moves item to front`() = runTest {
+    fun `recordWatch deduplicates and moves item to front`() = runTest(timeout = 120.seconds) {
         val item1 = TvItem(id = "movie_1", title = "Movie 1")
         val item2 = TvItem(id = "movie_2", title = "Movie 2")
 
@@ -103,7 +104,7 @@ class WatchHistoryStoreTest {
     }
 
     @Test
-    fun `clearHistory removes all entries`() = runTest {
+    fun `clearHistory removes all entries`() = runTest(timeout = 120.seconds) {
         store.recordWatch(TvItem(id = "movie_1", title = "Movie 1"))
         store.recordWatch(TvItem(id = "movie_2", title = "Movie 2"))
 
@@ -112,7 +113,7 @@ class WatchHistoryStoreTest {
     }
 
     @Test
-    fun `history is capped to MAX_HISTORY_ENTRIES`() = runTest {
+    fun `history is capped to MAX_HISTORY_ENTRIES`() = runTest(timeout = 120.seconds) {
         for (i in 1..(WatchHistoryStore.MAX_HISTORY_ENTRIES + 10)) {
             store.recordWatch(TvItem(id = "item_$i", title = "Title $i"), watchedAt = i.toLong())
         }

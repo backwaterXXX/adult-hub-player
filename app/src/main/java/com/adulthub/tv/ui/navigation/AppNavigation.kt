@@ -329,6 +329,7 @@ private fun TvExitPrompt(
     val currentRoute = currentEntry?.destination?.route
     val isFirstScreen = currentRoute == Screen.Home.route || currentRoute == Screen.Server.route
     val context = LocalContext.current
+    val exitMessage = stringResource(R.string.press_back_again_to_exit)
     var lastBackPressTime by remember { mutableLongStateOf(0L) }
     var showExitPrompt by remember { mutableStateOf(false) }
 
@@ -354,7 +355,7 @@ private fun TvExitPrompt(
                 showExitPrompt = true
                 Toast.makeText(
                     context,
-                    context.getString(R.string.press_back_again_to_exit),
+                    exitMessage,
                     Toast.LENGTH_SHORT,
                 ).show()
             }

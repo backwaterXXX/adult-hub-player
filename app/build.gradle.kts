@@ -9,13 +9,13 @@ plugins {
 
 android {
     namespace = "com.adulthub.tv"
-    compileSdk = 36
+    compileSdk = 37
     buildToolsVersion = "36.0.0"
 
     defaultConfig {
         applicationId = "com.adulthub.tv"
         minSdk = 28
-        targetSdk = 36
+        targetSdk = 37
         versionCode = 71
         versionName = "0.1.71"
 

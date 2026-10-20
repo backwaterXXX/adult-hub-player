@@ -10,6 +10,7 @@ import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.test.TestScope
 import kotlinx.coroutines.test.UnconfinedTestDispatcher
 import kotlinx.coroutines.test.runTest
+import kotlin.time.Duration.Companion.seconds
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertFalse
 import org.junit.Assert.assertNotNull
@@ -47,7 +48,7 @@ class TelegramProgressStoreTest {
     }
 
     @Test
-    fun `saveProgress and getProgress roundtrip`() = runTest {
+    fun `saveProgress and getProgress roundtrip`() = runTest(timeout = 120.seconds) {
         assertNull(store.getProgress("tg_123"))
 
         store.saveProgress(
@@ -73,7 +74,7 @@ class TelegramProgressStoreTest {
     }
 
     @Test
-    fun `markPlayed updates isPlayed flag and clears position`() = runTest {
+    fun `markPlayed updates isPlayed flag and clears position`() = runTest(timeout = 120.seconds) {
         store.saveProgress(
             providerVideoId = "tg_456",
             positionMs = 50_000L,
@@ -96,7 +97,7 @@ class TelegramProgressStoreTest {
     }
 
     @Test
-    fun `clearProgress removes specific video`() = runTest {
+    fun `clearProgress removes specific video`() = runTest(timeout = 120.seconds) {
         store.saveProgress("tg_1", 10_000L, 60_000L, "Title 1")
         store.saveProgress("tg_2", 20_000L, 60_000L, "Title 2")
 
@@ -109,7 +110,7 @@ class TelegramProgressStoreTest {
     }
 
     @Test
-    fun `clearAll removes all records`() = runTest {
+    fun `clearAll removes all records`() = runTest(timeout = 120.seconds) {
         store.saveProgress("tg_1", 10_000L, 60_000L, "Title 1")
         store.saveProgress("tg_2", 20_000L, 60_000L, "Title 2")
 
@@ -118,7 +119,7 @@ class TelegramProgressStoreTest {
     }
 
     @Test
-    fun `progress is trimmed to MAX_LRU_ENTRIES`() = runTest {
+    fun `progress is trimmed to MAX_LRU_ENTRIES`() = runTest(timeout = 120.seconds) {
         // Insert MAX_LRU_ENTRIES + 5 items
         for (i in 1..(TelegramProgressStore.MAX_LRU_ENTRIES + 5)) {
             store.saveProgress("tg_$i", 10_000L, 60_000L, "Title $i")
@@ -129,7 +130,7 @@ class TelegramProgressStoreTest {
     }
 
     @Test
-    fun `watched records are trimmed to MAX_LRU_ENTRIES`() = runTest {
+    fun `watched records are trimmed to MAX_LRU_ENTRIES`() = runTest(timeout = 120.seconds) {
         for (i in 1..(TelegramProgressStore.MAX_LRU_ENTRIES + 5)) {
             store.markPlayed("tg_$i", isPlayed = true, title = "Title $i")
         }

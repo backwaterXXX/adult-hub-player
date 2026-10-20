@@ -98,6 +98,9 @@ fun SettingsScreen(
     viewModel: SettingsViewModel = koinViewModel(),
 ) {
     val context = LocalContext.current
+    val diagnosticsTitle = stringResource(com.adulthub.tv.R.string.settings_diagnostics_title)
+    val diagnosticsDescription = stringResource(com.adulthub.tv.R.string.settings_diagnostics_description)
+    val exportDiagnosticsLabel = stringResource(com.adulthub.tv.R.string.settings_export_diagnostics)
     val updateManager: AppUpdateManager = koinInject()
     val updateRepository: AppUpdateRepository = koinInject()
     val updateState by updateManager.state.collectAsStateWithLifecycle()
@@ -696,9 +699,9 @@ fun SettingsScreen(
             }
 
             item(key = "section_diagnostics") {
-                SettingsCard(title = context.getString(com.adulthub.tv.R.string.settings_diagnostics_title)) {
+                SettingsCard(title = diagnosticsTitle) {
                     Text(
-                        text = context.getString(com.adulthub.tv.R.string.settings_diagnostics_description),
+                        text = diagnosticsDescription,
                         style = MaterialTheme.typography.bodyMedium.copy(color = TextSecondary),
                     )
                     Spacer(modifier = Modifier.height(12.dp))
@@ -707,7 +710,7 @@ fun SettingsScreen(
                         modifier = Modifier.height(40.dp),
                     ) {
                         Text(
-                            context.getString(com.adulthub.tv.R.string.settings_export_diagnostics),
+                            exportDiagnosticsLabel,
                             fontWeight = FontWeight.Medium,
                         )
                     }

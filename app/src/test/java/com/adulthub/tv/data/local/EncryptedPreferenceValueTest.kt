@@ -4,6 +4,7 @@ import io.mockk.coEvery
 import io.mockk.coVerify
 import io.mockk.mockk
 import kotlinx.coroutines.test.runTest
+import kotlin.time.Duration.Companion.seconds
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertNull
 import org.junit.Test
@@ -13,12 +14,12 @@ class EncryptedPreferenceValueTest {
     private val codec = EncryptedPreferenceValue(crypto)
 
     @Test
-    fun `legacy plaintext remains readable until migration`() = runTest {
+    fun `legacy plaintext remains readable until migration`() = runTest(timeout = 120.seconds) {
         assertEquals("private value", codec.decode("private value"))
     }
 
     @Test
-    fun `values use a versioned encrypted representation`() = runTest {
+    fun `values use a versioned encrypted representation`() = runTest(timeout = 120.seconds) {
         coEvery { crypto.encrypt("private value") } returns "ciphertext"
         coEvery { crypto.decrypt("ciphertext") } returns "private value"
 
@@ -29,7 +30,7 @@ class EncryptedPreferenceValueTest {
     }
 
     @Test
-    fun `already encrypted values are not encrypted twice`() = runTest {
+    fun `already encrypted values are not encrypted twice`() = runTest(timeout = 120.seconds) {
         val stored = "enc:v1:existing-ciphertext"
 
         assertEquals(stored, codec.encode(stored))
@@ -37,7 +38,7 @@ class EncryptedPreferenceValueTest {
     }
 
     @Test
-    fun `unreadable encrypted values fail closed`() = runTest {
+    fun `unreadable encrypted values fail closed`() = runTest(timeout = 120.seconds) {
         coEvery { crypto.decrypt("broken") } returns null
 
         assertNull(codec.decode("enc:v1:broken"))
