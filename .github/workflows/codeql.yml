@@ -24,7 +24,9 @@ jobs:
     strategy:
       fail-fast: false
       matrix:
-        language: [ 'java-kotlin' ]
+        include:
+          - language: 'java-kotlin'
+            build-command: 'assembleTvDebug'
 
     steps:
       - name: Checkout Code
@@ -42,7 +44,10 @@ jobs:
         uses: github/codeql-action/init@6f2ac81f5cd81fe351a197ba0b00d91d03cd2aee # v4.39.0
         with:
           languages: ${{ matrix.language }}
-          build-mode: none
+          build-mode: manual
+
+      - name: Build for CodeQL
+        run: ./gradlew ${{ matrix.build-command }} --no-daemon
 
       - name: Perform CodeQL Analysis
         uses: github/codeql-action/analyze@6f2ac81f5cd81fe351a197ba0b00d91d03cd2aee # v4.39.0
