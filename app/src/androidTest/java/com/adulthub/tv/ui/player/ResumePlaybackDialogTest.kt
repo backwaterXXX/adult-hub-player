@@ -1,9 +1,10 @@
 package com.adulthub.tv.ui.player
 
+import androidx.compose.ui.semantics.SemanticsActions
 import androidx.compose.ui.test.assertIsDisplayed
 import androidx.compose.ui.test.junit4.createComposeRule
 import androidx.compose.ui.test.onNodeWithText
-import androidx.compose.ui.test.performClick
+import androidx.compose.ui.test.performSemanticsAction
 import androidx.test.ext.junit.runners.AndroidJUnit4
 import com.adulthub.tv.ui.theme.AdultHubTvTheme
 import org.junit.Assert.assertTrue
@@ -12,8 +13,10 @@ import org.junit.Test
 import org.junit.runner.RunWith
 
 /**
- * Verifies the resume dialog of the player screen, including the focus of the resume button
- * and the two possible decisions.
+ * Verifies the resume dialog of the player screen.
+ *
+ * The buttons are activated through their semantics action, a touch event does not reach the
+ * TV components on a device without a touchscreen.
  */
 @RunWith(AndroidJUnit4::class)
 class ResumePlaybackDialogTest {
@@ -38,7 +41,7 @@ class ResumePlaybackDialogTest {
     }
 
     @Test
-    fun theResumeButtonIsFocusedAndStartsThePlayback() {
+    fun theResumeButtonStartsThePlayback() {
         var resumed = false
         composeRule.setContent {
             AdultHubTvTheme {
@@ -51,7 +54,7 @@ class ResumePlaybackDialogTest {
         }
         composeRule.waitForIdle()
 
-        composeRule.onNodeWithText("Resume (01:05)").performClick()
+        composeRule.onNodeWithText("Resume (01:05)").performSemanticsAction(SemanticsActions.OnClick)
         composeRule.waitForIdle()
 
         assertTrue("The resume button has to start the playback", resumed)
@@ -71,7 +74,7 @@ class ResumePlaybackDialogTest {
         }
         composeRule.waitForIdle()
 
-        composeRule.onNodeWithText("Start Over").performClick()
+        composeRule.onNodeWithText("Start Over").performSemanticsAction(SemanticsActions.OnClick)
         composeRule.waitForIdle()
 
         assertTrue("The second button has to restart the playback", startedFromBeginning)
