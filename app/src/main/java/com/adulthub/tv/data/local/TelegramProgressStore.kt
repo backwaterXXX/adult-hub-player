@@ -129,7 +129,15 @@ open class TelegramProgressStore(
                 isPlayed = isPlayed,
             )
             currentMap[providerVideoId] = record
-            prefs[KEY_PROGRESS_MAP] = json.encodeToString(currentMap)
+            val trimmedMap = if (currentMap.size > MAX_LRU_ENTRIES) {
+                currentMap.entries
+                    .sortedByDescending { it.value.updatedAt }
+                    .take(MAX_LRU_ENTRIES)
+                    .associate { it.key to it.value }
+            } else {
+                currentMap
+            }
+            prefs[KEY_PROGRESS_MAP] = json.encodeToString(trimmedMap)
         }
     }
 

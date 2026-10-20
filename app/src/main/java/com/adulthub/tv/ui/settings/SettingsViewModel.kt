@@ -481,7 +481,7 @@ class SettingsViewModel(
 
     fun logout(context: Context? = null) {
         viewModelScope.launch {
-            context?.let(::clearImageCache)
+            context?.let { withContext(Dispatchers.IO) { clearImageCache(it) } }
             authRepository.logout()
             _uiState.update { it.copy(isLoggedOut = true) }
         }

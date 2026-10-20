@@ -44,6 +44,8 @@ private const val TAG = "PlayerManager"
 private const val SEEK_INCREMENT_MS = 10_000L
 private const val POSITION_POLL_INTERVAL_MS = 1_000L
 private const val MAX_AUTOMATIC_RETRIES = 3
+private const val PLAYBACK_POLICY_ORIGIN_HEADER = "X-AdultHub-Playback-Origin"
+private const val PLAYBACK_POLICY_HEADERS_HEADER = "X-AdultHub-Playback-Headers"
 
 private data class PlaybackRequest(
     val streamUrl: String,
@@ -66,6 +68,49 @@ class PlayerManager(
     private var totalRetryCount = 0
     private var playbackRequest: PlaybackRequest? = null
     private var released = false
+    private val httpClient by lazy {
+        OkHttpClient.Builder()
+            .connectTimeout(15, java.util.concurrent.TimeUnit.SECONDS)
+            .readTimeout(20, java.util.concurrent.TimeUnit.SECONDS)
+            .addNetworkInterceptor { chain ->
+                val request = chain.request()
+                val allowedOrigin = request.header(PLAYBACK_POLICY_ORIGIN_HEADER).orEmpty()
+                val forwardedHeaders = request.header(PLAYBACK_POLICY_HEADERS_HEADER)
+                    .orEmpty()
+                    .split(',')
+                    .filter(String::isNotBlank)
+                val requestWithoutPolicy = request.newBuilder()
+                    .removeHeader(PLAYBACK_POLICY_ORIGIN_HEADER)
+                    .removeHeader(PLAYBACK_POLICY_HEADERS_HEADER)
+                val safeRequest = requestWithoutPolicy.build()
+                if (request.url.isHttps) {
+                    val redirectedOrigin = "${request.url.scheme}://${request.url.host}:${request.url.port}"
+                    val originSafeRequest = if (redirectedOrigin == allowedOrigin) safeRequest else {
+                        requestWithoutPolicy.apply {
+                            forwardedHeaders.forEach(::removeHeader)
+                            removeHeader("Authorization")
+                            removeHeader("Cookie")
+                            removeHeader("X-Emby-Token")
+                        }.build()
+                    }
+                    chain.proceed(originSafeRequest)
+                } else {
+                    when (val validation = ServiceUrlPolicy.inspect(request.url.toString(), allowQuery = true)) {
+                        is ServiceUrlValidation.Valid -> {
+                            if (!validation.value.usesCleartext) {
+                                throw IOException("Blocked an insecure stream redirect")
+                            }
+                            if (validation.value.origin != allowedOrigin) {
+                                throw IOException("Blocked a cleartext redirect to a different host")
+                            }
+                            chain.proceed(safeRequest)
+                        }
+                        is ServiceUrlValidation.Invalid -> throw IOException("Blocked an insecure stream redirect: ${validation.reason}")
+                    }
+                }
+            }
+            .build()
+    }
     private var preparingStartedAt: Long? = null
     private var readyLoggedForCurrentMedia = false
     private var videoDecoderName: String? = null
@@ -318,7 +363,7 @@ class PlayerManager(
         resetPlaybackSpeed: Boolean,
         resumePlayback: Boolean,
     ) {
-        released = false
+        check(!released) { "Cannot start playback after PlayerManager.release()" }
         _errorMessage.value = null
         _durationMs.value = 0L
         streamFileSizeBytes = null
@@ -344,46 +389,14 @@ class PlayerManager(
         val initialUrl = streamUrl.toHttpUrlOrNull()
             ?: throw IllegalArgumentException("Invalid stream URL")
         val initialOrigin = "${initialUrl.scheme}://${initialUrl.host}:${initialUrl.port}"
-        val forwardedHeaderNames = headers.keys.toList()
-        val httpClient = OkHttpClient.Builder()
-            .connectTimeout(15, java.util.concurrent.TimeUnit.SECONDS)
-            .readTimeout(20, java.util.concurrent.TimeUnit.SECONDS)
-            .addNetworkInterceptor { chain ->
-                val request = chain.request()
-                if (request.url.isHttps) {
-                    val redirectedOrigin = "${request.url.scheme}://${request.url.host}:${request.url.port}"
-                    val safeRequest = if (redirectedOrigin == initialOrigin) request else {
-                        request.newBuilder().apply {
-                            forwardedHeaderNames.forEach(::removeHeader)
-                            removeHeader("Authorization")
-                            removeHeader("Cookie")
-                            removeHeader("X-Emby-Token")
-                        }.build()
-                    }
-                    chain.proceed(safeRequest)
-                } else {
-                    when (val validation = ServiceUrlPolicy.inspect(request.url.toString(), allowQuery = true)) {
-                        is ServiceUrlValidation.Valid -> {
-                            if (!validation.value.usesCleartext) {
-                                throw IOException("Blocked an insecure stream redirect")
-                            }
-                            if (validation.value.origin != initialOrigin) {
-                                throw IOException("Blocked a cleartext redirect to a different host")
-                            }
-                            chain.proceed(request)
-                        }
-                        is ServiceUrlValidation.Invalid -> throw IOException("Blocked an insecure stream redirect: ${validation.reason}")
-                    }
-                }
-            }
-            .build()
-
         val httpDataSourceFactory = OkHttpDataSource.Factory(httpClient)
             .setUserAgent("${BuildConfig.CLIENT_NAME}/${BuildConfig.VERSION_NAME} (${BuildConfig.DEVICE_NAME})")
-
-        if (headers.isNotEmpty()) {
-            httpDataSourceFactory.setDefaultRequestProperties(headers)
-        }
+            .setDefaultRequestProperties(
+                headers + mapOf(
+                    PLAYBACK_POLICY_ORIGIN_HEADER to initialOrigin,
+                    PLAYBACK_POLICY_HEADERS_HEADER to headers.keys.joinToString(","),
+                ),
+            )
 
         val trackingDataSourceFactory = androidx.media3.datasource.DataSource.Factory {
             FileSizeTrackingDataSource(

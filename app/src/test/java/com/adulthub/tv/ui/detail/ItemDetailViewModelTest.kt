@@ -101,6 +101,25 @@ class ItemDetailViewModelTest {
     }
 
     @Test
+    fun `toggleWatched uses provider video id for Telegram items`() = runTest(testDispatcher) {
+        fakeLibraryRepository.itemDetailsResult = Result.success(
+            TvItem(id = "internal-item-id", title = "Channel clip", providerVideoId = "telegram:clip-42"),
+        )
+        val viewModel = ItemDetailViewModel(
+            libraryRepository = fakeLibraryRepository,
+            clientManager = clientManager,
+        )
+
+        viewModel.loadDetails("internal-item-id")
+        advanceUntilIdle()
+        viewModel.toggleWatched()
+        advanceUntilIdle()
+
+        assertEquals("telegram:clip-42", fakeLibraryRepository.lastWatchedStateId)
+        assertEquals(true, fakeLibraryRepository.lastWatchedState)
+    }
+
+    @Test
     fun `playMovie emits NavigateToPlayer event`() = runTest(testDispatcher) {
         val viewModel = ItemDetailViewModel(
             libraryRepository = fakeLibraryRepository,
@@ -168,6 +187,8 @@ class ItemDetailViewModelTest {
         var similarResult: Result<List<TvItem>> = Result.success(emptyList())
         var singleRandomResult: Result<TvItem?> = Result.success(null)
         var lastToggledFavoriteState: Boolean? = null
+        var lastWatchedStateId: String? = null
+        var lastWatchedState: Boolean? = null
 
         override suspend fun getItemDetails(itemId: String): Result<TvItem> = itemDetailsResult
 
@@ -178,6 +199,12 @@ class ItemDetailViewModelTest {
         override suspend fun toggleFavorite(itemId: String, markFavorite: Boolean): Result<Boolean> {
             lastToggledFavoriteState = markFavorite
             return Result.success(markFavorite)
+        }
+
+        override suspend fun markAsPlayed(itemId: String, isPlayed: Boolean): Result<Boolean> {
+            lastWatchedStateId = itemId
+            lastWatchedState = isPlayed
+            return Result.success(isPlayed)
         }
     }
 }

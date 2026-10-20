@@ -177,13 +177,14 @@ fun MobilePlayerOverlay(
                         Text(formatTime(position), color = Color.White, fontSize = 12.sp)
                         Slider(
                             value = if (isDraggingSeek) dragPositionMs else position.toFloat(),
+                            enabled = duration > 0L,
                             onValueChange = {
                                 dragPositionMs = it
                                 isDraggingSeek = true
                                 onInteraction()
                             },
                             onValueChangeFinished = {
-                                onSeekTo(dragPositionMs.toLong())
+                                if (duration > 0L) onSeekTo(dragPositionMs.toLong())
                                 isDraggingSeek = false
                                 onInteraction()
                             },

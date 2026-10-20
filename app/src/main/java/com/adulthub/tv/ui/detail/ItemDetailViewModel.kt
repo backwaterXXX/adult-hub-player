@@ -121,7 +121,12 @@ class ItemDetailViewModel(
         _uiState.update { it.copy(item = currentItem.copy(isPlayed = newPlayed)) }
 
         viewModelScope.launch {
-            val result = libraryRepository.markAsPlayed(currentItem.id, newPlayed)
+            val watchedStateId = if (currentItem.isTelegram) {
+                currentItem.providerVideoId ?: currentItem.id
+            } else {
+                currentItem.id
+            }
+            val result = libraryRepository.markAsPlayed(watchedStateId, newPlayed)
             if (result.isFailure) {
                 // Revert on failure
                 _uiState.update { it.copy(item = currentItem) }

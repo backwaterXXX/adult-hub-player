@@ -27,6 +27,12 @@ import com.adulthub.tv.ui.search.SearchViewModel
 import com.adulthub.tv.ui.settings.SettingsViewModel
 import org.koin.androidx.compose.koinViewModel
 
+internal fun mobileTopLevelNavigationRoute(routePattern: String): String = when (routePattern) {
+    Screen.Library.route -> Screen.Library.createRoute()
+    Screen.Search.route -> Screen.Search.createRoute()
+    else -> routePattern
+}
+
 @Composable
 fun MobileAppNavigation(modifier: Modifier = Modifier) {
     val nav = rememberNavController()
@@ -77,7 +83,7 @@ fun MobileAppNavigation(modifier: Modifier = Modifier) {
                     NavigationBarItem(
                         selected = selected,
                         onClick = {
-                            nav.navigate(destination) {
+                            nav.navigate(mobileTopLevelNavigationRoute(destination)) {
                                 popUpTo(Screen.Home.route) { saveState = true }
                                 launchSingleTop = true
                                 restoreState = true
@@ -96,9 +102,9 @@ fun MobileAppNavigation(modifier: Modifier = Modifier) {
             composable(Screen.Login.route) { MobileLoginScreen(auth) { nav.popBackStack() } }
             composable(Screen.QuickConnect.route) { MobileQuickConnectScreen(auth) { nav.popBackStack() } }
             composable(Screen.LibrarySelect.route) { MobileLibrarySelectScreen(auth) }
-            composable(Screen.Home.route) {
+            composable(Screen.Home.route) { homeEntry ->
                 val vm: HomeViewModel = koinViewModel()
-                MobileHomeScreen(vm, onItem = { nav.navigate(Screen.ItemDetail.createRoute(it)) }, onPlay = { nav.navigate(Screen.Player.createRoute(it)) }, onPerson = { id, name -> nav.navigate(Screen.PersonDetail.createRoute(id, name)) }, onSearch = { nav.navigate(Screen.Search.createRoute()) }, onLibrary = { nav.navigate(Screen.Library.createRoute()) }, onCategory = { nav.navigate(Screen.Library.createRoute(it)) })
+                MobileHomeScreen(vm, isCurrentDestination = entry?.id == homeEntry.id, onItem = { nav.navigate(Screen.ItemDetail.createRoute(it)) }, onPlay = { nav.navigate(Screen.Player.createRoute(it)) }, onPerson = { id, name -> nav.navigate(Screen.PersonDetail.createRoute(id, name)) }, onSearch = { nav.navigate(Screen.Search.createRoute()) }, onLibrary = { nav.navigate(Screen.Library.createRoute()) }, onCategory = { nav.navigate(Screen.Library.createRoute(it)) })
             }
             composable(Screen.Library.route, arguments = listOf(navArgument("categoryId") { type = NavType.StringType; nullable = true; defaultValue = null })) { back ->
                 val vm: LibraryViewModel = koinViewModel()

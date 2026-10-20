@@ -17,6 +17,7 @@ import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.LazyRow
 import androidx.compose.foundation.lazy.items
+import androidx.compose.foundation.lazy.itemsIndexed
 import androidx.compose.foundation.interaction.MutableInteractionSource
 import androidx.compose.foundation.interaction.collectIsFocusedAsState
 import androidx.compose.foundation.shape.RoundedCornerShape
@@ -25,6 +26,7 @@ import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
+import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.ExperimentalComposeUiApi
@@ -89,7 +91,7 @@ fun ItemDetailScreen(
 ) {
     val state by viewModel.uiState.collectAsStateWithLifecycle()
     val contentFocusRequester = remember(itemId) { FocusRequester() }
-    var hasBeenCurrentDestination by remember(itemId) { mutableStateOf(false) }
+    var hasBeenCurrentDestination by rememberSaveable(itemId) { mutableStateOf(false) }
     val context = LocalContext.current
     val settingsDataStore: SettingsDataStore = koinInject()
     val jellyfinClientManager: JellyfinClientManager = koinInject()
@@ -384,7 +386,7 @@ fun ItemDetailScreen(
                                         contentPadding = PaddingValues(horizontal = 12.dp),
                                         horizontalArrangement = Arrangement.spacedBy(8.dp),
                                     ) {
-                                        items(item.genres, key = { "genre_$it" }) { genre ->
+                                        itemsIndexed(item.genres, key = { index, genre -> "genre_${genre}_$index" }) { _, genre ->
                                             TvFilterChip(
                                                 text = genre,
                                                 borderColor = NeonPink,
@@ -400,7 +402,7 @@ fun ItemDetailScreen(
                                         contentPadding = PaddingValues(horizontal = 12.dp),
                                         horizontalArrangement = Arrangement.spacedBy(8.dp),
                                     ) {
-                                        items(item.tags, key = { "tag_$it" }) { tag ->
+                                        itemsIndexed(item.tags, key = { index, tag -> "tag_${tag}_$index" }) { _, tag ->
                                             TvFilterChip(
                                                 text = "#$tag",
                                                 borderColor = NeonPink,
@@ -460,7 +462,7 @@ fun ItemDetailScreen(
                                     contentPadding = PaddingValues(horizontal = 48.dp),
                                     horizontalArrangement = Arrangement.spacedBy(16.dp),
                                 ) {
-                                    items(castActors, key = { "person_${it.id}" }) { role ->
+                                    itemsIndexed(castActors, key = { index, role -> "person_${role.id}_$index" }) { _, role ->
                                         val person = TvPerson(
                                             id = role.id,
                                             name = role.name,

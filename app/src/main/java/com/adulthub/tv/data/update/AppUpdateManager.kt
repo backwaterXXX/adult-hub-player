@@ -77,7 +77,9 @@ class AppUpdateManager(
                     message = "Downloading update…",
                 )
             }
-            settings.setLastUpdateCheck(System.currentTimeMillis())
+            if (result !is UpdateCheckResult.Failed) {
+                settings.setLastUpdateCheck(System.currentTimeMillis())
+            }
             _state.value = when (result) {
                 is UpdateCheckResult.UpdateReady -> _state.value.copy(
                     isChecking = false,

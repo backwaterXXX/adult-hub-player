@@ -19,6 +19,7 @@ import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.flow.firstOrNull
 import kotlinx.coroutines.Job
 import kotlinx.coroutines.launch
+import kotlinx.coroutines.CoroutineScope
 
 sealed interface PlayerUiState {
     data object Loading : PlayerUiState
@@ -41,6 +42,7 @@ class PlayerViewModel(
     private val channelRepository: ChannelRepository? = null,
     private val telegramProgressStore: TelegramProgressStore? = null,
     private val watchHistoryStore: WatchHistoryStore? = null,
+    private val persistenceScope: CoroutineScope? = null,
 ) : ViewModel() {
 
     companion object {
@@ -294,7 +296,9 @@ class PlayerViewModel(
 
     private fun saveTelegramProgress(positionMs: Long, isEnded: Boolean) {
         val ready = _uiState.value as? PlayerUiState.Ready ?: return
-        viewModelScope.launch { persistTelegramProgress(ready.item, positionMs, isEnded) }
+        (persistenceScope ?: viewModelScope).launch {
+            persistTelegramProgress(ready.item, positionMs, isEnded)
+        }
     }
 
     suspend fun checkpointTelegramProgress(positionMs: Long) {

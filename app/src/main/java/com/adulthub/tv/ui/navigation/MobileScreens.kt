@@ -17,6 +17,7 @@ import androidx.compose.foundation.lazy.grid.items
 import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
+import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.text.input.KeyboardType
@@ -40,6 +41,7 @@ import com.adulthub.tv.ui.settings.SettingsViewModel
 import com.adulthub.tv.ui.person.PersonDetailViewModel
 import com.adulthub.tv.ui.theme.NeonPink
 import com.adulthub.tv.ui.theme.OledBlack
+import kotlinx.coroutines.delay
 import org.koin.compose.koinInject
 
 @Composable
@@ -121,8 +123,19 @@ fun MobileLibrarySelectScreen(vm: AuthViewModel) {
 }
 
 @Composable
-fun MobileHomeScreen(vm: HomeViewModel, onItem: (String) -> Unit, onPlay: (String) -> Unit, onPerson: (String, String) -> Unit, onSearch: () -> Unit, onLibrary: () -> Unit, onCategory: (String) -> Unit) {
+fun MobileHomeScreen(vm: HomeViewModel, isCurrentDestination: Boolean = true, onItem: (String) -> Unit, onPlay: (String) -> Unit, onPerson: (String, String) -> Unit, onSearch: () -> Unit, onLibrary: () -> Unit, onCategory: (String) -> Unit) {
     val state by vm.uiState.collectAsStateWithLifecycle()
+    var hasBeenCurrentDestination by rememberSaveable { mutableStateOf(false) }
+    LaunchedEffect(isCurrentDestination) {
+        if (isCurrentDestination) {
+            if (hasBeenCurrentDestination) {
+                delay(500L)
+                vm.loadResume()
+                vm.loadWatchHistory()
+            }
+            hasBeenCurrentDestination = true
+        }
+    }
     LaunchedEffect(vm) {
         vm.navEvents.collect { event ->
             when (event) {

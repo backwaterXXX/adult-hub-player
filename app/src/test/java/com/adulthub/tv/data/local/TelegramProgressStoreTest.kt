@@ -127,4 +127,13 @@ class TelegramProgressStoreTest {
         val all = store.allProgress.first()
         assertEquals(TelegramProgressStore.MAX_LRU_ENTRIES, all.size)
     }
+
+    @Test
+    fun `watched records are trimmed to MAX_LRU_ENTRIES`() = runTest {
+        for (i in 1..(TelegramProgressStore.MAX_LRU_ENTRIES + 5)) {
+            store.markPlayed("tg_$i", isPlayed = true, title = "Title $i")
+        }
+
+        assertEquals(TelegramProgressStore.MAX_LRU_ENTRIES, store.allProgress.first().size)
+    }
 }

@@ -23,6 +23,7 @@ import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
+import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.ExperimentalComposeUiApi
 import androidx.compose.ui.Alignment
@@ -66,7 +67,7 @@ fun PersonDetailScreen(
 ) {
     val state by viewModel.uiState.collectAsStateWithLifecycle()
     val contentFocusRequester = remember(personId) { FocusRequester() }
-    var hasBeenCurrentDestination by remember(personId) { mutableStateOf(false) }
+    var hasBeenCurrentDestination by rememberSaveable(personId) { mutableStateOf(false) }
 
     LaunchedEffect(personId, personName) {
         viewModel.loadPerson(personId, personName)

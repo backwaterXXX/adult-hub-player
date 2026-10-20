@@ -1,5 +1,6 @@
 package com.adulthub.tv.data.repository
 
+import android.net.Uri
 import com.adulthub.tv.diagnostics.AppLog as Log
 import com.adulthub.tv.data.jellyfin.JellyfinClientManager
 import com.adulthub.tv.data.local.SettingsDataStore
@@ -87,7 +88,7 @@ open class PlaybackRepository(
                     } else {
                         "telegram:${item.providerVideoId}"
                     }
-                    "$resolverOrigin/admin/play/$ref/stream?mode=proxy"
+                    "$resolverOrigin/admin/play/${Uri.encode(ref)}/stream?mode=proxy"
                 }
                 item.id.startsWith("telegram:") -> {
                     val resolverUrl = settingsDataStore.getResolverBaseUrl()
@@ -95,7 +96,7 @@ open class PlaybackRepository(
                         return@withContext Result.failure(IllegalStateException("Set a Resolver URL in Settings before playback"))
                     }
                     val resolverOrigin = settingsDataStore.requireAllowedServiceUrl(resolverUrl).normalized
-                    "$resolverOrigin/admin/play/${item.id}/stream?mode=proxy"
+                    "$resolverOrigin/admin/play/${Uri.encode(item.id)}/stream?mode=proxy"
                 }
                 else -> {
                     return@withContext Result.failure(

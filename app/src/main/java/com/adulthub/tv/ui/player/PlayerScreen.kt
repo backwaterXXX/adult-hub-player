@@ -85,14 +85,19 @@ fun PlayerScreen(
     val isLoadingRandom by viewModel.isLoadingRandom.collectAsStateWithLifecycle()
 
     val settingsDataStore: com.adulthub.tv.data.local.SettingsDataStore = koinInject()
-    val initialBufferProfile by produceState<com.adulthub.tv.data.local.BufferProfile?>(null, settingsDataStore) {
-        value = settingsDataStore.bufferProfile.first()
+    val playerManagerState by produceState<PlayerManager?>(null, context, settingsDataStore) {
+        val bufferProfile = settingsDataStore.bufferProfile.first()
+        value = PlayerManager(context, coroutineScope, bufferProfile)
     }
+    if (playerManagerState == null) {
+        Box(Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
+            Text("Preparing player…", color = Color.White)
+        }
+        return
+    }
+    val playerManager = requireNotNull(playerManagerState)
     val seekStepSec by settingsDataStore.seekStepSec.collectAsStateWithLifecycle(initialValue = 15)
     val autoplayNext by settingsDataStore.autoplayNext.collectAsStateWithLifecycle(initialValue = false)
-    val playerManager = remember(context, initialBufferProfile) {
-        PlayerManager(context, coroutineScope, initialBufferProfile ?: com.adulthub.tv.data.local.BufferProfile.STANDARD)
-    }
     var reportingSessionId by remember(playerManager) { mutableLongStateOf(0L) }
     val phashCoordinator: com.adulthub.tv.player.PhashCoordinator = koinInject()
     val phashJobStatuses by phashCoordinator.jobStatuses.collectAsStateWithLifecycle()
@@ -126,8 +131,7 @@ fun PlayerScreen(
     val rootFocusRequester = remember { FocusRequester() }
 
     // Initial load
-    LaunchedEffect(itemId, resume, initialBufferProfile) {
-        if (initialBufferProfile == null) return@LaunchedEffect
+    LaunchedEffect(itemId, resume, playerManager) {
         viewModel.loadItem(itemId, resume)
     }
 
@@ -275,9 +279,7 @@ fun PlayerScreen(
         } else if (showInfoDialog) {
             showInfoDialog = false
         } else if (pendingResumeDialogPosition != null) {
-            viewModel.onExitPlayer(pendingResumeDialogPosition, reportingSessionId.takeIf { it > 0L })
-            playerManager.release()
-            onBack()
+            viewModel.onResumeDialogHandled()
         } else if (isOsdVisible) {
             isOsdVisible = false
         } else {
