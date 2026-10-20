@@ -162,13 +162,9 @@ Debug APKs use the Android debug key and install under separate `.debug` applica
 
 To replace an older sideloaded debug-signed production package with the GitHub release, first back up any local app data, uninstall that package, and then install the release APK. Android does not allow an APK signed by a different certificate to update an existing installation.
 
-Generate a long-lived signing key and copy the example properties file:
-```sh
-keytool -genkeypair -v -keystore release.jks -alias adult-hub-release -keyalg RSA -keysize 4096 -validity 10000
-cp keystore.properties.example keystore.properties
-```
+Use the existing long-lived release key for every TV and mobile release. Restore `release.jks` and `keystore.properties` from the secure signing backup when setting up a new machine. Do not generate a replacement key during normal setup: a different key breaks updates for existing installations. The public certificate fingerprint is pinned in `signing/release-cert.sha256`.
 
-Set the keystore and key passwords in `keystore.properties`:
+The local `keystore.properties` file has this format:
 ```properties
 storeFile=release.jks
 storePassword=your_keystore_password
@@ -185,7 +181,11 @@ The GitHub Actions release workflow reads these repository Actions secrets and v
 - `ANDROID_KEY_PASSWORD`
 - Repository variable `ANDROID_SIGNING_CERT_SHA256`: SHA-256 fingerprint of the release signing certificate, without colons.
 
-Push a version tag matching `v<versionName>-tv` (for example, `v0.1.69-tv`) to run release signing and publish both APKs. The workflow checks the tag and requires the version code to increase.
+The workflow reads the fingerprint only from the repository variable, requires it to match `signing/release-cert.sha256`, and checks both APK signatures before publishing. Remove any legacy secret named `ANDROID_SIGNING_CERT_SHA256` to avoid confusion. Changing the four signing secrets alone cannot silently change the published signing identity.
+
+After the deliberate signing reset on 2026-10-20, existing installations signed with an older key require a one-time uninstall and installation of the new release APK. Uninstalling removes local app data. Both TV and mobile use the new key. Subsequent updates must retain that key, their application IDs, and increasing version codes. The old signing files are archived locally under `docs/bak/`; private GitHub setup values are under `docs/signing-current/`. These directories are ignored by Git and must be backed up securely outside this checkout.
+
+Push a version tag matching `v<versionName>-tv` (for example, `v0.1.70-tv`) to run release signing and publish both APKs. The workflow checks the tag and requires the version code to increase.
 
 ### Running Tests & Linting
 ```sh

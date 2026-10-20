@@ -154,7 +154,7 @@ jobs:
           KEYSTORE_PASSWORD: ${{ secrets.ANDROID_KEYSTORE_PASSWORD }}
           KEY_ALIAS: ${{ secrets.ANDROID_KEY_ALIAS }}
           KEY_PASSWORD: ${{ secrets.ANDROID_KEY_PASSWORD }}
-          EXPECTED_CERT_SHA256: ${{ secrets.ANDROID_SIGNING_CERT_SHA256 || vars.ANDROID_SIGNING_CERT_SHA256 }}
+          EXPECTED_CERT_SHA256: ${{ vars.ANDROID_SIGNING_CERT_SHA256 }}
           UPDATE_GITHUB_OWNER: ${{ github.repository_owner }}
           UPDATE_GITHUB_REPO: ${{ github.event.repository.name }}
         run: |
@@ -164,6 +164,13 @@ jobs:
               exit 1
             fi
           done
+
+          expected_cert="$(printf '%s' "$EXPECTED_CERT_SHA256" | tr -d '[:space:]:' | tr '[:upper:]' '[:lower:]' | sed 's/^sha256=//')"
+          pinned_cert="$(tr -d '[:space:]' < signing/release-cert.sha256)"
+          if ! [[ "$pinned_cert" =~ ^[0-9a-f]{64}$ ]] || [ "$expected_cert" != "$pinned_cert" ]; then
+            echo "ANDROID_SIGNING_CERT_SHA256 must match signing/release-cert.sha256; refusing to change the release signing identity" >&2
+            exit 1
+          fi
 
           umask 077
           printf '%s' "$KEYSTORE_BASE64" | base64 --decode > release.jks
@@ -183,7 +190,6 @@ jobs:
           fi
           "$apksigner" verify --verbose "$tv_apk"
           "$apksigner" verify --verbose "$mobile_apk"
-          expected_cert="$(printf '%s' "$EXPECTED_CERT_SHA256" | tr -d '[:space:]:' | tr '[:upper:]' '[:lower:]' | sed 's/^sha256=//')"
           for apk in "$tv_apk" "$mobile_apk"; do
             actual_cert="$("$apksigner" verify --print-certs "$apk" 2>&1 | grep -i 'sha-256' | grep -Eio '[[:xdigit:]]{64}' | head -n 1 | tr '[:upper:]' '[:lower:]')"
             if [ "$actual_cert" != "$expected_cert" ]; then
