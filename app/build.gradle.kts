@@ -16,8 +16,8 @@ android {
         applicationId = "com.adulthub.tv"
         minSdk = 28
         targetSdk = 36
-        versionCode = 70
-        versionName = "0.1.70"
+        versionCode = 71
+        versionName = "0.1.71"
 
         testInstrumentationRunner = "androidx.test.runner.AndroidJUnitRunner"
         val updateOwner = providers.environmentVariable("UPDATE_GITHUB_OWNER")
