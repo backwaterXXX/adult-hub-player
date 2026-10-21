@@ -144,7 +144,7 @@ Open <strong>Settings</strong> in the app:
 
 ### Prerequisites
 - **JDK 17** (Temurin or OpenJDK recommended)
-- **Android SDK Platform 36** and **Build Tools 36.0.0**
+- **Android SDK Platform 37** and **Build Tools 36.0.0**
 - Git
 
 ### Build APKs
@@ -185,6 +185,8 @@ The workflow reads the fingerprint only from the repository variable, requires i
 
 After the deliberate signing reset on 2026-10-20, existing installations signed with an older key require a one-time uninstall and installation of the new release APK. Uninstalling removes local app data. Both TV and mobile use the new key. Subsequent updates must retain that key, their application IDs, and increasing version codes. The old signing files are archived locally under `docs/bak/`; private GitHub setup values are under `docs/signing-current/`. These directories are ignored by Git and must be backed up securely outside this checkout.
 
+The app ships the pinned certificate digest as `app/src/main/assets/release_cert.sha256`. An installation that still carries the old certificate detects this before an update download starts and shows a message that asks for a fresh install, instead of failing later with a certificate error. The CI refuses to publish when the asset and `signing/release-cert.sha256` disagree.
+
 Push a version tag matching `v<versionName>-tv` (for example, `v0.1.70-tv`) to run release signing and publish both APKs. The workflow checks the tag and requires the version code to increase.
 
 ### Running Tests & Linting
@@ -204,7 +206,7 @@ Push a version tag matching `v<versionName>-tv` (for example, `v0.1.70-tv`) to r
 - **Player**: AndroidX Media3 ExoPlayer (`androidx.media3:media3-exoplayer`)
 - **Jellyfin Integration**: Jellyfin Kotlin SDK (`org.jellyfin.sdk:jellyfin-core`)
 - **Dependency Injection**: Koin (`io.insert-koin:koin-androidx-compose`)
-- **Networking**: Retrofit 2 + OkHttp 4 + Kotlinx Serialization
+- **Networking**: Retrofit 2 + OkHttp 5 + Kotlinx Serialization
 - **Storage**: Jetpack DataStore Preferences + Android KeyStore crypto
 - **Image Loading**: Coil Compose
 

@@ -73,6 +73,11 @@ class AppUpdateRepository(
             val manifest = json.decodeFromString<UpdateManifest>(manifestBody.toString(Charsets.UTF_8))
             validateManifest(manifest)
             if (manifest.versionCode <= BuildConfig.VERSION_CODE) return UpdateCheckResult.UpToDate
+            // An installation from before the signing key rotation can never accept
+            // the new release, so the download is not started at all.
+            if (SigningIdentity.requiresFreshInstall(context)) {
+                return UpdateCheckResult.Failed(SigningIdentity.FRESH_INSTALL_REQUIRED_MESSAGE)
+            }
 
             val apkName = manifest.apkAssetName
             val apkAsset = release.assets.singleOrNull { it.name == apkName }
@@ -190,7 +195,8 @@ class AppUpdateRepository(
         val installedSigners = installed.signingInfo?.apkContentsSigners.orEmpty().map { it.toByteArray().toList() }.toSet()
         val updateSigners = info.signingInfo?.apkContentsSigners.orEmpty().map { it.toByteArray().toList() }.toSet()
         require(sameSigningCertificates(installedSigners, updateSigners)) {
-            "APK signing certificate does not match the installed app"
+            "This update was signed with a different key than this installation. " +
+                "Uninstall the current app and install the latest release again."
         }
     }
 

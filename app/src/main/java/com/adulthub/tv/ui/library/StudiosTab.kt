@@ -379,10 +379,10 @@ private fun StudioCard(
                 textAlign = TextAlign.Center,
             )
 
-            if (studio.movieCount > 0) {
+            studio.movieCount?.takeIf { it > 0 }?.let { movieCount ->
                 Spacer(modifier = Modifier.height(4.dp))
                 Text(
-                    text = "${studio.movieCount} movies",
+                    text = "$movieCount movies",
                     style = MaterialTheme.typography.bodySmall,
                     color = TextSecondary,
                     fontSize = 12.sp,

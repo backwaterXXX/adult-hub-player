@@ -269,6 +269,8 @@ class LibraryViewModel(
         if (_uiState.value.allState.areStudiosLoaded || _uiState.value.allState.isLoadingStudios) return
         viewModelScope.launch {
             _uiState.update { it.copy(allState = it.allState.copy(isLoadingStudios = true)) }
+            // The filter panel only needs the names; counting every studio would
+            // add one request per studio to a list of several hundred entries.
             val result = studioRepository.getStudios(limit = 500)
             _uiState.update { state ->
                 state.copy(allState = state.allState.copy(
@@ -759,7 +761,7 @@ private fun filterActors(
             _uiState.update { state ->
                 state.copy(studiosState = state.studiosState.copy(isLoading = true, errorMessage = null))
             }
-            val result = studioRepository.getStudios(limit = 100)
+            val result = studioRepository.getStudios(limit = 100, includeMovieCounts = true)
             _uiState.update { state ->
                 result.fold(
                     onSuccess = { studios ->

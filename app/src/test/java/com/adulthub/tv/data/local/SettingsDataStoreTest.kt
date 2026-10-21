@@ -38,6 +38,9 @@ class SettingsDataStoreTest {
     private lateinit var dataStore: DataStore<Preferences>
     private lateinit var settingsDataStore: SettingsDataStore
 
+    /** Namespace of the account the store is bound to in this test. */
+    private val accountKey = AccountScope.ANONYMOUS_KEY
+
     @Before
     fun setUp() {
         coEvery { crypto.encrypt(any()) } answers { "enc_" + firstArg<String>() }
@@ -70,18 +73,19 @@ class SettingsDataStoreTest {
     }
 
     @Test
-    fun `setSelectedLibrary saves encrypted id and name`() = runTest(timeout = 120.seconds) {
+    fun `setSelectedLibrary saves encrypted id and name in the account namespace`() = runTest(timeout = 120.seconds) {
         settingsDataStore.setSelectedLibrary("lib-uuid-42", "Adult Videos")
 
         assertEquals("lib-uuid-42", settingsDataStore.getSelectedLibraryId())
         assertEquals("Adult Videos", settingsDataStore.getSelectedLibraryName())
 
-        // Verify it was persisted in encrypted form in underlying DataStore
+        // Verify it was persisted in encrypted form under the account namespace
         val prefs = dataStore.data.first()
-        val rawId = prefs[stringPreferencesKey("selected_library_id")]
-        val rawName = prefs[stringPreferencesKey("selected_library_name")]
+        val rawId = prefs[stringPreferencesKey("selected_library_id__$accountKey")]
+        val rawName = prefs[stringPreferencesKey("selected_library_name__$accountKey")]
         assertEquals("enc:v1:enc_lib-uuid-42", rawId)
         assertEquals("enc:v1:enc_Adult Videos", rawName)
+        assertNull(prefs[stringPreferencesKey("selected_library_id")])
     }
 
     @Test
@@ -92,6 +96,22 @@ class SettingsDataStoreTest {
         // Blank clears the preference
         settingsDataStore.setResolverBaseUrl("   ")
         assertEquals(SettingsDataStore.DEFAULT_RESOLVER_URL, settingsDataStore.getResolverBaseUrl())
+    }
+
+    @Test
+    fun `the resolver address source tells a configured address from an unset one`() = runTest(timeout = 120.seconds) {
+        assertEquals(
+            ResolverUrlSource.DEFAULT,
+            settingsDataStore.resolverBaseUrlSource.first(),
+        )
+
+        settingsDataStore.setResolverBaseUrl("https://resolver.example.com")
+
+        assertEquals(
+            ResolverUrlSource.CONFIGURED,
+            settingsDataStore.resolverBaseUrlSource.first(),
+        )
+        assertEquals("https://resolver.example.com", settingsDataStore.getResolverBaseUrl())
     }
 
     @Test
@@ -132,18 +152,21 @@ class SettingsDataStoreTest {
             prefs[stringSetPreferencesKey("approved_cleartext_origins")] = setOf("http://192.168.1.50:8000")
         }
 
-        // Before migration, getters still decode plaintext gracefully
-        assertEquals("plaintext-lib-id", settingsDataStore.getSelectedLibraryId())
-        assertEquals("Plain Library", settingsDataStore.getSelectedLibraryName())
-        assertEquals("https://resolver.legacy.internal", settingsDataStore.getResolverBaseUrl())
-
         // Execute migration
         settingsDataStore.migrateSensitiveValues()
 
-        // Check raw storage to confirm it is encrypted now
+        // Check raw storage to confirm it is encrypted now and moved into the account namespace
         val prefsAfter = dataStore.data.first()
-        assertEquals("enc:v1:enc_plaintext-lib-id", prefsAfter[stringPreferencesKey("selected_library_id")])
-        assertEquals("enc:v1:enc_Plain Library", prefsAfter[stringPreferencesKey("selected_library_name")])
+        assertEquals(
+            "enc:v1:enc_plaintext-lib-id",
+            prefsAfter[stringPreferencesKey("selected_library_id__$accountKey")],
+        )
+        assertEquals(
+            "enc:v1:enc_Plain Library",
+            prefsAfter[stringPreferencesKey("selected_library_name__$accountKey")],
+        )
+        assertNull(prefsAfter[stringPreferencesKey("selected_library_id")])
+        assertNull(prefsAfter[stringPreferencesKey("selected_library_name")])
         assertEquals("enc:v1:enc_https://resolver.legacy.internal", prefsAfter[stringPreferencesKey("resolver_base_url")])
         assertEquals(SettingsDataStore.CURRENT_SCHEMA_VERSION, settingsDataStore.schemaVersion.first())
 

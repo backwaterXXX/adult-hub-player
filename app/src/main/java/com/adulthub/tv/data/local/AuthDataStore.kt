@@ -142,12 +142,17 @@ class AuthDataStore(
         val encryptedUserId = encryptedValue.encode(userId)
         val encryptedUsername = encryptedValue.encode(username)
         val encryptedServerName = encryptedValue.encode(serverName)
-        context.authDataStore.edit { preferences ->
-            preferences[KEY_SERVER_URL] = encryptedServerUrl
-            preferences[KEY_USER_ID] = encryptedUserId
-            preferences[KEY_USERNAME] = encryptedUsername
-            preferences[KEY_SERVER_NAME] = encryptedServerName
-            preferences[KEY_ENCRYPTED_TOKEN] = encryptedToken
+        try {
+            context.authDataStore.edit { preferences ->
+                preferences[KEY_SERVER_URL] = encryptedServerUrl
+                preferences[KEY_USER_ID] = encryptedUserId
+                preferences[KEY_USERNAME] = encryptedUsername
+                preferences[KEY_SERVER_NAME] = encryptedServerName
+                preferences[KEY_ENCRYPTED_TOKEN] = encryptedToken
+            }
+        } catch (error: IOException) {
+            // The session is not stored, so the login must not report success.
+            throw IllegalStateException("The session could not be saved", error)
         }
     }
 

@@ -1,5 +1,6 @@
 package com.adulthub.tv.ui.settings
 
+import com.adulthub.tv.data.local.AccountKeyProvider
 import com.adulthub.tv.data.local.SearchHistoryStore
 import com.adulthub.tv.data.local.SettingsDataStore
 import com.adulthub.tv.data.local.TelegramProgressStore
@@ -379,21 +380,33 @@ class SettingsViewModelTest {
     }
 }
 
-private class FakeWatchHistoryStore : WatchHistoryStore(mockk(relaxed = true), mockk(relaxed = true)) {
+private class FakeWatchHistoryStore : WatchHistoryStore(
+    context = mockk(relaxed = true),
+    accountKeyProvider = AccountKeyProvider.ANONYMOUS,
+    dataStore = mockk(relaxed = true),
+) {
     var clearCount = 0
     override suspend fun clearHistory() {
         clearCount++
     }
 }
 
-private class FakeTelegramProgressStore : TelegramProgressStore(mockk(relaxed = true), mockk(relaxed = true)) {
+private class FakeTelegramProgressStore : TelegramProgressStore(
+    context = mockk(relaxed = true),
+    accountKeyProvider = AccountKeyProvider.ANONYMOUS,
+    dataStore = mockk(relaxed = true),
+) {
     var clearCount = 0
     override suspend fun clearAll() {
         clearCount++
     }
 }
 
-private class FakeSearchHistoryStore : SearchHistoryStore(mockk(relaxed = true), mockk(relaxed = true)) {
+private class FakeSearchHistoryStore : SearchHistoryStore(
+    context = mockk(relaxed = true),
+    accountKeyProvider = AccountKeyProvider.ANONYMOUS,
+    dataStore = mockk(relaxed = true),
+) {
     var clearCount = 0
     override suspend fun clearHistory() {
         clearCount++
@@ -450,6 +463,7 @@ private class FakeSettingsDataStore : SettingsDataStore(mockk(relaxed = true)) {
     override val selectedLibraryId = MutableStateFlow<String?>("lib-1")
     override val selectedLibraryName = MutableStateFlow<String?>("Adult Movies")
     override val resolverBaseUrl = MutableStateFlow("")
+    override val resolverBaseUrlSource = MutableStateFlow(com.adulthub.tv.data.local.ResolverUrlSource.DEFAULT)
     override val approvedCleartextOrigins = MutableStateFlow<Set<String>>(emptySet())
     override val cacheLimitMb = MutableStateFlow(512)
     override val phashOnPlayback = MutableStateFlow(false)

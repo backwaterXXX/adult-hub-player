@@ -59,8 +59,10 @@ import androidx.tv.material3.MaterialTheme
 import androidx.tv.material3.Text
 import com.adulthub.tv.BuildConfig
 import com.adulthub.tv.data.local.BufferProfile
+import com.adulthub.tv.data.local.ResolverUrlSource
 import com.adulthub.tv.data.update.AppUpdateManager
 import com.adulthub.tv.data.update.AppUpdateRepository
+import com.adulthub.tv.data.update.SigningIdentity
 import com.adulthub.tv.diagnostics.DeviceDiagnosticsHelper
 import com.adulthub.tv.player.STASH_COMPATIBLE_PHASH_FRAME_COUNT
 import com.adulthub.tv.R
@@ -509,6 +511,8 @@ fun SettingsScreen(
                             Spacer(modifier = Modifier.height(8.dp))
                         }
                         SettingsInfoRow(label = "Current origin", value = uiState.resolverBaseUrl.ifBlank { "Not configured" })
+                        Spacer(modifier = Modifier.height(6.dp))
+                        SettingsInfoRow(label = "Origin source", value = resolverUrlSourceLabel(uiState.resolverBaseUrlSource))
                         Spacer(modifier = Modifier.height(10.dp))
                         SettingsInfoRow(label = "Jellyfin", value = uiState.jellyfinConnectionStatus)
                         Spacer(modifier = Modifier.height(6.dp))
@@ -572,6 +576,13 @@ fun SettingsScreen(
                             text = updateState.message.ifBlank { "Updates are checked from the latest GitHub release." },
                             style = MaterialTheme.typography.bodyMedium.copy(color = TextSecondary),
                         )
+                        if (SigningIdentity.requiresFreshInstall(context)) {
+                            Spacer(modifier = Modifier.height(6.dp))
+                            Text(
+                                text = SigningIdentity.FRESH_INSTALL_REQUIRED_MESSAGE,
+                                style = MaterialTheme.typography.bodyMedium.copy(color = NeonPink),
+                            )
+                        }
                         if (updateState.isDownloading) {
                             Spacer(modifier = Modifier.height(6.dp))
                             Text(
@@ -1006,6 +1017,19 @@ private fun SettingsCard(
         Spacer(modifier = Modifier.height(if (LocalTouchUi.current) 8.dp else 14.dp))
         content()
     }
+}
+
+/**
+ * Describes where the effective Resolver address comes from.
+ *
+ * The address can be configured explicitly, inherited from the Jellyfin server
+ * address, or still empty. The source tells the user which service the app
+ * actually talks to.
+ */
+private fun resolverUrlSourceLabel(source: ResolverUrlSource): String = when (source) {
+    ResolverUrlSource.CONFIGURED -> "Configured in Adult Hub"
+    ResolverUrlSource.SERVER_FALLBACK -> "Jellyfin server address"
+    ResolverUrlSource.DEFAULT -> "Not configured"
 }
 
 @Composable

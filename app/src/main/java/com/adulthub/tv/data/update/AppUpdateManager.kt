@@ -8,6 +8,7 @@ import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.sync.Mutex
+import kotlinx.coroutines.sync.withLock
 
 data class AppUpdateState(
     val enabled: Boolean = true,
@@ -47,12 +48,24 @@ class AppUpdateManager(
         scope.launch {
             val enabled = settings.autoUpdateEnabled.first()
             val lastCheck = settings.lastUpdateCheck.first()
-            if (enabled && (lastCheck == 0L || System.currentTimeMillis() - lastCheck >= CHECK_INTERVAL_MS)) checkAndDownload()
+            if (enabled && (lastCheck == 0L || System.currentTimeMillis() - lastCheck >= CHECK_INTERVAL_MS)) {
+                // An automatic check never queues up behind a running one.
+                if (!operation.tryLock()) return@launch
+                try {
+                    checkAndDownload()
+                } finally {
+                    operation.unlock()
+                }
+            }
         }
     }
 
     fun checkNow() {
-        scope.launch { checkAndDownload() }
+        // A check the user asked for is never dropped: it waits for a running
+        // check and then runs.
+        scope.launch {
+            operation.withLock { checkAndDownload() }
+        }
     }
 
     suspend fun setEnabled(enabled: Boolean) {
@@ -66,9 +79,8 @@ class AppUpdateManager(
     }
 
     private suspend fun checkAndDownload() {
-        if (!operation.tryLock()) return
+        _state.value = _state.value.copy(isChecking = true, isDownloading = false, downloadProgress = 0f, message = "Checking for updates…")
         try {
-            _state.value = _state.value.copy(isChecking = true, isDownloading = false, downloadProgress = 0f, message = "Checking for updates…")
             val result = repository.checkAndDownload { received, total ->
                 _state.value = _state.value.copy(
                     isChecking = false,
@@ -103,9 +115,10 @@ class AppUpdateManager(
         } catch (error: kotlinx.coroutines.CancellationException) {
             throw error
         } catch (error: Exception) {
-            _state.value = _state.value.copy(isChecking = false, isDownloading = false, message = error.message ?: "Update check failed")
+            _state.value = _state.value.copy(message = error.message ?: "Update check failed")
         } finally {
-            operation.unlock()
+            // A cancelled check must not leave the screen stuck on "Downloading update…".
+            _state.value = _state.value.copy(isChecking = false, isDownloading = false)
         }
     }
 

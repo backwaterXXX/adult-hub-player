@@ -62,6 +62,17 @@ class PlayerViewModel(
     private var loadItemJob: Job? = null
     private var lastPlaybackPositionMs: Long = 0L
 
+    /**
+     * The reporting session this view model owns.
+     *
+     * Every cleanup path passes this id, so a view model that is cleared after a
+     * newer session started cannot stop that newer session.
+     */
+    private var reportingSessionId: Long? = null
+
+    /** Keeps the final write of a session idempotent. */
+    private var finalStatePersisted = false
+
     fun loadItem(itemId: String, resume: Boolean? = null) {
         val playbackRequestId = ++playbackRequestCounter
         loadItemJob?.cancel()
@@ -269,8 +280,9 @@ class PlayerViewModel(
 
     fun onPlaybackEnded(finalPositionMs: Long, reportingSessionId: Long? = null) {
         _isPlaybackEnded.value = true
-        saveTelegramProgress(finalPositionMs, isEnded = true)
-        playbackReporter.stopSession(finalPositionMs, reportingSessionId)
+        reportingSessionId?.let { this.reportingSessionId = it }
+        persistFinalProgress(finalPositionMs, isEnded = true)
+        playbackReporter.stopSession(finalPositionMs, this.reportingSessionId)
     }
 
     fun toggleFavorite() {
@@ -286,8 +298,21 @@ class PlayerViewModel(
     }
 
     fun onExitPlayer(currentPositionMs: Long, reportingSessionId: Long? = null) {
-        saveTelegramProgress(currentPositionMs, isEnded = false)
-        playbackReporter.stopSession(currentPositionMs, reportingSessionId)
+        reportingSessionId?.let { this.reportingSessionId = it }
+        persistFinalProgress(currentPositionMs, isEnded = false)
+        playbackReporter.stopSession(currentPositionMs, this.reportingSessionId)
+    }
+
+    /**
+     * Writes the final progress of the session once.
+     *
+     * The exit handler and the composition disposal both report the end of the
+     * session, so the write is guarded to keep the last write idempotent.
+     */
+    private fun persistFinalProgress(positionMs: Long, isEnded: Boolean) {
+        if (finalStatePersisted) return
+        finalStatePersisted = true
+        saveTelegramProgress(positionMs, isEnded = isEnded)
     }
 
     /**
@@ -302,18 +327,22 @@ class PlayerViewModel(
         super.onCleared()
         val positionMs = lastPlaybackPositionMs
         val ready = _uiState.value as? PlayerUiState.Ready
+        val shouldPersist = !finalStatePersisted
+        finalStatePersisted = true
         // The view model scope is cancelled right after this callback, so the persistence work
         // runs in the application scope whenever one is available.
         val scope = persistenceScope
         if (scope != null) {
             scope.launch {
-                runCatching { playbackReporter.stopSession(positionMs) }
-                if (ready != null) {
+                // The session id of this view model is passed, so a cleared view model
+                // cannot stop a session that started after it.
+                runCatching { playbackReporter.stopSession(positionMs, reportingSessionId) }
+                if (ready != null && shouldPersist) {
                     runCatching { persistTelegramProgress(ready.item, positionMs, isEnded = false) }
                 }
             }
         } else {
-            runCatching { playbackReporter.stopSession(positionMs) }
+            runCatching { playbackReporter.stopSession(positionMs, reportingSessionId) }
         }
     }
 

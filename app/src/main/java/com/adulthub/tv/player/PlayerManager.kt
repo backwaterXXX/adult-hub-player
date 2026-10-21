@@ -44,6 +44,7 @@ private const val TAG = "PlayerManager"
 private const val SEEK_INCREMENT_MS = 10_000L
 private const val POSITION_POLL_INTERVAL_MS = 1_000L
 private const val MAX_AUTOMATIC_RETRIES = 3
+private const val STABLE_PLAYBACK_MS = 30_000L
 private const val PLAYBACK_POLICY_ORIGIN_HEADER = "X-AdultHub-Playback-Origin"
 private const val PLAYBACK_POLICY_HEADERS_HEADER = "X-AdultHub-Playback-Headers"
 
@@ -66,6 +67,8 @@ class PlayerManager(
     private var playbackGeneration = 0L
     private var automaticRetryCount = 0
     private var totalRetryCount = 0
+    /** Position when the player last reached the ready state, used for the stable playback check. */
+    private var readyPositionMs = 0L
     private var playbackRequest: PlaybackRequest? = null
     private var released = false
     private val httpClient by lazy {
@@ -207,11 +210,14 @@ class PlayerManager(
                 }
                 Player.STATE_READY -> {
                     finishBufferingMeasurement()
-                    automaticRetryCount = 0
+                    // The retry budget is not reset here: a stream that reaches READY for a
+                    // moment and fails again would otherwise retry forever. It is reset once
+                    // the playback ran long enough to count as stable.
                     retryJob?.cancel()
                     retryJob = null
                     _retryStatus.value = null
                     _errorMessage.value = null
+                    readyPositionMs = exoPlayer.currentPosition
                     if (!readyLoggedForCurrentMedia) {
                         readyLoggedForCurrentMedia = true
                         preparingStartedAt?.let { startedAt ->
@@ -529,12 +535,28 @@ class PlayerManager(
                     if (dur > 0L && _durationMs.value != dur) {
                         _durationMs.value = dur
                     }
+                    resetRetryBudgetAfterStablePlayback(pos)
                     delay(POSITION_POLL_INTERVAL_MS)
                 }
             } catch (e: CancellationException) {
                 // Expected when polling cancelled
             }
         }
+    }
+
+    /**
+     * Gives the retry budget back after the playback ran long enough.
+     *
+     * The budget covers consecutive failures. A stream that only reaches READY for a
+     * moment keeps its budget, so repeated short recoveries cannot retry forever, while
+     * a session that played for a while starts with a fresh budget again.
+     */
+    private fun resetRetryBudgetAfterStablePlayback(positionMs: Long) {
+        if (automaticRetryCount == 0) return
+        if (_playbackState.value != Player.STATE_READY) return
+        if (positionMs - readyPositionMs < STABLE_PLAYBACK_MS) return
+        automaticRetryCount = 0
+        Log.i(TAG, "Playback was stable, the automatic retry budget is reset")
     }
 
     private fun stopPositionPolling() {

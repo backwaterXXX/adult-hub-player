@@ -67,6 +67,20 @@ open class ChannelRepository(
         cacheVideos(listOf(video))
     }
 
+    /**
+     * Drops the cached videos of the previous session.
+     *
+     * The cache holds data of one account and one resolver origin, so it is
+     * cleared whenever either of them changes.
+     */
+    fun invalidateCache() {
+        synchronized(videoCacheLock) {
+            videoCache.clear()
+            videoIdLru.clear()
+            aliasesByVideoId.clear()
+        }
+    }
+
     fun getVideo(id: String): VideoDto? {
         synchronized(videoCacheLock) {
             val video = videoCache[id] ?: videoCache["telegram:$id"]

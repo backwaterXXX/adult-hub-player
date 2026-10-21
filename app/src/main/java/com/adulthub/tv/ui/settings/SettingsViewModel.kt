@@ -33,6 +33,7 @@ import com.adulthub.tv.data.local.SearchHistoryStore
 import com.adulthub.tv.data.local.TelegramProgressStore
 import com.adulthub.tv.data.local.WatchHistoryStore
 import com.adulthub.tv.data.local.BufferProfile
+import com.adulthub.tv.data.local.ResolverUrlSource
 
 data class SettingsUiState(
     val serverUrl: String = "",
@@ -42,6 +43,7 @@ data class SettingsUiState(
     val selectedLibraryId: String = "",
     val selectedLibraryName: String = "",
     val resolverBaseUrl: String = SettingsDataStore.DEFAULT_RESOLVER_URL,
+    val resolverBaseUrlSource: ResolverUrlSource = ResolverUrlSource.DEFAULT,
     val resolverUrlDraft: String = SettingsDataStore.DEFAULT_RESOLVER_URL,
     val approvedCleartextOrigins: Set<String> = emptySet(),
     val pendingHttpConsentUrl: String? = null,
@@ -96,6 +98,7 @@ class SettingsViewModel(
             val libraryId = settingsDataStore.selectedLibraryId.firstOrNull().orEmpty()
             val libraryName = settingsDataStore.selectedLibraryName.firstOrNull().orEmpty()
             val resolverUrl = settingsDataStore.resolverBaseUrl.firstOrNull() ?: SettingsDataStore.DEFAULT_RESOLVER_URL
+            val resolverUrlSource = settingsDataStore.resolverBaseUrlSource.firstOrNull() ?: ResolverUrlSource.DEFAULT
             val approvedHttpOrigins = settingsDataStore.approvedCleartextOrigins.firstOrNull().orEmpty()
             val cacheLimit = settingsDataStore.cacheLimitMb.firstOrNull() ?: SettingsDataStore.DEFAULT_CACHE_LIMIT_MB
             val phashOnPlayback = settingsDataStore.phashOnPlayback.firstOrNull() ?: false
@@ -123,6 +126,7 @@ class SettingsViewModel(
                     selectedLibraryId = libraryId,
                     selectedLibraryName = libraryName.ifEmpty { "None Selected" },
                     resolverBaseUrl = resolverUrl,
+                    resolverBaseUrlSource = resolverUrlSource,
                     resolverUrlDraft = resolverUrl,
                     approvedCleartextOrigins = approvedHttpOrigins,
                     cacheLimitMb = cacheLimit,
@@ -319,9 +323,17 @@ class SettingsViewModel(
     private suspend fun persistResolverUrl(url: String) {
         settingsDataStore.setResolverBaseUrl(url)
         val effectiveUrl = url.ifBlank { _uiState.value.serverUrl }
+        val source = if (url.isNotBlank()) {
+            ResolverUrlSource.CONFIGURED
+        } else if (effectiveUrl.isNotBlank()) {
+            ResolverUrlSource.SERVER_FALLBACK
+        } else {
+            ResolverUrlSource.DEFAULT
+        }
         _uiState.update {
             it.copy(
                 resolverBaseUrl = effectiveUrl,
+                resolverBaseUrlSource = source,
                 resolverUrlDraft = effectiveUrl,
                 resolverConnectionStatus = "Not checked",
                 statusMessage = if (url.isBlank()) "Using Jellyfin server URL" else "Resolver URL updated",

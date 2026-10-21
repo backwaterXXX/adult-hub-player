@@ -1,12 +1,14 @@
 package com.adulthub.tv.di
 
 import com.adulthub.tv.data.jellyfin.JellyfinClientManager
+import com.adulthub.tv.data.local.AccountScope
 import com.adulthub.tv.data.local.AuthDataStore
 import com.adulthub.tv.data.local.KeyStoreCrypto
 import com.adulthub.tv.data.local.SettingsDataStore
 import com.adulthub.tv.data.local.SearchHistoryStore
 import com.adulthub.tv.data.local.TelegramProgressStore
 import com.adulthub.tv.data.local.PhashJobStore
+import com.adulthub.tv.data.local.UserScopedDataMigration
 import com.adulthub.tv.data.local.WatchHistoryStore
 import com.adulthub.tv.data.resolver.ResolverApiClient
 import com.adulthub.tv.data.resolver.DynamicResolverApi
@@ -19,11 +21,14 @@ import org.koin.dsl.module
 val appModule = module {
     single { KeyStoreCrypto() }
     single { AuthDataStore(androidContext(), get()) }
-    single { SettingsDataStore(androidContext(), get(), authDataStore = get()) }
-    single { TelegramProgressStore(androidContext()) }
-    single { PhashJobStore(androidContext()) }
-    single { WatchHistoryStore(androidContext()) }
-    single { SearchHistoryStore(androidContext()) }
+    // Namespaces user-scoped data so one account never sees the data of another.
+    single { AccountScope(get()) }
+    single { SettingsDataStore(androidContext(), get(), authDataStore = get(), accountKeyProvider = get()) }
+    single { TelegramProgressStore(androidContext(), accountKeyProvider = get()) }
+    single { PhashJobStore(androidContext(), accountKeyProvider = get()) }
+    single { WatchHistoryStore(androidContext(), accountKeyProvider = get()) }
+    single { SearchHistoryStore(androidContext(), accountKeyProvider = get()) }
+    single { UserScopedDataMigration(get(), get(), get(), get()) }
     single { JellyfinClientManager(androidContext()) }
     single { ResolverApiClient() }
     single { kotlinx.coroutines.CoroutineScope(kotlinx.coroutines.SupervisorJob() + kotlinx.coroutines.Dispatchers.IO) }

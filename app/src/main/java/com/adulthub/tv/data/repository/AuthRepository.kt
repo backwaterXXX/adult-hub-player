@@ -3,6 +3,7 @@ package com.adulthub.tv.data.repository
 import com.adulthub.tv.data.jellyfin.JellyfinClientManager
 import com.adulthub.tv.data.local.AuthDataStore
 import com.adulthub.tv.data.local.SettingsDataStore
+import com.adulthub.tv.data.local.UserScopedDataMigration
 import com.adulthub.tv.data.model.AuthState
 import com.adulthub.tv.data.model.ServerInfo
 import com.adulthub.tv.data.network.ServiceUrlPolicy
@@ -27,6 +28,7 @@ open class AuthRepository(
     private val clientManager: JellyfinClientManager,
     private val authDataStore: AuthDataStore,
     private val settingsDataStore: SettingsDataStore,
+    private val userScopedDataMigration: UserScopedDataMigration? = null,
 ) {
     open val authState: Flow<AuthState> = authDataStore.authState
 
@@ -196,6 +198,9 @@ open class AuthRepository(
         settingsDataStore.migrateSensitiveValues()
         val state = authDataStore.getAuthState()
         if (state is AuthState.Authenticated) {
+            // Data written before accounts were isolated belongs to the account
+            // that is signed in now, so an update does not empty the history.
+            userScopedDataMigration?.migrateToCurrentAccount()
             when (val validation = ServiceUrlPolicy.inspect(state.serverUrl)) {
                 is ServiceUrlValidation.Invalid -> return@withContext AuthState.HttpBlocked(
                     serverUrl = state.serverUrl,

@@ -810,7 +810,12 @@ class LibraryViewModelTest {
         var studioMoviesResult: Result<List<TvItem>> = Result.success(emptyList())
         var studioMoviesPageResult: Result<TvItemsPage>? = null
 
-        override suspend fun getStudios(parentId: String?, startIndex: Int, limit: Int): Result<List<TvStudio>> = studiosResult
+        override suspend fun getStudios(
+            parentId: String?,
+            startIndex: Int,
+            limit: Int,
+            includeMovieCounts: Boolean,
+        ): Result<List<TvStudio>> = studiosResult
 
         override suspend fun getStudioMovies(studioName: String, parentId: String?, startIndex: Int, limit: Int): Result<List<TvItem>> = studioMoviesResult
 

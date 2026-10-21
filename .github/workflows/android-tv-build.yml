@@ -49,7 +49,16 @@ jobs:
         env:
           UPDATE_GITHUB_OWNER: ${{ github.repository_owner }}
           UPDATE_GITHUB_REPO: ${{ github.event.repository.name }}
-        run: ./gradlew testTvDebugUnitTest testMobileDebugUnitTest lintTvDebug lintMobileDebug lintTvRelease lintMobileRelease compileTvReleaseKotlin compileMobileReleaseKotlin minifyTvReleaseWithR8 minifyMobileReleaseWithR8 assembleTvDebug assembleMobileDebug --no-daemon
+        run: ./gradlew testTvDebugUnitTest testMobileDebugUnitTest lintTvDebug lintMobileDebug lintTvRelease lintMobileRelease compileTvReleaseKotlin compileMobileReleaseKotlin minifyTvReleaseWithR8 minifyMobileReleaseWithR8 assembleTvDebug assembleMobileDebug assembleTvDebugAndroidTest assembleMobileDebugAndroidTest --no-daemon
+
+      - name: Check the pinned signing certificate
+        run: |
+          pinned="$(tr -d '[:space:]' < signing/release-cert.sha256)"
+          asset="$(tr -d '[:space:]' < app/src/main/assets/release_cert.sha256)"
+          if ! [[ "$pinned" =~ ^[0-9a-f]{64}$ ]] || [ "$pinned" != "$asset" ]; then
+            echo "app/src/main/assets/release_cert.sha256 must match signing/release-cert.sha256" >&2
+            exit 1
+          fi
 
       - name: Archive validation reports
         if: always()

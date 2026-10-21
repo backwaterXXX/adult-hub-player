@@ -63,11 +63,15 @@ data class AppConfigExport(
     val autoUpdateEnabled: Boolean = true,
 )
 
+/** Origin of the effective Resolver address. */
+private data class ResolverBaseUrl(val url: String, val source: ResolverUrlSource)
+
 open class SettingsDataStore(
     private val context: Context,
     crypto: KeyStoreCrypto = KeyStoreCrypto(),
-    private val dataStore: DataStore<Preferences> = context.settingsDataStore,
+    private val dataStore: DataStore<Preferences> = SafePreferencesDataStore(context.settingsDataStore),
     private val authDataStore: AuthDataStore? = null,
+    accountKeyProvider: AccountKeyProvider? = null,
 ) {
     companion object {
         private val KEY_SCHEMA_VERSION = intPreferencesKey("schema_version")
@@ -96,6 +100,15 @@ open class SettingsDataStore(
     }
 
     private val encryptedValue = EncryptedPreferenceValue(crypto)
+    /**
+     * The selected library is a user choice, so it is stored per account.
+     *
+     * Without an explicit provider the key is derived from the session store,
+     * which keeps the selection of a signed-out account out of the next one.
+     */
+    private val accountKeys: AccountKeyProvider = accountKeyProvider
+        ?: authDataStore?.let { AccountScope(it) }
+        ?: AccountKeyProvider.ANONYMOUS
     private val approvedCleartextOriginsSnapshot = AtomicReference<Set<String>>(emptySet())
     private val settingsPreferences = dataStore.data
         .catch { if (it is IOException) emit(emptyPreferences()) else throw it }
@@ -108,25 +121,45 @@ open class SettingsDataStore(
         .catch { if (it is IOException) emit(emptyPreferences()) else throw it }
         .map { it[KEY_SCHEMA_VERSION] ?: CURRENT_SCHEMA_VERSION }
 
-    open val selectedLibraryId: Flow<String?> = dataStore.data
-        .catch { if (it is IOException) emit(emptyPreferences()) else throw it }
-        .map { encryptedValue.decode(it[KEY_SELECTED_LIBRARY_ID]) }
+    open val selectedLibraryId: Flow<String?> =
+        combine(settingsPreferences, accountKeys.accountKey) { preferences, accountKey ->
+            encryptedValue.decode(preferences[selectedLibraryIdKey(accountKey)])
+        }
 
-    open val selectedLibraryName: Flow<String?> = dataStore.data
-        .catch { if (it is IOException) emit(emptyPreferences()) else throw it }
-        .map { encryptedValue.decode(it[KEY_SELECTED_LIBRARY_NAME]) }
+    open val selectedLibraryName: Flow<String?> =
+        combine(settingsPreferences, accountKeys.accountKey) { preferences, accountKey ->
+            encryptedValue.decode(preferences[selectedLibraryNameKey(accountKey)])
+        }
 
-    open val resolverBaseUrl: Flow<String> = authDataStore?.let { auth ->
+    private val resolverBaseUrlState: Flow<ResolverBaseUrl> = authDataStore?.let { auth ->
         combine(settingsPreferences, auth.authState) { preferences, authState ->
-            encryptedValue.decode(preferences[KEY_RESOLVER_BASE_URL])
-                ?.takeIf(String::isNotBlank)
-                ?: (authState as? AuthState.Authenticated)?.serverUrl?.takeIf(String::isNotBlank)
-                ?: DEFAULT_RESOLVER_URL
+            val configured = encryptedValue.decode(preferences[KEY_RESOLVER_BASE_URL])?.takeIf(String::isNotBlank)
+            val serverUrl = (authState as? AuthState.Authenticated)?.serverUrl?.takeIf(String::isNotBlank)
+            when {
+                configured != null -> ResolverBaseUrl(configured, ResolverUrlSource.CONFIGURED)
+                serverUrl != null -> ResolverBaseUrl(serverUrl, ResolverUrlSource.SERVER_FALLBACK)
+                else -> ResolverBaseUrl(DEFAULT_RESOLVER_URL, ResolverUrlSource.DEFAULT)
+            }
         }
     } ?: settingsPreferences.map { preferences ->
-        encryptedValue.decode(preferences[KEY_RESOLVER_BASE_URL])
-            ?.takeIf(String::isNotBlank) ?: DEFAULT_RESOLVER_URL
+        val configured = encryptedValue.decode(preferences[KEY_RESOLVER_BASE_URL])?.takeIf(String::isNotBlank)
+        if (configured != null) {
+            ResolverBaseUrl(configured, ResolverUrlSource.CONFIGURED)
+        } else {
+            ResolverBaseUrl(DEFAULT_RESOLVER_URL, ResolverUrlSource.DEFAULT)
+        }
     }
+
+    open val resolverBaseUrl: Flow<String> = resolverBaseUrlState.map { it.url }
+
+    /**
+     * Where the effective Resolver address comes from.
+     *
+     * The address can be configured explicitly, inherited from the Jellyfin
+     * server, or still empty. Showing the source tells the user which service
+     * the app actually talks to.
+     */
+    open val resolverBaseUrlSource: Flow<ResolverUrlSource> = resolverBaseUrlState.map { it.source }
 
     open val approvedCleartextOrigins: Flow<Set<String>> = dataStore.data
         .catch { if (it is IOException) emit(emptyPreferences()) else throw it }
@@ -205,8 +238,6 @@ open class SettingsDataStore(
             .catch { if (it is IOException) emit(emptyPreferences()) else throw it }
             .first()
         val sensitiveValues = listOf(
-            KEY_SELECTED_LIBRARY_ID to snapshot[KEY_SELECTED_LIBRARY_ID],
-            KEY_SELECTED_LIBRARY_NAME to snapshot[KEY_SELECTED_LIBRARY_NAME],
             KEY_RESOLVER_BASE_URL to snapshot[KEY_RESOLVER_BASE_URL],
         )
         val replacements = sensitiveValues.mapNotNull { (key, oldValue) ->
@@ -222,11 +253,33 @@ open class SettingsDataStore(
         val originsNeedUpdate = oldOrigins != encryptedOrigins
         val versionNeedsUpdate = snapshot[KEY_SCHEMA_VERSION] != CURRENT_SCHEMA_VERSION
         val hasLegacyUpdateSource = snapshot[LEGACY_KEY_UPDATE_BASE_URL] != null
-        if (replacements.isEmpty() && !originsNeedUpdate && !versionNeedsUpdate && !hasLegacyUpdateSource) return
+        // The library selection used to be stored without an account, so it is moved into
+        // the namespace of the account that is signed in now.
+        val accountKey = accountKeys.currentKey()
+        val legacyLibraryId = snapshot[KEY_SELECTED_LIBRARY_ID]
+        val legacyLibraryName = snapshot[KEY_SELECTED_LIBRARY_NAME]
+        val migratedLibraryId = legacyLibraryId?.let { value ->
+            if (encryptedValue.isEncrypted(value)) value else encryptedValue.encode(value)
+        }
+        val migratedLibraryName = legacyLibraryName?.let { value ->
+            if (encryptedValue.isEncrypted(value)) value else encryptedValue.encode(value)
+        }
+        val hasLegacyLibrary = legacyLibraryId != null || legacyLibraryName != null
+        if (replacements.isEmpty() && !originsNeedUpdate && !versionNeedsUpdate && !hasLegacyUpdateSource && !hasLegacyLibrary) return
 
         dataStore.edit { preferences ->
             replacements.forEach { (key, oldValue, newValue) ->
                 if (preferences[key] == oldValue) preferences[key] = newValue
+            }
+            if (migratedLibraryId != null) {
+                val target = selectedLibraryIdKey(accountKey)
+                if (preferences[target] == null) preferences[target] = migratedLibraryId
+                preferences.remove(KEY_SELECTED_LIBRARY_ID)
+            }
+            if (migratedLibraryName != null) {
+                val target = selectedLibraryNameKey(accountKey)
+                if (preferences[target] == null) preferences[target] = migratedLibraryName
+                preferences.remove(KEY_SELECTED_LIBRARY_NAME)
             }
             if (preferences[KEY_APPROVED_CLEARTEXT_ORIGINS].orEmpty() == oldOrigins) {
                 preferences[KEY_APPROVED_CLEARTEXT_ORIGINS] = encryptedOrigins
@@ -235,6 +288,12 @@ open class SettingsDataStore(
             preferences[KEY_SCHEMA_VERSION] = CURRENT_SCHEMA_VERSION
         }
     }
+
+    private fun selectedLibraryIdKey(accountKey: String) =
+        stringPreferencesKey("${KEY_SELECTED_LIBRARY_ID.name}__$accountKey")
+
+    private fun selectedLibraryNameKey(accountKey: String) =
+        stringPreferencesKey("${KEY_SELECTED_LIBRARY_NAME.name}__$accountKey")
 
     /**
      * Loads the persisted cleartext consent into the snapshot that guards image requests.
@@ -331,9 +390,12 @@ open class SettingsDataStore(
     open suspend fun setSelectedLibrary(libraryId: String, libraryName: String) {
         val encryptedLibraryId = encryptedValue.encode(libraryId)
         val encryptedLibraryName = encryptedValue.encode(libraryName)
+        // The key is resolved before the write starts, so a session change during
+        // the write cannot move the selection into the next account.
+        val accountKey = accountKeys.currentKey()
         dataStore.edit { preferences ->
-            preferences[KEY_SELECTED_LIBRARY_ID] = encryptedLibraryId
-            preferences[KEY_SELECTED_LIBRARY_NAME] = encryptedLibraryName
+            preferences[selectedLibraryIdKey(accountKey)] = encryptedLibraryId
+            preferences[selectedLibraryNameKey(accountKey)] = encryptedLibraryName
         }
     }
 

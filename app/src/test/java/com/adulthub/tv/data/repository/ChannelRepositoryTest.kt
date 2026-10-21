@@ -84,4 +84,18 @@ class ChannelRepositoryTest {
         assertSame(replacement, repository.getVideo("shared"))
         assertNull(repository.getVideo("telegram:old-id"))
     }
+
+    @Test
+    fun `invalidating the cache removes the videos of the previous session`() {
+        val repository = ChannelRepository(mockk(relaxed = true))
+        repository.cacheVideo(VideoDto(id = "video-1", providerVideoId = "provider-1", title = "Video 1"))
+
+        assertNotNull(repository.getVideo("video-1"))
+        assertNotNull(repository.getRandomCachedVideo())
+
+        repository.invalidateCache()
+
+        assertNull(repository.getVideo("video-1"))
+        assertNull(repository.getRandomCachedVideo())
+    }
 }

@@ -9,6 +9,7 @@ import androidx.datastore.preferences.core.stringPreferencesKey
 import androidx.datastore.preferences.preferencesDataStore
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.catch
+import kotlinx.coroutines.flow.combine
 import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.flow.map
 import kotlinx.serialization.Serializable
@@ -37,13 +38,16 @@ data class TelegramProgressRecord(
 
 open class TelegramProgressStore(
     private val context: Context,
-    private val dataStore: DataStore<Preferences> = context.telegramProgressDataStore,
+    accountKeyProvider: AccountKeyProvider = AccountKeyProvider.ANONYMOUS,
+    private val dataStore: DataStore<Preferences> = SafePreferencesDataStore(context.telegramProgressDataStore),
 ) {
     companion object {
-        private val KEY_PROGRESS_MAP = stringPreferencesKey("telegram_progress_map")
+        /** Unscoped key written by versions that did not isolate accounts yet. */
+        const val LEGACY_KEY_PROGRESS_MAP = "telegram_progress_map"
         const val MAX_LRU_ENTRIES = 200
     }
 
+    private val accountKeys: AccountKeyProvider = accountKeyProvider
     private val json = Json {
         ignoreUnknownKeys = true
         encodeDefaults = true
@@ -58,14 +62,16 @@ open class TelegramProgressStore(
             }
         }
 
-    val allProgress: Flow<List<TelegramProgressRecord>> = dataStoreFlow.map { prefs ->
-        parseMap(prefs[KEY_PROGRESS_MAP]).values
-            .sortedByDescending { it.updatedAt }
-    }
+    val allProgress: Flow<List<TelegramProgressRecord>> =
+        combine(dataStoreFlow, accountKeys.accountKey) { prefs, accountKey ->
+            parseMap(prefs[progressKey(accountKey)]).values
+                .sortedByDescending { it.updatedAt }
+        }
 
     suspend fun getProgress(providerVideoId: String): TelegramProgressRecord? {
+        val accountKey = accountKeys.currentKey()
         val prefs = dataStoreFlow.first()
-        return parseMap(prefs[KEY_PROGRESS_MAP])[providerVideoId]
+        return parseMap(prefs[progressKey(accountKey)])[providerVideoId]
     }
 
     suspend fun saveProgress(
@@ -78,8 +84,11 @@ open class TelegramProgressStore(
         isPlayed: Boolean = false,
     ) {
         if (providerVideoId.isBlank()) return
+        // The key is resolved before the write starts, so a session change during
+        // the write cannot move the progress into the next account.
+        val accountKey = accountKeys.currentKey()
         dataStore.edit { prefs ->
-            val currentMap = parseMap(prefs[KEY_PROGRESS_MAP]).toMutableMap()
+            val currentMap = parseMap(prefs[progressKey(accountKey)]).toMutableMap()
             val existing = currentMap[providerVideoId]
             val record = TelegramProgressRecord(
                 providerVideoId = providerVideoId,
@@ -103,7 +112,7 @@ open class TelegramProgressStore(
                 currentMap
             }
 
-            prefs[KEY_PROGRESS_MAP] = json.encodeToString(trimmedMap)
+            prefs[progressKey(accountKey)] = json.encodeToString(trimmedMap)
         }
     }
 
@@ -115,8 +124,9 @@ open class TelegramProgressStore(
         channelId: String? = null,
     ) {
         if (providerVideoId.isBlank()) return
+        val accountKey = accountKeys.currentKey()
         dataStore.edit { prefs ->
-            val currentMap = parseMap(prefs[KEY_PROGRESS_MAP]).toMutableMap()
+            val currentMap = parseMap(prefs[progressKey(accountKey)]).toMutableMap()
             val existing = currentMap[providerVideoId]
             val record = TelegramProgressRecord(
                 providerVideoId = providerVideoId,
@@ -137,25 +147,46 @@ open class TelegramProgressStore(
             } else {
                 currentMap
             }
-            prefs[KEY_PROGRESS_MAP] = json.encodeToString(trimmedMap)
+            prefs[progressKey(accountKey)] = json.encodeToString(trimmedMap)
         }
     }
 
     suspend fun clearProgress(providerVideoId: String) {
         if (providerVideoId.isBlank()) return
+        val accountKey = accountKeys.currentKey()
         dataStore.edit { prefs ->
-            val currentMap = parseMap(prefs[KEY_PROGRESS_MAP]).toMutableMap()
+            val currentMap = parseMap(prefs[progressKey(accountKey)]).toMutableMap()
             if (currentMap.remove(providerVideoId) != null) {
-                prefs[KEY_PROGRESS_MAP] = json.encodeToString(currentMap)
+                prefs[progressKey(accountKey)] = json.encodeToString(currentMap)
             }
         }
     }
 
     open suspend fun clearAll() {
+        val accountKey = accountKeys.currentKey()
         dataStore.edit { prefs ->
-            prefs.remove(KEY_PROGRESS_MAP)
+            prefs.remove(progressKey(accountKey))
         }
     }
+
+    /**
+     * Moves the progress of installs without account isolation to the account
+     * that is signed in now.
+     */
+    open suspend fun migrateLegacyProgress() {
+        val accountKey = accountKeys.currentKey()
+        dataStore.edit { prefs ->
+            val legacy = prefs[stringPreferencesKey(LEGACY_KEY_PROGRESS_MAP)] ?: return@edit
+            val target = progressKey(accountKey)
+            if (prefs[target] == null) {
+                prefs[target] = legacy
+            }
+            prefs.remove(stringPreferencesKey(LEGACY_KEY_PROGRESS_MAP))
+        }
+    }
+
+    private fun progressKey(accountKey: String) =
+        stringPreferencesKey("${LEGACY_KEY_PROGRESS_MAP}__$accountKey")
 
     private fun parseMap(jsonStr: String?): Map<String, TelegramProgressRecord> {
         if (jsonStr.isNullOrBlank()) return emptyMap()

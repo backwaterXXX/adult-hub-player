@@ -232,7 +232,7 @@ private fun MobileMediaPosterCard(title: String, imageUrl: String?, onClick: () 
 }
 
 @Composable
-private fun MobileCatalogTile(title: String, subtitle: String, onClick: () -> Unit) {
+private fun MobileCatalogTile(title: String, subtitle: String?, onClick: () -> Unit) {
     Card(
         Modifier.fillMaxWidth().height(112.dp).clickable(onClick = onClick),
         shape = RoundedCornerShape(14.dp),
@@ -240,8 +240,10 @@ private fun MobileCatalogTile(title: String, subtitle: String, onClick: () -> Un
     ) {
         Column(Modifier.fillMaxSize().padding(14.dp), verticalArrangement = Arrangement.Center) {
             Text(title, style = MaterialTheme.typography.titleSmall, color = Color.White, maxLines = 2, overflow = TextOverflow.Ellipsis)
-            Spacer(Modifier.height(5.dp))
-            Text(subtitle, style = MaterialTheme.typography.labelMedium, color = NeonPink)
+            if (!subtitle.isNullOrBlank()) {
+                Spacer(Modifier.height(5.dp))
+                Text(subtitle, style = MaterialTheme.typography.labelMedium, color = NeonPink)
+            }
         }
     }
 }
@@ -382,7 +384,8 @@ fun MobileLibraryScreen(vm: LibraryViewModel, initialCategoryId: String?, onItem
                 } else {
                     LazyVerticalGrid(columns = GridCells.Adaptive(minSize = 142.dp), verticalArrangement = Arrangement.spacedBy(8.dp), horizontalArrangement = Arrangement.spacedBy(6.dp)) {
                         items(state.studiosState.studios, key = { it.id }) { studio ->
-                            MobileCatalogTile(studio.name, "${studio.movieCount} titles") { vm.selectStudio(studio) }
+                            val subtitle = studio.movieCount?.let { "$it titles" }
+                            MobileCatalogTile(studio.name, subtitle) { vm.selectStudio(studio) }
                         }
                     }
                 }

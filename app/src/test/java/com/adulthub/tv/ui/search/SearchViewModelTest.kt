@@ -1,5 +1,6 @@
 package com.adulthub.tv.ui.search
 
+import com.adulthub.tv.data.local.AccountKeyProvider
 import com.adulthub.tv.data.local.SearchHistoryStore
 import com.adulthub.tv.data.local.SettingsDataStore
 import com.adulthub.tv.data.model.TvItem
@@ -256,7 +257,11 @@ class SearchViewModelTest {
     }
 }
 
-private class FakeSearchHistoryStore : SearchHistoryStore(mockk(relaxed = true), mockk(relaxed = true)) {
+private class FakeSearchHistoryStore : SearchHistoryStore(
+    context = mockk(relaxed = true),
+    accountKeyProvider = AccountKeyProvider.ANONYMOUS,
+    dataStore = mockk(relaxed = true),
+) {
     val recordedQueries = mutableListOf<String>()
 
     override suspend fun recordQuery(query: String) {
