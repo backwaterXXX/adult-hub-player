@@ -24,6 +24,14 @@ data class StoredPhashJob(
     val errorCode: String? = null,
     val durationUs: Long? = null,
     val updatedAt: Long = System.currentTimeMillis(),
+    /**
+     * The moment the task was submitted.
+     *
+     * The time of the last change is not enough for the polling budget, because the
+     * budget measures the life of the task. Records of an earlier version have no
+     * start time and use the time of their last change.
+     */
+    val startedAt: Long = updatedAt,
 )
 
 /** Persists resolver job IDs so polling can resume after navigation or process death. */
@@ -57,7 +65,15 @@ class PhashJobStore(
         val accountKey = accountKey ?: accountKeys.currentKey()
         dataStore.edit { prefs ->
             val records = decode(prefs[jobsKey(accountKey)]).associateBy { it.videoId }.toMutableMap()
-            records[record.videoId] = record.copy(updatedAt = System.currentTimeMillis())
+            val existing = records[record.videoId]
+            // The start time of a running task does not change with its state. A new
+            // task for the same video gets its own budget.
+            val startedAt = if (existing != null && existing.jobId != null && existing.jobId == record.jobId) {
+                existing.startedAt
+            } else {
+                record.startedAt
+            }
+            records[record.videoId] = record.copy(updatedAt = System.currentTimeMillis(), startedAt = startedAt)
             val trimmed = records.values.sortedByDescending { it.updatedAt }.take(MAX_JOBS)
             prefs[jobsKey(accountKey)] = json.encodeToString(trimmed)
         }

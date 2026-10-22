@@ -56,6 +56,7 @@ class PhashCoordinator(
     private val jobStore: PhashJobStore,
     private val applicationScope: kotlinx.coroutines.CoroutineScope,
     private val accountScope: AccountScope? = null,
+    private val budget: PhashBudget = PhashBudget(),
 ) {
     private val inFlight = java.util.concurrent.ConcurrentHashMap.newKeySet<String>()
     private val _jobStatuses = MutableStateFlow<Map<String, PhashUiStatus>>(emptyMap())
@@ -65,11 +66,21 @@ class PhashCoordinator(
         // A job already accepted by the resolver outlives the player and the app process.
         applicationScope.launch {
             val owner = accountScope?.currentOwner()
+            val nowMs = System.currentTimeMillis()
             jobStore.getAll(owner?.accountKey).forEach { record ->
+                if (!budget.mayResume(record, nowMs)) {
+                    // The task used up its budget while the app was not running. It is
+                    // not continued and it leaves the store, so it is not started
+                    // again at the next launch.
+                    jobStore.remove(record.videoId, owner?.accountKey)
+                    setStatus(record.videoId, PhashUiStatus(TIMEOUT_MESSAGE, terminal = true))
+                    return@forEach
+                }
                 setStatus(record.videoId, statusFor(record))
-                if (record.jobId != null && record.state in ACTIVE_STATES) start(record.videoId)
-                else if (record.state == "submitting" && record.durationUs != null) {
-                    start(record.videoId, durationOverrideUs = record.durationUs)
+                if (record.jobId != null && record.state in ACTIVE_STATES) {
+                    start(record.videoId, startedAtMs = record.startedAt)
+                } else if (record.state == "submitting" && record.durationUs != null) {
+                    start(record.videoId, durationOverrideUs = record.durationUs, startedAtMs = record.startedAt)
                 }
             }
         }
@@ -86,6 +97,7 @@ class PhashCoordinator(
         item: TvItem? = null,
         observedDurationMs: Long? = null,
         durationOverrideUs: Long? = null,
+        startedAtMs: Long? = null,
     ) {
         if (!inFlight.add(videoId)) return
         applicationScope.launch {
@@ -93,7 +105,7 @@ class PhashCoordinator(
                 // The owner is captured when the job starts. A job of an older session
                 // must not continue with the token or the Resolver of a newer session.
                 val owner = accountScope?.currentOwner()
-                process(videoId, item, observedDurationMs, durationOverrideUs, owner)
+                process(videoId, item, observedDurationMs, durationOverrideUs, owner, startedAtMs)
             } catch (cancelled: CancellationException) {
                 throw cancelled
             } catch (error: Exception) {
@@ -111,9 +123,14 @@ class PhashCoordinator(
         observedDurationMs: Long?,
         durationOverrideUs: Long?,
         owner: SessionOwner?,
+        startedAtMs: Long?,
     ) {
         val accountKey = owner?.accountKey
         val stored = jobStore.get(videoId, accountKey)
+        // The moment the task was submitted. It stays the same over every update of
+        // the task, so the budget measures the life of the task and not the life of
+        // the process.
+        val startedAt = startedAtMs ?: stored?.startedAt ?: System.currentTimeMillis()
         val resolverUrl = settingsDataStore.getResolverBaseUrl()
         // The token belongs to the session that starts the task. A task of an older
         // session is never continued with the token of a newer session.
@@ -123,7 +140,7 @@ class PhashCoordinator(
                 setStatus(videoId, PhashUiStatus("Sign in again to check video matching"))
                 return
             }
-            poll(videoId, stored.jobId!!, owner, resolverUrl, token)
+            poll(videoId, stored.jobId!!, owner, resolverUrl, token, startedAt, stored.durationUs)
             return
         }
         if (stored != null && stored.state in TERMINAL_STATES) {
@@ -151,7 +168,15 @@ class PhashCoordinator(
         }
 
         setStatus(videoId, PhashUiStatus("Sending task to Resolver"))
-        jobStore.save(StoredPhashJob(videoId = videoId, state = "submitting", durationUs = durationUs), accountKey)
+        jobStore.save(
+            StoredPhashJob(
+                videoId = videoId,
+                state = "submitting",
+                durationUs = durationUs,
+                startedAt = startedAt,
+            ),
+            accountKey,
+        )
         var lastHttpCode: Int? = null
         for (attempt in 0..2) {
             try {
@@ -182,6 +207,7 @@ class PhashCoordinator(
                     state = state.ifBlank { "queued" },
                     errorCode = response.errorCode,
                     durationUs = durationUs,
+                    startedAt = startedAt,
                 )
                 jobStore.save(record, accountKey)
                 setStatus(videoId, statusFor(record))
@@ -189,7 +215,7 @@ class PhashCoordinator(
                     jobStore.save(record.copy(state = "done", errorCode = null), accountKey)
                     setStatus(videoId, PhashUiStatus("Video matching complete", terminal = true))
                 } else if (state in ACTIVE_STATES || state.isBlank()) {
-                    poll(videoId, jobId, owner, resolverUrl, token)
+                    poll(videoId, jobId, owner, resolverUrl, token, startedAt, durationUs)
                 } else {
                     setStatus(videoId, statusFor(record))
                 }
@@ -244,6 +270,9 @@ class PhashCoordinator(
      * The token and the Resolver address are the ones the task was started with.
      * A task of an older session is not continued with the credentials of a newer
      * session; the poll stops and the task keeps the state of its owner.
+     *
+     * The polling is bounded by the budget of the task. A task that used it up is
+     * not polled again and is stored as failed with the reason of the timeout.
      */
     private suspend fun poll(
         videoId: String,
@@ -251,11 +280,23 @@ class PhashCoordinator(
         owner: SessionOwner?,
         resolverUrl: String,
         token: String,
+        startedAtMs: Long,
+        durationUs: Long?,
     ) {
         var backoffMs = STATUS_POLL_INTERVAL_MS
+        var polls = 0
         val accountKey = owner?.accountKey
         while (true) {
+            if (budget.isExhausted(startedAtMs, System.currentTimeMillis(), polls)) {
+                expireTask(videoId, jobId, accountKey, startedAtMs, durationUs)
+                return
+            }
             delay(backoffMs)
+            // The budget can run out while the request waits.
+            if (budget.isExhausted(startedAtMs, System.currentTimeMillis(), polls)) {
+                expireTask(videoId, jobId, accountKey, startedAtMs, durationUs)
+                return
+            }
             if (owner != null && accountScope?.isCurrent(owner) == false) {
                 setStatus(videoId, PhashUiStatus("The session changed; the task stays with its account"))
                 return
@@ -267,6 +308,7 @@ class PhashCoordinator(
                 return
             }
             try {
+                polls += 1
                 val api = apiClient.create(settingsDataStore.requireAllowedServiceUrl(resolverUrl).normalized)
                 val response = withTimeout(15_000L) { api.getPhashJob(token, jobId) }
                 val job = response.job
@@ -280,7 +322,14 @@ class PhashCoordinator(
                     return
                 }
                 val state = job.state.lowercase()
-                val record = StoredPhashJob(videoId, jobId, state, job.errorCode)
+                val record = StoredPhashJob(
+                    videoId = videoId,
+                    jobId = jobId,
+                    state = state,
+                    errorCode = job.errorCode,
+                    durationUs = durationUs,
+                    startedAt = startedAtMs,
+                )
                 jobStore.save(record, accountKey)
                 when (state) {
                     in SUCCESS_STATES -> {
@@ -331,6 +380,35 @@ class PhashCoordinator(
         }
     }
 
+    /**
+     * Ends a task that used up its budget.
+     *
+     * The task is stored as failed with the reason of the timeout, so it is not
+     * continued at the next start of the app and it does not stay in the list of
+     * running tasks.
+     */
+    private suspend fun expireTask(
+        videoId: String,
+        jobId: String?,
+        accountKey: String?,
+        startedAtMs: Long,
+        durationUs: Long?,
+    ) {
+        jobStore.save(
+            StoredPhashJob(
+                videoId = videoId,
+                jobId = jobId,
+                state = "failed",
+                errorCode = TIMEOUT_ERROR_CODE,
+                durationUs = durationUs,
+                startedAt = startedAtMs,
+            ),
+            accountKey,
+        )
+        setStatus(videoId, PhashUiStatus(TIMEOUT_MESSAGE, terminal = true))
+        Log.i(PHASH_TAG, "the task used up its polling budget")
+    }
+
     private fun setStatus(videoId: String, status: PhashUiStatus) {
         _jobStatuses.update { current ->
             val updated = current + (videoId to status)
@@ -344,7 +422,12 @@ class PhashCoordinator(
         "processing" -> PhashUiStatus("Resolver is processing video matching")
         in SUCCESS_STATES -> PhashUiStatus("Video matching complete", terminal = true)
         "failed", "cancelled" -> PhashUiStatus(
-            "Video matching failed${record.errorCode?.let { " ($it)" }.orEmpty()}", terminal = true,
+            if (record.errorCode == TIMEOUT_ERROR_CODE) {
+                TIMEOUT_MESSAGE
+            } else {
+                "Video matching failed${record.errorCode?.let { " ($it)" }.orEmpty()}"
+            },
+            terminal = true,
         )
         else -> PhashUiStatus("Resolver task state: ${record.state}")
     }
@@ -354,6 +437,8 @@ class PhashCoordinator(
     companion object {
         private const val STATUS_POLL_INTERVAL_MS = 5_000L
         private const val MAX_STATUS_BACKOFF_MS = 60_000L
+        private const val TIMEOUT_ERROR_CODE = "timeout"
+        private const val TIMEOUT_MESSAGE = "Video matching timed out"
         private val ACTIVE_STATES = setOf("queued", "processing")
         private val SUCCESS_STATES = setOf("done", "completed", "succeeded")
         private val TERMINAL_STATES = SUCCESS_STATES + setOf("failed", "cancelled")
