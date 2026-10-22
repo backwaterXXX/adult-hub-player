@@ -17,10 +17,16 @@ object SigningIdentity {
     /** Asset that carries the SHA-256 digest of the pinned release certificate. */
     const val PINNED_CERTIFICATE_ASSET = "release_cert.sha256"
 
-    /** Message shown when the installation predates the signing key rotation. */
+    /**
+     * Message shown when the installation predates the signing key rotation.
+     *
+     * The message states the consequence of the uninstall as well, because the
+     * local data of the device is removed with the package.
+     */
     const val FRESH_INSTALL_REQUIRED_MESSAGE =
         "This installation was signed with an older key, so it cannot be updated in place. " +
-            "Uninstall the app and install the latest release again to receive updates."
+            "Uninstall the app and install the latest release again to receive updates. " +
+            "Uninstalling removes the local data of this device, including the watch history."
 
     /** SHA-256 digest of the certificate the running app was signed with. */
     fun installedCertificateSha256(context: Context): String? =

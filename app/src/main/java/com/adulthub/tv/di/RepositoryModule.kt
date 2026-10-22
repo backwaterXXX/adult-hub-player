@@ -17,12 +17,12 @@ import kotlinx.coroutines.launch
 import org.koin.dsl.module
 
 val repositoryModule = module {
-    single { AuthRepository(get(), get(), get(), userScopedDataMigration = get()) }
-    single { LibraryRepository(get(), get(), get<TelegramProgressStore>()) }
+    single { AuthRepository(get(), get(), get()) }
+    single { LibraryRepository(get(), get(), get<TelegramProgressStore>(), get()) }
     single { PersonRepository(get(), get(), get()) }
     single { StudioRepository(get(), get()) }
     single {
-        val channelRepository = ChannelRepository(get())
+        val channelRepository = ChannelRepository(get(), get())
         val scope = get<CoroutineScope>()
         val accountScope = get<AccountScope>()
         val settingsDataStore = get<SettingsDataStore>()

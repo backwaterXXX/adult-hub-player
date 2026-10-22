@@ -10,6 +10,7 @@ import androidx.datastore.preferences.preferencesDataStore
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.catch
 import kotlinx.coroutines.flow.combine
+import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.flow.map
 import kotlinx.serialization.encodeToString
 import kotlinx.serialization.json.Json
@@ -48,12 +49,13 @@ open class SearchHistoryStore(
             parseList(prefs[queriesKey(accountKey)])
         }
 
-    open suspend fun recordQuery(query: String) {
+    open suspend fun recordQuery(query: String, accountKey: String? = null) {
         val trimmed = query.trim()
         if (trimmed.length < 2) return
         // The key is resolved before the write starts, so a session change during
-        // the write cannot move the query into the next account.
-        val accountKey = accountKeys.currentKey()
+        // the write cannot move the query into the next account. A caller that
+        // owns a session passes its own key, so a late write stays with its owner.
+        val accountKey = accountKey ?: accountKeys.currentKey()
         dataStore.edit { prefs ->
             val list = parseList(prefs[queriesKey(accountKey)]).toMutableList()
             list.removeAll { it.equals(trimmed, ignoreCase = true) }
@@ -70,20 +72,42 @@ open class SearchHistoryStore(
         }
     }
 
+    /** True when data of an install without account isolation waits for an import. */
+    open suspend fun hasLegacyData(): Boolean {
+        val prefs = dataStoreFlow.first()
+        return !prefs[stringPreferencesKey(LEGACY_KEY_SEARCH_QUERIES)].isNullOrBlank()
+    }
+
     /**
-     * Moves the queries of installs without account isolation to the account
-     * that is signed in now.
+     * Imports the queries of an install without account isolation into one account.
+     *
+     * The import is explicit because the unisolated data has no known owner. The
+     * source is removed in the same atomic edit, so it is only dropped when the
+     * merged result was stored.
      */
-    open suspend fun migrateLegacyHistory() {
-        val accountKey = accountKeys.currentKey()
+    open suspend fun importLegacyData(accountKey: String): Boolean {
+        var imported = false
         dataStore.edit { prefs ->
             val legacy = prefs[stringPreferencesKey(LEGACY_KEY_SEARCH_QUERIES)] ?: return@edit
             val target = queriesKey(accountKey)
-            if (prefs[target] == null) {
-                prefs[target] = legacy
-            }
+            val merged = mergeQueries(
+                parseList(prefs[target]),
+                parseList(legacy),
+            )
+            prefs[target] = json.encodeToString(merged)
             prefs.remove(stringPreferencesKey(LEGACY_KEY_SEARCH_QUERIES))
+            imported = true
         }
+        return imported
+    }
+
+    private fun mergeQueries(current: List<String>, legacy: List<String>): List<String> {
+        val merged = LinkedHashMap<String, String>()
+        for (query in current + legacy) {
+            val key = query.lowercase()
+            if (!merged.containsKey(key)) merged[key] = query
+        }
+        return merged.values.take(MAX_SEARCH_QUERIES)
     }
 
     private fun queriesKey(accountKey: String) =

@@ -31,6 +31,7 @@ import kotlinx.coroutines.withContext
 
 import com.adulthub.tv.data.local.SearchHistoryStore
 import com.adulthub.tv.data.local.TelegramProgressStore
+import com.adulthub.tv.data.local.UserScopedDataMigration
 import com.adulthub.tv.data.local.WatchHistoryStore
 import com.adulthub.tv.data.local.BufferProfile
 import com.adulthub.tv.data.local.ResolverUrlSource
@@ -59,6 +60,7 @@ data class SettingsUiState(
     val excludedTags: Set<String> = emptySet(),
     val availableLibraries: List<TvLibrary> = emptyList(),
     val isLoggedOut: Boolean = false,
+    val hasPendingHistoryImport: Boolean = false,
     val statusMessage: String? = null,
     val isCheckingConnections: Boolean = false,
     val jellyfinConnectionStatus: String = "Not checked",
@@ -73,6 +75,7 @@ class SettingsViewModel(
     private val watchHistoryStore: WatchHistoryStore? = null,
     private val telegramProgressStore: TelegramProgressStore? = null,
     private val searchHistoryStore: SearchHistoryStore? = null,
+    private val userScopedDataMigration: UserScopedDataMigration? = null,
 ) : ViewModel() {
 
     private val _uiState = MutableStateFlow(SettingsUiState())
@@ -109,6 +112,7 @@ class SettingsViewModel(
             val savedHomeCategoryIds = settingsDataStore.selectedHomeCategoryIds.firstOrNull()
             val hiddenChannels = settingsDataStore.hiddenChannelIds.firstOrNull().orEmpty()
             val excluded = settingsDataStore.excludedTags.firstOrNull().orEmpty()
+            val pendingImport = runCatching { userScopedDataMigration?.hasPendingImport() }.getOrNull() ?: false
 
             val librariesResult = libraryRepository.getLibraries()
             val libraries = librariesResult.getOrDefault(emptyList())
@@ -140,14 +144,49 @@ class SettingsViewModel(
                     hiddenChannelIds = hiddenChannels,
                     excludedTags = excluded,
                     availableLibraries = libraries,
+                    hasPendingHistoryImport = pendingImport,
                 )
+            }
+        }
+    }
+
+    /**
+     * Imports the data of an install without account isolation.
+     *
+     * The data has no known owner, so it is only attached to an account when the
+     * owner of the device asks for it. Until then it stays in its own namespace
+     * and no account can see it.
+     */
+    fun importUnisolatedHistory() {
+        val migration = userScopedDataMigration ?: return
+        viewModelScope.launch {
+            try {
+                val imported = migration.importIntoCurrentAccount()
+                _uiState.update {
+                    it.copy(
+                        hasPendingHistoryImport = false,
+                        statusMessage = if (imported) {
+                            "The history of the previous install was imported into this account"
+                        } else {
+                            "There was nothing to import"
+                        },
+                    )
+                }
+            } catch (cancelled: CancellationException) {
+                throw cancelled
+            } catch (error: Exception) {
+                _uiState.update {
+                    it.copy(
+                        statusMessage = "The import failed: ${error.localizedMessage ?: "storage error"}",
+                    )
+                }
             }
         }
     }
 
     fun selectLibrary(library: TvLibrary) {
         viewModelScope.launch {
-            settingsDataStore.setSelectedLibrary(library.id, library.name)
+            if (!persist { settingsDataStore.setSelectedLibrary(library.id, library.name) }) return@launch
             val categoriesResult = libraryRepository.getGenres(limit = 200)
             val categories = categoriesResult.getOrDefault(emptyList())
             val savedCategoryIds = settingsDataStore.selectedHomeCategoryIds.firstOrNull()
@@ -159,7 +198,9 @@ class SettingsViewModel(
                     categories.take(2).map { it.id }.toSet()
                 else -> savedCategoryIds.intersect(availableCategoryIds)
             }
-            if (categoriesResult.isSuccess) settingsDataStore.setSelectedHomeCategoryIds(selectedIds)
+            if (categoriesResult.isSuccess) {
+                persist { settingsDataStore.setSelectedHomeCategoryIds(selectedIds) }
+            }
             _uiState.update {
                 it.copy(
                     selectedLibraryId = library.id,
@@ -174,7 +215,7 @@ class SettingsViewModel(
 
     fun setCacheLimit(limitMb: Int) {
         viewModelScope.launch {
-            settingsDataStore.setCacheLimitMb(limitMb)
+            if (!persist { settingsDataStore.setCacheLimitMb(limitMb) }) return@launch
             _uiState.update {
                 it.copy(
                     cacheLimitMb = limitMb,
@@ -186,14 +227,14 @@ class SettingsViewModel(
 
     fun setPhashOnPlayback(enabled: Boolean) {
         viewModelScope.launch {
-            settingsDataStore.setPhashOnPlayback(enabled)
+            if (!persist { settingsDataStore.setPhashOnPlayback(enabled) }) return@launch
             _uiState.update { it.copy(phashOnPlayback = enabled) }
         }
     }
 
     fun setBufferProfile(profile: BufferProfile) {
         viewModelScope.launch {
-            settingsDataStore.setBufferProfile(profile)
+            if (!persist { settingsDataStore.setBufferProfile(profile) }) return@launch
             _uiState.update {
                 it.copy(
                     bufferProfile = profile,
@@ -205,7 +246,7 @@ class SettingsViewModel(
 
     fun setLowRamMode(enabled: Boolean) {
         viewModelScope.launch {
-            settingsDataStore.setLowRamMode(enabled)
+            if (!persist { settingsDataStore.setLowRamMode(enabled) }) return@launch
             _uiState.update {
                 it.copy(
                     lowRamMode = enabled,
@@ -217,7 +258,7 @@ class SettingsViewModel(
 
     fun setSeekStepSec(seconds: Int) {
         viewModelScope.launch {
-            settingsDataStore.setSeekStepSec(seconds)
+            if (!persist { settingsDataStore.setSeekStepSec(seconds) }) return@launch
             _uiState.update {
                 it.copy(
                     seekStepSec = seconds,
@@ -229,7 +270,7 @@ class SettingsViewModel(
 
     fun setAutoplayNext(enabled: Boolean) {
         viewModelScope.launch {
-            settingsDataStore.setAutoplayNext(enabled)
+            if (!persist { settingsDataStore.setAutoplayNext(enabled) }) return@launch
             _uiState.update {
                 it.copy(
                     autoplayNext = enabled,
@@ -249,7 +290,7 @@ class SettingsViewModel(
             )
         }
         viewModelScope.launch {
-            settingsDataStore.setSelectedHomeCategoryIds(selectedIds)
+            persist { settingsDataStore.setSelectedHomeCategoryIds(selectedIds) }
         }
     }
 
@@ -301,27 +342,35 @@ class SettingsViewModel(
 
     fun revokeCleartextConsent(origin: String) {
         viewModelScope.launch {
-            settingsDataStore.revokeCleartextOrigin(origin)
+            if (!persist { settingsDataStore.revokeCleartextOrigin(origin) }) return@launch
             val origins = settingsDataStore.approvedCleartextOrigins.firstOrNull().orEmpty()
             val currentServerUsesOrigin = when (val validation = ServiceUrlPolicy.inspect(_uiState.value.serverUrl)) {
                 is ServiceUrlValidation.Invalid -> false
                 is ServiceUrlValidation.Valid -> validation.value.usesCleartext && validation.value.origin == origin
             }
-            if (currentServerUsesOrigin) {
-                authRepository.logout()
+            // The consent of the server origin is gone, so the session has to end. A
+            // failed sign-out is reported instead of being shown as a closed account.
+            val signedOut = if (currentServerUsesOrigin) {
+                authRepository.logout().isSuccess
+            } else {
+                true
             }
             _uiState.update {
                 it.copy(
                     approvedCleartextOrigins = origins,
-                    statusMessage = "HTTP consent removed for $origin",
-                    isLoggedOut = currentServerUsesOrigin,
+                    statusMessage = if (signedOut) {
+                        "HTTP consent removed for $origin"
+                    } else {
+                        "HTTP consent removed for $origin, but the sign-out failed"
+                    },
+                    isLoggedOut = currentServerUsesOrigin && signedOut,
                 )
             }
         }
     }
 
     private suspend fun persistResolverUrl(url: String) {
-        settingsDataStore.setResolverBaseUrl(url)
+        if (!persist { settingsDataStore.setResolverBaseUrl(url) }) return
         val effectiveUrl = url.ifBlank { _uiState.value.serverUrl }
         val source = if (url.isNotBlank()) {
             ResolverUrlSource.CONFIGURED
@@ -494,9 +543,36 @@ class SettingsViewModel(
     fun logout(context: Context? = null) {
         viewModelScope.launch {
             context?.let { withContext(Dispatchers.IO) { clearImageCache(it) } }
-            authRepository.logout()
+            // The session is only closed when the stored session could be cleared.
+            authRepository.logout().onFailure { error ->
+                _uiState.update {
+                    it.copy(
+                        isLoggedOut = false,
+                        statusMessage = "Sign out failed: ${error.localizedMessage ?: "storage error"}",
+                    )
+                }
+                return@launch
+            }
             _uiState.update { it.copy(isLoggedOut = true) }
         }
+    }
+
+    /**
+     * Runs a settings write.
+     *
+     * Returns false when the write failed. The store reports the failure, so the
+     * screen must not show a new value as saved when it was never stored.
+     */
+    private suspend fun persist(block: suspend () -> Unit): Boolean = try {
+        block()
+        true
+    } catch (cancelled: CancellationException) {
+        throw cancelled
+    } catch (error: Exception) {
+        _uiState.update {
+            it.copy(statusMessage = "Could not save the setting: ${error.localizedMessage ?: "storage error"}")
+        }
+        false
     }
 }
 

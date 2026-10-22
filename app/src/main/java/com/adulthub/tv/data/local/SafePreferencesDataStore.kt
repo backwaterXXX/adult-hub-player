@@ -2,21 +2,25 @@ package com.adulthub.tv.data.local
 
 import androidx.datastore.core.DataStore
 import androidx.datastore.preferences.core.Preferences
-import androidx.datastore.preferences.core.emptyPreferences
-import com.adulthub.tv.diagnostics.AppLog as Log
 import kotlinx.coroutines.flow.Flow
-import kotlinx.coroutines.flow.first
 import java.io.IOException
 
-private const val TAG = "PreferencesStore"
+/**
+ * Reports that a preference write failed.
+ *
+ * The store boundary turns a failed write into this exception, so a caller can
+ * tell a stored value from a value that could not be stored. A coroutine
+ * cancellation is never converted into this exception.
+ */
+class PreferenceWriteException(message: String, cause: Throwable) : RuntimeException(message, cause)
 
 /**
- * Wraps a preferences store so a failed write does not take the app down.
+ * Wraps a preferences store so a failed write is reported instead of being
+ * hidden.
  *
- * DataStore reports write failures as an [IOException]. An unguarded write
- * inside a view model scope crashes the process, so the failure is logged and
- * the unchanged state is returned. The UI keeps its recoverable state and the
- * next write can still succeed.
+ * DataStore reports write failures as an [IOException]. Swallowing the error
+ * would let the UI report a successful change that was never stored, so the
+ * failure is passed to the caller as a [PreferenceWriteException].
  */
 internal class SafePreferencesDataStore(
     private val delegate: DataStore<Preferences>,
@@ -28,14 +32,6 @@ internal class SafePreferencesDataStore(
     ): Preferences = try {
         delegate.updateData(transform)
     } catch (error: IOException) {
-        Log.w(TAG, "Could not persist preferences (${error.javaClass.simpleName})")
-        currentState()
-    }
-
-    private suspend fun currentState(): Preferences = try {
-        delegate.data.first()
-    } catch (_: IOException) {
-        Log.w(TAG, "Could not read preferences")
-        emptyPreferences()
+        throw PreferenceWriteException("The preference could not be stored", error)
     }
 }

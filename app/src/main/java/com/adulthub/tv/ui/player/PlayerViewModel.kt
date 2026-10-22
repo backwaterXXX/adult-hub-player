@@ -4,6 +4,8 @@ import android.os.SystemClock
 import com.adulthub.tv.diagnostics.AppLog as Log
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
+import com.adulthub.tv.data.local.AccountScope
+import com.adulthub.tv.data.local.SessionOwner
 import com.adulthub.tv.data.local.SettingsDataStore
 import com.adulthub.tv.data.local.TelegramProgressStore
 import com.adulthub.tv.data.local.WatchHistoryStore
@@ -39,10 +41,11 @@ class PlayerViewModel(
     private val playbackRepository: PlaybackRepository,
     private val settingsDataStore: SettingsDataStore,
     val playbackReporter: PlaybackReporter,
-    private val channelRepository: ChannelRepository? = null,
-    private val telegramProgressStore: TelegramProgressStore? = null,
-    private val watchHistoryStore: WatchHistoryStore? = null,
+    internal val channelRepository: ChannelRepository? = null,
+    internal val telegramProgressStore: TelegramProgressStore? = null,
+    internal val watchHistoryStore: WatchHistoryStore? = null,
     private val persistenceScope: CoroutineScope? = null,
+    private val accountScope: AccountScope? = null,
 ) : ViewModel() {
 
     companion object {
@@ -65,13 +68,30 @@ class PlayerViewModel(
     /**
      * The reporting session this view model owns.
      *
-     * Every cleanup path passes this id, so a view model that is cleared after a
-     * newer session started cannot stop that newer session.
+     * The id is known as soon as the session is created, so every cleanup path can
+     * pass it. A view model that is cleared after a newer session started cannot
+     * stop that newer session.
      */
-    private var reportingSessionId: Long? = null
+    private val _reportingSessionId = MutableStateFlow<Long?>(null)
+    val reportingSessionId: StateFlow<Long?> = _reportingSessionId.asStateFlow()
 
-    /** Keeps the final write of a session idempotent. */
-    private var finalStatePersisted = false
+    /**
+     * The owner of the current playback.
+     *
+     * The account and the session are captured when the playback starts, so a late
+     * write stays with the account the playback belongs to.
+     */
+    private var playbackOwner: SessionOwner? = null
+
+    /** The playback whose final write is running. */
+    private var finalizingPlaybackId: Long? = null
+
+    /** The playback whose final write finished. */
+    private var finalizedPlaybackId: Long? = null
+
+    /** True when the final write of the current playback finished. */
+    private val _finalizationCompleted = MutableStateFlow(false)
+    val finalizationCompleted: StateFlow<Boolean> = _finalizationCompleted.asStateFlow()
 
     fun loadItem(itemId: String, resume: Boolean? = null) {
         val playbackRequestId = ++playbackRequestCounter
@@ -81,6 +101,12 @@ class PlayerViewModel(
             val loadStartedAt = SystemClock.elapsedRealtime()
             _uiState.value = PlayerUiState.Loading
             _isPlaybackEnded.value = false
+            // The owner of the playback is captured before the first write. A late
+            // write of this playback stays with the account it belongs to.
+            playbackOwner = accountScope?.currentOwner()
+            // The completion of the final write belongs to one playback, so a new
+            // playback starts without the completion of the previous one.
+            _finalizationCompleted.value = false
 
             val itemLookupStartedAt = SystemClock.elapsedRealtime()
             val itemResult = libraryRepository.getItemDetails(itemId)
@@ -173,7 +199,9 @@ class PlayerViewModel(
             _uiState.value = readyState
 
             // Record in watch history
-            if (playbackRequestId == playbackRequestCounter) watchHistoryStore?.recordWatch(item)
+            if (playbackRequestId == playbackRequestCounter) {
+                recordWatchHistory(item)
+            }
         }
     }
 
@@ -182,11 +210,14 @@ class PlayerViewModel(
         val playbackRequestId = ++playbackRequestCounter
         loadItemJob?.cancel()
         _isLoadingRandom.value = true
+        _finalizationCompleted.value = false
         viewModelScope.launch {
             val currentItem = (_uiState.value as? PlayerUiState.Ready)?.item
             if (currentItem != null) persistTelegramProgress(currentItem, currentPositionMs, isEnded = false)
-            // Stop current playback reporting session
-            playbackReporter.stopSession(currentPositionMs, reportingSessionId)
+            // Stop the reporting session of this playback. The session this view
+            // model knows is preferred, so a caller without an id cannot stop the
+            // session of another player.
+            playbackReporter.stopSession(currentPositionMs, reportingSessionId ?: _reportingSessionId.value)
 
             val currentId = currentItem?.id
             val libraryId = settingsDataStore.selectedLibraryId.firstOrNull()
@@ -274,15 +305,55 @@ class PlayerViewModel(
             )
 
             // Record in watch history
-            watchHistoryStore?.recordWatch(randomItem)
+            recordWatchHistory(randomItem)
         }
+    }
+
+    /**
+     * Creates the reporting session of the current playback.
+     *
+     * The view model owns the session, so it knows its id from the first moment
+     * and every cleanup path can stop exactly this session.
+     */
+    fun startReportingSession(
+        itemId: String,
+        mediaSourceId: String?,
+        playSessionId: String?,
+        playMethod: org.jellyfin.sdk.model.api.PlayMethod,
+        getCurrentPositionMs: () -> Long,
+        getIsPaused: () -> Boolean,
+    ): Long {
+        val sessionId = playbackReporter.startSession(
+            itemId = itemId,
+            mediaSourceId = mediaSourceId,
+            playSessionId = playSessionId,
+            playMethod = playMethod,
+            getCurrentPositionMs = getCurrentPositionMs,
+            getIsPaused = getIsPaused,
+        )
+        _reportingSessionId.value = sessionId
+        return sessionId
     }
 
     fun onPlaybackEnded(finalPositionMs: Long, reportingSessionId: Long? = null) {
         _isPlaybackEnded.value = true
-        reportingSessionId?.let { this.reportingSessionId = it }
-        persistFinalProgress(finalPositionMs, isEnded = true)
-        playbackReporter.stopSession(finalPositionMs, this.reportingSessionId)
+        reportingSessionId?.let { _reportingSessionId.value = it }
+        finalizePlayback(finalPositionMs, isEnded = true)
+        stopOwnedSession(finalPositionMs)
+    }
+
+    /**
+     * Resolves a fresh stream address for the current item.
+     *
+     * A stream address can expire while a video plays. A retry resolves the
+     * playback data again, so an expired address is not used a second time. The
+     * position is kept by the caller.
+     */
+    suspend fun resolveFreshStreamUrl(itemId: String): String? {
+        val ready = _uiState.value as? PlayerUiState.Ready ?: return null
+        if (ready.item.id != itemId) return null
+        val playbackInfo = playbackRepository.resolvePlaybackInfo(ready.item).getOrNull() ?: return null
+        return playbackInfo.streamUrl.takeIf { it.isNotBlank() }
     }
 
     fun toggleFavorite() {
@@ -298,21 +369,51 @@ class PlayerViewModel(
     }
 
     fun onExitPlayer(currentPositionMs: Long, reportingSessionId: Long? = null) {
-        reportingSessionId?.let { this.reportingSessionId = it }
-        persistFinalProgress(currentPositionMs, isEnded = false)
-        playbackReporter.stopSession(currentPositionMs, this.reportingSessionId)
+        reportingSessionId?.let { _reportingSessionId.value = it }
+        finalizePlayback(currentPositionMs, isEnded = false)
+        stopOwnedSession(currentPositionMs)
     }
 
     /**
-     * Writes the final progress of the session once.
+     * Stops the reporting session of this view model.
      *
-     * The exit handler and the composition disposal both report the end of the
-     * session, so the write is guarded to keep the last write idempotent.
+     * Without a known session id no session is stopped. A cleared view model must
+     * not stop the session of the player that runs now.
      */
-    private fun persistFinalProgress(positionMs: Long, isEnded: Boolean) {
-        if (finalStatePersisted) return
-        finalStatePersisted = true
-        saveTelegramProgress(positionMs, isEnded = isEnded)
+    private fun stopOwnedSession(positionMs: Long) {
+        val sessionId = _reportingSessionId.value ?: return
+        playbackReporter.stopSession(positionMs, sessionId)
+    }
+
+    /**
+     * Writes the final progress of the current playback once.
+     *
+     * The exit handler and the composition disposal both report the end of a
+     * playback, so the write is guarded per playback. The write of a playback does
+     * not block the finalisation of the next one, and the completion is only
+     * reported after the write finished.
+     */
+    private fun finalizePlayback(positionMs: Long, isEnded: Boolean) {
+        val ready = _uiState.value as? PlayerUiState.Ready ?: return
+        val playbackId = ready.playbackRequestId
+        if (finalizingPlaybackId == playbackId || finalizedPlaybackId == playbackId) return
+        finalizingPlaybackId = playbackId
+        lastPlaybackPositionMs = positionMs
+        (persistenceScope ?: viewModelScope).launch {
+            val stored = runCatching {
+                persistTelegramProgress(ready.item, positionMs, isEnded)
+            }
+            if (stored.isFailure) {
+                Log.w(PERF_TAG, "The final progress write failed")
+            }
+            finalizedPlaybackId = playbackId
+            finalizingPlaybackId = null
+            // The completion belongs to this playback. A playback that started in the
+            // meantime does not inherit the completion of the previous one.
+            if ((_uiState.value as? PlayerUiState.Ready)?.playbackRequestId == playbackId) {
+                _finalizationCompleted.value = stored.isSuccess
+            }
+        }
     }
 
     /**
@@ -325,10 +426,25 @@ class PlayerViewModel(
 
     override fun onCleared() {
         super.onCleared()
+        clearOwnedSession()
+    }
+
+    /**
+     * Releases the session of this view model.
+     *
+     * The view model clears itself through this path, so the cleanup of a view
+     * model that is discarded is covered by the same code.
+     */
+    internal fun clearOwnedSession() {
         val positionMs = lastPlaybackPositionMs
         val ready = _uiState.value as? PlayerUiState.Ready
-        val shouldPersist = !finalStatePersisted
-        finalStatePersisted = true
+        val playbackId = ready?.playbackRequestId
+        val shouldPersist = playbackId != null &&
+            finalizingPlaybackId != playbackId &&
+            finalizedPlaybackId != playbackId
+        if (shouldPersist) {
+            finalizingPlaybackId = playbackId
+        }
         // The view model scope is cancelled right after this callback, so the persistence work
         // runs in the application scope whenever one is available.
         val scope = persistenceScope
@@ -336,13 +452,20 @@ class PlayerViewModel(
             scope.launch {
                 // The session id of this view model is passed, so a cleared view model
                 // cannot stop a session that started after it.
-                runCatching { playbackReporter.stopSession(positionMs, reportingSessionId) }
+                stopOwnedSession(positionMs)
                 if (ready != null && shouldPersist) {
-                    runCatching { persistTelegramProgress(ready.item, positionMs, isEnded = false) }
+                    val stored = runCatching {
+                        persistTelegramProgress(ready.item, positionMs, isEnded = false)
+                    }
+                    if (stored.isFailure) {
+                        Log.w(PERF_TAG, "The final progress write failed")
+                    }
+                    finalizedPlaybackId = playbackId
+                    finalizingPlaybackId = null
                 }
             }
         } else {
-            runCatching { playbackReporter.stopSession(positionMs, reportingSessionId) }
+            stopOwnedSession(positionMs)
         }
     }
 
@@ -351,23 +474,22 @@ class PlayerViewModel(
         _uiState.value = ready.copy(pendingResumePositionMs = null)
     }
 
-    private fun saveTelegramProgress(positionMs: Long, isEnded: Boolean) {
-        val ready = _uiState.value as? PlayerUiState.Ready ?: return
-        lastPlaybackPositionMs = positionMs
-        (persistenceScope ?: viewModelScope).launch {
-            persistTelegramProgress(ready.item, positionMs, isEnded)
-        }
-    }
-
     suspend fun checkpointTelegramProgress(positionMs: Long) {
         val ready = _uiState.value as? PlayerUiState.Ready ?: return
         persistTelegramProgress(ready.item, positionMs, isEnded = false)
     }
 
+    /**
+     * Writes the progress of a playback.
+     *
+     * The write uses the account the playback belongs to, so a late write of a
+     * finished playback does not land in the account that signed in meanwhile.
+     */
     private suspend fun persistTelegramProgress(item: TvItem, positionMs: Long, isEnded: Boolean) {
         val provVideoId = item.providerVideoId ?: return
         if (runCatching { java.util.UUID.fromString(item.id) }.isSuccess) return
 
+        val accountKey = playbackOwner?.accountKey
         val durationMs = item.runtimeTicks?.div(10_000L) ?: 0L
         if (isEnded || (durationMs > 0L && positionMs >= durationMs * 0.90f)) {
             telegramProgressStore?.markPlayed(
@@ -376,6 +498,7 @@ class PlayerViewModel(
                 title = item.title,
                 thumbnailUrl = item.posterUrl,
                 channelId = item.channelId,
+                accountKey = accountKey,
             )
         } else if (positionMs > 15_000L) {
             telegramProgressStore?.saveProgress(
@@ -386,7 +509,23 @@ class PlayerViewModel(
                 thumbnailUrl = item.posterUrl,
                 channelId = item.channelId,
                 isPlayed = false,
+                accountKey = accountKey,
             )
+        }
+    }
+
+    /**
+     * Records a playback in the watch history of the account that owns it.
+     *
+     * A failed write is logged; it must not take the playback down.
+     */
+    private suspend fun recordWatchHistory(item: TvItem) {
+        val store = watchHistoryStore ?: return
+        val stored = runCatching {
+            store.recordWatch(item, accountKey = playbackOwner?.accountKey)
+        }
+        if (stored.isFailure) {
+            Log.w(PERF_TAG, "The watch history write failed")
         }
     }
 }

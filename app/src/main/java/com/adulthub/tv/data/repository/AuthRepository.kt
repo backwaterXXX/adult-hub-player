@@ -2,8 +2,8 @@ package com.adulthub.tv.data.repository
 
 import com.adulthub.tv.data.jellyfin.JellyfinClientManager
 import com.adulthub.tv.data.local.AuthDataStore
+import com.adulthub.tv.data.local.PreferenceWriteException
 import com.adulthub.tv.data.local.SettingsDataStore
-import com.adulthub.tv.data.local.UserScopedDataMigration
 import com.adulthub.tv.data.model.AuthState
 import com.adulthub.tv.data.model.ServerInfo
 import com.adulthub.tv.data.network.ServiceUrlPolicy
@@ -13,6 +13,7 @@ import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.map
 import kotlinx.coroutines.withContext
+import com.adulthub.tv.diagnostics.AppLog as Log
 import org.jellyfin.sdk.api.client.extensions.authenticateUserByName
 import org.jellyfin.sdk.api.client.extensions.authenticateWithQuickConnect
 import org.jellyfin.sdk.api.client.extensions.quickConnectApi
@@ -24,11 +25,12 @@ data class QuickConnectInitResult(
     val secret: String,
 )
 
+private const val TAG = "AuthRepository"
+
 open class AuthRepository(
     private val clientManager: JellyfinClientManager,
     private val authDataStore: AuthDataStore,
     private val settingsDataStore: SettingsDataStore,
-    private val userScopedDataMigration: UserScopedDataMigration? = null,
 ) {
     open val authState: Flow<AuthState> = authDataStore.authState
 
@@ -198,9 +200,6 @@ open class AuthRepository(
         settingsDataStore.migrateSensitiveValues()
         val state = authDataStore.getAuthState()
         if (state is AuthState.Authenticated) {
-            // Data written before accounts were isolated belongs to the account
-            // that is signed in now, so an update does not empty the history.
-            userScopedDataMigration?.migrateToCurrentAccount()
             when (val validation = ServiceUrlPolicy.inspect(state.serverUrl)) {
                 is ServiceUrlValidation.Invalid -> return@withContext AuthState.HttpBlocked(
                     serverUrl = state.serverUrl,
@@ -222,8 +221,21 @@ open class AuthRepository(
         state
     }
 
-    open suspend fun logout() = withContext(Dispatchers.IO) {
-        authDataStore.clearSession()
+    /**
+     * Signs the account out.
+     *
+     * The stored session is cleared first. When that write fails the session
+     * stays valid, so the client keeps its token and the caller is told that
+     * the sign-out did not happen. The failure is never an unhandled exception.
+     */
+    open suspend fun logout(): Result<Unit> = withContext(Dispatchers.IO) {
+        try {
+            authDataStore.clearSession()
+        } catch (error: PreferenceWriteException) {
+            Log.w(TAG, "Sign out failed because the session could not be cleared")
+            return@withContext Result.failure(error)
+        }
         clientManager.clearSession()
+        Result.success(Unit)
     }
 }

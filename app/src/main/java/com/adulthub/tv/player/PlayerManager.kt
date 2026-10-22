@@ -49,6 +49,7 @@ private const val PLAYBACK_POLICY_ORIGIN_HEADER = "X-AdultHub-Playback-Origin"
 private const val PLAYBACK_POLICY_HEADERS_HEADER = "X-AdultHub-Playback-Headers"
 
 private data class PlaybackRequest(
+    val itemId: String,
     val streamUrl: String,
     val title: String?,
     val headers: Map<String, String>,
@@ -65,10 +66,8 @@ class PlayerManager(
     private var positionPollJob: Job? = null
     private var retryJob: Job? = null
     private var playbackGeneration = 0L
-    private var automaticRetryCount = 0
+    private val retryBudget = RetryBudget(STABLE_PLAYBACK_MS)
     private var totalRetryCount = 0
-    /** Position when the player last reached the ready state, used for the stable playback check. */
-    private var readyPositionMs = 0L
     private var playbackRequest: PlaybackRequest? = null
     private var released = false
     private val httpClient by lazy {
@@ -185,6 +184,17 @@ class PlayerManager(
     var onPlaybackEnded: (() -> Unit)? = null
     var onPlaybackError: ((error: String) -> Unit)? = null
 
+    /** Detaches the view before the player is released. */
+    var onBeforeRelease: (() -> Unit)? = null
+
+    /**
+     * Provides a fresh stream URL for an automatic retry.
+     *
+     * A runtime error often means that the stream URL expired. The retry asks the
+     * owner of the playback for a new address instead of reusing the old one.
+     */
+    var streamUrlProvider: (suspend (itemId: String, positionMs: Long) -> String?)? = null
+
     private val playerListener = object : Player.Listener {
         override fun onPlaybackStateChanged(playbackState: Int) {
             _playbackState.value = playbackState
@@ -217,7 +227,7 @@ class PlayerManager(
                     retryJob = null
                     _retryStatus.value = null
                     _errorMessage.value = null
-                    readyPositionMs = exoPlayer.currentPosition
+                    retryBudget.reset()
                     if (!readyLoggedForCurrentMedia) {
                         readyLoggedForCurrentMedia = true
                         preparingStartedAt?.let { startedAt ->
@@ -345,14 +355,15 @@ class PlayerManager(
         startPositionMs: Long = 0L,
         title: String? = null,
         headers: Map<String, String> = emptyMap(),
+        itemId: String = "",
     ) {
         playbackGeneration += 1
         retryJob?.cancel()
         retryJob = null
-        automaticRetryCount = 0
+        retryBudget.reset()
         totalRetryCount = 0
         _retryStatus.value = null
-        playbackRequest = PlaybackRequest(streamUrl, title, headers.toMap())
+        playbackRequest = PlaybackRequest(itemId, streamUrl, title, headers.toMap())
         try {
             startPlayback(streamUrl, startPositionMs, title, headers, resetPlaybackSpeed = true, resumePlayback = true)
         } catch (error: Exception) {
@@ -433,13 +444,12 @@ class PlayerManager(
     }
 
     private fun scheduleAutomaticRetry(error: PlaybackException): Boolean {
-        if (automaticRetryCount >= MAX_AUTOMATIC_RETRIES || !isTransient(error)) return false
+        if (!retryBudget.canRetry(MAX_AUTOMATIC_RETRIES) || !isTransient(error)) return false
         val request = playbackRequest ?: return false
         val generation = playbackGeneration
-        automaticRetryCount += 1
+        val attempt = retryBudget.registerFailure()
         totalRetryCount += 1
-        val attempt = automaticRetryCount
-        val delayMs = 1_000L shl (attempt - 1)
+        val delayMs = retryDelayMs(attempt)
         _retryStatus.value = "Connection interrupted. Retrying automatically ($attempt/$MAX_AUTOMATIC_RETRIES)…"
         retryJob?.cancel()
         retryJob = coroutineScope.launch(Dispatchers.Main) {
@@ -447,10 +457,19 @@ class PlayerManager(
             if (generation != playbackGeneration) return@launch
             Log.i(TAG, "Automatic playback retry $attempt/$MAX_AUTOMATIC_RETRIES")
             val resumePlayback = exoPlayer.playWhenReady
+            val positionMs = exoPlayer.currentPosition.coerceAtLeast(0L)
             try {
+                // The stream address is resolved again. A runtime error often means
+                // that the previous address expired, and reusing it would fail again.
+                val streamUrl = resolveStreamUrlForRetry(request, positionMs)
+                if (streamUrl == null) {
+                    _errorMessage.value = "The stream address could not be refreshed"
+                    Log.w(TAG, "Automatic retry failed because the stream address could not be refreshed")
+                    return@launch
+                }
                 startPlayback(
-                    streamUrl = request.streamUrl,
-                    startPositionMs = exoPlayer.currentPosition.coerceAtLeast(0L),
+                    streamUrl = streamUrl,
+                    startPositionMs = positionMs,
                     title = request.title,
                     headers = request.headers,
                     resetPlaybackSpeed = false,
@@ -463,6 +482,15 @@ class PlayerManager(
         }
         return true
     }
+
+    /**
+     * Asks the owner of the playback for a fresh stream address.
+     *
+     * Without a provider the previous address is used again, because some streams
+     * stay valid and the retry only has to restart the transfer.
+     */
+    private suspend fun resolveStreamUrlForRetry(request: PlaybackRequest, positionMs: Long): String? =
+        resolveRetryStreamUrl(streamUrlProvider, request.itemId, positionMs, request.streamUrl)
 
     private fun isTransient(error: PlaybackException): Boolean {
         if (error.errorCode == PlaybackException.ERROR_CODE_IO_NETWORK_CONNECTION_FAILED ||
@@ -535,28 +563,16 @@ class PlayerManager(
                     if (dur > 0L && _durationMs.value != dur) {
                         _durationMs.value = dur
                     }
-                    resetRetryBudgetAfterStablePlayback(pos)
+                    retryBudget.track(
+                        SystemClock.elapsedRealtime(),
+                        _playbackState.value == Player.STATE_READY && _isPlaying.value,
+                    )
                     delay(POSITION_POLL_INTERVAL_MS)
                 }
             } catch (e: CancellationException) {
                 // Expected when polling cancelled
             }
         }
-    }
-
-    /**
-     * Gives the retry budget back after the playback ran long enough.
-     *
-     * The budget covers consecutive failures. A stream that only reaches READY for a
-     * moment keeps its budget, so repeated short recoveries cannot retry forever, while
-     * a session that played for a while starts with a fresh budget again.
-     */
-    private fun resetRetryBudgetAfterStablePlayback(positionMs: Long) {
-        if (automaticRetryCount == 0) return
-        if (_playbackState.value != Player.STATE_READY) return
-        if (positionMs - readyPositionMs < STABLE_PLAYBACK_MS) return
-        automaticRetryCount = 0
-        Log.i(TAG, "Playback was stable, the automatic retry budget is reset")
     }
 
     private fun stopPositionPolling() {
@@ -567,6 +583,10 @@ class PlayerManager(
     fun release() {
         if (released) return
         released = true
+        // The view is detached before the player is released, so the view never
+        // holds a released player.
+        runCatching { onBeforeRelease?.invoke() }
+        onBeforeRelease = null
         playbackGeneration += 1
         retryJob?.cancel()
         retryJob = null

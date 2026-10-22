@@ -136,6 +136,14 @@ class PlaybackReporter(
         }
     }
 
+    /**
+     * Stops a reporting session.
+     *
+     * A known session id stops only that session, so a caller that knows its own
+     * session can never stop the session of another player. A caller without a
+     * session id stops the session that is running, because such a caller owns the
+     * reporter and has to end its own reporting.
+     */
     @Synchronized
     fun stopSession(finalPositionMs: Long, sessionId: Long? = null) {
         val session = currentSession ?: return

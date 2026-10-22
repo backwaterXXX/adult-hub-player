@@ -29,6 +29,7 @@ val viewModelModule = module {
             telegramProgressStore = getOrNull(),
             watchHistoryStore = getOrNull(),
             persistenceScope = getOrNull(),
+            accountScope = getOrNull(),
         )
     }
     viewModelOf(::SearchViewModel)

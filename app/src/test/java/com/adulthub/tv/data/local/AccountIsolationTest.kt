@@ -101,20 +101,62 @@ class AccountIsolationTest {
     }
 
     @Test
-    fun `legacy history is moved into the namespace of the signed in account`() = runTest(timeout = 120.seconds) {
+    fun `unisolated history stays invisible until it is imported`() = runTest(timeout = 120.seconds) {
         dataStore.edit { prefs ->
             prefs[stringPreferencesKey(WatchHistoryStore.LEGACY_KEY_HISTORY_LIST)] =
                 """[{"itemId":"legacy-movie","title":"Legacy movie","watchedAt":1}]"""
         }
         val store = WatchHistoryStore(context = context, accountKeyProvider = accountKeys, dataStore = dataStore)
 
-        store.migrateLegacyHistory()
+        // No account sees the data of an install without isolation.
+        assertTrue(store.history.first().isEmpty())
+        assertTrue(store.hasLegacyData())
+
+        accountKeys.switchTo(secondAccount)
+        assertTrue(store.history.first().isEmpty())
+
+        // The import is explicit and belongs to the account that asks for it.
+        val imported = store.importLegacyData(accountKeys.currentKey())
+        assertTrue(imported)
 
         val history = store.history.first()
         assertEquals(1, history.size)
         assertEquals("legacy-movie", history.first().itemId)
+        assertFalse(store.hasLegacyData())
         val prefs = dataStore.data.first()
         assertNull(prefs[stringPreferencesKey(WatchHistoryStore.LEGACY_KEY_HISTORY_LIST)])
+    }
+
+    @Test
+    fun `an import merges into the data of the account and can run again`() = runTest(timeout = 120.seconds) {
+        dataStore.edit { prefs ->
+            prefs[stringPreferencesKey(WatchHistoryStore.LEGACY_KEY_HISTORY_LIST)] =
+                """[{"itemId":"legacy-movie","title":"Legacy movie","watchedAt":1}]"""
+        }
+        val store = WatchHistoryStore(context = context, accountKeyProvider = accountKeys, dataStore = dataStore)
+        store.recordWatch(TvItem(id = "own-movie", title = "Own movie"))
+
+        assertTrue(store.importLegacyData(accountKeys.currentKey()))
+
+        val history = store.history.first()
+        assertEquals(2, history.size)
+        assertEquals(setOf("legacy-movie", "own-movie"), history.map { it.itemId }.toSet())
+
+        // A second import has nothing left to do.
+        assertFalse(store.importLegacyData(accountKeys.currentKey()))
+        assertEquals(2, store.history.first().size)
+    }
+
+    @Test
+    fun `a later sign in finds the data of the account again`() = runTest(timeout = 120.seconds) {
+        val store = WatchHistoryStore(context = context, accountKeyProvider = accountKeys, dataStore = dataStore)
+        store.recordWatch(TvItem(id = "movie-1", title = "First account movie"))
+
+        accountKeys.switchTo(secondAccount)
+        assertTrue(store.history.first().isEmpty())
+
+        accountKeys.switchTo(firstAccount)
+        assertEquals(1, store.history.first().size)
     }
 
     @Test

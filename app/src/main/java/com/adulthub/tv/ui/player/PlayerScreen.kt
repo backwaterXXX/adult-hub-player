@@ -88,9 +88,16 @@ fun PlayerScreen(
     val isLoadingRandom by viewModel.isLoadingRandom.collectAsStateWithLifecycle()
 
     val settingsDataStore: com.adulthub.tv.data.local.SettingsDataStore = koinInject()
+    val playerViewHolder = remember { mutableStateOf<PlayerView?>(null) }
     val playerManagerState by produceState<PlayerManager?>(null, context, settingsDataStore) {
         val bufferProfile = settingsDataStore.bufferProfile.first()
-        value = PlayerManager(context, coroutineScope, bufferProfile)
+        val manager = PlayerManager(context, coroutineScope, bufferProfile)
+        // The view is detached before the player is released.
+        manager.onBeforeRelease = { playerViewHolder.value?.player = null }
+        value = manager
+        // The composition owns the player. It is released when the screen leaves,
+        // also when the screen was left before the player was created.
+        awaitDispose { manager.release() }
     }
     if (playerManagerState == null) {
         Box(Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
@@ -101,7 +108,7 @@ fun PlayerScreen(
     val playerManager = requireNotNull(playerManagerState)
     val seekStepSec by settingsDataStore.seekStepSec.collectAsStateWithLifecycle(initialValue = 15)
     val autoplayNext by settingsDataStore.autoplayNext.collectAsStateWithLifecycle(initialValue = false)
-    var reportingSessionId by remember(playerManager) { mutableLongStateOf(0L) }
+    val reportingSessionId by viewModel.reportingSessionId.collectAsStateWithLifecycle()
     val phashCoordinator: com.adulthub.tv.player.PhashCoordinator = koinInject()
     val phashJobStatuses by phashCoordinator.jobStatuses.collectAsStateWithLifecycle()
 
@@ -139,6 +146,11 @@ fun PlayerScreen(
 
     // Connect PlayerManager callbacks to ViewModel and PlaybackReporter
     LaunchedEffect(playerManager) {
+        // A runtime error often means that the stream address expired. The retry
+        // resolves the playback data again instead of reusing the old address.
+        playerManager.streamUrlProvider = { itemId, _ ->
+            viewModel.resolveFreshStreamUrl(itemId)
+        }
         playerManager.onPlaybackReady = { posMs ->
             viewModel.playbackReporter.reportStart(
                 positionMs = posMs,
@@ -147,7 +159,7 @@ fun PlayerScreen(
             )
         }
         playerManager.onPlaybackEnded = {
-            viewModel.onPlaybackEnded(playerManager.currentPositionMs.value, reportingSessionId.takeIf { it > 0L })
+            viewModel.onPlaybackEnded(playerManager.currentPositionMs.value, reportingSessionId)
         }
     }
 
@@ -186,8 +198,9 @@ fun PlayerScreen(
     LaunchedEffect(readyState?.playbackRequestId, playerManager) {
         val state = readyState ?: return@LaunchedEffect
         val info = state.playbackInfo
-        // Start reporting session
-        reportingSessionId = viewModel.playbackReporter.startSession(
+        // Start reporting session. The view model owns it and knows its id from
+        // the first moment, so every cleanup path can stop exactly this session.
+        viewModel.startReportingSession(
             itemId = info.itemId,
             mediaSourceId = info.mediaSourceId,
             playSessionId = info.playSessionId,
@@ -206,6 +219,7 @@ fun PlayerScreen(
             startPositionMs = state.startPositionMs,
             title = info.title,
             headers = info.headers,
+            itemId = state.item.id,
         )
 
         // If waiting for user to confirm resume from ResumePlaybackDialog, pause immediately
@@ -245,7 +259,7 @@ fun PlayerScreen(
                 val current = autoplayCountdownSec ?: break
                 if (current <= 1) {
                     autoplayCountdownSec = null
-                    viewModel.playRandomMovie(currentPositionMs = 0L, reportingSessionId = reportingSessionId.takeIf { it > 0L })
+                    viewModel.playRandomMovie(currentPositionMs = 0L, reportingSessionId = reportingSessionId)
                     break
                 } else {
                     autoplayCountdownSec = current - 1
@@ -314,8 +328,7 @@ fun PlayerScreen(
             PlayerBackAction.DISMISS_RESUME_DIALOG -> viewModel.onResumeDialogHandled()
             PlayerBackAction.HIDE_OSD -> isOsdVisible = false
             PlayerBackAction.EXIT_PLAYER -> {
-                viewModel.onExitPlayer(playerManager.currentPositionMs.value, reportingSessionId.takeIf { it > 0L })
-                playerManager.release()
+                viewModel.onExitPlayer(playerManager.currentPositionMs.value, reportingSessionId)
                 onBack()
             }
         }
@@ -324,8 +337,7 @@ fun PlayerScreen(
     // Cleanup when leaving screen
     DisposableEffect(playerManager) {
         onDispose {
-            viewModel.onExitPlayer(playerManager.currentPositionMs.value, reportingSessionId.takeIf { it > 0L })
-            playerManager.release()
+            viewModel.onExitPlayer(playerManager.currentPositionMs.value, reportingSessionId)
         }
     }
 
@@ -355,7 +367,7 @@ fun PlayerScreen(
                                 viewModel.playbackReporter.reportProgressNow(
                                     playerManager.currentPositionMs.value,
                                     !playerManager.isPlaying.value,
-                                    reportingSessionId.takeIf { it > 0L },
+                                    reportingSessionId,
                                 )
                                 true
                             } else false
@@ -368,7 +380,7 @@ fun PlayerScreen(
                                 viewModel.playbackReporter.reportProgressNow(
                                     playerManager.currentPositionMs.value,
                                     !playerManager.isPlaying.value,
-                                    reportingSessionId.takeIf { it > 0L },
+                                    reportingSessionId,
                                 )
                                 true
                             } else false
@@ -414,8 +426,7 @@ fun PlayerScreen(
                     errorMessage = state.message,
                     onRetry = { viewModel.loadItem(itemId, resume) },
                     onBack = {
-                        viewModel.onExitPlayer(0L, reportingSessionId.takeIf { it > 0L })
-                        playerManager.release()
+                        viewModel.onExitPlayer(0L, reportingSessionId)
                         onBack()
                     },
                 )
@@ -428,6 +439,7 @@ fun PlayerScreen(
                             useController = false
                             this.resizeMode = resizeMode
                             player = playerManager.exoPlayer
+                            playerViewHolder.value = this
                         }
                     },
                     update = { view ->
@@ -452,24 +464,23 @@ fun PlayerScreen(
                     onInteraction = { osdTimerTrigger = System.currentTimeMillis() },
                     onPlayPauseClick = {
                         playerManager.togglePlayPause()
-                        viewModel.playbackReporter.reportProgressNow(playerManager.currentPositionMs.value, !playerManager.isPlaying.value, reportingSessionId.takeIf { it > 0L })
+                        viewModel.playbackReporter.reportProgressNow(playerManager.currentPositionMs.value, !playerManager.isPlaying.value, reportingSessionId)
                     },
                     onSeekRelative = { deltaMs ->
                         playerManager.seekBy(deltaMs)
                         seekFeedback = if (deltaMs > 0) "+${deltaMs / 1000}s" else "${deltaMs / 1000}s"
-                        viewModel.playbackReporter.reportProgressNow(playerManager.currentPositionMs.value, !playerManager.isPlaying.value, reportingSessionId.takeIf { it > 0L })
+                        viewModel.playbackReporter.reportProgressNow(playerManager.currentPositionMs.value, !playerManager.isPlaying.value, reportingSessionId)
                     },
                     onSeekTo = { positionMs ->
                         playerManager.seekTo(positionMs)
-                        viewModel.playbackReporter.reportProgressNow(positionMs, !playerManager.isPlaying.value, reportingSessionId.takeIf { it > 0L })
+                        viewModel.playbackReporter.reportProgressNow(positionMs, !playerManager.isPlaying.value, reportingSessionId)
                     },
                     isMuted = isMuted,
                     onMuteClick = { playerManager.toggleMute() },
-                    onRandomClick = { viewModel.playRandomMovie(playerManager.currentPositionMs.value, reportingSessionId.takeIf { it > 0L }) },
+                    onRandomClick = { viewModel.playRandomMovie(playerManager.currentPositionMs.value, reportingSessionId) },
                     onInfoClick = { showInfoDialog = !showInfoDialog },
                     onBackClick = {
-                        viewModel.onExitPlayer(playerManager.currentPositionMs.value, reportingSessionId.takeIf { it > 0L })
-                        playerManager.release()
+                        viewModel.onExitPlayer(playerManager.currentPositionMs.value, reportingSessionId)
                         onBack()
                     },
                     isFavorite = state.item.isFavorite,
@@ -501,7 +512,7 @@ fun PlayerScreen(
                         viewModel.playbackReporter.reportProgressNow(
                             playerManager.currentPositionMs.value,
                             !playerManager.isPlaying.value,
-                            reportingSessionId.takeIf { it > 0L },
+                            reportingSessionId,
                         )
                     },
                     isMuted = isMuted,
@@ -512,18 +523,17 @@ fun PlayerScreen(
                         viewModel.playbackReporter.reportProgressNow(
                             playerManager.currentPositionMs.value,
                             !playerManager.isPlaying.value,
-                            reportingSessionId.takeIf { it > 0L },
+                            reportingSessionId,
                         )
                     },
                     onRandomClick = {
-                        viewModel.playRandomMovie(playerManager.currentPositionMs.value, reportingSessionId.takeIf { it > 0L })
+                        viewModel.playRandomMovie(playerManager.currentPositionMs.value, reportingSessionId)
                     },
                     onInfoClick = {
                         showInfoDialog = !showInfoDialog
                     },
                     onBackClick = {
-                        viewModel.onExitPlayer(playerManager.currentPositionMs.value, reportingSessionId.takeIf { it > 0L })
-                        playerManager.release()
+                        viewModel.onExitPlayer(playerManager.currentPositionMs.value, reportingSessionId)
                         onBack()
                     },
                     isFavorite = state.item.isFavorite,
@@ -572,12 +582,11 @@ fun PlayerScreen(
                     EndOfMovieDialog(
                         onNextRandom = {
                             autoplayCountdownSec = null
-                            viewModel.playRandomMovie(currentPositionMs = 0L, reportingSessionId = reportingSessionId.takeIf { it > 0L })
+                            viewModel.playRandomMovie(currentPositionMs = 0L, reportingSessionId = reportingSessionId)
                         },
                         onBackToDetails = {
                             autoplayCountdownSec = null
-                            viewModel.onExitPlayer(playerManager.currentPositionMs.value, reportingSessionId.takeIf { it > 0L })
-                            playerManager.release()
+                            viewModel.onExitPlayer(playerManager.currentPositionMs.value, reportingSessionId)
                             onBack()
                         },
                         countdownSeconds = autoplayCountdownSec,
@@ -610,16 +619,23 @@ fun PlayerScreen(
                     PlaybackErrorDialog(
                         errorMessage = err,
                         onRetry = {
-                            playerManager.prepareAndPlay(
-                                streamUrl = state.playbackInfo.streamUrl,
-                                startPositionMs = playerManager.currentPositionMs.value,
-                                title = state.playbackInfo.title,
-                                headers = state.playbackInfo.headers,
-                            )
+                            // The address of an expired stream cannot be reused, so the
+                            // playback data is resolved again before the retry.
+                            coroutineScope.launch {
+                                val freshUrl = viewModel.resolveFreshStreamUrl(state.item.id)
+                                if (freshUrl != null) {
+                                    playerManager.prepareAndPlay(
+                                        streamUrl = freshUrl,
+                                        startPositionMs = playerManager.currentPositionMs.value,
+                                        title = state.playbackInfo.title,
+                                        headers = state.playbackInfo.headers,
+                                        itemId = state.item.id,
+                                    )
+                                }
+                            }
                         },
                         onBack = {
-                            viewModel.onExitPlayer(playerManager.currentPositionMs.value, reportingSessionId.takeIf { it > 0L })
-                            playerManager.release()
+                            viewModel.onExitPlayer(playerManager.currentPositionMs.value, reportingSessionId)
                             onBack()
                         },
                     )

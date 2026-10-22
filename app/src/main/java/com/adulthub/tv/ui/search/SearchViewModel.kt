@@ -46,6 +46,7 @@ class SearchViewModel(
     private val settingsDataStore: SettingsDataStore,
     private val channelRepository: ChannelRepository? = null,
     private val searchHistoryStore: SearchHistoryStore? = null,
+    private val accountScope: com.adulthub.tv.data.local.AccountScope? = null,
 ) : ViewModel() {
 
     private val _query = MutableStateFlow("")
@@ -109,6 +110,9 @@ class SearchViewModel(
     }
 
     private suspend fun performSearch(searchTerm: String) {
+        // The account that started the search also owns the query that is written
+        // when it finished.
+        val accountKey = runCatching { accountScope?.currentKey() }.getOrNull()
         _uiState.update {
             it.copy(
                 query = searchTerm,
@@ -196,7 +200,7 @@ class SearchViewModel(
                 SettingsDataStore.DEFAULT_RESOLVER_URL
             }
 
-            searchHistoryStore?.recordQuery(searchTerm)
+            searchHistoryStore?.recordQuery(searchTerm, accountKey)
             if (searchTerm != _query.value) return@coroutineScope
 
             _uiState.update {

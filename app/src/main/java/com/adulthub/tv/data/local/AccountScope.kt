@@ -34,6 +34,32 @@ interface AccountKeyProvider {
 }
 
 /**
+ * Identifies the account and the session an asynchronous operation belongs to.
+ *
+ * The owner is captured when the operation starts, never when it finishes. A
+ * result that arrives after the account or the session changed is stale: it
+ * must not be written into the new account and it must not fill the cache of
+ * the new session.
+ */
+data class SessionOwner(
+    /** Namespace of the account the operation belongs to. */
+    val accountKey: String,
+    /** Changes with every sign-in, also for a new session of the same account. */
+    val sessionMarker: String,
+)
+
+/**
+ * Provides the owner of an asynchronous operation.
+ */
+interface SessionOwnerProvider {
+    /** The owner of the session that is active right now. */
+    suspend fun currentOwner(): SessionOwner
+
+    /** True when the given owner still belongs to the active session. */
+    suspend fun isCurrent(owner: SessionOwner): Boolean
+}
+
+/**
  * Derives the account key from the persisted Jellyfin session.
  *
  * The key is a digest of the server URL and the user id: it is stable across
@@ -42,12 +68,30 @@ interface AccountKeyProvider {
  */
 class AccountScope(
     private val authDataStore: AuthDataStore,
-) : AccountKeyProvider {
+) : AccountKeyProvider, SessionOwnerProvider {
     override val accountKey: Flow<String> = authDataStore.authState
         .map { state -> keyOf(state) }
         .distinctUntilChanged()
 
     override suspend fun currentKey(): String = accountKey.first()
+
+    /**
+     * The marker of the active session.
+     *
+     * It contains a digest of the access token, so a new sign-in of the same
+     * account produces a new marker without the token ever being stored.
+     */
+    val sessionMarker: Flow<String> = authDataStore.authState
+        .map { state -> markerOf(state) }
+        .distinctUntilChanged()
+
+    override suspend fun currentOwner(): SessionOwner = SessionOwner(
+        accountKey = accountKey.first(),
+        sessionMarker = sessionMarker.first(),
+    )
+
+    override suspend fun isCurrent(owner: SessionOwner): Boolean =
+        sessionMarker.first() == owner.sessionMarker
 
     companion object {
         /** Namespace used while no account is signed in. */
@@ -55,6 +99,17 @@ class AccountScope(
 
         fun keyOf(state: AuthState): String = when (state) {
             is AuthState.Authenticated -> digest(state.serverUrl, state.userId)
+            else -> ANONYMOUS_KEY
+        }
+
+        /**
+         * The marker of a session.
+         *
+         * The access token is part of the digest, so every sign-in produces its
+         * own marker even when the account stays the same.
+         */
+        fun markerOf(state: AuthState): String = when (state) {
+            is AuthState.Authenticated -> digest(state.serverUrl, "${state.userId}|${state.accessToken}")
             else -> ANONYMOUS_KEY
         }
 

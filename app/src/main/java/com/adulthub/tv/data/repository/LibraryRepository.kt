@@ -2,6 +2,7 @@ package com.adulthub.tv.data.repository
 
 import com.adulthub.tv.data.jellyfin.JellyfinClientManager
 import com.adulthub.tv.data.jellyfin.toTvItem
+import com.adulthub.tv.data.local.AccountKeyProvider
 import com.adulthub.tv.data.local.SettingsDataStore
 import com.adulthub.tv.data.model.TvCategory
 import com.adulthub.tv.data.model.TvItem
@@ -49,6 +50,7 @@ open class LibraryRepository(
     private val clientManager: JellyfinClientManager,
     private val settingsDataStore: SettingsDataStore,
     private val telegramProgressStore: TelegramProgressStore? = null,
+    private val accountKeyProvider: AccountKeyProvider? = null,
 ) {
     open suspend fun getLibraries(): Result<List<TvLibrary>> = withContext(Dispatchers.IO) {
         try {
@@ -280,6 +282,9 @@ open class LibraryRepository(
     }
 
     open suspend fun markAsPlayed(itemId: String, isPlayed: Boolean): Result<Boolean> = withContext(Dispatchers.IO) {
+        // The account of the request is captured before the network call, so a late
+        // write cannot land in the account that signed in meanwhile.
+        val accountKey = runCatching { accountKeyProvider?.currentKey() }.getOrNull()
         try {
             val uuid = runCatching { UUID.fromString(itemId) }.getOrNull()
             if (uuid != null) {
@@ -294,6 +299,7 @@ open class LibraryRepository(
                 telegramProgressStore?.markPlayed(
                     providerVideoId = itemId,
                     isPlayed = isPlayed,
+                    accountKey = accountKey,
                 )
             }
             Result.success(isPlayed)

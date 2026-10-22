@@ -264,7 +264,7 @@ private class FakeSearchHistoryStore : SearchHistoryStore(
 ) {
     val recordedQueries = mutableListOf<String>()
 
-    override suspend fun recordQuery(query: String) {
+    override suspend fun recordQuery(query: String, accountKey: String?) {
         recordedQueries.add(query)
     }
 }

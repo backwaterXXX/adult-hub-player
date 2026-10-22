@@ -426,8 +426,11 @@ private class FakeSettingsAuthRepo : AuthRepository(mockk(relaxed = true), mockk
     override val authState: Flow<AuthState> = authStateFlow
     var loggedOut = false
 
-    override suspend fun logout() {
+    var logoutResult: Result<Unit> = Result.success(Unit)
+
+    override suspend fun logout(): Result<Unit> {
         loggedOut = true
+        return logoutResult
     }
 }
 

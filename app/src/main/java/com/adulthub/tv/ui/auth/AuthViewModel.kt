@@ -383,7 +383,15 @@ class AuthViewModel(
             result.onSuccess { libraries ->
                 if (libraries.size == 1) {
                     val singleLib = libraries.first()
-                    settingsDataStore.setSelectedLibrary(singleLib.id, singleLib.name)
+                    // The library selection is stored per account. When the write fails
+                    // the app must not continue as if the selection was saved.
+                    val stored = runCatching { settingsDataStore.setSelectedLibrary(singleLib.id, singleLib.name) }
+                    if (stored.isFailure) {
+                        _libraryState.update {
+                            it.copy(errorMessage = "Could not save the library selection.")
+                        }
+                        return@onSuccess
+                    }
                     _navEvents.send(AuthNavEvent.NavigateToHome)
                 } else if (libraries.isNotEmpty()) {
                     _libraryState.update { it.copy(libraries = libraries) }
@@ -403,14 +411,25 @@ class AuthViewModel(
 
     fun selectLibrary(library: TvLibrary) {
         viewModelScope.launch {
-            settingsDataStore.setSelectedLibrary(library.id, library.name)
+            val stored = runCatching { settingsDataStore.setSelectedLibrary(library.id, library.name) }
+            if (stored.isFailure) {
+                _libraryState.update { it.copy(errorMessage = "Could not save the library selection.") }
+                return@launch
+            }
             _navEvents.send(AuthNavEvent.NavigateToHome)
         }
     }
 
     fun signOut() {
         viewModelScope.launch {
-            authRepository.logout()
+            // A failed sign-out keeps the session, so the user must not be sent to
+            // the server screen as if the account was closed.
+            authRepository.logout().onFailure { error ->
+                _serverState.update {
+                    it.copy(errorMessage = "Sign out failed: ${error.localizedMessage ?: "storage error"}")
+                }
+                return@launch
+            }
             _navEvents.send(AuthNavEvent.NavigateToServer)
         }
     }

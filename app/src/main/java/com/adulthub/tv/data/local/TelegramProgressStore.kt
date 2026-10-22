@@ -68,13 +68,13 @@ open class TelegramProgressStore(
                 .sortedByDescending { it.updatedAt }
         }
 
-    suspend fun getProgress(providerVideoId: String): TelegramProgressRecord? {
-        val accountKey = accountKeys.currentKey()
+    open suspend fun getProgress(providerVideoId: String, accountKey: String? = null): TelegramProgressRecord? {
+        val accountKey = accountKey ?: accountKeys.currentKey()
         val prefs = dataStoreFlow.first()
         return parseMap(prefs[progressKey(accountKey)])[providerVideoId]
     }
 
-    suspend fun saveProgress(
+    open suspend fun saveProgress(
         providerVideoId: String,
         positionMs: Long,
         durationMs: Long,
@@ -82,11 +82,13 @@ open class TelegramProgressStore(
         thumbnailUrl: String? = null,
         channelId: String? = null,
         isPlayed: Boolean = false,
+        accountKey: String? = null,
     ) {
         if (providerVideoId.isBlank()) return
         // The key is resolved before the write starts, so a session change during
-        // the write cannot move the progress into the next account.
-        val accountKey = accountKeys.currentKey()
+        // the write cannot move the progress into the next account. A caller that
+        // owns a session passes its own key, so a late write stays with its owner.
+        val accountKey = accountKey ?: accountKeys.currentKey()
         dataStore.edit { prefs ->
             val currentMap = parseMap(prefs[progressKey(accountKey)]).toMutableMap()
             val existing = currentMap[providerVideoId]
@@ -116,15 +118,16 @@ open class TelegramProgressStore(
         }
     }
 
-    suspend fun markPlayed(
+    open suspend fun markPlayed(
         providerVideoId: String,
         isPlayed: Boolean,
         title: String? = null,
         thumbnailUrl: String? = null,
         channelId: String? = null,
+        accountKey: String? = null,
     ) {
         if (providerVideoId.isBlank()) return
-        val accountKey = accountKeys.currentKey()
+        val accountKey = accountKey ?: accountKeys.currentKey()
         dataStore.edit { prefs ->
             val currentMap = parseMap(prefs[progressKey(accountKey)]).toMutableMap()
             val existing = currentMap[providerVideoId]
@@ -169,20 +172,50 @@ open class TelegramProgressStore(
         }
     }
 
+    /** True when data of an install without account isolation waits for an import. */
+    open suspend fun hasLegacyData(): Boolean {
+        val prefs = dataStoreFlow.first()
+        return !prefs[stringPreferencesKey(LEGACY_KEY_PROGRESS_MAP)].isNullOrBlank()
+    }
+
     /**
-     * Moves the progress of installs without account isolation to the account
-     * that is signed in now.
+     * Imports the progress of an install without account isolation into one account.
+     *
+     * The import is explicit because the unisolated data has no known owner. The
+     * source is removed in the same atomic edit, so it is only dropped when the
+     * merged result was stored.
      */
-    open suspend fun migrateLegacyProgress() {
-        val accountKey = accountKeys.currentKey()
+    open suspend fun importLegacyData(accountKey: String): Boolean {
+        var imported = false
         dataStore.edit { prefs ->
             val legacy = prefs[stringPreferencesKey(LEGACY_KEY_PROGRESS_MAP)] ?: return@edit
             val target = progressKey(accountKey)
-            if (prefs[target] == null) {
-                prefs[target] = legacy
-            }
+            val merged = mergeProgress(
+                parseMap(prefs[target]),
+                parseMap(legacy),
+            )
+            prefs[target] = json.encodeToString(merged)
             prefs.remove(stringPreferencesKey(LEGACY_KEY_PROGRESS_MAP))
+            imported = true
         }
+        return imported
+    }
+
+    private fun mergeProgress(
+        current: Map<String, TelegramProgressRecord>,
+        legacy: Map<String, TelegramProgressRecord>,
+    ): Map<String, TelegramProgressRecord> {
+        val merged = LinkedHashMap(current)
+        for ((videoId, record) in legacy) {
+            val existing = merged[videoId]
+            if (existing == null || record.updatedAt >= existing.updatedAt) {
+                merged[videoId] = record
+            }
+        }
+        return merged.entries
+            .sortedByDescending { it.value.updatedAt }
+            .take(MAX_LRU_ENTRIES)
+            .associate { it.key to it.value }
     }
 
     private fun progressKey(accountKey: String) =

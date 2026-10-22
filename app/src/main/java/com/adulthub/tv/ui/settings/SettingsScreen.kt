@@ -640,6 +640,25 @@ fun SettingsScreen(
                 }
             }
 
+            item(key = "section_history_import") {
+                if (uiState.hasPendingHistoryImport) {
+                    SettingsCard(title = "History from an earlier install") {
+                        Text(
+                            text = "This device still holds watch history, playback progress and search queries from an install that did not separate accounts. " +
+                                "Import them into the account that is signed in now, or leave them where they are; they are not shown to any account until you import them.",
+                            style = MaterialTheme.typography.bodyMedium.copy(color = TextSecondary),
+                        )
+                        Spacer(modifier = Modifier.height(12.dp))
+                        TvSecondaryButton(
+                            onClick = viewModel::importUnisolatedHistory,
+                            modifier = Modifier.height(40.dp),
+                        ) {
+                            Text("Import into this account", fontWeight = FontWeight.Medium)
+                        }
+                    }
+                }
+            }
+
             item(key = "section_http_consent") {
                 SettingsCard(title = "Trusted LAN HTTP") {
                     Text(
