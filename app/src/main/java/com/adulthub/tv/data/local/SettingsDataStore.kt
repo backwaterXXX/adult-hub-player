@@ -20,6 +20,7 @@ import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.combine
 import kotlinx.coroutines.flow.catch
 import kotlinx.coroutines.flow.first
+import kotlinx.coroutines.flow.onEach
 import kotlinx.coroutines.flow.map
 import kotlinx.serialization.Serializable
 import kotlinx.serialization.json.Json
@@ -110,6 +111,7 @@ open class SettingsDataStore(
         ?: authDataStore?.let { AccountScope(it) }
         ?: AccountKeyProvider.ANONYMOUS
     private val approvedCleartextOriginsSnapshot = AtomicReference<Set<String>>(emptySet())
+    private val resolverBaseUrlSnapshot = AtomicReference(DEFAULT_RESOLVER_URL)
     private val settingsPreferences = dataStore.data
         .catch { if (it is IOException) emit(emptyPreferences()) else throw it }
 
@@ -150,7 +152,9 @@ open class SettingsDataStore(
         }
     }
 
-    open val resolverBaseUrl: Flow<String> = resolverBaseUrlState.map { it.url }
+    open val resolverBaseUrl: Flow<String> = resolverBaseUrlState
+        .map { it.url }
+        .onEach(resolverBaseUrlSnapshot::set)
 
     /**
      * Where the effective Resolver address comes from.
@@ -306,6 +310,19 @@ open class SettingsDataStore(
             .catch { if (it is IOException) emit(emptyPreferences()) else throw it }
             .first()[KEY_APPROVED_CLEARTEXT_ORIGINS].orEmpty()
         approvedCleartextOriginsSnapshot.set(persisted.mapNotNull { encryptedValue.decode(it) }.toSet())
+    }
+
+    /**
+     * Synchronous view of [resolverBaseUrl] for the image loader.
+     *
+     * The image loader runs on its own threads and cannot wait for a suspending
+     * read, so the last known address is kept next to the flow.
+     */
+    open fun resolverBaseUrlSnapshot(): String = resolverBaseUrlSnapshot.get()
+
+    /** Fills [resolverBaseUrlSnapshot] once, before the first image request. */
+    open suspend fun refreshResolverBaseUrlSnapshot() {
+        resolverBaseUrlSnapshot.set(getResolverBaseUrl())
     }
 
     open suspend fun isCleartextOriginApproved(url: String): Boolean {
