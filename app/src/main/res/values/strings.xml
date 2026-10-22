@@ -29,6 +29,14 @@
     <string name="http_consent_required_error">Confirm unencrypted HTTP for this local host before connecting.</string>
     <string name="resolver_url_missing">Set a Resolver URL in Settings before using channel features.</string>
 
+    <!-- Local network permission (enforced on Android 17 for apps that target SDK 37) -->
+    <string name="local_network_permission_title">Allow local network access?</string>
+    <string name="local_network_permission_message">Android 17 blocks apps from reaching devices on your local network. Allow local network access so Adult Hub can connect to your Jellyfin server and the Resolver on this LAN.</string>
+    <string name="local_network_permission_blocked">Local network access is blocked. Allow it in Android settings, then connect again.</string>
+    <string name="local_network_permission_allow">Allow access</string>
+    <string name="local_network_permission_settings">Open settings</string>
+    <string name="local_network_permission_later">Not now</string>
+
     <!-- Login Screen -->
     <string name="login_title">Sign In</string>
     <string name="login_subtitle">Enter your credentials to access your library</string>

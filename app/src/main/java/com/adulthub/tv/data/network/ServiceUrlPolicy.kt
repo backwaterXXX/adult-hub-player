@@ -52,7 +52,7 @@ object ServiceUrlPolicy {
         return ServiceUrlValidation.Valid(ServiceUrl(normalized, origin, usesCleartext))
     }
 
-    private fun isLocalNetworkHost(host: String): Boolean {
+    internal fun isLocalNetworkHost(host: String): Boolean {
         if (host == "localhost" || host.endsWith(".localhost") || host.endsWith(".local")) return true
 
         val ipv4 = host.split('.')

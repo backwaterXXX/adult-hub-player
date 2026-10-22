@@ -31,6 +31,7 @@ import com.adulthub.tv.R
 import com.adulthub.tv.ui.components.CleartextHttpConsentDialog
 import com.adulthub.tv.ui.components.ErrorMessage
 import com.adulthub.tv.ui.components.LoadingIndicator
+import com.adulthub.tv.ui.components.LocalNetworkPermission
 import com.adulthub.tv.ui.components.TvPrimaryButton
 import com.adulthub.tv.ui.components.TvSecondaryButton
 import com.adulthub.tv.ui.components.TvTextField
@@ -44,6 +45,7 @@ fun ServerScreen(
     modifier: Modifier = Modifier,
 ) {
     val state by viewModel.serverState.collectAsStateWithLifecycle()
+    val localNetwork = LocalNetworkPermission.current
 
     Box(
         modifier = modifier
@@ -87,7 +89,9 @@ fun ServerScreen(
                             imeAction = ImeAction.Done,
                         ),
                         keyboardActions = KeyboardActions(
-                            onDone = { viewModel.connectServer() },
+                            onDone = {
+                                localNetwork.ensureGranted(state.serverUrl) { viewModel.connectServer() }
+                            },
                         ),
                         modifier = Modifier.fillMaxWidth(),
                     )
@@ -100,7 +104,9 @@ fun ServerScreen(
                         horizontalArrangement = Arrangement.Center,
                     ) {
                         TvPrimaryButton(
-                            onClick = { viewModel.connectServer() },
+                            onClick = {
+                                localNetwork.ensureGranted(state.serverUrl) { viewModel.connectServer() }
+                            },
                             modifier = Modifier.width(200.dp),
                         ) {
                             Text(text = stringResource(R.string.action_connect))
@@ -113,7 +119,9 @@ fun ServerScreen(
                     item {
                         ErrorMessage(
                             message = state.errorMessage ?: "",
-                            onRetry = { viewModel.connectServer() },
+                            onRetry = {
+                                localNetwork.ensureGranted(state.serverUrl) { viewModel.connectServer() }
+                            },
                         )
                         Spacer(modifier = Modifier.height(16.dp))
                     }
@@ -152,7 +160,9 @@ fun ServerScreen(
                             }
                             Spacer(modifier = Modifier.width(16.dp))
                             TvSecondaryButton(
-                                onClick = { viewModel.connectServer(server.url) },
+                                onClick = {
+                                    localNetwork.ensureGranted(server.url) { viewModel.connectServer(server.url) }
+                                },
                             ) {
                                 Text(text = stringResource(R.string.action_connect))
                             }

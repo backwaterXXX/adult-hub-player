@@ -29,6 +29,7 @@ import androidx.tv.material3.Text
 import com.adulthub.tv.R
 import com.adulthub.tv.ui.components.ErrorMessage
 import com.adulthub.tv.ui.components.LoadingIndicator
+import com.adulthub.tv.ui.components.LocalNetworkPermission
 import com.adulthub.tv.ui.components.TvPrimaryButton
 import com.adulthub.tv.ui.components.TvSecondaryButton
 import com.adulthub.tv.ui.components.TvTextField
@@ -43,6 +44,7 @@ fun LoginScreen(
     modifier: Modifier = Modifier,
 ) {
     val state by viewModel.loginState.collectAsStateWithLifecycle()
+    val localNetwork = LocalNetworkPermission.current
 
     Box(
         modifier = modifier
@@ -101,7 +103,9 @@ fun LoginScreen(
                             imeAction = ImeAction.Done,
                         ),
                         keyboardActions = KeyboardActions(
-                            onDone = { viewModel.signIn() },
+                            onDone = {
+                                localNetwork.ensureGranted(state.serverUrl) { viewModel.signIn() }
+                            },
                         ),
                         modifier = Modifier.fillMaxWidth(),
                     )
@@ -114,14 +118,18 @@ fun LoginScreen(
                         horizontalArrangement = Arrangement.Center,
                     ) {
                         TvPrimaryButton(
-                            onClick = { viewModel.signIn() },
+                            onClick = {
+                                localNetwork.ensureGranted(state.serverUrl) { viewModel.signIn() }
+                            },
                             modifier = Modifier.weight(1f),
                         ) {
                             Text(text = stringResource(R.string.action_sign_in))
                         }
                         Spacer(modifier = Modifier.width(16.dp))
                         TvSecondaryButton(
-                            onClick = { viewModel.startQuickConnect() },
+                            onClick = {
+                                localNetwork.ensureGranted(state.serverUrl) { viewModel.startQuickConnect() }
+                            },
                             modifier = Modifier.weight(1f),
                         ) {
                             Text(text = stringResource(R.string.action_quick_connect))
@@ -144,7 +152,9 @@ fun LoginScreen(
                     item {
                         ErrorMessage(
                             message = state.errorMessage ?: "",
-                            onRetry = { viewModel.signIn() },
+                            onRetry = {
+                                localNetwork.ensureGranted(state.serverUrl) { viewModel.signIn() }
+                            },
                         )
                     }
                 }

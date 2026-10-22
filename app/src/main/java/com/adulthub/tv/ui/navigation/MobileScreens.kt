@@ -31,8 +31,11 @@ import androidx.compose.ui.text.style.TextOverflow
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import coil.compose.AsyncImage
 import com.adulthub.tv.data.model.*
+import com.adulthub.tv.data.jellyfin.JellyfinClientManager
 import com.adulthub.tv.data.local.BufferProfile
+import com.adulthub.tv.data.resolver.resolveResolverUrl
 import com.adulthub.tv.ui.auth.AuthViewModel
+import com.adulthub.tv.ui.components.LocalNetworkPermission
 import com.adulthub.tv.ui.home.HomeViewModel
 import com.adulthub.tv.ui.detail.ItemDetailViewModel
 import com.adulthub.tv.ui.library.*
@@ -68,12 +71,13 @@ private fun MobileError(text: String?) { if (text != null) Text(text, color = Ma
 fun MobileServerScreen(vm: AuthViewModel) {
     val state by vm.serverState.collectAsStateWithLifecycle()
     var url by remember(state.serverUrl) { mutableStateOf(state.serverUrl) }
+    val localNetwork = LocalNetworkPermission.current
     MobilePage("Connect to Jellyfin", "Enter your server address") {
         OutlinedTextField(url, { url = it; vm.onServerUrlChanged(it) }, Modifier.fillMaxWidth(), label = { Text("Server URL") }, keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Uri, autoCorrectEnabled = false, imeAction = androidx.compose.ui.text.input.ImeAction.Go), singleLine = true)
         Spacer(Modifier.height(12.dp))
-        Button(onClick = { vm.connectServer(url) }, enabled = !state.isConnecting, modifier = Modifier.fillMaxWidth().heightIn(min = 48.dp)) { Text(if (state.isConnecting) "Connecting…" else "Connect") }
+        Button(onClick = { localNetwork.ensureGranted(url) { vm.connectServer(url) } }, enabled = !state.isConnecting, modifier = Modifier.fillMaxWidth().heightIn(min = 48.dp)) { Text(if (state.isConnecting) "Connecting…" else "Connect") }
         if (state.isDiscovering) LinearProgressIndicator(Modifier.fillMaxWidth())
-        state.discoveredServers.forEach { server -> TextButton(onClick = { vm.connectServer(server.url) }) { Text(server.name) } }
+        state.discoveredServers.forEach { server -> TextButton(onClick = { localNetwork.ensureGranted(server.url) { vm.connectServer(server.url) } }) { Text(server.name) } }
         MobileError(state.errorMessage)
         state.pendingHttpConsentUrl?.let { host ->
             AlertDialog(onDismissRequest = vm::dismissHttpConsent, title = { Text("Allow unencrypted connection?") }, text = { Text("Allow HTTP for $host on this device?") }, confirmButton = { TextButton(onClick = vm::confirmHttpConsent) { Text("Allow") } }, dismissButton = { TextButton(onClick = vm::dismissHttpConsent) { Text("Cancel") } })
@@ -84,13 +88,14 @@ fun MobileServerScreen(vm: AuthViewModel) {
 @Composable
 fun MobileLoginScreen(vm: AuthViewModel, onBack: () -> Unit) {
     val state by vm.loginState.collectAsStateWithLifecycle()
+    val localNetwork = LocalNetworkPermission.current
     MobilePage("Sign in", state.serverUrl) {
         OutlinedTextField(state.username, vm::onUsernameChanged, Modifier.fillMaxWidth(), label = { Text("Username") }, singleLine = true)
         Spacer(Modifier.height(10.dp))
         OutlinedTextField(state.password, vm::onPasswordChanged, Modifier.fillMaxWidth(), label = { Text("Password") }, visualTransformation = PasswordVisualTransformation(), keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Password), singleLine = true)
         Spacer(Modifier.height(14.dp))
-        Button(onClick = vm::signIn, enabled = !state.isSigningIn, modifier = Modifier.fillMaxWidth().heightIn(min = 48.dp)) { Text(if (state.isSigningIn) "Signing in…" else "Sign in") }
-        OutlinedButton(onClick = vm::startQuickConnect, modifier = Modifier.fillMaxWidth().heightIn(min = 48.dp)) { Text("Quick Connect") }
+        Button(onClick = { localNetwork.ensureGranted(state.serverUrl) { vm.signIn() } }, enabled = !state.isSigningIn, modifier = Modifier.fillMaxWidth().heightIn(min = 48.dp)) { Text(if (state.isSigningIn) "Signing in…" else "Sign in") }
+        OutlinedButton(onClick = { localNetwork.ensureGranted(state.serverUrl) { vm.startQuickConnect() } }, modifier = Modifier.fillMaxWidth().heightIn(min = 48.dp)) { Text("Quick Connect") }
         TextButton(onClick = onBack) { Text("Change server") }
         MobileError(state.errorMessage)
     }
@@ -437,9 +442,22 @@ fun MobileLibraryScreen(vm: LibraryViewModel, initialCategoryId: String?, onItem
 @Composable
 fun MobileSearchScreen(vm: SearchViewModel, initialQuery: String?, onItem: (String) -> Unit, onPlay: (String) -> Unit, onPerson: (String, String) -> Unit) {
     val state by vm.uiState.collectAsStateWithLifecycle()
+    val clientManager: JellyfinClientManager = koinInject()
     LaunchedEffect(initialQuery) { if (!initialQuery.isNullOrBlank()) vm.onQueryChanged(initialQuery) }
     MobilePage("Search") {
-        OutlinedTextField(state.query, vm::onQueryChanged, Modifier.fillMaxWidth(), label = { Text("Movies, performers, channels") }, singleLine = true)
+        OutlinedTextField(
+            state.query,
+            vm::onQueryChanged,
+            Modifier.fillMaxWidth(),
+            label = { Text("Movies, performers, channels") },
+            trailingIcon = {
+                if (state.query.isNotEmpty()) {
+                    TextButton(onClick = vm::clearQuery) { Text("Clear") }
+                }
+            },
+            keyboardOptions = KeyboardOptions(imeAction = androidx.compose.ui.text.input.ImeAction.Search),
+            singleLine = true,
+        )
         if (state.query.isBlank() && state.recentQueries.isNotEmpty()) {
             Text("Recent searches", style = MaterialTheme.typography.labelLarge, color = NeonPink, modifier = Modifier.padding(top = 8.dp))
             LazyRow(horizontalArrangement = Arrangement.spacedBy(8.dp), contentPadding = PaddingValues(vertical = 4.dp)) {
@@ -450,12 +468,61 @@ fun MobileSearchScreen(vm: SearchViewModel, initialQuery: String?, onItem: (Stri
         }
         MobileError(state.errorMessage)
         if (state.isSearching) LinearProgressIndicator(Modifier.fillMaxWidth())
-        LazyColumn {
-            items(state.movies, key = { "m${it.id}" }) { item -> MobileMediaCard(item.title, null) { if (item.providerVideoId != null) onPlay(item.id) else onItem(item.id) } }
-            items(state.actors, key = { "p${it.id}" }) { person -> MobileMediaCard(person.name, null) { onPerson(person.id, person.name) } }
-            items(state.channelVideos, key = { "c${it.id}" }) { video -> MobileMediaCard(video.title, null) { onPlay(video.id) } }
+        LazyColumn(
+            modifier = Modifier.fillMaxWidth().weight(1f).imePadding(),
+            verticalArrangement = Arrangement.spacedBy(6.dp),
+            contentPadding = PaddingValues(bottom = 16.dp),
+        ) {
+            if (state.movies.isNotEmpty()) {
+                item(key = "h_movies") { MobileSearchSectionHeader("Movies") }
+                items(state.movies, key = { "m${it.id}" }) { item ->
+                    MobileMediaCard(item.title, clientManager.getItemImageUrl(item)) {
+                        if (item.providerVideoId != null) onPlay(item.id) else onItem(item.id)
+                    }
+                }
+            }
+            if (state.actors.isNotEmpty()) {
+                item(key = "h_actors") { MobileSearchSectionHeader("Performers") }
+                items(state.actors, key = { "p${it.id}" }) { person ->
+                    MobileMediaCard(person.name, clientManager.getPersonImageUrl(person.id, person.primaryImageTag)) {
+                        onPerson(person.id, person.name)
+                    }
+                }
+            }
+            if (state.channelVideos.isNotEmpty()) {
+                item(key = "h_channels") { MobileSearchSectionHeader("Channel videos") }
+                items(state.channelVideos, key = { "c${it.id}" }) { video ->
+                    MobileMediaCard(
+                        video.title,
+                        resolveResolverUrl(video.thumbnail, state.resolverBaseUrl),
+                    ) { onPlay(video.providerVideoId.ifBlank { video.id }) }
+                }
+            }
+            if (state.hasSearched && !state.isSearching &&
+                state.movies.isEmpty() && state.actors.isEmpty() && state.channelVideos.isEmpty()
+            ) {
+                item(key = "no_results") {
+                    Text(
+                        "Nothing found for \"${state.query.trim()}\".",
+                        style = MaterialTheme.typography.bodyMedium,
+                        color = MaterialTheme.colorScheme.onSurfaceVariant,
+                        modifier = Modifier.padding(vertical = 18.dp).fillMaxWidth(),
+                        textAlign = androidx.compose.ui.text.style.TextAlign.Center,
+                    )
+                }
+            }
         }
     }
+}
+
+@Composable
+private fun MobileSearchSectionHeader(text: String) {
+    Text(
+        text,
+        style = MaterialTheme.typography.titleSmall,
+        color = NeonPink,
+        modifier = Modifier.padding(top = 10.dp, bottom = 2.dp),
+    )
 }
 
 @Composable

@@ -5,6 +5,7 @@ import android.view.WindowManager
 import androidx.activity.ComponentActivity
 import androidx.activity.compose.setContent
 import com.adulthub.tv.diagnostics.AppLog as Log
+import com.adulthub.tv.ui.components.LocalNetworkPermissionHost
 import com.adulthub.tv.ui.navigation.AppNavigation
 import com.adulthub.tv.ui.navigation.MobileAppNavigation
 import com.adulthub.tv.ui.player.PlayerScreenState
@@ -21,12 +22,14 @@ class MainActivity : ComponentActivity() {
             WindowManager.LayoutParams.FLAG_HARDWARE_ACCELERATED,
         )
         setContent {
-            if (BuildConfig.FLAVOR == "mobile") {
-                AdultHubMobileTheme {
-                    MobileAppNavigation()
+            LocalNetworkPermissionHost(autoPrompt = true, touchUi = BuildConfig.FLAVOR == "mobile") {
+                if (BuildConfig.FLAVOR == "mobile") {
+                    AdultHubMobileTheme {
+                        MobileAppNavigation()
+                    }
+                } else {
+                    AdultHubTvTheme { AppNavigation() }
                 }
-            } else {
-                AdultHubTvTheme { AppNavigation() }
             }
         }
     }

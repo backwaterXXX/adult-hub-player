@@ -927,8 +927,10 @@ fun SettingsScreen(
                             ),
                         )
                         Spacer(modifier = Modifier.height(8.dp))
-                        Row(
+                        @OptIn(ExperimentalLayoutApi::class)
+                        FlowRow(
                             horizontalArrangement = Arrangement.spacedBy(10.dp),
+                            verticalArrangement = Arrangement.spacedBy(8.dp),
                             modifier = Modifier.fillMaxWidth(),
                         ) {
                             diagnostics.codecs.forEach { codec ->
@@ -950,6 +952,8 @@ fun SettingsScreen(
                                         fontSize = 12.sp,
                                         color = if (codec.isSupported) Color.White else Color.Gray,
                                         fontWeight = FontWeight.Medium,
+                                        maxLines = 1,
+                                        softWrap = false,
                                     )
                                 }
                             }
