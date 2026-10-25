@@ -24,6 +24,7 @@ import androidx.media3.exoplayer.source.DefaultMediaSourceFactory
 import androidx.media3.session.MediaSession
 import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.CoroutineScope
+import kotlinx.coroutines.CancellableContinuation
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.Job
 import kotlinx.coroutines.delay
@@ -32,6 +33,7 @@ import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.isActive
 import kotlinx.coroutines.launch
+import kotlinx.coroutines.suspendCancellableCoroutine
 
 import com.adulthub.tv.data.local.BufferProfile
 import com.adulthub.tv.data.network.ServiceUrlPolicy
@@ -42,12 +44,14 @@ import com.adulthub.tv.data.resolver.formatQualityDescriptor
 import okhttp3.OkHttpClient
 import okhttp3.HttpUrl.Companion.toHttpUrlOrNull
 import java.io.IOException
+import kotlin.coroutines.resume
 
 private const val TAG = "PlayerManager"
 private const val SEEK_INCREMENT_MS = 10_000L
 private const val POSITION_POLL_INTERVAL_MS = 1_000L
 private const val MAX_AUTOMATIC_RETRIES = 3
 private const val STABLE_PLAYBACK_MS = 30_000L
+private const val QUALITY_SWITCH_TIMEOUT_MS = 20_000L
 private const val PLAYBACK_POLICY_ORIGIN_HEADER = "X-AdultHub-Playback-Origin"
 private const val PLAYBACK_POLICY_HEADERS_HEADER = "X-AdultHub-Playback-Headers"
 
@@ -56,6 +60,17 @@ private data class PlaybackRequest(
     val streamUrl: String,
     val title: String?,
     val headers: Map<String, String>,
+)
+
+private enum class QualitySwitchPhase { CANDIDATE, RESTORING }
+
+private data class PendingQualitySwitch(
+    val previousRequest: PlaybackRequest,
+    val previousQuality: VideoVariant?,
+    val positionMs: Long,
+    val resumePlayback: Boolean,
+    val continuation: CancellableContinuation<Boolean>,
+    var phase: QualitySwitchPhase = QualitySwitchPhase.CANDIDATE,
 )
 
 @UnstableApi
@@ -72,6 +87,8 @@ class PlayerManager(
     private val retryBudget = RetryBudget(STABLE_PLAYBACK_MS)
     private var totalRetryCount = 0
     private var playbackRequest: PlaybackRequest? = null
+    private var pendingQualitySwitch: PendingQualitySwitch? = null
+    private var qualitySwitchTimeoutJob: Job? = null
     private var released = false
     private val httpClient by lazy {
         OkHttpClient.Builder()
@@ -248,6 +265,9 @@ class PlayerManager(
                     val currentPos = exoPlayer.currentPosition
                     _currentPositionMs.value = currentPos
                     onPlaybackReady?.invoke(currentPos)
+                    pendingQualitySwitch?.let { pending ->
+                        finishQualitySwitch(pending.phase == QualitySwitchPhase.CANDIDATE)
+                    }
                 }
                 Player.STATE_ENDED -> {
                     finishBufferingMeasurement()
@@ -289,6 +309,17 @@ class PlayerManager(
 
         override fun onPlayerError(error: PlaybackException) {
             Log.e(TAG, "ExoPlayer error: ${error.errorCodeName} (${error.errorCode})")
+            val qualitySwitch = pendingQualitySwitch
+            if (qualitySwitch != null && qualitySwitch.phase == QualitySwitchPhase.CANDIDATE) {
+                // Preparation failures arrive asynchronously through this listener. Keep
+                // the last working source as the active request and prepare it again.
+                if (restoreQualitySwitch(qualitySwitch)) return
+                // Let the ordinary error path report that playback could not recover.
+            } else if (qualitySwitch != null) {
+                // The previous source also failed to prepare; complete the request and
+                // let the ordinary playback error path display the failure.
+                finishQualitySwitch(false)
+            }
             if (scheduleAutomaticRetry(error)) return
             _retryStatus.value = null
             val friendlyMessage = when (error.errorCode) {
@@ -392,28 +423,86 @@ class PlayerManager(
      * be prepared, the previous working address is restored. Returns false when the
      * swap failed even after the restore attempt.
      */
-    fun switchQualityStream(streamUrl: String, variant: VideoVariant?): Boolean {
+    suspend fun switchQualityStream(streamUrl: String, variant: VideoVariant?): Boolean {
         val request = playbackRequest ?: return false
+        if (pendingQualitySwitch != null) return false
         val positionMs = exoPlayer.currentPosition.coerceAtLeast(0L)
         val resumePlayback = exoPlayer.playWhenReady
-        val previousUrl = request.streamUrl
-        // A pending automatic retry belongs to the old source and must not race the swap.
-        playbackGeneration += 1
-        retryJob?.cancel()
-        retryJob = null
-        _retryStatus.value = null
-        playbackRequest = request.copy(streamUrl = streamUrl)
-        return try {
+        return suspendCancellableCoroutine { continuation ->
+            val pending = PendingQualitySwitch(
+                previousRequest = request,
+                previousQuality = activeQuality,
+                positionMs = positionMs,
+                resumePlayback = resumePlayback,
+                continuation = continuation,
+            )
+            pendingQualitySwitch = pending
+            scheduleQualitySwitchTimeout(pending)
+            // A pending automatic retry belongs to the old source and must not race the swap.
+            playbackGeneration += 1
+            retryJob?.cancel()
+            retryJob = null
+            _retryStatus.value = null
+            playbackRequest = request.copy(streamUrl = streamUrl)
             activeQuality = variant
-            startPlayback(streamUrl, positionMs, request.title, request.headers, resetPlaybackSpeed = false, resumePlayback = resumePlayback)
-            true
+            try {
+                startPlayback(streamUrl, positionMs, request.title, request.headers, resetPlaybackSpeed = false, resumePlayback = resumePlayback)
+            } catch (error: Exception) {
+                Log.w(TAG, "Quality switch preparation failed (${error.javaClass.simpleName})")
+                restoreQualitySwitch(pending)
+            }
+            continuation.invokeOnCancellation {
+                if (pendingQualitySwitch === pending) {
+                    pendingQualitySwitch = null
+                    qualitySwitchTimeoutJob?.cancel()
+                    qualitySwitchTimeoutJob = null
+                }
+            }
+        }
+    }
+
+    private fun restoreQualitySwitch(pending: PendingQualitySwitch): Boolean {
+        pending.phase = QualitySwitchPhase.RESTORING
+        scheduleQualitySwitchTimeout(pending)
+        playbackRequest = pending.previousRequest
+        activeQuality = pending.previousQuality
+        try {
+            startPlayback(
+                streamUrl = pending.previousRequest.streamUrl,
+                startPositionMs = pending.positionMs,
+                title = pending.previousRequest.title,
+                headers = pending.previousRequest.headers,
+                resetPlaybackSpeed = false,
+                resumePlayback = pending.resumePlayback,
+            )
+            return true
         } catch (error: Exception) {
-            Log.w(TAG, "Quality switch preparation failed (${error.javaClass.simpleName})")
-            playbackRequest = request
-            activeQuality = null
-            runCatching {
-                startPlayback(previousUrl, positionMs, request.title, request.headers, resetPlaybackSpeed = false, resumePlayback = resumePlayback)
-            }.isSuccess
+            Log.w(TAG, "Could not restore previous stream (${error.javaClass.simpleName})")
+            finishQualitySwitch(false)
+            return false
+        }
+    }
+
+    private fun finishQualitySwitch(succeeded: Boolean) {
+        val pending = pendingQualitySwitch ?: return
+        pendingQualitySwitch = null
+        qualitySwitchTimeoutJob?.cancel()
+        qualitySwitchTimeoutJob = null
+        if (pending.continuation.isActive) pending.continuation.resume(succeeded)
+    }
+
+    private fun scheduleQualitySwitchTimeout(pending: PendingQualitySwitch) {
+        qualitySwitchTimeoutJob?.cancel()
+        qualitySwitchTimeoutJob = coroutineScope.launch(Dispatchers.Main) {
+            delay(QUALITY_SWITCH_TIMEOUT_MS)
+            if (pendingQualitySwitch !== pending) return@launch
+            if (pending.phase == QualitySwitchPhase.CANDIDATE) {
+                Log.w(TAG, "Quality switch timed out; restoring previous stream")
+                restoreQualitySwitch(pending)
+            } else {
+                Log.w(TAG, "Restoring previous stream timed out")
+                finishQualitySwitch(false)
+            }
         }
     }
 
