@@ -364,57 +364,46 @@ fun PlayerOverlay(
                                         onResetOsdTimer()
                                     },
                                 )
-                                // The quality entry only appears when there is something to pick
-                                // or when loading qualities failed; a lone original stays hidden.
-                                val hasQualityChoices = qualityOptions.size > 1
-                                if (hasQualityChoices || qualityLoadFailed || isQualityFetching) {
-                                    val selectedOption = qualityOptions.firstOrNull { it.isSelected }
-                                    val qualityText = when {
-                                        isQualitySwitching -> "Changing quality…"
-                                        isQualityFetching -> "Quality: loading…"
-                                        qualityLoadFailed && !hasQualityChoices -> "Quality: unavailable (retry)"
-                                        else -> "Quality: ${selectedOption?.label ?: "Original"}"
-                                    }
+                                // Without any option the only useful entry left is a retry
+                                // after the variants request failed.
+                                if (qualityLoadFailed && qualityOptions.size <= 1) {
                                     OsdActionChip(
                                         icon = Icons.Rounded.HighQuality,
-                                        text = qualityText,
-                                        isActive = isQualityPickerVisible ||
-                                            (selectedOption != null && selectedOption.variantId != ORIGINAL_VARIANT_ID),
+                                        text = "Quality: unavailable (retry)",
                                         onClick = {
-                                            when {
-                                                isQualitySwitching -> Unit
-                                                qualityLoadFailed && !hasQualityChoices -> onQualityRetry()
-                                                else -> isQualityPickerVisible = !isQualityPickerVisible
-                                            }
+                                            onQualityRetry()
                                             onResetOsdTimer()
                                         },
                                     )
                                 }
                             }
-                            if (isQualityPickerVisible && qualityOptions.size > 1) {
-                                Row(
-                                    modifier = Modifier
-                                        .clip(RoundedCornerShape(16.dp))
-                                        .background(Color.Black.copy(alpha = 0.85f))
-                                        .border(1.dp, Color.White.copy(alpha = 0.2f), RoundedCornerShape(16.dp))
-                                        .padding(6.dp),
-                                    horizontalArrangement = Arrangement.spacedBy(8.dp),
-                                ) {
-                                    qualityOptions.forEach { option ->
-                                        OsdActionChip(
-                                            icon = Icons.Rounded.HighQuality,
-                                            text = option.label,
-                                            isActive = option.isSelected,
-                                            onClick = {
-                                                if (!isQualitySwitching) {
-                                                    onQualitySelected(option.variantId)
-                                                    isQualityPickerVisible = false
-                                                }
-                                                onResetOsdTimer()
-                                            },
-                                        )
-                                    }
-                                }
+                        }
+                    }
+
+                    if (isQualityPickerVisible && qualityOptions.size > 1) {
+                        Row(
+                            modifier = Modifier
+                                .fillMaxWidth()
+                                .padding(bottom = 16.dp)
+                                .clip(RoundedCornerShape(16.dp))
+                                .background(Color.Black.copy(alpha = 0.85f))
+                                .border(1.dp, Color.White.copy(alpha = 0.2f), RoundedCornerShape(16.dp))
+                                .padding(6.dp),
+                            horizontalArrangement = Arrangement.spacedBy(8.dp),
+                        ) {
+                            qualityOptions.forEach { option ->
+                                OsdActionChip(
+                                    icon = Icons.Rounded.HighQuality,
+                                    text = option.label,
+                                    isActive = option.isSelected,
+                                    onClick = {
+                                        if (!isQualitySwitching) {
+                                            onQualitySelected(option.variantId)
+                                            isQualityPickerVisible = false
+                                        }
+                                        onResetOsdTimer()
+                                    },
+                                )
                             }
                         }
                     }
@@ -485,6 +474,27 @@ fun PlayerOverlay(
                                 onResetOsdTimer()
                             },
                         )
+                        // The quality button joins the bar only while another file version
+                        // is actually selectable.
+                        if (qualityOptions.size > 1) {
+                            Spacer(modifier = Modifier.width(14.dp))
+                            val selectedOption = qualityOptions.firstOrNull { it.isSelected }
+                            OsdIconButton(
+                                icon = Icons.Rounded.HighQuality,
+                                contentDescription = when {
+                                    isQualitySwitching -> "Changing quality"
+                                    else -> "Quality: ${selectedOption?.label ?: "Original"}"
+                                },
+                                isActive = isQualityPickerVisible ||
+                                    (selectedOption != null && selectedOption.variantId != ORIGINAL_VARIANT_ID),
+                                onClick = {
+                                    if (!isQualitySwitching) {
+                                        isQualityPickerVisible = !isQualityPickerVisible
+                                    }
+                                    onResetOsdTimer()
+                                },
+                            )
+                        }
                         Spacer(modifier = Modifier.width(14.dp))
                         OsdIconButton(
                             icon = Icons.Rounded.MoreHoriz,

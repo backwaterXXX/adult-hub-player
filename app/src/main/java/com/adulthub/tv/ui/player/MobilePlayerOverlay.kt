@@ -23,6 +23,7 @@ import androidx.compose.material.icons.rounded.Favorite
 import androidx.compose.material.icons.rounded.FavoriteBorder
 import androidx.compose.material.icons.rounded.FastForward
 import androidx.compose.material.icons.rounded.FastRewind
+import androidx.compose.material.icons.rounded.HighQuality
 import androidx.compose.material.icons.rounded.Info
 import androidx.compose.material.icons.rounded.MoreHoriz
 import androidx.compose.material.icons.rounded.Pause
@@ -185,52 +186,43 @@ fun MobilePlayerOverlay(
                                     })
                                     onInteraction()
                                 }) { Icon(Icons.Rounded.AspectRatio, "Change aspect ratio", tint = Color.White) }
-                                // The quality entry only appears when there is something to pick
-                                // or when loading qualities failed; a lone original stays hidden.
-                                val hasQualityChoices = qualityOptions.size > 1
-                                if (hasQualityChoices || qualityLoadFailed || isQualityFetching) {
-                                    val selectedOption = qualityOptions.firstOrNull { it.isSelected }
-                                    val qualityLabel = when {
-                                        isQualitySwitching -> "Quality: changing…"
-                                        isQualityFetching -> "Quality: loading…"
-                                        qualityLoadFailed && !hasQualityChoices -> "Quality: retry"
-                                        else -> "Quality: ${selectedOption?.label ?: "Original"}"
-                                    }
+                                // Without any option the only useful entry left is a retry
+                                // after the variants request failed.
+                                if (qualityLoadFailed && qualityOptions.size <= 1) {
                                     TextButton(
                                         onClick = {
-                                            when {
-                                                isQualitySwitching -> Unit
-                                                qualityLoadFailed && !hasQualityChoices -> {
-                                                    onQualityRetry()
-                                                    onInteraction()
-                                                }
-                                                else -> showQualityPicker = !showQualityPicker
-                                            }
+                                            onQualityRetry()
                                             onInteraction()
                                         },
                                     ) {
-                                        Text(qualityLabel, color = NeonPink, style = MaterialTheme.typography.labelLarge)
+                                        Text("Quality: retry", color = NeonPink, style = MaterialTheme.typography.labelLarge)
                                     }
                                 }
                                 Spacer(Modifier.weight(1f))
                             }
-                            if (showQualityPicker && qualityOptions.size > 1) {
-                                qualityOptions.forEach { option ->
-                                    TextButton(
-                                        onClick = {
-                                            if (!isQualitySwitching) {
-                                                onQualitySelected(option.variantId)
-                                                showQualityPicker = false
-                                            }
-                                            onInteraction()
-                                        },
-                                    ) {
-                                        Text(
-                                            text = (if (option.isSelected) "✓ " else "") + option.label,
-                                            color = if (option.isSelected) NeonPink else Color.White,
-                                            style = MaterialTheme.typography.labelLarge,
-                                        )
-                                    }
+                        }
+                    }
+
+                    if (showQualityPicker && qualityOptions.size > 1) {
+                        Column(
+                            Modifier.fillMaxWidth(),
+                            horizontalAlignment = Alignment.End,
+                        ) {
+                            qualityOptions.forEach { option ->
+                                TextButton(
+                                    onClick = {
+                                        if (!isQualitySwitching) {
+                                            onQualitySelected(option.variantId)
+                                            showQualityPicker = false
+                                        }
+                                        onInteraction()
+                                    },
+                                ) {
+                                    Text(
+                                        text = (if (option.isSelected) "✓ " else "") + option.label,
+                                        color = if (option.isSelected) NeonPink else Color.White,
+                                        style = MaterialTheme.typography.labelLarge,
+                                    )
                                 }
                             }
                         }
@@ -268,6 +260,28 @@ fun MobilePlayerOverlay(
                         }
                         IconButton(onClick = { onSeekRelative(seekStepSec * 1_000L); onInteraction() }) { Icon(Icons.Rounded.FastForward, "Forward $seekStepSec seconds", tint = Color.White, modifier = Modifier.size(30.dp)) }
                         IconButton(onClick = { onRandomClick(); onInteraction() }) { Icon(Icons.Rounded.Shuffle, "Play random", tint = Color.White) }
+                        // The quality button joins the bar only while another file version
+                        // is actually selectable.
+                        if (qualityOptions.size > 1) {
+                            val selectedOption = qualityOptions.firstOrNull { it.isSelected }
+                            val qualityActive = showQualityPicker ||
+                                (selectedOption != null && selectedOption.variantId != ORIGINAL_VARIANT_ID)
+                            IconButton(
+                                onClick = {
+                                    if (!isQualitySwitching) showQualityPicker = !showQualityPicker
+                                    onInteraction()
+                                },
+                            ) {
+                                Icon(
+                                    Icons.Rounded.HighQuality,
+                                    contentDescription = when {
+                                        isQualitySwitching -> "Changing quality"
+                                        else -> "Quality: ${selectedOption?.label ?: "Original"}"
+                                    },
+                                    tint = if (qualityActive) NeonPink else Color.White,
+                                )
+                            }
+                        }
                         IconButton(onClick = { onMuteClick(); onInteraction() }) { Icon(if (isMuted) Icons.Rounded.VolumeOff else Icons.Rounded.VolumeUp, if (isMuted) "Unmute" else "Mute", tint = Color.White) }
                         IconButton(onClick = { expanded = !expanded; onInteraction() }) { Icon(Icons.Rounded.MoreHoriz, "More playback options", tint = Color.White) }
                     }
