@@ -31,6 +31,8 @@ data class ServerUiState(
     val errorMessage: String? = null,
     val pendingHttpConsentUrl: String? = null,
     val pendingHttpConsentRestoresSession: Boolean = false,
+    /** The error belongs to the saved session, so a retry must restore it instead of a manual connect. */
+    val sessionRestoreFailed: Boolean = false,
 )
 
 data class LoginUiState(
@@ -69,6 +71,7 @@ class AuthViewModel(
     private val authRepository: AuthRepository,
     private val libraryRepository: LibraryRepository,
     private val settingsDataStore: SettingsDataStore,
+    private val sessionRestoreRetry: SessionRestoreRetryPolicy = SessionRestoreRetryPolicy(),
 ) : ViewModel() {
 
     private val _serverState = MutableStateFlow(ServerUiState())
@@ -92,6 +95,7 @@ class AuthViewModel(
     private var quickConnectInitJob: Job? = null
     private var quickConnectGeneration = 0L
     private var discoveryJob: Job? = null
+    private var sessionRestoreJob: Job? = null
 
     init {
         checkSession()
@@ -99,7 +103,8 @@ class AuthViewModel(
     }
 
     fun checkSession() {
-        viewModelScope.launch {
+        sessionRestoreJob?.cancel()
+        sessionRestoreJob = viewModelScope.launch {
             val session = try {
                 authRepository.restoreSession()
             } catch (cancelled: CancellationException) {
@@ -116,8 +121,9 @@ class AuthViewModel(
                     _serverState.update { it.copy(serverUrl = session.serverUrl) }
                     _loginState.update { it.copy(serverUrl = session.serverUrl, username = session.username) }
 
-                    val discoveryResult = authRepository.discoverServer(session.serverUrl)
+                    val discoveryResult = discoverSavedServer(session.serverUrl)
                     if (discoveryResult.isSuccess) {
+                        _serverState.update { it.copy(sessionRestoreFailed = false) }
                         val savedLibraryId = settingsDataStore.getSelectedLibraryId()
                         if (!savedLibraryId.isNullOrBlank()) {
                             _navEvents.send(AuthNavEvent.NavigateToHome)
@@ -126,7 +132,10 @@ class AuthViewModel(
                         }
                     } else {
                         _serverState.update {
-                            it.copy(errorMessage = "Saved server unavailable. Please reconnect.")
+                            it.copy(
+                                errorMessage = "Saved server unavailable. Please reconnect.",
+                                sessionRestoreFailed = true,
+                            )
                         }
                         _navEvents.send(AuthNavEvent.NavigateToServer)
                     }
@@ -152,8 +161,25 @@ class AuthViewModel(
         }
     }
 
+    /**
+     * Retries the restore of the saved session after a failed start, for example a
+     * television that woke up without a network. A manual connect is not the right
+     * answer here: it would ask for the password that the saved session already has.
+     */
+    fun retrySavedSession() {
+        _serverState.update { it.copy(errorMessage = null, sessionRestoreFailed = false) }
+        checkSession()
+    }
+
+    /**
+     * Discovers the saved server with the retries of [sessionRestoreRetry], so that a
+     * network which is still coming up does not cost the user the saved session.
+     */
+    private suspend fun discoverSavedServer(serverUrl: String): Result<ServerInfo> =
+        discoverWithRetry(sessionRestoreRetry) { authRepository.discoverServer(serverUrl) }
+
     fun onServerUrlChanged(url: String) {
-        _serverState.update { it.copy(serverUrl = url, errorMessage = null) }
+        _serverState.update { it.copy(serverUrl = url, errorMessage = null, sessionRestoreFailed = false) }
     }
 
     fun startServerDiscovery() {
@@ -180,6 +206,7 @@ class AuthViewModel(
 
     fun connectServer(url: String? = null) {
         val targetUrl = (url ?: _serverState.value.serverUrl).trim().trimEnd('/')
+        _serverState.update { it.copy(sessionRestoreFailed = false) }
         if (targetUrl.isBlank()) {
             _serverState.update { it.copy(errorMessage = "Server address cannot be empty") }
             return

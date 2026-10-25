@@ -120,7 +120,11 @@ fun ServerScreen(
                         ErrorMessage(
                             message = state.errorMessage ?: "",
                             onRetry = {
-                                localNetwork.ensureGranted(state.serverUrl) { viewModel.connectServer() }
+                                if (state.sessionRestoreFailed) {
+                                    viewModel.retrySavedSession()
+                                } else {
+                                    localNetwork.ensureGranted(state.serverUrl) { viewModel.connectServer() }
+                                }
                             },
                         )
                         Spacer(modifier = Modifier.height(16.dp))

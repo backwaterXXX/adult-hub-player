@@ -79,6 +79,18 @@ fun MobileServerScreen(vm: AuthViewModel) {
         if (state.isDiscovering) LinearProgressIndicator(Modifier.fillMaxWidth())
         state.discoveredServers.forEach { server -> TextButton(onClick = { localNetwork.ensureGranted(server.url) { vm.connectServer(server.url) } }) { Text(server.name) } }
         MobileError(state.errorMessage)
+        if (state.errorMessage != null) {
+            TextButton(
+                onClick = {
+                    if (state.sessionRestoreFailed) {
+                        vm.retrySavedSession()
+                    } else {
+                        localNetwork.ensureGranted(url) { vm.connectServer(url) }
+                    }
+                },
+                modifier = Modifier.heightIn(min = 48.dp),
+            ) { Text(if (state.sessionRestoreFailed) "Retry saved session" else "Retry") }
+        }
         state.pendingHttpConsentUrl?.let { host ->
             AlertDialog(onDismissRequest = vm::dismissHttpConsent, title = { Text("Allow unencrypted connection?") }, text = { Text("Allow HTTP for $host on this device?") }, confirmButton = { TextButton(onClick = vm::confirmHttpConsent) { Text("Allow") } }, dismissButton = { TextButton(onClick = vm::dismissHttpConsent) { Text("Cancel") } })
         }

@@ -1,6 +1,7 @@
 package com.adulthub.tv.di
 
 import com.adulthub.tv.ui.auth.AuthViewModel
+import com.adulthub.tv.ui.auth.SessionRestoreRetryPolicy
 import com.adulthub.tv.ui.detail.ItemDetailViewModel
 import com.adulthub.tv.ui.home.HomeViewModel
 import com.adulthub.tv.ui.library.LibraryViewModel
@@ -13,7 +14,7 @@ import org.koin.core.module.dsl.viewModelOf
 import org.koin.dsl.module
 
 val viewModelModule = module {
-    viewModelOf(::AuthViewModel)
+    viewModel { AuthViewModel(get(), get(), get(), SessionRestoreRetryPolicy()) }
     viewModelOf(::HomeViewModel)
     viewModelOf(::LibraryViewModel)
     viewModelOf(::ItemDetailViewModel)
