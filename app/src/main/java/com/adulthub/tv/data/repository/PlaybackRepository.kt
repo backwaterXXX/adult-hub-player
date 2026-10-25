@@ -77,6 +77,9 @@ open class PlaybackRepository(
             val resolverRef = telegramResolverRef(item)
             val hasHttpMediaSource = !mediaSourcePath.isNullOrBlank() &&
                 mediaSourcePath.startsWith("http", ignoreCase = true)
+            val resolverServedSource = hasHttpMediaSource &&
+                runCatching { URI(mediaSourcePath.orEmpty()).rawPath }.getOrNull()
+                    ?.startsWith("/admin/play/") == true
             val selectedVariantId = variantId?.trim()?.takeIf { it.isNotEmpty() && it != "original" }
             val streamUrl = when {
                 hasHttpMediaSource -> {
@@ -84,9 +87,12 @@ open class PlaybackRepository(
                     val allowedResolver = if (configuredResolver.isBlank()) "" else {
                         settingsDataStore.requireAllowedServiceUrl(configuredResolver).normalized
                     }
-                    rewriteResolverMediaSourceUrl(
-                        mediaSourcePath = mediaSourcePath,
-                        resolverOrigin = allowedResolver,
+                    appendVariantQuery(
+                        rewriteResolverMediaSourceUrl(
+                            mediaSourcePath = mediaSourcePath,
+                            resolverOrigin = allowedResolver,
+                        ),
+                        selectedVariantId.takeIf { resolverServedSource },
                     )
                 }
                 resolverRef != null -> {
@@ -103,7 +109,7 @@ open class PlaybackRepository(
                     )
                 }
             }
-            val resolverVideoId = resolverRef?.takeIf { !hasHttpMediaSource }
+            val resolverVideoId = resolverRef?.takeIf { !hasHttpMediaSource || resolverServedSource }
             settingsDataStore.requireAllowedServiceUrl(streamUrl, allowQuery = true)
 
             val playbackInfo = PlaybackInfo(
@@ -270,12 +276,13 @@ internal fun resolverStreamUrl(origin: String, ref: String, variantId: String?):
  * the one a resolver without variant support already served.
  */
 internal fun appendVariantQuery(url: String, variantId: String?): String {
-    val variant = variantId?.trim()?.takeIf { it.isNotEmpty() && it != "original" } ?: return url
+    val requested = variantId?.trim()?.takeIf { it.isNotEmpty() && it != "original" } ?: return url
     val encoded = buildString {
-        for (character in variant) {
+        for (character in requested) {
             if (character.isLetterOrDigit() || character in "-._~") append(character)
             else append("%%%02X".format(character.code))
         }
     }
-    return "$url&variant=$encoded"
+    val separator = if ('?' in url) '&' else '?'
+    return "$url$separator" + "variant=$encoded"
 }

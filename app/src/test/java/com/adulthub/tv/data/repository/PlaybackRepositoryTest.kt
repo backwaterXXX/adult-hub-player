@@ -70,6 +70,16 @@ class PlaybackRepositoryTest {
     }
 
     @Test
+    fun `variant uses a question mark when the url has no query yet`() {
+        val url = "https://resolver.example/admin/play/telegram:-100:1:2/stream"
+
+        assertEquals(
+            "$url?variant=alt_7",
+            appendVariantQuery(url, "alt_7"),
+        )
+    }
+
+    @Test
     fun `unexpected characters in a variant id are percent encoded`() {
         val url = "http://resolver/stream?mode=proxy"
 
