@@ -499,13 +499,15 @@ fun PlaybackInfoOverlay(
                 }
                 TechnicalInfoRow(label = "Dropped Frames", value = "${technicalInfo.droppedFrames}")
                 TechnicalInfoRow(label = "Resolution", value = technicalInfo.resolution)
+                TechnicalInfoRow(label = "Quality", value = technicalInfo.qualityLabel)
                 TechnicalInfoRow(label = "Video Codec", value = technicalInfo.videoCodec)
                 if (technicalInfo.frameRate.isNotBlank()) {
                     TechnicalInfoRow(label = "Frame Rate", value = technicalInfo.frameRate)
                 }
                 if (technicalInfo.videoBitrate.isNotBlank()) {
-                    TechnicalInfoRow(label = "Bitrate", value = technicalInfo.videoBitrate)
+                    TechnicalInfoRow(label = "Content Bitrate", value = technicalInfo.videoBitrate)
                 }
+                TechnicalInfoRow(label = "Download Speed", value = technicalInfo.downloadRate)
                 TechnicalInfoRow(label = "Audio Codec", value = technicalInfo.audioCodec)
                 TechnicalInfoRow(label = "Audio Channels", value = technicalInfo.audioChannels)
                 if (technicalInfo.audioSampleRate.isNotBlank()) {

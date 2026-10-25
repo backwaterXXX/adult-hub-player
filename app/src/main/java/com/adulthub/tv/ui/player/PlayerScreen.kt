@@ -25,6 +25,7 @@ import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.draw.clip
 import androidx.compose.ui.focus.FocusRequester
 import androidx.compose.ui.focus.focusRequester
 import androidx.compose.ui.graphics.Color
@@ -36,6 +37,7 @@ import androidx.compose.ui.input.key.type
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
+import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.ui.viewinterop.AndroidView
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
@@ -118,6 +120,8 @@ fun PlayerScreen(
     val durationMs by playerManager.durationMs.collectAsStateWithLifecycle()
     val playerError by playerManager.errorMessage.collectAsStateWithLifecycle()
     val retryStatus by playerManager.retryStatus.collectAsStateWithLifecycle()
+    val qualityState by viewModel.quality.collectAsStateWithLifecycle()
+    val qualityMessage by viewModel.qualityMessage.collectAsStateWithLifecycle()
 
     DisposableEffect(activity, playerManager) {
         val observer = LifecycleEventObserver { _, event ->
@@ -136,8 +140,38 @@ fun PlayerScreen(
     var resizeMode by rememberSaveable { mutableIntStateOf(AspectRatioFrameLayout.RESIZE_MODE_FIT) }
     var playbackSpeed by rememberSaveable { mutableFloatStateOf(1.0f) }
     var autoplayCountdownSec by remember { mutableStateOf<Int?>(null) }
+    var qualitySwitchToken by remember { mutableIntStateOf(0) }
     val playPauseFocusRequester = remember { FocusRequester() }
     val rootFocusRequester = remember { FocusRequester() }
+
+    LaunchedEffect(qualityMessage) {
+        if (qualityMessage != null) {
+            delay(4_000L)
+            viewModel.onQualityMessageShown()
+        }
+    }
+
+    val requestQualityChange: (String) -> Unit = { variantId ->
+        if (viewModel.beginQualitySwitch(variantId)) {
+            val token = ++qualitySwitchToken
+            coroutineScope.launch {
+                // The new address is prepared while the current source keeps playing.
+                val info = viewModel.resolveQualityStreamUrl(variantId)
+                if (token != qualitySwitchToken) {
+                    // Another playback started meanwhile; its state reset covers this one.
+                } else if (info == null) {
+                    viewModel.abortQualitySwitch("Could not change quality. Keeping current stream.")
+                } else {
+                    val swapped = playerManager.switchQualityStream(info.streamUrl, viewModel.variantFor(variantId))
+                    if (swapped) {
+                        viewModel.confirmQualitySwitch(variantId)
+                    } else {
+                        viewModel.abortQualitySwitch("Could not change quality. Keeping current stream.")
+                    }
+                }
+            }
+        }
+    }
 
     // Initial load
     LaunchedEffect(itemId, resume, playerManager) {
@@ -164,6 +198,10 @@ fun PlayerScreen(
     }
 
     val readyState = uiState as? PlayerUiState.Ready
+    // A new movie or a reload supersedes any quality switch that is still resolving.
+    LaunchedEffect(readyState?.playbackRequestId) {
+        qualitySwitchToken++
+    }
     val pendingResumeDialogPosition = readyState?.pendingResumePositionMs?.takeIf { it > 0L }
     val phashVideoId = readyState?.item?.let { com.adulthub.tv.player.adultHubVideoId(it) }
     val phashStatus = phashVideoId?.let { phashJobStatuses[it] }
@@ -182,6 +220,7 @@ fun PlayerScreen(
             technicalInfo = playerManager.getTechnicalInfo(
                 playbackInfo = state.playbackInfo,
                 resolverLatencyMs = state.resolverLatencyMs,
+                reportedVariant = viewModel.activeVariant(),
             )
             delay(1_000L)
         }
@@ -410,6 +449,40 @@ fun PlayerScreen(
             )
         }
 
+        qualityMessage?.let { message ->
+            Text(
+                text = message,
+                color = Color.White,
+                fontSize = 16.sp,
+                modifier = Modifier
+                    .align(Alignment.TopCenter)
+                    .padding(top = 32.dp)
+                    .background(Color.Black.copy(alpha = 0.8f), RoundedCornerShape(8.dp))
+                    .padding(horizontal = 20.dp, vertical = 12.dp),
+            )
+        }
+
+        if (qualityState.isSwitching) {
+            Box(
+                modifier = Modifier
+                    .align(Alignment.Center)
+                    .clip(CircleShape)
+                    .background(Color.Black.copy(alpha = 0.6f))
+                    .padding(20.dp),
+                contentAlignment = Alignment.Center,
+            ) {
+                Column(horizontalAlignment = Alignment.CenterHorizontally) {
+                    com.adulthub.tv.ui.components.LoadingIndicator()
+                    Text(
+                        text = "Changing quality…",
+                        color = Color.White,
+                        fontSize = 14.sp,
+                        modifier = Modifier.padding(top = 8.dp),
+                    )
+                }
+            }
+        }
+
         when (val state = uiState) {
             is PlayerUiState.Loading -> {
                 Box(
@@ -491,6 +564,12 @@ fun PlayerScreen(
                     onResizeModeChange = { resizeMode = it },
                     seekFeedback = seekFeedback,
                     seekStepSec = seekStepSec,
+                    qualityOptions = qualityState.options,
+                    isQualitySwitching = qualityState.isSwitching,
+                    isQualityFetching = qualityState.isFetching,
+                    qualityLoadFailed = qualityState.qualityUnavailableMessage != null,
+                    onQualitySelected = requestQualityChange,
+                    onQualityRetry = { viewModel.retryQualityFetch() },
                 ) else PlayerOverlay(
                     title = state.item.title,
                     isPlaying = isPlaying,
@@ -550,6 +629,12 @@ fun PlayerScreen(
                     onResizeModeChange = { newMode ->
                         resizeMode = newMode
                     },
+                    qualityOptions = qualityState.options,
+                    isQualitySwitching = qualityState.isSwitching,
+                    isQualityFetching = qualityState.isFetching,
+                    qualityLoadFailed = qualityState.qualityUnavailableMessage != null,
+                    onQualitySelected = requestQualityChange,
+                    onQualityRetry = { viewModel.retryQualityFetch() },
                 )
 
                 phashStatus?.takeIf { it.message != hiddenPhashStatusMessage }?.let { status ->

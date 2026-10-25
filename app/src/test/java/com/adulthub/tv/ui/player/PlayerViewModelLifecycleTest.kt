@@ -113,7 +113,7 @@ private class LifecycleFakeLibraryRepository : LibraryRepository(mockk(relaxed =
 private class LifecycleFakePlaybackRepository : PlaybackRepository(mockk(relaxed = true), mockk(relaxed = true)) {
     var playbackInfoResult: Result<PlaybackInfo>? = null
 
-    override suspend fun resolvePlaybackInfo(item: TvItem): Result<PlaybackInfo> {
+    override suspend fun resolvePlaybackInfo(item: TvItem, variantId: String?): Result<PlaybackInfo> {
         return playbackInfoResult ?: Result.success(
             PlaybackInfo(
                 itemId = item.id,

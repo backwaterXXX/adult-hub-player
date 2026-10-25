@@ -49,4 +49,9 @@ interface ResolverApi {
         @Header("X-Emby-Token") token: String,
         @Path("job_id") jobId: String,
     ): PhashJobStatusDto
+
+    @GET("admin/play/{videoId}/variants")
+    suspend fun getVideoVariants(
+        @Path("videoId") videoId: String,
+    ): VideoVariantsDto
 }

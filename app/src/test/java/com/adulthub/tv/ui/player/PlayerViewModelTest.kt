@@ -357,7 +357,7 @@ private class FakePlaybackRepository : PlaybackRepository(mockk(relaxed = true),
     var lastReportedProgressTicks: Long? = null
     var lastReportedStoppedTicks: Long? = null
 
-    override suspend fun resolvePlaybackInfo(item: TvItem): Result<PlaybackInfo> {
+    override suspend fun resolvePlaybackInfo(item: TvItem, variantId: String?): Result<PlaybackInfo> {
         return playbackInfoResult ?: Result.success(
             PlaybackInfo(
                 itemId = item.id,

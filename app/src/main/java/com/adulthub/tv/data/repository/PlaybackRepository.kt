@@ -6,6 +6,10 @@ import com.adulthub.tv.data.jellyfin.JellyfinClientManager
 import com.adulthub.tv.data.local.SettingsDataStore
 import com.adulthub.tv.data.model.PlaybackInfo
 import com.adulthub.tv.data.model.TvItem
+import com.adulthub.tv.data.resolver.VideoVariantsResult
+import com.adulthub.tv.data.resolver.ResolverApi
+import com.adulthub.tv.data.resolver.classifyVariantsError
+import com.adulthub.tv.data.resolver.classifyVariantsResponse
 import com.adulthub.tv.data.resolver.resolveResolverUrl
 import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.Dispatchers
@@ -36,8 +40,12 @@ private suspend inline fun <T> capturePlaybackResult(crossinline block: suspend 
 open class PlaybackRepository(
     private val clientManager: JellyfinClientManager,
     private val settingsDataStore: SettingsDataStore,
+    private val resolverApi: ResolverApi? = null,
 ) {
-    open suspend fun resolvePlaybackInfo(item: TvItem): Result<PlaybackInfo> = withContext(Dispatchers.IO) {
+    open suspend fun resolvePlaybackInfo(
+        item: TvItem,
+        variantId: String? = null,
+    ): Result<PlaybackInfo> = withContext(Dispatchers.IO) {
         try {
             val uuid = runCatching { UUID.fromString(item.id) }.getOrNull()
             val userId = clientManager.currentUserId?.let { runCatching { UUID.fromString(it) }.getOrNull() }
@@ -66,8 +74,12 @@ open class PlaybackRepository(
             val playSessionId = playbackInfoResponse?.playSessionId
             val mediaSourceId = mediaSource?.id ?: item.mediaSourceId
 
+            val resolverRef = telegramResolverRef(item)
+            val hasHttpMediaSource = !mediaSourcePath.isNullOrBlank() &&
+                mediaSourcePath.startsWith("http", ignoreCase = true)
+            val selectedVariantId = variantId?.trim()?.takeIf { it.isNotEmpty() && it != "original" }
             val streamUrl = when {
-                !mediaSourcePath.isNullOrBlank() && mediaSourcePath.startsWith("http", ignoreCase = true) -> {
+                hasHttpMediaSource -> {
                     val configuredResolver = settingsDataStore.getResolverBaseUrl()
                     val allowedResolver = if (configuredResolver.isBlank()) "" else {
                         settingsDataStore.requireAllowedServiceUrl(configuredResolver).normalized
@@ -77,26 +89,13 @@ open class PlaybackRepository(
                         resolverOrigin = allowedResolver,
                     )
                 }
-                !item.providerVideoId.isNullOrBlank() -> {
+                resolverRef != null -> {
                     val resolverUrl = settingsDataStore.getResolverBaseUrl()
                     if (resolverUrl.isBlank()) {
                         return@withContext Result.failure(IllegalStateException("Set a Resolver URL in Settings before playback"))
                     }
                     val resolverOrigin = settingsDataStore.requireAllowedServiceUrl(resolverUrl).normalized
-                    val ref = if (item.providerVideoId.startsWith("telegram:")) {
-                        item.providerVideoId
-                    } else {
-                        "telegram:${item.providerVideoId}"
-                    }
-                    "$resolverOrigin/admin/play/${Uri.encode(ref)}/stream?mode=proxy"
-                }
-                item.id.startsWith("telegram:") -> {
-                    val resolverUrl = settingsDataStore.getResolverBaseUrl()
-                    if (resolverUrl.isBlank()) {
-                        return@withContext Result.failure(IllegalStateException("Set a Resolver URL in Settings before playback"))
-                    }
-                    val resolverOrigin = settingsDataStore.requireAllowedServiceUrl(resolverUrl).normalized
-                    "$resolverOrigin/admin/play/${Uri.encode(item.id)}/stream?mode=proxy"
+                    resolverStreamUrl(resolverOrigin, resolverRef, selectedVariantId)
                 }
                 else -> {
                     return@withContext Result.failure(
@@ -104,6 +103,7 @@ open class PlaybackRepository(
                     )
                 }
             }
+            val resolverVideoId = resolverRef?.takeIf { !hasHttpMediaSource }
             settingsDataStore.requireAllowedServiceUrl(streamUrl, allowQuery = true)
 
             val playbackInfo = PlaybackInfo(
@@ -124,12 +124,33 @@ open class PlaybackRepository(
                 fileSizeBytes = mediaSource?.size ?: item.fileSizeBytes,
                 container = mediaSource?.container ?: item.container,
                 durationMs = item.runtimeTicks?.div(10_000L),
+                resolverVideoId = resolverVideoId,
+                variantId = selectedVariantId,
             )
             Result.success(playbackInfo)
         } catch (e: CancellationException) {
             throw e
         } catch (e: Exception) {
             Result.failure(e)
+        }
+    }
+
+    /**
+     * Fetches the selectable qualities of a resolver video.
+     *
+     * A resolver without the variants feature, a video without alternatives and a
+     * failed request are three different outcomes; none of them may block playback,
+     * which continues on the original stream regardless.
+     */
+    open suspend fun fetchVideoVariants(resolverVideoId: String?): VideoVariantsResult {
+        val api = resolverApi ?: return VideoVariantsResult.Unsupported
+        if (resolverVideoId.isNullOrBlank()) return VideoVariantsResult.Unsupported
+        return try {
+            classifyVariantsResponse(api.getVideoVariants(resolverVideoId))
+        } catch (cancelled: CancellationException) {
+            throw cancelled
+        } catch (error: Exception) {
+            classifyVariantsError(error)
         }
     }
 
@@ -228,4 +249,33 @@ internal fun rewriteResolverMediaSourceUrl(mediaSourcePath: String, resolverOrig
     val uri = runCatching { URI(mediaSourcePath) }.getOrNull() ?: return mediaSourcePath
     if (!uri.rawPath.orEmpty().startsWith("/admin/play/")) return mediaSourcePath
     return resolveResolverUrl(mediaSourcePath, resolverOrigin)
+}
+
+/** The identifier the resolver variants and stream endpoints expect for this item. */
+internal fun telegramResolverRef(item: TvItem): String? = when {
+    !item.providerVideoId.isNullOrBlank() ->
+        if (item.providerVideoId.startsWith("telegram:")) item.providerVideoId
+        else "telegram:${item.providerVideoId}"
+    item.id.startsWith("telegram:") -> item.id
+    else -> null
+}
+
+internal fun resolverStreamUrl(origin: String, ref: String, variantId: String?): String =
+    appendVariantQuery("$origin/admin/play/${Uri.encode(ref)}/stream?mode=proxy", variantId)
+
+/**
+ * Appends the `variant` query parameter.
+ *
+ * The original needs no parameter, so the address of the default stream stays exactly
+ * the one a resolver without variant support already served.
+ */
+internal fun appendVariantQuery(url: String, variantId: String?): String {
+    val variant = variantId?.trim()?.takeIf { it.isNotEmpty() && it != "original" } ?: return url
+    val encoded = buildString {
+        for (character in variant) {
+            if (character.isLetterOrDigit() || character in "-._~") append(character)
+            else append("%%%02X".format(character.code))
+        }
+    }
+    return "$url&variant=$encoded"
 }

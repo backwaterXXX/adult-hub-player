@@ -36,6 +36,9 @@ import kotlinx.coroutines.launch
 import com.adulthub.tv.data.local.BufferProfile
 import com.adulthub.tv.data.network.ServiceUrlPolicy
 import com.adulthub.tv.data.network.ServiceUrlValidation
+import com.adulthub.tv.data.resolver.VideoVariant
+import com.adulthub.tv.data.resolver.formatBitrate
+import com.adulthub.tv.data.resolver.formatQualityDescriptor
 import okhttp3.OkHttpClient
 import okhttp3.HttpUrl.Companion.toHttpUrlOrNull
 import java.io.IOException
@@ -129,6 +132,14 @@ class PlayerManager(
     @Volatile private var streamFileSizeBytes: Long? = null
     @Volatile private var streamContentType: String? = null
     val currentStreamFileSizeBytes: Long? get() = streamFileSizeBytes
+    @Volatile private var totalBytesTransferred = 0L
+    private var downloadRateSampleBytes = 0L
+    private var downloadRateSampleAtMs = 0L
+    private var lastDownloadRateBps: Long? = null
+
+    /** The quality variant the player was told to play, when the server describes it. */
+    @Volatile var activeQuality: VideoVariant? = null
+        private set
     private val analyticsListener = object : AnalyticsListener {
         override fun onVideoDecoderInitialized(
             eventTime: AnalyticsListener.EventTime,
@@ -363,12 +374,46 @@ class PlayerManager(
         retryBudget.reset()
         totalRetryCount = 0
         _retryStatus.value = null
+        activeQuality = null
         playbackRequest = PlaybackRequest(itemId, streamUrl, title, headers.toMap())
         try {
             startPlayback(streamUrl, startPositionMs, title, headers, resetPlaybackSpeed = true, resumePlayback = true)
         } catch (error: Exception) {
             _errorMessage.value = error.message?.takeIf(String::isNotBlank) ?: "Could not prepare this video"
             Log.w(TAG, "Playback preparation failed (${error.javaClass.simpleName})")
+        }
+    }
+
+    /**
+     * Swaps the stream to another quality variant of the same video.
+     *
+     * The position, the play/pause intent, the volume and the speed stay as they are;
+     * only the source changes, so playback never stops first. If the new source cannot
+     * be prepared, the previous working address is restored. Returns false when the
+     * swap failed even after the restore attempt.
+     */
+    fun switchQualityStream(streamUrl: String, variant: VideoVariant?): Boolean {
+        val request = playbackRequest ?: return false
+        val positionMs = exoPlayer.currentPosition.coerceAtLeast(0L)
+        val resumePlayback = exoPlayer.playWhenReady
+        val previousUrl = request.streamUrl
+        // A pending automatic retry belongs to the old source and must not race the swap.
+        playbackGeneration += 1
+        retryJob?.cancel()
+        retryJob = null
+        _retryStatus.value = null
+        playbackRequest = request.copy(streamUrl = streamUrl)
+        return try {
+            activeQuality = variant
+            startPlayback(streamUrl, positionMs, request.title, request.headers, resetPlaybackSpeed = false, resumePlayback = resumePlayback)
+            true
+        } catch (error: Exception) {
+            Log.w(TAG, "Quality switch preparation failed (${error.javaClass.simpleName})")
+            playbackRequest = request
+            activeQuality = null
+            runCatching {
+                startPlayback(previousUrl, positionMs, request.title, request.headers, resetPlaybackSpeed = false, resumePlayback = resumePlayback)
+            }.isSuccess
         }
     }
 
@@ -399,6 +444,10 @@ class PlayerManager(
         pendingSeekAtMs = null
         seekBufferingStartedAtMs = null
         lastSeekBufferDurationMs = null
+        totalBytesTransferred = 0L
+        downloadRateSampleBytes = 0L
+        downloadRateSampleAtMs = 0L
+        lastDownloadRateBps = null
         if (resetPlaybackSpeed) {
             exoPlayer.setPlaybackSpeed(1.0f)
         }
@@ -423,6 +472,7 @@ class PlayerManager(
                 upstream = httpDataSourceFactory.createDataSource(),
                 onFileSize = { size -> if (size > 0L) streamFileSizeBytes = size },
                 onContentType = { contentType -> streamContentType = contentType },
+                onBytesTransferred = { count -> totalBytesTransferred += count },
             )
         }
         val mediaSourceFactory = DefaultMediaSourceFactory(trackingDataSourceFactory)
@@ -607,6 +657,7 @@ class PlayerManager(
     fun getTechnicalInfo(
         playbackInfo: com.adulthub.tv.data.model.PlaybackInfo,
         resolverLatencyMs: Long? = null,
+        reportedVariant: VideoVariant? = null,
     ): PlaybackTechnicalInfo {
         val videoFormat = exoPlayer.videoFormat
         val audioFormat = exoPlayer.audioFormat
@@ -666,9 +717,15 @@ class PlayerManager(
         val durationMs = exoPlayer.duration.takeIf { it > 0L } ?: playbackInfo.durationMs ?: 0L
         val estimatedBitrate = fileSizeForBitrate?.takeIf { it > 0L && durationMs > 0L }
             ?.let { (it * 8_000L / durationMs).coerceAtLeast(1L).toInt() }
-        val bitrate = videoFormat?.bitrate?.takeIf { it > 0 } ?: estimatedBitrate
-        val vBitrate = bitrate?.let {
-            val text = if (it >= 1_000_000) {
+        // Bitrate hierarchy: what the decoder reports, then what the server knows about
+        // the variant, then what the file size implies. None of them is ever guessed as 0.
+        val variant = activeQuality ?: reportedVariant
+        val contentBitrate = videoFormat?.bitrate?.takeIf { it > 0 }?.toLong()
+            ?: variant?.bitrate
+            ?: variant?.estimatedAverageBitrate
+            ?: estimatedBitrate?.toLong()
+        val vBitrate = contentBitrate?.let {
+            val text = if (it >= 1_000_000L) {
                 String.format(java.util.Locale.US, "%.1f Mbps", it / 1_000_000.0)
             } else "${it / 1000} kbps"
             if (videoFormat?.bitrate?.let { value -> value > 0 } == true) text else "~$text"
@@ -726,7 +783,35 @@ class PlayerManager(
             rebufferDurationMs = totalRebufferDurationMs +
                 (bufferingStartedAtMs?.let { (SystemClock.elapsedRealtime() - it).coerceAtLeast(0L) } ?: 0L),
             lastSeekBufferDurationMs = lastSeekBufferDurationMs,
+            qualityLabel = variant?.let(::formatQualityDescriptor) ?: "Unknown",
+            downloadRate = formatBitrate(sampleDownloadRateBps()) ?: "Unknown",
         )
+    }
+
+    /**
+     * Measures the download speed between two HUD refreshes.
+     *
+     * Only bytes that actually arrived are counted. Before the first usable sample the
+     * rate stays unknown, and a sample without transferred bytes keeps the last known
+     * value instead of claiming a speed that was not measured.
+     */
+    private fun sampleDownloadRateBps(): Long? {
+        val now = SystemClock.elapsedRealtime()
+        val bytes = totalBytesTransferred
+        if (downloadRateSampleAtMs == 0L) {
+            downloadRateSampleAtMs = now
+            downloadRateSampleBytes = bytes
+            return null
+        }
+        val elapsedMs = now - downloadRateSampleAtMs
+        if (elapsedMs < 500L) return lastDownloadRateBps
+        val deltaBytes = bytes - downloadRateSampleBytes
+        downloadRateSampleAtMs = now
+        downloadRateSampleBytes = bytes
+        if (deltaBytes > 0L) {
+            lastDownloadRateBps = deltaBytes * 8_000L / elapsedMs
+        }
+        return lastDownloadRateBps
     }
 
     private fun finishBufferingMeasurement() {
@@ -764,6 +849,7 @@ private class FileSizeTrackingDataSource(
     private val upstream: DataSource,
     private val onFileSize: (Long) -> Unit,
     private val onContentType: (String) -> Unit,
+    private val onBytesTransferred: (Int) -> Unit,
 ) : DataSource {
     override fun addTransferListener(transferListener: androidx.media3.datasource.TransferListener) {
         upstream.addTransferListener(transferListener)
@@ -790,8 +876,11 @@ private class FileSizeTrackingDataSource(
         return length
     }
 
-    override fun read(buffer: ByteArray, offset: Int, length: Int): Int =
-        upstream.read(buffer, offset, length)
+    override fun read(buffer: ByteArray, offset: Int, length: Int): Int {
+        val read = upstream.read(buffer, offset, length)
+        if (read > 0) onBytesTransferred(read)
+        return read
+    }
 
     override fun getUri(): Uri? = upstream.uri
 
@@ -832,6 +921,8 @@ data class PlaybackTechnicalInfo(
     val rebufferCount: Int = 0,
     val rebufferDurationMs: Long = 0L,
     val lastSeekBufferDurationMs: Long? = null,
+    val qualityLabel: String = "Unknown",
+    val downloadRate: String = "Unknown",
 )
 
 private const val SEEK_BUFFER_CORRELATION_WINDOW_MS = 3_000L

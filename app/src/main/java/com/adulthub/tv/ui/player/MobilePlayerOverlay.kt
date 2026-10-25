@@ -34,6 +34,7 @@ import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Slider
+import androidx.compose.material3.TextButton
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
@@ -83,12 +84,19 @@ fun MobilePlayerOverlay(
     onResizeModeChange: (Int) -> Unit,
     seekFeedback: String?,
     seekStepSec: Int,
+    qualityOptions: List<QualityOption> = emptyList(),
+    isQualitySwitching: Boolean = false,
+    isQualityFetching: Boolean = false,
+    qualityLoadFailed: Boolean = false,
+    onQualitySelected: (String) -> Unit = {},
+    onQualityRetry: () -> Unit = {},
 ) {
     // Collected inside the overlay so the 1 Hz position updates do not recompose the whole screen.
     val currentPositionMs by positionFlow.collectAsStateWithLifecycle()
     val duration = durationMs.coerceAtLeast(0L)
     val position = currentPositionMs.coerceIn(0L, duration.takeIf { it > 0 } ?: Long.MAX_VALUE)
     var expanded by remember { mutableStateOf(false) }
+    var showQualityPicker by remember { mutableStateOf(false) }
     var isDraggingSeek by remember { mutableStateOf(false) }
     var dragPositionMs by remember { mutableFloatStateOf(position.toFloat()) }
     LaunchedEffect(position, isDraggingSeek) {
@@ -157,23 +165,74 @@ fun MobilePlayerOverlay(
                     horizontalAlignment = Alignment.CenterHorizontally,
                 ) {
                     if (expanded) {
-                        Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.End, verticalAlignment = Alignment.CenterVertically) {
-                            IconButton(onClick = {
-                                val next = when { playbackSpeed < 1.15f -> 1.25f; playbackSpeed < 1.4f -> 1.5f; playbackSpeed < 1.75f -> 2f; else -> 1f }
-                                onPlaybackSpeedChange(next)
-                                onInteraction()
-                            }) {
-                                Text("${playbackSpeed}×", color = Color.White, style = MaterialTheme.typography.labelLarge)
+                        Column(
+                            Modifier.fillMaxWidth(),
+                            horizontalAlignment = Alignment.End,
+                        ) {
+                            Row(verticalAlignment = Alignment.CenterVertically) {
+                                IconButton(onClick = {
+                                    val next = when { playbackSpeed < 1.15f -> 1.25f; playbackSpeed < 1.4f -> 1.5f; playbackSpeed < 1.75f -> 2f; else -> 1f }
+                                    onPlaybackSpeedChange(next)
+                                    onInteraction()
+                                }) {
+                                    Text("${playbackSpeed}×", color = Color.White, style = MaterialTheme.typography.labelLarge)
+                                }
+                                IconButton(onClick = {
+                                    onResizeModeChange(when (resizeMode) {
+                                        AspectRatioFrameLayout.RESIZE_MODE_FIT -> AspectRatioFrameLayout.RESIZE_MODE_FILL
+                                        AspectRatioFrameLayout.RESIZE_MODE_FILL -> AspectRatioFrameLayout.RESIZE_MODE_ZOOM
+                                        else -> AspectRatioFrameLayout.RESIZE_MODE_FIT
+                                    })
+                                    onInteraction()
+                                }) { Icon(Icons.Rounded.AspectRatio, "Change aspect ratio", tint = Color.White) }
+                                // The quality entry only appears when there is something to pick
+                                // or when loading qualities failed; a lone original stays hidden.
+                                val hasQualityChoices = qualityOptions.size > 1
+                                if (hasQualityChoices || qualityLoadFailed || isQualityFetching) {
+                                    val selectedOption = qualityOptions.firstOrNull { it.isSelected }
+                                    val qualityLabel = when {
+                                        isQualitySwitching -> "Quality: changing…"
+                                        isQualityFetching -> "Quality: loading…"
+                                        qualityLoadFailed && !hasQualityChoices -> "Quality: retry"
+                                        else -> "Quality: ${selectedOption?.label ?: "Original"}"
+                                    }
+                                    TextButton(
+                                        onClick = {
+                                            when {
+                                                isQualitySwitching -> Unit
+                                                qualityLoadFailed && !hasQualityChoices -> {
+                                                    onQualityRetry()
+                                                    onInteraction()
+                                                }
+                                                else -> showQualityPicker = !showQualityPicker
+                                            }
+                                            onInteraction()
+                                        },
+                                    ) {
+                                        Text(qualityLabel, color = NeonPink, style = MaterialTheme.typography.labelLarge)
+                                    }
+                                }
+                                Spacer(Modifier.weight(1f))
                             }
-                            IconButton(onClick = {
-                                onResizeModeChange(when (resizeMode) {
-                                    AspectRatioFrameLayout.RESIZE_MODE_FIT -> AspectRatioFrameLayout.RESIZE_MODE_FILL
-                                    AspectRatioFrameLayout.RESIZE_MODE_FILL -> AspectRatioFrameLayout.RESIZE_MODE_ZOOM
-                                    else -> AspectRatioFrameLayout.RESIZE_MODE_FIT
-                                })
-                                onInteraction()
-                            }) { Icon(Icons.Rounded.AspectRatio, "Change aspect ratio", tint = Color.White) }
-                            Spacer(Modifier.weight(1f))
+                            if (showQualityPicker && qualityOptions.size > 1) {
+                                qualityOptions.forEach { option ->
+                                    TextButton(
+                                        onClick = {
+                                            if (!isQualitySwitching) {
+                                                onQualitySelected(option.variantId)
+                                                showQualityPicker = false
+                                            }
+                                            onInteraction()
+                                        },
+                                    ) {
+                                        Text(
+                                            text = (if (option.isSelected) "✓ " else "") + option.label,
+                                            color = if (option.isSelected) NeonPink else Color.White,
+                                            style = MaterialTheme.typography.labelLarge,
+                                        )
+                                    }
+                                }
+                            }
                         }
                     }
 

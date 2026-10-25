@@ -310,7 +310,7 @@ private class FakeLifecyclePlaybackRepository : PlaybackRepository(mockk(relaxed
         playSessionId: String?,
     ): Result<Unit> = Result.success(Unit)
 
-    override suspend fun resolvePlaybackInfo(item: TvItem): Result<PlaybackInfo> =
+    override suspend fun resolvePlaybackInfo(item: TvItem, variantId: String?): Result<PlaybackInfo> =
         playbackInfoResult ?: Result.success(
             PlaybackInfo(
                 itemId = item.id,

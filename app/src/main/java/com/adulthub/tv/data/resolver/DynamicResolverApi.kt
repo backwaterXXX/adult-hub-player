@@ -39,4 +39,7 @@ class DynamicResolverApi(
 
     override suspend fun getPhashJob(token: String, jobId: String): PhashJobStatusDto =
         api().getPhashJob(token, jobId)
+
+    override suspend fun getVideoVariants(videoId: String): VideoVariantsDto =
+        api().getVideoVariants(videoId)
 }

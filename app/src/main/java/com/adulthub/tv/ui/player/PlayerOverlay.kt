@@ -30,6 +30,7 @@ import androidx.compose.material.icons.rounded.FastForward
 import androidx.compose.material.icons.rounded.FastRewind
 import androidx.compose.material.icons.rounded.Favorite
 import androidx.compose.material.icons.rounded.FavoriteBorder
+import androidx.compose.material.icons.rounded.HighQuality
 import androidx.compose.material.icons.rounded.Info
 import androidx.compose.material.icons.rounded.MoreHoriz
 import androidx.compose.material.icons.rounded.Pause
@@ -110,6 +111,12 @@ fun PlayerOverlay(
     onMuteClick: () -> Unit = {},
     resizeMode: Int = AspectRatioFrameLayout.RESIZE_MODE_FIT,
     onResizeModeChange: (Int) -> Unit = {},
+    qualityOptions: List<QualityOption> = emptyList(),
+    isQualitySwitching: Boolean = false,
+    isQualityFetching: Boolean = false,
+    qualityLoadFailed: Boolean = false,
+    onQualitySelected: (String) -> Unit = {},
+    onQualityRetry: () -> Unit = {},
     modifier: Modifier = Modifier,
 ) {
     // The position flow is collected here (and not in the parent screen) so that the 1 Hz
@@ -122,6 +129,7 @@ fun PlayerOverlay(
     var lastSeekDirection by remember { mutableIntStateOf(0) }
     var lastSeekAtMs by remember { mutableLongStateOf(0L) }
     var isMoreMenuVisible by remember { mutableStateOf(false) }
+    var isQualityPickerVisible by remember { mutableStateOf(false) }
 
     val seekWithAcceleration: (Int) -> Unit = { direction ->
         val now = SystemClock.elapsedRealtime()
@@ -306,11 +314,12 @@ fun PlayerOverlay(
                     Spacer(modifier = Modifier.height(20.dp))
 
                     if (isMoreMenuVisible) {
-                        Row(
+                        Column(
                             modifier = Modifier
                                 .fillMaxWidth()
                                 .padding(bottom = 16.dp),
-                            horizontalArrangement = Arrangement.End,
+                            horizontalAlignment = Alignment.End,
+                            verticalArrangement = Arrangement.spacedBy(8.dp),
                         ) {
                             Row(
                                 modifier = Modifier
@@ -355,6 +364,57 @@ fun PlayerOverlay(
                                         onResetOsdTimer()
                                     },
                                 )
+                                // The quality entry only appears when there is something to pick
+                                // or when loading qualities failed; a lone original stays hidden.
+                                val hasQualityChoices = qualityOptions.size > 1
+                                if (hasQualityChoices || qualityLoadFailed || isQualityFetching) {
+                                    val selectedOption = qualityOptions.firstOrNull { it.isSelected }
+                                    val qualityText = when {
+                                        isQualitySwitching -> "Changing quality…"
+                                        isQualityFetching -> "Quality: loading…"
+                                        qualityLoadFailed && !hasQualityChoices -> "Quality: unavailable (retry)"
+                                        else -> "Quality: ${selectedOption?.label ?: "Original"}"
+                                    }
+                                    OsdActionChip(
+                                        icon = Icons.Rounded.HighQuality,
+                                        text = qualityText,
+                                        isActive = isQualityPickerVisible ||
+                                            (selectedOption != null && selectedOption.variantId != ORIGINAL_VARIANT_ID),
+                                        onClick = {
+                                            when {
+                                                isQualitySwitching -> Unit
+                                                qualityLoadFailed && !hasQualityChoices -> onQualityRetry()
+                                                else -> isQualityPickerVisible = !isQualityPickerVisible
+                                            }
+                                            onResetOsdTimer()
+                                        },
+                                    )
+                                }
+                            }
+                            if (isQualityPickerVisible && qualityOptions.size > 1) {
+                                Row(
+                                    modifier = Modifier
+                                        .clip(RoundedCornerShape(16.dp))
+                                        .background(Color.Black.copy(alpha = 0.85f))
+                                        .border(1.dp, Color.White.copy(alpha = 0.2f), RoundedCornerShape(16.dp))
+                                        .padding(6.dp),
+                                    horizontalArrangement = Arrangement.spacedBy(8.dp),
+                                ) {
+                                    qualityOptions.forEach { option ->
+                                        OsdActionChip(
+                                            icon = Icons.Rounded.HighQuality,
+                                            text = option.label,
+                                            isActive = option.isSelected,
+                                            onClick = {
+                                                if (!isQualitySwitching) {
+                                                    onQualitySelected(option.variantId)
+                                                    isQualityPickerVisible = false
+                                                }
+                                                onResetOsdTimer()
+                                            },
+                                        )
+                                    }
+                                }
                             }
                         }
                     }

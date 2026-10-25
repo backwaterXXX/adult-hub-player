@@ -84,3 +84,26 @@ data class TelegramHistoryResponseDto(
     @SerialName("message_count") val messageCount: Int = 0,
     @SerialName("has_more") val hasMore: Boolean = false,
 )
+
+@Serializable
+data class VideoVariantsDto(
+    @SerialName("video_id") val videoId: String = "",
+    @SerialName("status") val status: String = "",
+    @SerialName("video_processing_pending") val videoProcessingPending: Boolean = false,
+    @SerialName("has_alternatives") val hasAlternatives: Boolean = false,
+    @SerialName("variants") val variants: List<VideoVariantDto> = emptyList(),
+)
+
+@Serializable
+data class VideoVariantDto(
+    @SerialName("id") val id: String,
+    @SerialName("is_original") val isOriginal: Boolean = false,
+    @SerialName("width") val width: Int? = null,
+    @SerialName("height") val height: Int? = null,
+    @SerialName("codec") val codec: String? = null,
+    @SerialName("mime_type") val mimeType: String? = null,
+    @SerialName("file_size") val fileSize: Long? = null,
+    @SerialName("duration") val duration: Double? = null,
+    @SerialName("bitrate") val bitrate: Long? = null,
+    @SerialName("estimated_average_bitrate") val estimatedAverageBitrate: Long? = null,
+)

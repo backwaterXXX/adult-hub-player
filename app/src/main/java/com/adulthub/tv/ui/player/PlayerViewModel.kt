@@ -14,6 +14,8 @@ import com.adulthub.tv.data.model.TvItem
 import com.adulthub.tv.data.repository.ChannelRepository
 import com.adulthub.tv.data.repository.LibraryRepository
 import com.adulthub.tv.data.repository.PlaybackRepository
+import com.adulthub.tv.data.resolver.VideoVariant
+import com.adulthub.tv.data.resolver.VideoVariantsResult
 import com.adulthub.tv.player.PlaybackReporter
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
@@ -54,6 +56,16 @@ class PlayerViewModel(
 
     private val _uiState = MutableStateFlow<PlayerUiState>(PlayerUiState.Loading)
     val uiState: StateFlow<PlayerUiState> = _uiState.asStateFlow()
+
+    private val _quality = MutableStateFlow(PlayerQualityState())
+    val quality: StateFlow<PlayerQualityState> = _quality.asStateFlow()
+
+    private val _qualityMessage = MutableStateFlow<String?>(null)
+    val qualityMessage: StateFlow<String?> = _qualityMessage.asStateFlow()
+
+    private var qualityVariants: List<VideoVariant> = emptyList()
+    private var selectedVariantId: String? = null
+    private var qualityFetchJob: Job? = null
 
     private val _isPlaybackEnded = MutableStateFlow(false)
     val isPlaybackEnded: StateFlow<Boolean> = _isPlaybackEnded.asStateFlow()
@@ -97,6 +109,7 @@ class PlayerViewModel(
         val playbackRequestId = ++playbackRequestCounter
         loadItemJob?.cancel()
         _isLoadingRandom.value = false
+        resetQualityState()
         loadItemJob = viewModelScope.launch {
             val loadStartedAt = SystemClock.elapsedRealtime()
             _uiState.value = PlayerUiState.Loading
@@ -198,6 +211,8 @@ class PlayerViewModel(
 
             _uiState.value = readyState
 
+            startQualityFetch(playbackInfo, playbackRequestId)
+
             // Record in watch history
             if (playbackRequestId == playbackRequestCounter) {
                 recordWatchHistory(item)
@@ -211,6 +226,7 @@ class PlayerViewModel(
         loadItemJob?.cancel()
         _isLoadingRandom.value = true
         _finalizationCompleted.value = false
+        resetQualityState()
         viewModelScope.launch {
             val currentItem = (_uiState.value as? PlayerUiState.Ready)?.item
             if (currentItem != null) persistTelegramProgress(currentItem, currentPositionMs, isEnded = false)
@@ -304,6 +320,8 @@ class PlayerViewModel(
                 resolverLatencyMs = randomResolverLatencyMs,
             )
 
+            startQualityFetch(playbackInfo, playbackRequestId)
+
             // Record in watch history
             recordWatchHistory(randomItem)
         }
@@ -352,8 +370,101 @@ class PlayerViewModel(
     suspend fun resolveFreshStreamUrl(itemId: String): String? {
         val ready = _uiState.value as? PlayerUiState.Ready ?: return null
         if (ready.item.id != itemId) return null
-        val playbackInfo = playbackRepository.resolvePlaybackInfo(ready.item).getOrNull() ?: return null
+        val playbackInfo = playbackRepository
+            .resolvePlaybackInfo(ready.item, selectedVariantId)
+            .getOrNull() ?: return null
         return playbackInfo.streamUrl.takeIf { it.isNotBlank() }
+    }
+
+    /**
+     * Opens a quality switch.
+     *
+     * Returns false while another switch is still running, so overlapping switches
+     * are impossible from the moment the request is accepted.
+     */
+    fun beginQualitySwitch(variantId: String): Boolean {
+        val state = _quality.value
+        if (state.isSwitching || state.isFetching) return false
+        if (qualityVariants.none { it.id == variantId }) return false
+        if (variantId == (selectedVariantId ?: ORIGINAL_VARIANT_ID)) return false
+        _quality.value = state.copy(isSwitching = true, qualityUnavailableMessage = null)
+        return true
+    }
+
+    /**
+     * Prepares the address of another quality without touching the running playback.
+     *
+     * The current source keeps playing while this resolves. The caller only swaps
+     * the source after a URL came back.
+     */
+    suspend fun resolveQualityStreamUrl(variantId: String): PlaybackInfo? {
+        val ready = _uiState.value as? PlayerUiState.Ready ?: return null
+        return playbackRepository.resolvePlaybackInfo(ready.item, variantId).getOrNull()
+    }
+
+    fun confirmQualitySwitch(variantId: String) {
+        selectedVariantId = variantId.takeIf { it != ORIGINAL_VARIANT_ID }
+        _quality.value = _quality.value.copy(
+            isSwitching = false,
+            options = buildQualityOptions(qualityVariants, selectedVariantId),
+        )
+    }
+
+    /** Ends a switch that never reached the player; the current source keeps running. */
+    fun abortQualitySwitch(message: String) {
+        _quality.value = _quality.value.copy(
+            isSwitching = false,
+            qualityUnavailableMessage = message,
+        )
+        _qualityMessage.value = message
+    }
+
+    fun onQualityMessageShown() {
+        _qualityMessage.value = null
+    }
+
+    /** Retries the variants request after a failure. A missing feature stays hidden. */
+    fun retryQualityFetch() {
+        val ready = _uiState.value as? PlayerUiState.Ready ?: return
+        val ref = ready.playbackInfo.resolverVideoId ?: return
+        startQualityFetch(ready.playbackInfo, ready.playbackRequestId)
+    }
+
+    /** The variant the player should report in diagnostics, when it is known. */
+    fun activeVariant(): VideoVariant? =
+        qualityVariants.firstOrNull { it.id == (selectedVariantId ?: ORIGINAL_VARIANT_ID) }
+
+    fun variantFor(variantId: String): VideoVariant? =
+        qualityVariants.firstOrNull { it.id == variantId }
+
+    private fun resetQualityState() {
+        qualityFetchJob?.cancel()
+        qualityFetchJob = null
+        qualityVariants = emptyList()
+        selectedVariantId = null
+        _quality.value = PlayerQualityState()
+        _qualityMessage.value = null
+    }
+
+    private fun startQualityFetch(playbackInfo: PlaybackInfo, playbackRequestId: Long) {
+        qualityFetchJob?.cancel()
+        val ref = playbackInfo.resolverVideoId
+        if (ref.isNullOrBlank()) {
+            _quality.value = PlayerQualityState()
+            return
+        }
+        _quality.value = PlayerQualityState(isFetching = true)
+        qualityFetchJob = viewModelScope.launch {
+            val result = playbackRepository.fetchVideoVariants(ref)
+            if (playbackRequestId != playbackRequestCounter) return@launch
+            qualityVariants = variantsFor(result)
+            _quality.value = when (result) {
+                is VideoVariantsResult.Failed -> PlayerQualityState(
+                    qualityUnavailableMessage = "Could not load available qualities",
+                )
+                else -> PlayerQualityState(options = qualityOptionsFor(result, selectedVariantId))
+            }
+        }
     }
 
     fun toggleFavorite() {

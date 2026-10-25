@@ -1,6 +1,8 @@
 package com.adulthub.tv.data.repository
 
+import com.adulthub.tv.data.model.TvItem
 import org.junit.Assert.assertEquals
+import org.junit.Assert.assertNull
 import org.junit.Test
 
 class PlaybackRepositoryTest {
@@ -29,5 +31,51 @@ class PlaybackRepositoryTest {
         )
 
         assertEquals(original, result)
+    }
+
+    @Test
+    fun `provider video id is normalized to a telegram resolver reference`() {
+        assertEquals(
+            "telegram:-100:21406:5393323",
+            telegramResolverRef(TvItem(id = "jellyfin-uuid", title = "t", providerVideoId = "-100:21406:5393323")),
+        )
+        assertEquals(
+            "telegram:-100:21406:5393323",
+            telegramResolverRef(TvItem(id = "x", title = "t", providerVideoId = "telegram:-100:21406:5393323")),
+        )
+        assertEquals(
+            "telegram:-100:1:2",
+            telegramResolverRef(TvItem(id = "telegram:-100:1:2", title = "t")),
+        )
+        assertNull(telegramResolverRef(TvItem(id = "plain-id", title = "t")))
+    }
+
+    @Test
+    fun `original variant keeps the historic stream address`() {
+        val url = "http://resolver:8090/admin/play/telegram:-100:1:2/stream?mode=proxy"
+
+        assertEquals(url, appendVariantQuery(url, null))
+        assertEquals(url, appendVariantQuery(url, "original"))
+        assertEquals(url, appendVariantQuery(url, "  original  "))
+    }
+
+    @Test
+    fun `alternative variant is appended as query parameter`() {
+        val url = "http://resolver:8090/admin/play/telegram:-100:1:2/stream?mode=proxy"
+
+        assertEquals(
+            "$url&variant=alt_5393558434975097219",
+            appendVariantQuery(url, "alt_5393558434975097219"),
+        )
+    }
+
+    @Test
+    fun `unexpected characters in a variant id are percent encoded`() {
+        val url = "http://resolver/stream?mode=proxy"
+
+        assertEquals(
+            "$url&variant=a%26b",
+            appendVariantQuery(url, "a&b"),
+        )
     }
 }

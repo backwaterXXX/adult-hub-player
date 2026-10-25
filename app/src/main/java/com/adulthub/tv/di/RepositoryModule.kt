@@ -37,5 +37,5 @@ val repositoryModule = module {
         }
         channelRepository
     }
-    single { PlaybackRepository(get(), get()) }
+    single { PlaybackRepository(get(), get(), get()) }
 }

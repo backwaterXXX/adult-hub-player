@@ -14,4 +14,8 @@ data class PlaybackInfo(
     val fileSizeBytes: Long? = null,
     val container: String? = null,
     val durationMs: Long? = null,
+    /** Identifier accepted by the resolver variants endpoint, when the stream comes from it. */
+    val resolverVideoId: String? = null,
+    /** The quality variant the stream URL was built for. Null means the original. */
+    val variantId: String? = null,
 )
