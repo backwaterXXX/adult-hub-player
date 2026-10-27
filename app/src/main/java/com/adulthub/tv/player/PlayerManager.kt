@@ -399,6 +399,7 @@ class PlayerManager(
         headers: Map<String, String> = emptyMap(),
         itemId: String = "",
     ) {
+        finishQualitySwitch(false)
         playbackGeneration += 1
         retryJob?.cancel()
         retryJob = null
@@ -462,6 +463,10 @@ class PlayerManager(
     }
 
     private fun restoreQualitySwitch(pending: PendingQualitySwitch): Boolean {
+        if (released) {
+            finishQualitySwitch(false)
+            return false
+        }
         pending.phase = QualitySwitchPhase.RESTORING
         scheduleQualitySwitchTimeout(pending)
         playbackRequest = pending.previousRequest
@@ -495,7 +500,7 @@ class PlayerManager(
         qualitySwitchTimeoutJob?.cancel()
         qualitySwitchTimeoutJob = coroutineScope.launch(Dispatchers.Main) {
             delay(QUALITY_SWITCH_TIMEOUT_MS)
-            if (pendingQualitySwitch !== pending) return@launch
+            if (pendingQualitySwitch !== pending || released) return@launch
             if (pending.phase == QualitySwitchPhase.CANDIDATE) {
                 Log.w(TAG, "Quality switch timed out; restoring previous stream")
                 restoreQualitySwitch(pending)
@@ -722,6 +727,7 @@ class PlayerManager(
     fun release() {
         if (released) return
         released = true
+        finishQualitySwitch(false)
         // The view is detached before the player is released, so the view never
         // holds a released player.
         runCatching { onBeforeRelease?.invoke() }

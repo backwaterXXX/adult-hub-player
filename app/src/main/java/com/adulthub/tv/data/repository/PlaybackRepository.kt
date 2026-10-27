@@ -25,6 +25,7 @@ import org.jellyfin.sdk.model.api.MediaSourceInfo
 import org.jellyfin.sdk.model.api.RepeatMode
 import java.util.UUID
 import java.net.URI
+import okhttp3.HttpUrl.Companion.toHttpUrlOrNull
 
 private const val PLAYBACK_TAG = "PlaybackRepository"
 
@@ -276,7 +277,18 @@ internal fun resolverStreamUrl(origin: String, ref: String, variantId: String?):
  * the one a resolver without variant support already served.
  */
 internal fun appendVariantQuery(url: String, variantId: String?): String {
-    val requested = variantId?.trim()?.takeIf { it.isNotEmpty() && it != "original" } ?: return url
+    val requested = variantId?.trim()?.takeIf { it.isNotEmpty() && it != "original" }
+    val httpUrl = url.toHttpUrlOrNull()
+    if (httpUrl != null) {
+        val builder = httpUrl.newBuilder()
+        if (requested != null) {
+            builder.setQueryParameter("variant", requested)
+        } else {
+            builder.removeAllQueryParameters("variant")
+        }
+        return builder.build().toString()
+    }
+    if (requested == null) return url
     val encoded = buildString {
         for (character in requested) {
             if (character.isLetterOrDigit() || character in "-._~") append(character)

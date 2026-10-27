@@ -159,15 +159,21 @@ fun PlayerScreen(
                 val info = viewModel.resolveQualityStreamUrl(variantId)
                 if (token != qualitySwitchToken) {
                     // Another playback started meanwhile; its state reset covers this one.
-                } else if (info == null) {
+                    return@launch
+                }
+                if (info == null) {
                     viewModel.abortQualitySwitch("Could not change quality. Keeping current stream.")
+                    return@launch
+                }
+                val swapped = playerManager.switchQualityStream(info.streamUrl, viewModel.variantFor(variantId))
+                if (token != qualitySwitchToken) {
+                    // Another playback started meanwhile; its state reset covers this one.
+                    return@launch
+                }
+                if (swapped) {
+                    viewModel.confirmQualitySwitch(variantId)
                 } else {
-                    val swapped = playerManager.switchQualityStream(info.streamUrl, viewModel.variantFor(variantId))
-                    if (swapped) {
-                        viewModel.confirmQualitySwitch(variantId)
-                    } else {
-                        viewModel.abortQualitySwitch("Could not change quality. Keeping current stream.")
-                    }
+                    viewModel.abortQualitySwitch("Could not change quality. Keeping current stream.")
                 }
             }
         }

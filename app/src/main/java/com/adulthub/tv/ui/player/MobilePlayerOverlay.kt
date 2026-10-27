@@ -100,6 +100,12 @@ fun MobilePlayerOverlay(
     var showQualityPicker by remember { mutableStateOf(false) }
     var isDraggingSeek by remember { mutableStateOf(false) }
     var dragPositionMs by remember { mutableFloatStateOf(position.toFloat()) }
+    LaunchedEffect(isOsdVisible) {
+        if (!isOsdVisible) {
+            expanded = false
+            showQualityPicker = false
+        }
+    }
     LaunchedEffect(position, isDraggingSeek) {
         if (!isDraggingSeek) dragPositionMs = position.toFloat()
     }

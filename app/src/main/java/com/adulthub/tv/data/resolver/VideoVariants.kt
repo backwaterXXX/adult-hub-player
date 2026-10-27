@@ -84,17 +84,13 @@ fun classifyVariantsError(error: Exception): VideoVariantsResult {
  * Builds one distinct label per variant, in the given order.
  *
  * The height names the resolution; the original is always marked. When several variants
- * share the same resolution label, codec and file size are appended so they stay
- * distinguishable.
+ * are selectable, codec and file size are appended so users can compare formats and weights.
  */
 fun buildQualityLabels(variants: List<VideoVariant>): List<String> {
-    val baseLabels = variants.map { it.qualityBaseLabel() }
-    val duplicates = baseLabels.groupingBy { it }.eachCount().filterValues { it > 1 }.keys
-    val decorateAll = variants.size > 1
-    return variants.mapIndexed { index, variant ->
-        val base = baseLabels[index]
-        val parts = mutableListOf(base)
-        if (decorateAll || base in duplicates) {
+    val decorate = variants.size > 1
+    return variants.map { variant ->
+        val parts = mutableListOf(variant.qualityBaseLabel())
+        if (decorate) {
             variant.codec?.let { parts.add(it) }
             formatVariantSize(variant.fileSizeBytes)?.let { parts.add(it) }
         }
@@ -105,7 +101,7 @@ fun buildQualityLabels(variants: List<VideoVariant>): List<String> {
 
 private fun VideoVariant.qualityBaseLabel(): String = when {
     height != null -> "${height}p"
-    width != null && height == null -> "${width}px"
+    width != null -> "${width}px"
     else -> "Unknown"
 }
 

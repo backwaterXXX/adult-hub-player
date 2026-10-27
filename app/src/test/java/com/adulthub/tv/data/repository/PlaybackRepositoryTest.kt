@@ -88,4 +88,24 @@ class PlaybackRepositoryTest {
             appendVariantQuery(url, "a&b"),
         )
     }
+
+    @Test
+    fun `existing variant parameter is replaced instead of duplicated`() {
+        val url = "http://resolver/stream?mode=proxy&variant=old_1"
+
+        assertEquals(
+            "http://resolver/stream?mode=proxy&variant=new_2",
+            appendVariantQuery(url, "new_2"),
+        )
+    }
+
+    @Test
+    fun `original variant clears an existing variant parameter`() {
+        val url = "http://resolver/stream?mode=proxy&variant=old_1"
+
+        assertEquals(
+            "http://resolver/stream?mode=proxy",
+            appendVariantQuery(url, "original"),
+        )
+    }
 }

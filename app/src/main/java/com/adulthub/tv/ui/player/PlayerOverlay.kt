@@ -130,6 +130,20 @@ fun PlayerOverlay(
     var lastSeekAtMs by remember { mutableLongStateOf(0L) }
     var isMoreMenuVisible by remember { mutableStateOf(false) }
     var isQualityPickerVisible by remember { mutableStateOf(false) }
+    val qualityPickerFocusRequester = remember { FocusRequester() }
+
+    LaunchedEffect(isOsdVisible) {
+        if (!isOsdVisible) {
+            isMoreMenuVisible = false
+            isQualityPickerVisible = false
+        }
+    }
+
+    LaunchedEffect(isQualityPickerVisible) {
+        if (isQualityPickerVisible) {
+            runCatching { qualityPickerFocusRequester.requestFocus() }
+        }
+    }
 
     val seekWithAcceleration: (Int) -> Unit = { direction ->
         val now = SystemClock.elapsedRealtime()
@@ -381,6 +395,7 @@ fun PlayerOverlay(
                     }
 
                     if (isQualityPickerVisible && qualityOptions.size > 1) {
+                        val focusedIndex = qualityOptions.indexOfFirst { it.isSelected }.takeIf { it >= 0 } ?: 0
                         Row(
                             modifier = Modifier
                                 .fillMaxWidth()
@@ -391,7 +406,7 @@ fun PlayerOverlay(
                                 .padding(6.dp),
                             horizontalArrangement = Arrangement.spacedBy(8.dp),
                         ) {
-                            qualityOptions.forEach { option ->
+                            qualityOptions.forEachIndexed { index, option ->
                                 OsdActionChip(
                                     icon = Icons.Rounded.HighQuality,
                                     text = option.label,
@@ -402,6 +417,11 @@ fun PlayerOverlay(
                                             isQualityPickerVisible = false
                                         }
                                         onResetOsdTimer()
+                                    },
+                                    modifier = if (index == focusedIndex) {
+                                        Modifier.focusRequester(qualityPickerFocusRequester)
+                                    } else {
+                                        Modifier
                                     },
                                 )
                             }

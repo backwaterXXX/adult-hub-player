@@ -9,7 +9,9 @@ import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.SupervisorJob
 import kotlinx.coroutines.cancel
+import kotlinx.coroutines.launch
 import org.junit.After
+import org.junit.Assert.assertFalse
 import org.junit.Assert.assertNotNull
 import org.junit.Assert.assertNull
 import org.junit.Assert.assertTrue
@@ -104,6 +106,48 @@ class PlayerManagerInstrumentedTest {
         try {
             assertTrue(manager.currentPositionMs.value >= 0L)
             assertTrue(manager.durationMs.value >= 0L)
+        } finally {
+            onMain { manager.release() }
+        }
+    }
+
+    @Test
+    fun releaseCancelsPendingQualitySwitchCleanly() {
+        val manager = createPlayerManager()
+        try {
+            onMain {
+                manager.prepareAndPlay("https://example.com/video.mp4")
+            }
+            var switchResult: Boolean? = null
+            scope.launch {
+                switchResult = manager.switchQualityStream("https://example.com/video_low.mp4", null)
+            }
+            onMain {
+                manager.release()
+            }
+            InstrumentationRegistry.getInstrumentation().waitForIdleSync()
+            assertFalse(switchResult == true)
+        } finally {
+            onMain { manager.release() }
+        }
+    }
+
+    @Test
+    fun prepareAndPlayCancelsPendingQualitySwitchCleanly() {
+        val manager = createPlayerManager()
+        try {
+            onMain {
+                manager.prepareAndPlay("https://example.com/video.mp4")
+            }
+            var switchResult: Boolean? = null
+            scope.launch {
+                switchResult = manager.switchQualityStream("https://example.com/video_low.mp4", null)
+            }
+            onMain {
+                manager.prepareAndPlay("https://example.com/video_2.mp4")
+            }
+            InstrumentationRegistry.getInstrumentation().waitForIdleSync()
+            assertFalse(switchResult == true)
         } finally {
             onMain { manager.release() }
         }
