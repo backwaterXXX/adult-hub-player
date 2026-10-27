@@ -1,0 +1,118 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <!-- Page header -->
+    <string name="settings_version_subtitle">%1$s v%2$s</string>
+    <string name="settings_status_message">✓ %1$s</string>
+    <string name="settings_loading">Loading…</string>
+    <string name="settings_value_guest">Guest</string>
+
+    <!-- Account & Server -->
+    <string name="settings_account_server_title">Account &amp; Server</string>
+    <string name="settings_server_url_label">Server URL</string>
+    <string name="settings_not_connected">Not connected</string>
+    <string name="settings_server_name_label">Server Name</string>
+    <string name="settings_value_jellyfin">Jellyfin</string>
+    <string name="settings_playback_label">Playback</string>
+    <string name="settings_playback_streams">Jellyfin + Adult Hub streams</string>
+    <string name="settings_sign_out">Sign out</string>
+
+    <!-- Active library -->
+    <string name="settings_active_library_title">Active Library</string>
+    <string name="settings_currently_selected">Currently selected: %1$s</string>
+    <string name="settings_no_additional_libraries">No additional libraries found</string>
+
+    <!-- Home screen -->
+    <string name="settings_home_screen_title">Home screen</string>
+    <string name="settings_home_screen_desc">Choose which categories appear on the home screen. Selected categories are shown as separate rows.</string>
+    <string name="settings_home_categories_empty">No categories found in the active library.</string>
+
+    <!-- Cache & Storage -->
+    <string name="settings_cache_title">Cache &amp; Storage</string>
+    <string name="settings_cache_desc">Configure disk cache for thumbnails and poster artwork. Changes apply after restarting the app.</string>
+    <string name="settings_value_off">Off</string>
+    <string name="settings_value_on">On</string>
+    <string name="settings_cache_size_mb">%1$d MB</string>
+    <string name="settings_clear_cache">Clear cache</string>
+
+    <!-- Network buffer profile -->
+    <string name="settings_buffer_title">Network buffer profile</string>
+    <string name="settings_buffer_desc">Configure ExoPlayer buffer thresholds for playback stability vs initial start latency. Standard is recommended for most networks.</string>
+    <string name="settings_buffer_range">%1$ds minimum · %2$ds maximum</string>
+
+    <!-- Performance & Memory -->
+    <string name="settings_performance_title">Performance &amp; Memory</string>
+    <string name="settings_low_ram_desc">Low-memory mode downsizes thumbnail decoding and disables card scale animations to improve scrolling responsiveness and prevent out-of-memory errors on lower-end devices.</string>
+    <string name="settings_low_ram_recommended">💡 Recommended for this device (%1$d MB RAM detected, e.g. Chromecast Sabrina).</string>
+    <string name="settings_option_off_default">Off (Default)</string>
+    <string name="settings_option_low_ram_on">On (Low-memory)</string>
+
+    <!-- Playback controls -->
+    <string name="settings_playback_controls_title">Playback controls</string>
+    <string name="settings_seek_step_desc">Seek step size for D-pad navigation and remote skip buttons.</string>
+    <string name="settings_seek_step_sec">%1$d sec</string>
+    <string name="settings_seek_step_default">15 sec (Default)</string>
+    <string name="settings_autoplay_desc">Automatically play the next video with a 10-second countdown when a video ends.</string>
+    <string name="settings_option_autoplay_on">On (Auto-next)</string>
+
+    <!-- Resolver API -->
+    <string name="settings_resolver_title">Resolver API</string>
+    <string name="settings_resolver_desc">By default, this origin follows the Jellyfin server address. Enter a different URL only if your Resolver service is hosted separately.</string>
+    <string name="settings_resolver_current_origin">Current origin</string>
+    <string name="settings_not_configured">Not configured</string>
+    <string name="settings_resolver_origin_source">Origin source</string>
+    <string name="settings_resolver_source_configured">Set in the app settings</string>
+    <string name="settings_resolver_source_server">Jellyfin server address</string>
+    <string name="settings_label_resolver">Resolver</string>
+    <string name="settings_checking_connections">Checking connections…</string>
+    <string name="settings_check_connections">Check connections</string>
+    <string name="settings_resolver_url_label">Resolver base URL</string>
+    <string name="settings_resolver_url_hint">https://resolver.example.com or http://192.168.1.10:8099</string>
+    <string name="settings_save_resolver_url">Save Resolver URL</string>
+    <string name="settings_use_jellyfin_url">Use Jellyfin Server URL</string>
+
+    <!-- App updates -->
+    <string name="settings_updates_title">App updates</string>
+    <string name="settings_current_version">Current version: %1$s (code %2$d)</string>
+    <string name="settings_updates_desc">Updates are checked from the latest GitHub release.</string>
+    <string name="settings_updates_downloaded">%1$d%% downloaded</string>
+    <string name="settings_updates_available">Available: %1$s (code %2$d)</string>
+    <string name="settings_updates_release_notes">" — %1$s"</string>
+    <string name="settings_install_update">Install update</string>
+    <string name="settings_auto_update_on">Auto update On</string>
+    <string name="settings_auto_update_off">Auto update Off</string>
+    <string name="settings_check_now">Check now</string>
+
+    <!-- History from an earlier install -->
+    <string name="settings_history_import_title">History from an earlier install</string>
+    <string name="settings_history_import_desc">This device still holds watch history, playback progress and search queries from an install that did not separate accounts. Import them into the account that is signed in now, or leave them where they are; they are not shown to any account until you import them.</string>
+    <string name="settings_history_import_action">Import into this account</string>
+
+    <!-- Trusted LAN HTTP -->
+    <string name="settings_http_consent_title">Trusted LAN HTTP</string>
+    <string name="settings_http_consent_desc">HTTP consent is saved per host and port. Connections remain unencrypted; revoke hosts you no longer trust.</string>
+    <string name="settings_http_no_hosts">No HTTP hosts approved</string>
+    <string name="settings_revoke">Revoke</string>
+
+    <!-- Video matching -->
+    <string name="settings_phash_title">Video matching</string>
+    <string name="settings_phash_desc">When enabled, the Resolver queues server-side pHash generation after playback starts. The server also creates or repairs the video thumbnail. Work continues if you switch to another video. Off by default.</string>
+    <string name="settings_phash_frames_label">Frames per video</string>
+    <string name="settings_phash_frames_note">Server-side · StashDB-compatible</string>
+
+    <!-- Device & hardware diagnostics -->
+    <string name="settings_device_title">Device &amp; hardware diagnostics</string>
+    <string name="settings_device_model_label">Model</string>
+    <string name="settings_device_android_label">Android</string>
+    <string name="settings_device_ram_label">System RAM</string>
+    <string name="settings_diagnostics_ram">Total: %1$d MB · Available: %2$d MB</string>
+    <string name="settings_codecs_header">Video Codec Decoders:</string>
+    <string name="settings_codec_unsupported">Unsupported</string>
+    <string name="settings_codec_hardware">Hardware</string>
+    <string name="settings_codec_software">Software</string>
+    <string name="settings_codec_badge">%1$s: %2$s</string>
+
+    <!-- About & licenses -->
+    <string name="settings_about_title">About &amp; Licenses</string>
+    <string name="settings_about_summary">%1$s v%2$s (code %3$d). Built with Jetpack Compose, Jellyfin Kotlin SDK, and Media3 ExoPlayer.</string>
+    <string name="settings_licenses_button">Third-party open-source licenses</string>
+</resources>

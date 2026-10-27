@@ -177,6 +177,7 @@ fun LibraryScreen(
                             onToggleOnlyWithPhoto = viewModel::toggleOnlyWithPhoto,
                             onRetry = { viewModel.loadActors() },
                             onLoadMore = viewModel::loadMoreActors,
+                            onSearchQueryChange = viewModel::setActorSearchQuery,
                             getImageUrl = viewModel::getPersonImageUrl,
                         )
                     }

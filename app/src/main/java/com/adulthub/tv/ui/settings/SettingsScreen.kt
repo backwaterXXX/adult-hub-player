@@ -4,6 +4,7 @@ import android.content.Intent
 import android.net.Uri
 import android.os.Build
 import android.provider.Settings
+import androidx.annotation.StringRes
 import androidx.compose.animation.AnimatedVisibility
 import androidx.compose.animation.fadeIn
 import androidx.compose.animation.fadeOut
@@ -47,6 +48,7 @@ import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.res.stringResource
+import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.input.ImeAction
 import androidx.compose.ui.text.input.KeyboardType
@@ -111,7 +113,7 @@ fun SettingsScreen(
     var pendingClearType by rememberSaveable { mutableStateOf<ClearDataType?>(null) }
     val uiState by viewModel.uiState.collectAsStateWithLifecycle()
     val diagnostics by produceState(
-        initialValue = com.adulthub.tv.diagnostics.DeviceDiagnostics("Loading…", "", 0L, 0L, emptyList()),
+        initialValue = com.adulthub.tv.diagnostics.DeviceDiagnostics(stringResource(R.string.settings_loading), "", 0L, 0L, emptyList()),
         key1 = context,
     ) {
         value = withContext(Dispatchers.IO) { DeviceDiagnosticsHelper.getDiagnostics(context) }
@@ -147,8 +149,8 @@ fun SettingsScreen(
             .background(OledBlack),
     ) {
         TvPageHeader(
-            title = "Settings",
-            subtitle = "${BuildConfig.CLIENT_NAME} v${BuildConfig.VERSION_NAME}",
+            title = stringResource(R.string.nav_settings),
+            subtitle = stringResource(R.string.settings_version_subtitle, BuildConfig.CLIENT_NAME, BuildConfig.VERSION_NAME),
             onBack = onNavigateBack,
             isMobile = isMobile,
         )
@@ -171,7 +173,7 @@ fun SettingsScreen(
                         .padding(horizontal = 16.dp, vertical = 10.dp),
                 ) {
                     Text(
-                        text = "✓ $msg",
+                        text = stringResource(R.string.settings_status_message, msg),
                         color = NeonPink,
                         fontWeight = FontWeight.Medium,
                         fontSize = 14.sp,
@@ -190,27 +192,39 @@ fun SettingsScreen(
         ) {
             // 1. Session & Server Section
             item(key = "section_session") {
-                SettingsCard(title = "Account & Server") {
+                SettingsCard(title = stringResource(R.string.settings_account_server_title)) {
                     Row(
                         modifier = Modifier.fillMaxWidth(),
                         horizontalArrangement = Arrangement.SpaceBetween,
                         verticalAlignment = Alignment.CenterVertically,
                     ) {
                         Column(modifier = Modifier.weight(1f)) {
-                            SettingsInfoRow(label = "Server URL", value = uiState.serverUrl.ifEmpty { "Not connected" })
+                            SettingsInfoRow(
+                                label = stringResource(R.string.settings_server_url_label),
+                                value = uiState.serverUrl.ifEmpty { stringResource(R.string.settings_not_connected) },
+                            )
                             Spacer(modifier = Modifier.height(6.dp))
-                            SettingsInfoRow(label = "Server Name", value = uiState.serverName.ifEmpty { "Jellyfin" })
+                            SettingsInfoRow(
+                                label = stringResource(R.string.settings_server_name_label),
+                                value = uiState.serverName.ifEmpty { stringResource(R.string.settings_value_jellyfin) },
+                            )
                             Spacer(modifier = Modifier.height(6.dp))
-                            SettingsInfoRow(label = "Username", value = uiState.username.ifEmpty { "Guest" })
+                            SettingsInfoRow(
+                                label = stringResource(R.string.login_username_label),
+                                value = uiState.username.ifEmpty { stringResource(R.string.settings_value_guest) },
+                            )
                             Spacer(modifier = Modifier.height(6.dp))
-                            SettingsInfoRow(label = "Playback", value = "Jellyfin + Adult Hub streams")
+                            SettingsInfoRow(
+                                label = stringResource(R.string.settings_playback_label),
+                                value = stringResource(R.string.settings_playback_streams),
+                            )
                         }
 
                         TvSecondaryButton(
                             onClick = { viewModel.logout(context) },
                             modifier = Modifier.height(44.dp),
                         ) {
-                            Text("Sign out", fontWeight = FontWeight.SemiBold)
+                            Text(stringResource(R.string.settings_sign_out), fontWeight = FontWeight.SemiBold)
                         }
                     }
                 }
@@ -218,10 +232,10 @@ fun SettingsScreen(
 
             // 2. Active Library Selection
             item(key = "section_library") {
-                SettingsCard(title = "Active Library") {
+                SettingsCard(title = stringResource(R.string.settings_active_library_title)) {
                     Column {
                         Text(
-                            text = "Currently selected: ${uiState.selectedLibraryName}",
+                            text = stringResource(R.string.settings_currently_selected, uiState.selectedLibraryName),
                             style = MaterialTheme.typography.bodyMedium.copy(color = TextSecondary),
                         )
 
@@ -250,7 +264,7 @@ fun SettingsScreen(
                             }
                         } else {
                             Text(
-                                text = "No additional libraries found",
+                                text = stringResource(R.string.settings_no_additional_libraries),
                                 style = MaterialTheme.typography.bodySmall.copy(color = TextSecondary),
                             )
                         }
@@ -259,16 +273,16 @@ fun SettingsScreen(
             }
 
             item(key = "section_home_screen") {
-                SettingsCard(title = "Home screen") {
+                SettingsCard(title = stringResource(R.string.settings_home_screen_title)) {
                     Column {
                         Text(
-                            text = "Choose which categories appear on the home screen. Selected categories are shown as separate rows.",
+                            text = stringResource(R.string.settings_home_screen_desc),
                             style = MaterialTheme.typography.bodyMedium.copy(color = TextSecondary),
                         )
                         Spacer(modifier = Modifier.height(10.dp))
                         if (uiState.availableHomeCategories.isEmpty()) {
                             Text(
-                                text = "No categories found in the active library.",
+                                text = stringResource(R.string.settings_home_categories_empty),
                                 style = MaterialTheme.typography.bodySmall.copy(color = TextSecondary),
                             )
                         } else {
@@ -297,10 +311,10 @@ fun SettingsScreen(
 
             // 3. Cache & Storage Section
             item(key = "section_cache") {
-                SettingsCard(title = "Cache & Storage") {
+                SettingsCard(title = stringResource(R.string.settings_cache_title)) {
                     Column {
                         Text(
-                            text = "Configure disk cache for thumbnails and poster artwork. Changes apply after restarting the app.",
+                            text = stringResource(R.string.settings_cache_desc),
                             style = MaterialTheme.typography.bodyMedium.copy(color = TextSecondary),
                         )
 
@@ -314,11 +328,11 @@ fun SettingsScreen(
                             // Cache size choices
                             Row(horizontalArrangement = Arrangement.spacedBy(10.dp)) {
                                 val options = listOf(
-                                    0 to "Off",
-                                    128 to "128 MB",
-                                    256 to "256 MB",
-                                    512 to "512 MB",
-                                    1024 to "1024 MB",
+                                    0 to stringResource(R.string.settings_value_off),
+                                    128 to stringResource(R.string.settings_cache_size_mb, 128),
+                                    256 to stringResource(R.string.settings_cache_size_mb, 256),
+                                    512 to stringResource(R.string.settings_cache_size_mb, 512),
+                                    1024 to stringResource(R.string.settings_cache_size_mb, 1024),
                                 )
                                 options.forEach { (limit, label) ->
                                     val isSelected = uiState.cacheLimitMb == limit
@@ -337,7 +351,7 @@ fun SettingsScreen(
                                 onClick = { viewModel.clearCache(context) },
                                 modifier = Modifier.height(40.dp),
                             ) {
-                                Text("Clear cache", fontWeight = FontWeight.SemiBold)
+                                Text(stringResource(R.string.settings_clear_cache), fontWeight = FontWeight.SemiBold)
                             }
                         }
                     }
@@ -346,10 +360,10 @@ fun SettingsScreen(
 
             // 3b. Network Buffer Profile
             item(key = "section_buffer_profile") {
-                SettingsCard(title = "Network buffer profile") {
+                SettingsCard(title = stringResource(R.string.settings_buffer_title)) {
                     Column {
                         Text(
-                            text = "Configure ExoPlayer buffer thresholds for playback stability vs initial start latency. Standard is recommended for most networks.",
+                            text = stringResource(R.string.settings_buffer_desc),
                             style = MaterialTheme.typography.bodyMedium.copy(color = TextSecondary),
                         )
 
@@ -369,7 +383,15 @@ fun SettingsScreen(
                                 ) {
                                     Column(Modifier.weight(1f)) {
                                         Text(profile.label.substringBefore(" ("), color = TextPrimary, fontWeight = FontWeight.SemiBold)
-                                        Text("${profile.minBufferMs / 1000}s minimum · ${profile.maxBufferMs / 1000}s maximum", color = TextSecondary, fontSize = 12.sp)
+                                        Text(
+                                            text = stringResource(
+                                                R.string.settings_buffer_range,
+                                                profile.minBufferMs / 1000,
+                                                profile.maxBufferMs / 1000,
+                                            ),
+                                            color = TextSecondary,
+                                            fontSize = 12.sp,
+                                        )
                                     }
                                     Text(if (selected) "✓" else "", color = NeonPink, fontWeight = FontWeight.Bold)
                                 }
@@ -396,17 +418,17 @@ fun SettingsScreen(
             // 3c. Low-Memory Mode (Performance)
             item(key = "section_low_ram") {
                 val isLowMemoryDevice = diagnostics.totalRamMb in 1..2048
-                SettingsCard(title = "Performance & Memory") {
+                SettingsCard(title = stringResource(R.string.settings_performance_title)) {
                     Column {
                         Text(
-                            text = "Low-memory mode downsizes thumbnail decoding and disables card scale animations to improve scrolling responsiveness and prevent out-of-memory errors on lower-end devices.",
+                            text = stringResource(R.string.settings_low_ram_desc),
                             style = MaterialTheme.typography.bodyMedium.copy(color = TextSecondary),
                         )
 
                         if (isLowMemoryDevice) {
                             Spacer(modifier = Modifier.height(6.dp))
                             Text(
-                                text = "💡 Recommended for this device (${diagnostics.totalRamMb} MB RAM detected, e.g. Chromecast Sabrina).",
+                                text = stringResource(R.string.settings_low_ram_recommended, diagnostics.totalRamMb),
                                 style = MaterialTheme.typography.bodySmall.copy(color = NeonPink),
                             )
                         }
@@ -418,14 +440,14 @@ fun SettingsScreen(
                             modifier = Modifier.fillMaxWidth(),
                         ) {
                             TvChoiceChip(
-                                label = "Off (Default)",
+                                label = stringResource(R.string.settings_option_off_default),
                                 isSelected = !uiState.lowRamMode,
                                 onClick = { viewModel.setLowRamMode(false) },
                                 height = 38.dp,
                                 fontSize = 13.sp,
                             )
                             TvChoiceChip(
-                                label = "On (Low-memory)",
+                                label = stringResource(R.string.settings_option_low_ram_on),
                                 isSelected = uiState.lowRamMode,
                                 onClick = { viewModel.setLowRamMode(true) },
                                 height = 38.dp,
@@ -438,10 +460,10 @@ fun SettingsScreen(
 
             // 3d. Playback Controls & Navigation
             item(key = "section_playback_controls") {
-                SettingsCard(title = "Playback controls") {
+                SettingsCard(title = stringResource(R.string.settings_playback_controls_title)) {
                     Column {
                         Text(
-                            text = "Seek step size for D-pad navigation and remote skip buttons.",
+                            text = stringResource(R.string.settings_seek_step_desc),
                             style = MaterialTheme.typography.bodyMedium.copy(color = TextSecondary),
                         )
 
@@ -452,10 +474,10 @@ fun SettingsScreen(
                             modifier = Modifier.fillMaxWidth(),
                         ) {
                             listOf(
-                                10 to "10 sec",
-                                15 to "15 sec (Default)",
-                                30 to "30 sec",
-                                60 to "60 sec",
+                                10 to stringResource(R.string.settings_seek_step_sec, 10),
+                                15 to stringResource(R.string.settings_seek_step_default),
+                                30 to stringResource(R.string.settings_seek_step_sec, 30),
+                                60 to stringResource(R.string.settings_seek_step_sec, 60),
                             ).forEach { (step, label) ->
                                 TvChoiceChip(
                                     label = label,
@@ -470,7 +492,7 @@ fun SettingsScreen(
                         Spacer(modifier = Modifier.height(18.dp))
 
                         Text(
-                            text = "Automatically play the next video with a 10-second countdown when a video ends.",
+                            text = stringResource(R.string.settings_autoplay_desc),
                             style = MaterialTheme.typography.bodyMedium.copy(color = TextSecondary),
                         )
 
@@ -481,14 +503,14 @@ fun SettingsScreen(
                             modifier = Modifier.fillMaxWidth(),
                         ) {
                             TvChoiceChip(
-                                label = "Off (Default)",
+                                label = stringResource(R.string.settings_option_off_default),
                                 isSelected = !uiState.autoplayNext,
                                 onClick = { viewModel.setAutoplayNext(false) },
                                 height = 38.dp,
                                 fontSize = 13.sp,
                             )
                             TvChoiceChip(
-                                label = "On (Auto-next)",
+                                label = stringResource(R.string.settings_option_autoplay_on),
                                 isSelected = uiState.autoplayNext,
                                 onClick = { viewModel.setAutoplayNext(true) },
                                 height = 38.dp,
@@ -501,22 +523,34 @@ fun SettingsScreen(
 
             // 4. Resolver API Origin
             item(key = "section_resolver") {
-                SettingsCard(title = "Resolver API") {
+                SettingsCard(title = stringResource(R.string.settings_resolver_title)) {
                     Column {
                         if (isMobile) {
                             Text(
-                                text = "By default, this origin follows the Jellyfin server address. Enter a different URL only if your Resolver service is hosted separately.",
+                                text = stringResource(R.string.settings_resolver_desc),
                                 style = MaterialTheme.typography.bodySmall.copy(color = TextSecondary),
                             )
                             Spacer(modifier = Modifier.height(8.dp))
                         }
-                        SettingsInfoRow(label = "Current origin", value = uiState.resolverBaseUrl.ifBlank { "Not configured" })
+                        SettingsInfoRow(
+                            label = stringResource(R.string.settings_resolver_current_origin),
+                            value = uiState.resolverBaseUrl.ifBlank { stringResource(R.string.settings_not_configured) },
+                        )
                         Spacer(modifier = Modifier.height(6.dp))
-                        SettingsInfoRow(label = "Origin source", value = resolverUrlSourceLabel(uiState.resolverBaseUrlSource))
+                        SettingsInfoRow(
+                            label = stringResource(R.string.settings_resolver_origin_source),
+                            value = stringResource(resolverUrlSourceLabel(uiState.resolverBaseUrlSource)),
+                        )
                         Spacer(modifier = Modifier.height(10.dp))
-                        SettingsInfoRow(label = "Jellyfin", value = uiState.jellyfinConnectionStatus)
+                        SettingsInfoRow(
+                            label = stringResource(R.string.settings_value_jellyfin),
+                            value = uiState.jellyfinConnectionStatus,
+                        )
                         Spacer(modifier = Modifier.height(6.dp))
-                        SettingsInfoRow(label = "Resolver", value = uiState.resolverConnectionStatus)
+                        SettingsInfoRow(
+                            label = stringResource(R.string.settings_label_resolver),
+                            value = uiState.resolverConnectionStatus,
+                        )
                         Spacer(modifier = Modifier.height(12.dp))
                         TvSecondaryButton(
                             onClick = viewModel::checkConnections,
@@ -524,7 +558,13 @@ fun SettingsScreen(
                             modifier = Modifier.height(40.dp),
                         ) {
                             Text(
-                                if (uiState.isCheckingConnections) "Checking connections…" else "Check connections",
+                                stringResource(
+                                    if (uiState.isCheckingConnections) {
+                                        R.string.settings_checking_connections
+                                    } else {
+                                        R.string.settings_check_connections
+                                    },
+                                ),
                                 fontWeight = FontWeight.Medium,
                             )
                         }
@@ -532,8 +572,8 @@ fun SettingsScreen(
                         TvTextField(
                             value = uiState.resolverUrlDraft,
                             onValueChange = viewModel::onResolverUrlDraftChanged,
-                            label = "Resolver base URL",
-                            hint = "https://resolver.example.com or http://192.168.1.10:8099",
+                            label = stringResource(R.string.settings_resolver_url_label),
+                            hint = stringResource(R.string.settings_resolver_url_hint),
                             keyboardOptions = KeyboardOptions(
                                 keyboardType = KeyboardType.Uri,
                                 imeAction = ImeAction.Done,
@@ -549,14 +589,14 @@ fun SettingsScreen(
                                 onClick = { viewModel.setResolverUrl(uiState.resolverUrlDraft) },
                                 modifier = Modifier.height(40.dp),
                             ) {
-                                Text("Save Resolver URL", fontWeight = FontWeight.Medium)
+                                Text(stringResource(R.string.settings_save_resolver_url), fontWeight = FontWeight.Medium)
                             }
                             if (uiState.resolverBaseUrl.isNotBlank()) {
                                 TvSecondaryButton(
                                     onClick = { viewModel.setResolverUrl("") },
                                     modifier = Modifier.height(40.dp),
                                 ) {
-                                    Text("Use Jellyfin Server URL", fontWeight = FontWeight.Medium)
+                                    Text(stringResource(R.string.settings_use_jellyfin_url), fontWeight = FontWeight.Medium)
                                 }
                             }
                         }
@@ -565,15 +605,19 @@ fun SettingsScreen(
             }
 
             item(key = "section_app_updates") {
-                SettingsCard(title = "App updates") {
+                SettingsCard(title = stringResource(R.string.settings_updates_title)) {
                     Column {
                         Text(
-                            text = "Current version: ${BuildConfig.VERSION_NAME} (code ${BuildConfig.VERSION_CODE})",
+                            text = stringResource(
+                                R.string.settings_current_version,
+                                BuildConfig.VERSION_NAME,
+                                BuildConfig.VERSION_CODE,
+                            ),
                             style = MaterialTheme.typography.bodyMedium.copy(color = TextSecondary),
                         )
                         Spacer(modifier = Modifier.height(8.dp))
                         Text(
-                            text = updateState.message.ifBlank { "Updates are checked from the latest GitHub release." },
+                            text = updateState.message.ifBlank { stringResource(R.string.settings_updates_desc) },
                             style = MaterialTheme.typography.bodyMedium.copy(color = TextSecondary),
                         )
                         if (SigningIdentity.requiresFreshInstall(context)) {
@@ -586,14 +630,23 @@ fun SettingsScreen(
                         if (updateState.isDownloading) {
                             Spacer(modifier = Modifier.height(6.dp))
                             Text(
-                                text = "${(updateState.downloadProgress * 100).toInt()}% downloaded",
+                                text = stringResource(
+                                    R.string.settings_updates_downloaded,
+                                    (updateState.downloadProgress * 100).toInt(),
+                                ),
                                 style = MaterialTheme.typography.bodyMedium.copy(color = NeonPink),
                             )
                         }
                         updateState.update?.let { update ->
                             Spacer(modifier = Modifier.height(8.dp))
                             Text(
-                                text = "Available: ${update.manifest.versionName} (code ${update.manifest.versionCode})${update.manifest.releaseNotes?.let { " — $it" }.orEmpty()}",
+                                text = stringResource(
+                                    R.string.settings_updates_available,
+                                    update.manifest.versionName,
+                                    update.manifest.versionCode,
+                                ) + update.manifest.releaseNotes
+                                    ?.let { stringResource(R.string.settings_updates_release_notes, it) }
+                                    .orEmpty(),
                                 style = MaterialTheme.typography.bodyMedium.copy(color = TextPrimary),
                             )
                             Spacer(modifier = Modifier.height(8.dp))
@@ -612,19 +665,19 @@ fun SettingsScreen(
                                     }
                                 },
                                 modifier = Modifier.height(40.dp),
-                            ) { Text("Install update", fontWeight = FontWeight.Medium) }
+                            ) { Text(stringResource(R.string.settings_install_update), fontWeight = FontWeight.Medium) }
                         }
                         Spacer(modifier = Modifier.height(12.dp))
                         Row(horizontalArrangement = Arrangement.spacedBy(10.dp)) {
                             TvChoiceChip(
-                                label = "Auto update On",
+                                label = stringResource(R.string.settings_auto_update_on),
                                 isSelected = updateState.enabled,
                                 onClick = { updateScope.launch { updateManager.setEnabled(true) } },
                                 height = 38.dp,
                                 fontSize = 13.sp,
                             )
                             TvChoiceChip(
-                                label = "Auto update Off",
+                                label = stringResource(R.string.settings_auto_update_off),
                                 isSelected = !updateState.enabled,
                                 onClick = { updateScope.launch { updateManager.setEnabled(false) } },
                                 height = 38.dp,
@@ -634,7 +687,7 @@ fun SettingsScreen(
                                 onClick = updateManager::checkNow,
                                 enabled = !updateState.isChecking && !updateState.isDownloading,
                                 modifier = Modifier.height(38.dp),
-                            ) { Text("Check now", fontWeight = FontWeight.Medium) }
+                            ) { Text(stringResource(R.string.settings_check_now), fontWeight = FontWeight.Medium) }
                         }
                     }
                 }
@@ -642,10 +695,9 @@ fun SettingsScreen(
 
             item(key = "section_history_import") {
                 if (uiState.hasPendingHistoryImport) {
-                    SettingsCard(title = "History from an earlier install") {
+                    SettingsCard(title = stringResource(R.string.settings_history_import_title)) {
                         Text(
-                            text = "This device still holds watch history, playback progress and search queries from an install that did not separate accounts. " +
-                                "Import them into the account that is signed in now, or leave them where they are; they are not shown to any account until you import them.",
+                            text = stringResource(R.string.settings_history_import_desc),
                             style = MaterialTheme.typography.bodyMedium.copy(color = TextSecondary),
                         )
                         Spacer(modifier = Modifier.height(12.dp))
@@ -653,22 +705,22 @@ fun SettingsScreen(
                             onClick = viewModel::importUnisolatedHistory,
                             modifier = Modifier.height(40.dp),
                         ) {
-                            Text("Import into this account", fontWeight = FontWeight.Medium)
+                            Text(stringResource(R.string.settings_history_import_action), fontWeight = FontWeight.Medium)
                         }
                     }
                 }
             }
 
             item(key = "section_http_consent") {
-                SettingsCard(title = "Trusted LAN HTTP") {
+                SettingsCard(title = stringResource(R.string.settings_http_consent_title)) {
                     Text(
-                        text = "HTTP consent is saved per host and port. Connections remain unencrypted; revoke hosts you no longer trust.",
+                        text = stringResource(R.string.settings_http_consent_desc),
                         style = MaterialTheme.typography.bodyMedium.copy(color = TextSecondary),
                     )
                     Spacer(modifier = Modifier.height(12.dp))
                     if (uiState.approvedCleartextOrigins.isEmpty()) {
                         Text(
-                            text = "No HTTP hosts approved",
+                            text = stringResource(R.string.settings_http_no_hosts),
                             style = MaterialTheme.typography.bodySmall.copy(color = TextSecondary),
                         )
                     } else {
@@ -683,7 +735,7 @@ fun SettingsScreen(
                                     onClick = { viewModel.revokeCleartextConsent(origin) },
                                     modifier = Modifier.height(40.dp),
                                 ) {
-                                    Text("Revoke", fontWeight = FontWeight.Medium)
+                                    Text(stringResource(R.string.settings_revoke), fontWeight = FontWeight.Medium)
                                 }
                             }
                         }
@@ -692,7 +744,7 @@ fun SettingsScreen(
             }
 
             item(key = "section_phash") {
-                SettingsCard(title = "Video matching") {
+                SettingsCard(title = stringResource(R.string.settings_phash_title)) {
                     Row(
                         modifier = Modifier.fillMaxWidth(),
                         horizontalArrangement = Arrangement.SpaceBetween,
@@ -700,12 +752,12 @@ fun SettingsScreen(
                     ) {
                         Column(modifier = Modifier.weight(1f)) {
                             Text(
-                                text = "When enabled, the Resolver queues server-side pHash generation after playback starts. The server also creates or repairs the video thumbnail. Work continues if you switch to another video. Off by default.",
+                                text = stringResource(R.string.settings_phash_desc),
                                 style = MaterialTheme.typography.bodyMedium.copy(color = TextSecondary),
                             )
                         }
                         TvChoiceChip(
-                            label = if (uiState.phashOnPlayback) "On" else "Off",
+                            label = stringResource(if (uiState.phashOnPlayback) R.string.settings_value_on else R.string.settings_value_off),
                             isSelected = uiState.phashOnPlayback,
                             onClick = { viewModel.setPhashOnPlayback(!uiState.phashOnPlayback) },
                         )
@@ -717,11 +769,11 @@ fun SettingsScreen(
                         verticalAlignment = Alignment.CenterVertically,
                     ) {
                         Text(
-                            text = "Frames per video",
+                            text = stringResource(R.string.settings_phash_frames_label),
                             style = MaterialTheme.typography.bodyMedium.copy(color = TextPrimary),
                         )
                         Text(
-                            text = "Server-side · StashDB-compatible",
+                            text = stringResource(R.string.settings_phash_frames_note),
                             style = MaterialTheme.typography.bodyMedium.copy(color = NeonPink),
                         )
                     }
@@ -897,7 +949,12 @@ fun SettingsScreen(
                                             onClick = { viewModel.unhideChannel(channelId) },
                                             modifier = Modifier.height(34.dp),
                                         ) {
-                                            Text(text = "$channelId  ✕", fontSize = 12.sp)
+                                            Text(
+                                                text = "${uiState.hiddenChannelNames[channelId] ?: channelId}  ✕",
+                                                fontSize = 12.sp,
+                                                maxLines = 1,
+                                                overflow = TextOverflow.Ellipsis,
+                                            )
                                         }
                                     }
                                 }
@@ -908,19 +965,29 @@ fun SettingsScreen(
             }
 
             item(key = "section_device_info") {
-                SettingsCard(title = "Device & hardware diagnostics") {
+                SettingsCard(title = stringResource(R.string.settings_device_title)) {
                     Column {
-                        SettingsInfoRow(label = "Model", value = diagnostics.deviceModel)
-                        Spacer(modifier = Modifier.height(6.dp))
-                        SettingsInfoRow(label = "Android", value = diagnostics.androidVersion)
+                        SettingsInfoRow(
+                            label = stringResource(R.string.settings_device_model_label),
+                            value = diagnostics.deviceModel,
+                        )
                         Spacer(modifier = Modifier.height(6.dp))
                         SettingsInfoRow(
-                            label = "System RAM",
-                            value = "Total: ${diagnostics.totalRamMb} MB · Available: ${diagnostics.availableRamMb} MB",
+                            label = stringResource(R.string.settings_device_android_label),
+                            value = diagnostics.androidVersion,
+                        )
+                        Spacer(modifier = Modifier.height(6.dp))
+                        SettingsInfoRow(
+                            label = stringResource(R.string.settings_device_ram_label),
+                            value = stringResource(
+                                R.string.settings_diagnostics_ram,
+                                diagnostics.totalRamMb,
+                                diagnostics.availableRamMb,
+                            ),
                         )
                         Spacer(modifier = Modifier.height(14.dp))
                         Text(
-                            text = "Video Codec Decoders:",
+                            text = stringResource(R.string.settings_codecs_header),
                             style = MaterialTheme.typography.bodyMedium.copy(
                                 color = TextSecondary,
                                 fontWeight = FontWeight.Medium,
@@ -934,11 +1001,13 @@ fun SettingsScreen(
                             modifier = Modifier.fillMaxWidth(),
                         ) {
                             diagnostics.codecs.forEach { codec ->
-                                val statusText = when {
-                                    !codec.isSupported -> "Unsupported"
-                                    codec.isHardware -> "Hardware"
-                                    else -> "Software"
-                                }
+                                val statusText = stringResource(
+                                    when {
+                                        !codec.isSupported -> R.string.settings_codec_unsupported
+                                        codec.isHardware -> R.string.settings_codec_hardware
+                                        else -> R.string.settings_codec_software
+                                    },
+                                )
                                 val badgeBorder = if (codec.isSupported) NeonPink else Color.Gray.copy(alpha = 0.4f)
                                 Box(
                                     modifier = Modifier
@@ -948,7 +1017,7 @@ fun SettingsScreen(
                                         .padding(horizontal = 12.dp, vertical = 6.dp),
                                 ) {
                                     Text(
-                                        text = "${codec.name}: $statusText",
+                                        text = stringResource(R.string.settings_codec_badge, codec.name, statusText),
                                         fontSize = 12.sp,
                                         color = if (codec.isSupported) Color.White else Color.Gray,
                                         fontWeight = FontWeight.Medium,
@@ -963,10 +1032,15 @@ fun SettingsScreen(
             }
 
             item(key = "section_about_licenses") {
-                SettingsCard(title = "About & Licenses") {
+                SettingsCard(title = stringResource(R.string.settings_about_title)) {
                     Column {
                         Text(
-                            text = "${BuildConfig.CLIENT_NAME} v${BuildConfig.VERSION_NAME} (code ${BuildConfig.VERSION_CODE}). Built with Jetpack Compose, Jellyfin Kotlin SDK, and Media3 ExoPlayer.",
+                            text = stringResource(
+                                R.string.settings_about_summary,
+                                BuildConfig.CLIENT_NAME,
+                                BuildConfig.VERSION_NAME,
+                                BuildConfig.VERSION_CODE,
+                            ),
                             style = MaterialTheme.typography.bodyMedium.copy(color = TextSecondary),
                         )
                         Spacer(modifier = Modifier.height(14.dp))
@@ -974,7 +1048,7 @@ fun SettingsScreen(
                             onClick = { showLicensesDialog = true },
                             modifier = Modifier.height(40.dp),
                         ) {
-                            Text("Third-party open-source licenses", fontWeight = FontWeight.Medium)
+                            Text(stringResource(R.string.settings_licenses_button), fontWeight = FontWeight.Medium)
                         }
                     }
                 }
@@ -1049,10 +1123,11 @@ private fun SettingsCard(
  * address, or still empty. The source tells the user which service the app
  * actually talks to.
  */
-private fun resolverUrlSourceLabel(source: ResolverUrlSource): String = when (source) {
-    ResolverUrlSource.CONFIGURED -> "Configured in Adult Hub"
-    ResolverUrlSource.SERVER_FALLBACK -> "Jellyfin server address"
-    ResolverUrlSource.DEFAULT -> "Not configured"
+@StringRes
+private fun resolverUrlSourceLabel(source: ResolverUrlSource): Int = when (source) {
+    ResolverUrlSource.CONFIGURED -> R.string.settings_resolver_source_configured
+    ResolverUrlSource.SERVER_FALLBACK -> R.string.settings_resolver_source_server
+    ResolverUrlSource.DEFAULT -> R.string.settings_not_configured
 }
 
 @Composable

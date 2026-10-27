@@ -25,6 +25,7 @@ import androidx.compose.runtime.setValue
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.graphicsLayer
@@ -41,6 +42,7 @@ import androidx.tv.material3.MaterialTheme
 import androidx.tv.material3.Text
 import coil.compose.AsyncImage
 import coil.request.ImageRequest
+import com.adulthub.tv.R
 import com.adulthub.tv.data.jellyfin.JellyfinClientManager
 import com.adulthub.tv.data.local.SettingsDataStore
 import com.adulthub.tv.data.model.TvItem
@@ -248,7 +250,7 @@ private fun WatchedBadge(modifier: Modifier = Modifier) {
             .padding(horizontal = 6.dp, vertical = 2.dp),
     ) {
         Text(
-            text = "WATCHED",
+            text = stringResource(R.string.card_watched),
             color = NeonPink,
             fontSize = 10.sp,
             fontWeight = FontWeight.Bold,

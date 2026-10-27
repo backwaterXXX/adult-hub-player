@@ -57,6 +57,8 @@ data class SettingsUiState(
     val availableHomeCategories: List<TvCategory> = emptyList(),
     val selectedHomeCategoryIds: Set<String> = emptySet(),
     val hiddenChannelIds: Set<String> = emptySet(),
+    /** Resolver channel titles by id, so the hidden list can be read by name. */
+    val hiddenChannelNames: Map<String, String> = emptyMap(),
     val excludedTags: Set<String> = emptySet(),
     val availableLibraries: List<TvLibrary> = emptyList(),
     val isLoggedOut: Boolean = false,
@@ -121,6 +123,16 @@ class SettingsViewModel(
             val selectedHomeCategoryIds = savedHomeCategoryIds
                 ?: homeCategories.take(2).map { it.id }.toSet()
 
+            // An id alone tells the viewer nothing about the channel they hid, but the titles
+            // live behind the resolver, so they are only requested when there is a list to label.
+            val hiddenChannelNames = if (hiddenChannels.isEmpty()) {
+                emptyMap()
+            } else {
+                channelRepository?.getCategories()?.getOrDefault(emptyList())
+                    ?.associate { channel -> channel.id to channel.title }
+                    ?: emptyMap()
+            }
+
             _uiState.update {
                 it.copy(
                     serverUrl = serverUrl,
@@ -142,6 +154,7 @@ class SettingsViewModel(
                     availableHomeCategories = homeCategories,
                     selectedHomeCategoryIds = selectedHomeCategoryIds,
                     hiddenChannelIds = hiddenChannels,
+                    hiddenChannelNames = hiddenChannelNames,
                     excludedTags = excluded,
                     availableLibraries = libraries,
                     hasPendingHistoryImport = pendingImport,
@@ -483,21 +496,21 @@ class SettingsViewModel(
 
     fun clearWatchHistory() {
         viewModelScope.launch {
-            watchHistoryStore?.clearHistory()
+            if (!clearStore("watch history") { watchHistoryStore?.clearHistory() }) return@launch
             _uiState.update { it.copy(statusMessage = "Watch history cleared") }
         }
     }
 
     fun clearResumeProgress() {
         viewModelScope.launch {
-            telegramProgressStore?.clearAll()
+            if (!clearStore("resume progress") { telegramProgressStore?.clearAll() }) return@launch
             _uiState.update { it.copy(statusMessage = "Resume progress cleared") }
         }
     }
 
     fun clearSearchHistory() {
         viewModelScope.launch {
-            searchHistoryStore?.clearHistory()
+            if (!clearStore("search history") { searchHistoryStore?.clearHistory() }) return@launch
             _uiState.update { it.copy(statusMessage = "Search history cleared") }
         }
     }
@@ -571,6 +584,25 @@ class SettingsViewModel(
     } catch (error: Exception) {
         _uiState.update {
             it.copy(statusMessage = "Could not save the setting: ${error.localizedMessage ?: "storage error"}")
+        }
+        false
+    }
+
+    /**
+     * Runs a data-clearing write.
+     *
+     * Returns false when the store rejected it. A DataStore failure here is an
+     * IOException from the disk, not a programming error, so it is reported instead
+     * of reaching the coroutine's uncaught handler.
+     */
+    private suspend fun clearStore(label: String, block: suspend () -> Unit): Boolean = try {
+        block()
+        true
+    } catch (cancelled: CancellationException) {
+        throw cancelled
+    } catch (error: Exception) {
+        _uiState.update {
+            it.copy(statusMessage = "Could not clear the $label: ${error.localizedMessage ?: "storage error"}")
         }
         false
     }

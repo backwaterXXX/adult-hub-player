@@ -1,0 +1,93 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="player_zoom_fit">Zoom Fit</string>
+    <string name="player_zoom_crop">Zoom Crop</string>
+    <string name="player_zoom_fill">Zoom Fill</string>
+
+    <!-- Player screen -->
+    <string name="player_preparing">Preparing player…</string>
+    <string name="player_loading_stream">Loading stream...</string>
+    <string name="player_changing_quality">Changing quality…</string>
+    <string name="player_quality_switch_failure">Could not change quality. Keeping current stream.</string>
+    <string name="player_stream_refresh_failure">The stream address could not be refreshed. Try again or leave the player.</string>
+    <string name="player_seek_forward">+%1$ds</string>
+    <string name="player_seek_backward">-%1$ds</string>
+
+    <!-- Resume playback dialog -->
+    <string name="player_resume_title">Resume Playback?</string>
+    <string name="player_resume_message">Would you like to resume from %1$s or start over from the beginning?</string>
+    <string name="player_resume_action">Resume (%1$s)</string>
+    <string name="player_start_over">Start Over</string>
+
+    <!-- End of movie dialog -->
+    <string name="player_next_in_seconds">Next Movie in %1$ds</string>
+    <string name="player_scene_finished">Scene Finished</string>
+    <string name="player_autoplay_hint">Playing next movie automatically or cancel to stay.</string>
+    <string name="player_next_question">What would you like to watch next?</string>
+    <string name="player_play_now">Play now</string>
+    <string name="player_next_movie">Next movie</string>
+    <string name="player_cancel">Cancel</string>
+    <string name="player_back_to_details">Back to Details</string>
+
+    <!-- Playback error dialog -->
+    <string name="player_error_title">Playback Error</string>
+    <string name="player_retry">Retry</string>
+    <string name="player_back">Back</string>
+
+    <!-- Technical stats overlay -->
+    <string name="player_tech_stats_title">TECHNICAL STATS</string>
+    <string name="player_tech_direct">DIRECT</string>
+    <string name="player_tech_transcode">TRANSCODE</string>
+    <string name="player_tech_stream_mode">Stream Mode</string>
+    <string name="player_tech_decoder">Decoder</string>
+    <string name="player_tech_resolver_latency">Resolver Latency</string>
+    <string name="player_tech_retries">Retries</string>
+    <string name="player_tech_first_frame">First Frame</string>
+    <string name="player_tech_rebuffering">Rebuffering</string>
+    <string name="player_tech_last_seek_buffer">Last Seek Buffer</string>
+    <string name="player_tech_dropped_frames">Dropped Frames</string>
+    <string name="player_tech_resolution">Resolution</string>
+    <string name="player_tech_quality">Quality</string>
+    <string name="player_tech_video_codec">Video Codec</string>
+    <string name="player_tech_frame_rate">Frame Rate</string>
+    <string name="player_tech_content_bitrate">Content Bitrate</string>
+    <string name="player_tech_download_speed">Download Speed</string>
+    <string name="player_tech_audio_codec">Audio Codec</string>
+    <string name="player_tech_audio_channels">Audio Channels</string>
+    <string name="player_tech_sample_rate">Sample Rate</string>
+    <string name="player_tech_buffer_ahead">Buffer Ahead</string>
+    <string name="player_tech_container">Container</string>
+    <string name="player_tech_file_size">File Size</string>
+    <string name="player_tech_value_ms">%1$d ms</string>
+    <string name="player_tech_value_seconds">%1$ds</string>
+    <string name="player_tech_rebuffer_events">%1$d events / %2$ds</string>
+
+    <!-- TV player overlay -->
+    <string name="player_brand">Adult Hub</string>
+    <string name="player_time_unknown">--:--</string>
+    <string name="player_speed">Speed %1$s×</string>
+    <string name="player_speed_value">%1$s×</string>
+    <string name="player_quality_unavailable_retry">Quality: unavailable (retry)</string>
+    <string name="player_quality_retry">Quality: retry</string>
+    <string name="player_quality_selected_prefix">"✓ "</string>
+    <string name="player_quality_original">Original</string>
+
+    <!-- Control descriptions -->
+    <string name="player_cd_rewind">Rewind %1$d seconds</string>
+    <string name="player_cd_forward">Forward %1$d seconds</string>
+    <string name="player_cd_pause">Pause</string>
+    <string name="player_cd_play">Play</string>
+    <string name="player_cd_mute">Mute</string>
+    <string name="player_cd_unmute">Unmute</string>
+    <string name="player_cd_add_favorite">Add to favorites</string>
+    <string name="player_cd_remove_favorite">Remove from favorites</string>
+    <string name="player_cd_favorite">Favorite</string>
+    <string name="player_cd_random">Play random video</string>
+    <string name="player_cd_random_mobile">Play random</string>
+    <string name="player_cd_info">Playback information</string>
+    <string name="player_cd_more">More playback options</string>
+    <string name="player_cd_close">Close player</string>
+    <string name="player_cd_change_aspect_ratio">Change aspect ratio</string>
+    <string name="player_cd_quality_changing">Changing quality</string>
+    <string name="player_cd_quality">Quality: %1$s</string>
+</resources>

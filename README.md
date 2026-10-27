@@ -33,7 +33,8 @@ If your Adult Hub server is located in a different network, behind a firewall, o
 - **Smart Decoder Fallback**: Automatically switches to software decoding if an Android device encounters an unsupported hardware audio/video profile.
 - **TV Live Playback HUD**: View real-time technical stream details (codecs, resolution, bitrate, buffer health, dropped frames) in an unobtrusive corner overlay without pausing your media.
 - **Customizable Buffering**: Choose between *Fast Start* (instant playback), *Standard*, or *Large Buffer* (for slower Wi-Fi networks).
-- **Audio & Subtitle Selection**: Easily switch language tracks and subtitle options during playback.
+- **Quality Selection**: Switch between the original upload and the alternative renditions the resolver offers for Telegram videos, without restarting playback.
+- **Single-language content**: The player intentionally has no subtitle or audio track picker; the catalogue is monolingual and Telegram-sourced videos carry no subtitle tracks.
 
 ### 🎲 Smart Discovery
 - **"Surprise Me" (Instant Shuffle)**: Play a random movie immediately when you cannot decide what to watch.
@@ -107,7 +108,7 @@ If your **Adult Hub** server runs on a different local network, on a remote serv
 |---|---|---|
 | **D-Pad Center (OK)** | Select / Open item | Toggle Play / Pause; show on-screen controls |
 | **D-Pad Left / Right** | Move focus horizontally | Seek backward / forward (configurable 10s or 15s) |
-| **D-Pad Up / Down** | Scroll vertical sections and rows | Open Quick Controls (Audio, Subtitles, Stats HUD) |
+| **D-Pad Up / Down** | Scroll vertical sections and rows | Open the control bar (quality, speed, aspect ratio, technical info) |
 | **Back Button** | Return to previous screen (Press twice on Home to exit) | Close on-screen controls / Exit player |
 
 ---

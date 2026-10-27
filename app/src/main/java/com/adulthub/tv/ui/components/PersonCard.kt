@@ -15,6 +15,7 @@ import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.graphicsLayer
 import androidx.compose.ui.layout.ContentScale
@@ -34,6 +35,7 @@ import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import androidx.tv.material3.Text
 import coil.compose.AsyncImage
 import coil.request.ImageRequest
+import com.adulthub.tv.R
 import com.adulthub.tv.data.local.SettingsDataStore
 import com.adulthub.tv.data.model.TvPerson
 import com.adulthub.tv.ui.theme.CardSurface
@@ -121,7 +123,7 @@ fun PersonCard(
                 if (person.movieCount > 0) {
                     Spacer(modifier = Modifier.height(2.dp))
                     Text(
-                        text = "${person.movieCount} movies",
+                        text = stringResource(R.string.card_movies_count, person.movieCount),
                         style = MaterialTheme.typography.bodySmall,
                         color = TextSecondary,
                         maxLines = 1,

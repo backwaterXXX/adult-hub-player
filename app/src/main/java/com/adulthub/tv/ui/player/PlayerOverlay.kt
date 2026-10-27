@@ -60,6 +60,7 @@ import androidx.compose.ui.input.key.KeyEventType
 import androidx.compose.ui.input.key.key
 import androidx.compose.ui.input.key.onPreviewKeyEvent
 import androidx.compose.ui.input.key.type
+import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.semantics.contentDescription
 import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.text.font.FontWeight
@@ -79,6 +80,7 @@ import androidx.media3.ui.AspectRatioFrameLayout
 import android.os.SystemClock
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.flow.StateFlow
+import com.adulthub.tv.R
 import com.adulthub.tv.data.resolver.ORIGINAL_VARIANT_ID
 import com.adulthub.tv.ui.theme.NeonPink
 import com.adulthub.tv.ui.theme.SurfaceDark
@@ -264,7 +266,7 @@ fun PlayerOverlay(
                         )
 
                         Text(
-                            text = "Adult Hub",
+                            text = stringResource(R.string.player_brand),
                             color = NeonPink,
                             fontSize = 14.sp,
                             fontWeight = FontWeight.SemiBold,
@@ -318,7 +320,7 @@ fun PlayerOverlay(
                         Spacer(modifier = Modifier.width(16.dp))
 
                         Text(
-                            text = if (duration > 0L) formatTime(duration) else "--:--",
+                            text = if (duration > 0L) formatTime(duration) else stringResource(R.string.player_time_unknown),
                             color = Color.White.copy(alpha = 0.7f),
                             fontSize = 14.sp,
                             fontWeight = FontWeight.Medium,
@@ -343,38 +345,23 @@ fun PlayerOverlay(
                                     .padding(6.dp),
                                 horizontalArrangement = Arrangement.spacedBy(8.dp),
                             ) {
-                                val speedText = "Speed ${playbackSpeed}×"
+                                val speedText = stringResource(R.string.player_speed, playbackSpeed)
                                 OsdActionChip(
                                     icon = Icons.Rounded.Speed,
                                     text = speedText,
                                     isActive = playbackSpeed != 1.0f,
                                     onClick = {
-                                        val nextSpeed = when {
-                                            playbackSpeed < 1.15f -> 1.25f
-                                            playbackSpeed < 1.4f -> 1.5f
-                                            playbackSpeed < 1.75f -> 2.0f
-                                            else -> 1.0f
-                                        }
-                                        onPlaybackSpeedChange(nextSpeed)
+                                        onPlaybackSpeedChange(nextPlaybackSpeed(playbackSpeed))
                                         onResetOsdTimer()
                                     },
                                 )
-                                val zoomText = when (resizeMode) {
-                                    AspectRatioFrameLayout.RESIZE_MODE_FILL -> "Zoom Fill"
-                                    AspectRatioFrameLayout.RESIZE_MODE_ZOOM -> "Zoom Crop"
-                                    else -> "Zoom Fit"
-                                }
+                                val zoomText = resizeModeLabel(resizeMode)
                                 OsdActionChip(
                                     icon = Icons.Rounded.AspectRatio,
                                     text = zoomText,
                                     isActive = resizeMode != AspectRatioFrameLayout.RESIZE_MODE_FIT,
                                     onClick = {
-                                        val nextMode = when (resizeMode) {
-                                            AspectRatioFrameLayout.RESIZE_MODE_FIT -> AspectRatioFrameLayout.RESIZE_MODE_FILL
-                                            AspectRatioFrameLayout.RESIZE_MODE_FILL -> AspectRatioFrameLayout.RESIZE_MODE_ZOOM
-                                            else -> AspectRatioFrameLayout.RESIZE_MODE_FIT
-                                        }
-                                        onResizeModeChange(nextMode)
+                                        onResizeModeChange(nextResizeMode(resizeMode))
                                         onResetOsdTimer()
                                     },
                                 )
@@ -383,7 +370,7 @@ fun PlayerOverlay(
                                 if (qualityLoadFailed && qualityOptions.size <= 1) {
                                     OsdActionChip(
                                         icon = Icons.Rounded.HighQuality,
-                                        text = "Quality: unavailable (retry)",
+                                        text = stringResource(R.string.player_quality_unavailable_retry),
                                         onClick = {
                                             onQualityRetry()
                                             onResetOsdTimer()
@@ -435,13 +422,13 @@ fun PlayerOverlay(
                     ) {
                         OsdIconButton(
                             icon = Icons.Rounded.FastRewind,
-                            contentDescription = "Rewind ${nextSeekStepSeconds} seconds",
+                            contentDescription = stringResource(R.string.player_cd_rewind, nextSeekStepSeconds),
                             onClick = { seekWithAcceleration(-1) },
                         )
                         Spacer(modifier = Modifier.width(16.dp))
                         OsdIconButton(
                             icon = if (isPlaying) Icons.Rounded.Pause else Icons.Rounded.PlayArrow,
-                            contentDescription = if (isPlaying) "Pause" else "Play",
+                            contentDescription = stringResource(if (isPlaying) R.string.player_cd_pause else R.string.player_cd_play),
                             isPrimary = true,
                             enabled = !isBuffering,
                             onClick = {
@@ -453,13 +440,13 @@ fun PlayerOverlay(
                         Spacer(modifier = Modifier.width(16.dp))
                         OsdIconButton(
                             icon = Icons.Rounded.FastForward,
-                            contentDescription = "Forward ${nextSeekStepSeconds} seconds",
+                            contentDescription = stringResource(R.string.player_cd_forward, nextSeekStepSeconds),
                             onClick = { seekWithAcceleration(1) },
                         )
                         Spacer(modifier = Modifier.width(16.dp))
                         OsdIconButton(
                             icon = if (isMuted) Icons.Rounded.VolumeOff else Icons.Rounded.VolumeUp,
-                            contentDescription = if (isMuted) "Unmute" else "Mute",
+                            contentDescription = stringResource(if (isMuted) R.string.player_cd_unmute else R.string.player_cd_mute),
                             isActive = isMuted,
                             onClick = {
                                 onMuteClick()
@@ -469,7 +456,7 @@ fun PlayerOverlay(
                         Spacer(modifier = Modifier.width(28.dp))
                         OsdIconButton(
                             icon = if (isFavorite) Icons.Rounded.Favorite else Icons.Rounded.FavoriteBorder,
-                            contentDescription = if (isFavorite) "Remove from favorites" else "Add to favorites",
+                            contentDescription = stringResource(if (isFavorite) R.string.player_cd_remove_favorite else R.string.player_cd_add_favorite),
                             isActive = isFavorite,
                             onClick = {
                                 onToggleFavorite()
@@ -479,7 +466,7 @@ fun PlayerOverlay(
                         Spacer(modifier = Modifier.width(14.dp))
                         OsdIconButton(
                             icon = Icons.Rounded.Shuffle,
-                            contentDescription = "Play random video",
+                            contentDescription = stringResource(R.string.player_cd_random),
                             onClick = {
                                 onRandomClick()
                                 onResetOsdTimer()
@@ -488,7 +475,7 @@ fun PlayerOverlay(
                         Spacer(modifier = Modifier.width(14.dp))
                         OsdIconButton(
                             icon = Icons.Rounded.Info,
-                            contentDescription = "Playback information",
+                            contentDescription = stringResource(R.string.player_cd_info),
                             onClick = {
                                 onInfoClick()
                                 onResetOsdTimer()
@@ -502,8 +489,11 @@ fun PlayerOverlay(
                             OsdIconButton(
                                 icon = Icons.Rounded.HighQuality,
                                 contentDescription = when {
-                                    isQualitySwitching -> "Changing quality"
-                                    else -> "Quality: ${selectedOption?.label ?: "Original"}"
+                                    isQualitySwitching -> stringResource(R.string.player_cd_quality_changing)
+                                    else -> stringResource(
+                                        R.string.player_cd_quality,
+                                        selectedOption?.label ?: stringResource(R.string.player_quality_original),
+                                    )
                                 },
                                 isActive = isQualityPickerVisible ||
                                     (selectedOption != null && selectedOption.variantId != ORIGINAL_VARIANT_ID),
@@ -518,7 +508,7 @@ fun PlayerOverlay(
                         Spacer(modifier = Modifier.width(14.dp))
                         OsdIconButton(
                             icon = Icons.Rounded.MoreHoriz,
-                            contentDescription = "More playback options",
+                            contentDescription = stringResource(R.string.player_cd_more),
                             isActive = isMoreMenuVisible,
                             onClick = {
                                 isMoreMenuVisible = !isMoreMenuVisible
@@ -528,7 +518,7 @@ fun PlayerOverlay(
                         Spacer(modifier = Modifier.width(14.dp))
                         OsdIconButton(
                             icon = Icons.Rounded.Close,
-                            contentDescription = "Close player",
+                            contentDescription = stringResource(R.string.player_cd_close),
                             onClick = onBackClick,
                         )
                     }

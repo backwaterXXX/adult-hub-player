@@ -35,6 +35,7 @@ import androidx.compose.ui.input.key.key
 import androidx.compose.ui.input.key.onPreviewKeyEvent
 import androidx.compose.ui.input.key.type
 import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.compose.foundation.shape.CircleShape
@@ -49,6 +50,7 @@ import androidx.media3.common.util.UnstableApi
 import androidx.media3.ui.AspectRatioFrameLayout
 import androidx.media3.ui.PlayerView
 import androidx.tv.material3.Text
+import com.adulthub.tv.R
 import com.adulthub.tv.player.PlayerManager
 import com.adulthub.tv.ui.theme.NeonPink
 import com.adulthub.tv.ui.theme.OledBlack
@@ -103,7 +105,7 @@ fun PlayerScreen(
     }
     if (playerManagerState == null) {
         Box(Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
-            Text("Preparing player…", color = Color.White)
+            Text(stringResource(R.string.player_preparing), color = Color.White)
         }
         return
     }
@@ -136,6 +138,7 @@ fun PlayerScreen(
     var isOsdVisible by rememberSaveable { mutableStateOf(true) }
     var osdTimerTrigger by remember { mutableLongStateOf(0L) }
     var seekFeedback by remember { mutableStateOf<String?>(null) }
+    var retryMessage by remember { mutableStateOf<String?>(null) }
     var showInfoDialog by rememberSaveable { mutableStateOf(false) }
     var resizeMode by rememberSaveable { mutableIntStateOf(AspectRatioFrameLayout.RESIZE_MODE_FIT) }
     var playbackSpeed by rememberSaveable { mutableFloatStateOf(1.0f) }
@@ -158,14 +161,14 @@ fun PlayerScreen(
                 // can neither hijack the new media nor overwrite its quality state.
                 val info = viewModel.resolveQualityStreamUrl(variantId)
                 if (info == null) {
-                    viewModel.abortQualitySwitch(QUALITY_SWITCH_FAILURE_MESSAGE)
+                    viewModel.abortQualitySwitch(context.getString(R.string.player_quality_switch_failure))
                     return@launch
                 }
                 val swapped = playerManager.switchQualityStream(info.streamUrl, viewModel.variantFor(variantId))
                 if (swapped) {
                     viewModel.confirmQualitySwitch(variantId)
                 } else {
-                    viewModel.abortQualitySwitch(QUALITY_SWITCH_FAILURE_MESSAGE)
+                    viewModel.abortQualitySwitch(context.getString(R.string.player_quality_switch_failure))
                 }
             }
         }
@@ -396,7 +399,7 @@ fun PlayerScreen(
                             if (!isOsdVisible && !isPlaybackEnded && playerError == null && !showInfoDialog) {
                                 val delta = -seekStepSec * 1_000L
                                 playerManager.seekBy(delta)
-                                seekFeedback = "-${seekStepSec}s"
+                                seekFeedback = context.getString(R.string.player_seek_backward, seekStepSec)
                                 viewModel.playbackReporter.reportProgressNow(
                                     playerManager.currentPositionMs.value,
                                     !playerManager.isPlaying.value,
@@ -409,7 +412,7 @@ fun PlayerScreen(
                             if (!isOsdVisible && !isPlaybackEnded && playerError == null && !showInfoDialog) {
                                 val delta = seekStepSec * 1_000L
                                 playerManager.seekBy(delta)
-                                seekFeedback = "+${seekStepSec}s"
+                                seekFeedback = context.getString(R.string.player_seek_forward, seekStepSec)
                                 viewModel.playbackReporter.reportProgressNow(
                                     playerManager.currentPositionMs.value,
                                     !playerManager.isPlaying.value,
@@ -468,7 +471,7 @@ fun PlayerScreen(
                 Column(horizontalAlignment = Alignment.CenterHorizontally) {
                     com.adulthub.tv.ui.components.LoadingIndicator()
                     Text(
-                        text = "Changing quality…",
+                        text = stringResource(R.string.player_changing_quality),
                         color = Color.White,
                         fontSize = 14.sp,
                         modifier = Modifier.padding(top = 8.dp),
@@ -484,7 +487,7 @@ fun PlayerScreen(
                     contentAlignment = Alignment.Center,
                 ) {
                     com.adulthub.tv.ui.components.LoadingIndicator(
-                        message = "Loading stream...",
+                        message = stringResource(R.string.player_loading_stream),
                     )
                 }
             }
@@ -535,7 +538,7 @@ fun PlayerScreen(
                     },
                     onSeekRelative = { deltaMs ->
                         playerManager.seekBy(deltaMs)
-                        seekFeedback = if (deltaMs > 0) "+${deltaMs / 1000}s" else "${deltaMs / 1000}s"
+                        seekFeedback = if (deltaMs > 0) context.getString(R.string.player_seek_forward, deltaMs / 1000) else context.getString(R.string.player_seek_backward, -deltaMs / 1000)
                         viewModel.playbackReporter.reportProgressNow(playerManager.currentPositionMs.value, !playerManager.isPlaying.value, reportingSessionId)
                     },
                     onSeekTo = { positionMs ->
@@ -591,7 +594,7 @@ fun PlayerScreen(
                     onMuteClick = { playerManager.toggleMute() },
                     onSeekRelative = { deltaMs ->
                         playerManager.seekBy(deltaMs)
-                        seekFeedback = if (deltaMs > 0) "+${deltaMs / 1000}s" else "${deltaMs / 1000}s"
+                        seekFeedback = if (deltaMs > 0) context.getString(R.string.player_seek_forward, deltaMs / 1000) else context.getString(R.string.player_seek_backward, -deltaMs / 1000)
                         viewModel.playbackReporter.reportProgressNow(
                             playerManager.currentPositionMs.value,
                             !playerManager.isPlaying.value,
@@ -693,8 +696,10 @@ fun PlayerScreen(
 
                 // Runtime Playback Exception Dialog
                 playerError?.let { err ->
+                    LaunchedEffect(err) { retryMessage = null }
                     PlaybackErrorDialog(
                         errorMessage = err,
+                        retryMessage = retryMessage,
                         onRetry = {
                             // The address of an expired stream cannot be reused, so the
                             // playback data is resolved again before the retry.
@@ -708,6 +713,8 @@ fun PlayerScreen(
                                         headers = state.playbackInfo.headers,
                                         itemId = state.item.id,
                                     )
+                                } else {
+                                    retryMessage = context.getString(R.string.player_stream_refresh_failure)
                                 }
                             }
                         },
@@ -724,4 +731,3 @@ fun PlayerScreen(
 }
 
 private const val PHASH_STATUS_VISIBLE_MS = 10_000L
-private const val QUALITY_SWITCH_FAILURE_MESSAGE = "Could not change quality. Keeping current stream."

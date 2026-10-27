@@ -29,6 +29,7 @@ import androidx.compose.ui.graphics.Color
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.flow.distinctUntilChanged
 import androidx.compose.ui.graphics.graphicsLayer
+import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.text.style.TextOverflow
@@ -39,6 +40,7 @@ import androidx.tv.material3.Card
 import androidx.tv.material3.CardDefaults
 import androidx.tv.material3.MaterialTheme
 import androidx.tv.material3.Text
+import com.adulthub.tv.R
 import com.adulthub.tv.data.model.TvCategory
 import com.adulthub.tv.data.model.TvItem
 import com.adulthub.tv.ui.components.ErrorMessage
@@ -136,14 +138,14 @@ fun CategoriesTab(
                     )
                     val countText = if (state.totalCount > 0) {
                         if (state.hasMoreCategoryMovies) {
-                            "${state.categoryMovies.size} of ${state.totalCount} movies"
+                            stringResource(R.string.library_movies_of_total, state.categoryMovies.size, state.totalCount)
                         } else {
-                            "${state.categoryMovies.size} movies"
+                            stringResource(R.string.library_movies_count, state.categoryMovies.size)
                         }
                     } else if (state.hasMoreCategoryMovies) {
-                        "${state.categoryMovies.size}+ movies"
+                        stringResource(R.string.library_movies_count_plus, state.categoryMovies.size)
                     } else {
-                        "${state.categoryMovies.size} movies"
+                        stringResource(R.string.library_movies_count, state.categoryMovies.size)
                     }
                     Text(
                         text = countText,
@@ -153,7 +155,7 @@ fun CategoriesTab(
                 }
 
                 TvSecondaryButton(onClick = onBackToCategories) {
-                    Text(text = "Back to Categories")
+                    Text(text = stringResource(R.string.library_back_to_categories))
                 }
             }
 
@@ -162,7 +164,7 @@ fun CategoriesTab(
                     modifier = Modifier.fillMaxSize(),
                     contentAlignment = Alignment.Center,
                 ) {
-                    LoadingIndicator(message = "Loading category movies…")
+                    LoadingIndicator(message = stringResource(R.string.library_loading_category_movies))
                 }
             } else if (state.categoryMoviesError != null && state.categoryMovies.isEmpty()) {
                 Box(
@@ -181,7 +183,7 @@ fun CategoriesTab(
                     contentAlignment = Alignment.Center,
                 ) {
                     Text(
-                        text = "No movies found in category ${state.selectedCategory.name}",
+                        text = stringResource(R.string.library_no_movies_in_category, state.selectedCategory.name),
                         style = MaterialTheme.typography.bodyLarge,
                         color = TextSecondary,
                     )
@@ -220,7 +222,7 @@ fun CategoriesTab(
                                     .padding(vertical = 16.dp),
                                 contentAlignment = Alignment.Center,
                             ) {
-                                LoadingIndicator(message = "Loading more category movies…")
+                                LoadingIndicator(message = stringResource(R.string.library_loading_more_category_movies))
                             }
                         }
                     }
@@ -237,7 +239,7 @@ fun CategoriesTab(
                                     onClick = onLoadMore,
                                     modifier = Modifier.height(44.dp),
                                 ) {
-                                    Text(text = "Load More Movies ↓")
+                                    Text(text = stringResource(R.string.library_load_more_movies))
                                 }
                             }
                         }
@@ -255,7 +257,7 @@ fun CategoriesTab(
                                     onClick = onLoadMore,
                                     modifier = Modifier.height(44.dp),
                                 ) {
-                                    Text(text = "Retry Loading More Movies")
+                                    Text(text = stringResource(R.string.library_retry_loading_more_movies))
                                 }
                             }
                         }
@@ -271,7 +273,7 @@ fun CategoriesTab(
                 verticalAlignment = Alignment.CenterVertically,
             ) {
                 Text(
-                    text = "${state.categories.size} categories",
+                    text = stringResource(R.string.library_categories_count, state.categories.size),
                     style = MaterialTheme.typography.bodyMedium,
                     color = TextSecondary,
                 )
@@ -283,7 +285,7 @@ fun CategoriesTab(
                         modifier = Modifier.fillMaxSize(),
                         contentAlignment = Alignment.Center,
                     ) {
-                        LoadingIndicator(message = "Loading categories…")
+                        LoadingIndicator(message = stringResource(R.string.library_loading_categories))
                     }
                 }
                 state.errorMessage != null && state.categories.isEmpty() -> {
@@ -304,7 +306,7 @@ fun CategoriesTab(
                         contentAlignment = Alignment.Center,
                     ) {
                         Text(
-                            text = "No categories available",
+                            text = stringResource(R.string.library_no_categories_available),
                             style = MaterialTheme.typography.bodyLarge,
                             color = TextSecondary,
                         )
@@ -379,7 +381,7 @@ private fun CategoryCard(
             if (category.movieCount > 0) {
                 Spacer(modifier = Modifier.height(4.dp))
                 Text(
-                    text = "${category.movieCount} movies",
+                    text = stringResource(R.string.library_movies_count, category.movieCount),
                     style = MaterialTheme.typography.bodySmall,
                     color = TextSecondary,
                 )

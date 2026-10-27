@@ -145,7 +145,7 @@ fun ItemDetailScreen(
                     modifier = Modifier.fillMaxSize(),
                     contentAlignment = Alignment.Center,
                 ) {
-                    LoadingIndicator(message = "Loading movie details…")
+                    LoadingIndicator(message = stringResource(R.string.library_loading_movie_details))
                 }
             }
             state.errorMessage != null && state.item == null -> {
@@ -154,7 +154,7 @@ fun ItemDetailScreen(
                     contentAlignment = Alignment.Center,
                 ) {
                     ErrorMessage(
-                        message = state.errorMessage ?: "Failed to load movie",
+                        message = state.errorMessage ?: stringResource(R.string.library_failed_to_load_movie),
                         onRetry = { viewModel.loadDetails(itemId) },
                         modifier = Modifier.fillMaxWidth(0.5f),
                     )
@@ -248,7 +248,7 @@ fun ItemDetailScreen(
                                     onClick = onNavigateBack,
                                     modifier = Modifier.height(38.dp),
                                 ) {
-                                    Text(text = "Back", fontSize = 13.sp)
+                                    Text(text = stringResource(R.string.action_back), fontSize = 13.sp)
                                 }
                             }
 
@@ -309,7 +309,7 @@ fun ItemDetailScreen(
                                 onClick = viewModel::playMovie,
                                 modifier = Modifier.height(44.dp),
                             ) {
-                                Text(text = "Play", fontWeight = FontWeight.Bold)
+                                Text(text = stringResource(R.string.library_action_play), fontWeight = FontWeight.Bold)
                             }
 
                             val resumeMs = item.playbackPositionTicks / 10_000L
@@ -323,7 +323,7 @@ fun ItemDetailScreen(
                                     onClick = viewModel::resumeMovie,
                                     modifier = Modifier.height(44.dp),
                                 ) {
-                                    Text(text = "Resume ($pct%)")
+                                    Text(text = stringResource(R.string.library_resume_percent, pct))
                                 }
                             }
 
@@ -331,7 +331,7 @@ fun ItemDetailScreen(
                                 onClick = viewModel::playRandom,
                                 modifier = Modifier.height(44.dp),
                             ) {
-                                Text(text = "Random movie")
+                                Text(text = stringResource(R.string.library_random_movie))
                             }
 
                             val hasActors = item.people.any { it.type == "Actor" || it.type == null }
@@ -354,7 +354,11 @@ fun ItemDetailScreen(
                             }
 
                             if (!item.isTelegram) {
-                                val favText = if (state.isFavorite) "Favorited" else "Add to favorites"
+                                val favText = if (state.isFavorite) {
+                                    stringResource(R.string.library_favorited)
+                                } else {
+                                    stringResource(R.string.library_add_to_favorites)
+                                }
                                 TvSecondaryButton(
                                     onClick = viewModel::toggleFavorite,
                                     modifier = Modifier.height(44.dp),
@@ -363,7 +367,11 @@ fun ItemDetailScreen(
                                 }
                             }
 
-                            val watchedText = if (item.isPlayed) "Watched ✓" else "Mark watched"
+                            val watchedText = if (item.isPlayed) {
+                                stringResource(R.string.library_watched)
+                            } else {
+                                stringResource(R.string.library_mark_watched)
+                            }
                             TvSecondaryButton(
                                 onClick = viewModel::toggleWatched,
                                 modifier = Modifier.height(44.dp),
@@ -425,7 +433,7 @@ fun ItemDetailScreen(
                                     .padding(horizontal = 48.dp, vertical = 12.dp),
                             ) {
                                 Text(
-                                    text = "Overview",
+                                    text = stringResource(R.string.library_overview),
                                     style = MaterialTheme.typography.titleMedium,
                                     color = TextPrimary,
                                     fontWeight = FontWeight.Bold,
@@ -452,7 +460,7 @@ fun ItemDetailScreen(
                                     .padding(vertical = 12.dp),
                             ) {
                                 Text(
-                                    text = "Cast",
+                                    text = stringResource(R.string.library_cast),
                                     style = MaterialTheme.typography.titleLarge,
                                     fontWeight = FontWeight.Bold,
                                     modifier = Modifier.padding(horizontal = 48.dp, vertical = 6.dp),
@@ -489,7 +497,7 @@ fun ItemDetailScreen(
                                     .padding(vertical = 12.dp),
                             ) {
                                 Text(
-                                    text = "🔥 Similar Scenes",
+                                    text = stringResource(R.string.library_similar_scenes),
                                     style = MaterialTheme.typography.titleLarge,
                                     fontWeight = FontWeight.Bold,
                                     modifier = Modifier.padding(horizontal = 48.dp, vertical = 6.dp),
@@ -532,7 +540,7 @@ fun ItemDetailScreen(
                 )
                 Spacer(Modifier.height(14.dp))
                 Text(
-                    text = "Choose an action for this tag:",
+                    text = stringResource(R.string.library_tag_action_prompt),
                     style = MaterialTheme.typography.bodyLarge,
                     color = TextSecondary,
                 )

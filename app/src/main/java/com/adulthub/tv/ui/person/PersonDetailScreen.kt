@@ -33,6 +33,7 @@ import androidx.compose.ui.focus.focusRequester
 import androidx.compose.ui.focus.focusRestorer
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.layout.ContentScale
+import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
@@ -41,6 +42,7 @@ import androidx.tv.material3.MaterialTheme
 import androidx.tv.material3.Text
 import kotlinx.coroutines.delay
 import coil.compose.AsyncImage
+import com.adulthub.tv.R
 import com.adulthub.tv.ui.components.ErrorMessage
 import com.adulthub.tv.ui.components.LoadingIndicator
 import com.adulthub.tv.ui.components.MovieCard
@@ -106,7 +108,7 @@ fun PersonDetailScreen(
                     modifier = Modifier.fillMaxSize(),
                     contentAlignment = Alignment.Center,
                 ) {
-                    LoadingIndicator(message = "Loading performer details…")
+                    LoadingIndicator(message = stringResource(R.string.library_loading_performer_details))
                 }
             }
             state.errorMessage != null && state.person == null -> {
@@ -115,7 +117,7 @@ fun PersonDetailScreen(
                     contentAlignment = Alignment.Center,
                 ) {
                     ErrorMessage(
-                        message = state.errorMessage ?: "Failed to load performer",
+                        message = state.errorMessage ?: stringResource(R.string.library_failed_to_load_performer),
                         onRetry = { viewModel.loadPerson(personId, personName) },
                         modifier = Modifier.fillMaxWidth(0.5f),
                     )
@@ -168,7 +170,7 @@ fun PersonDetailScreen(
 
                                 if (!person.birthDate.isNullOrBlank()) {
                                     Row {
-                                        Text(text = "Born: ", style = MaterialTheme.typography.bodyMedium, color = TextSecondary)
+                                        Text(text = stringResource(R.string.library_label_born), style = MaterialTheme.typography.bodyMedium, color = TextSecondary)
                                         Text(text = person.birthDate ?: "", style = MaterialTheme.typography.bodyMedium, color = TextPrimary)
                                     }
                                     Spacer(modifier = Modifier.height(4.dp))
@@ -176,7 +178,7 @@ fun PersonDetailScreen(
 
                                 if (!person.nationality.isNullOrBlank()) {
                                     Row {
-                                        Text(text = "Nationality: ", style = MaterialTheme.typography.bodyMedium, color = TextSecondary)
+                                        Text(text = stringResource(R.string.library_label_nationality), style = MaterialTheme.typography.bodyMedium, color = TextSecondary)
                                         Text(text = person.nationality ?: "", style = MaterialTheme.typography.bodyMedium, color = TextPrimary)
                                     }
                                     Spacer(modifier = Modifier.height(4.dp))
@@ -184,7 +186,7 @@ fun PersonDetailScreen(
 
                                 if (person.aliases.isNotEmpty()) {
                                     Row {
-                                        Text(text = "Aliases: ", style = MaterialTheme.typography.bodyMedium, color = TextSecondary)
+                                        Text(text = stringResource(R.string.library_label_aliases), style = MaterialTheme.typography.bodyMedium, color = TextSecondary)
                                         Text(text = person.aliases.joinToString(", "), style = MaterialTheme.typography.bodyMedium, color = TextPrimary)
                                     }
                                     Spacer(modifier = Modifier.height(4.dp))
@@ -193,15 +195,15 @@ fun PersonDetailScreen(
                                 if (person.movieCount > 0 || state.movies.isNotEmpty()) {
                                     val count = if (state.movies.isNotEmpty()) state.movies.size else person.movieCount
                                     Row {
-                                        Text(text = "Filmography: ", style = MaterialTheme.typography.bodyMedium, color = TextSecondary)
-                                        Text(text = "$count scenes", style = MaterialTheme.typography.bodyMedium, color = TextPrimary, fontWeight = FontWeight.SemiBold)
+                                        Text(text = stringResource(R.string.library_label_filmography), style = MaterialTheme.typography.bodyMedium, color = TextSecondary)
+                                        Text(text = stringResource(R.string.library_scenes_count, count), style = MaterialTheme.typography.bodyMedium, color = TextPrimary, fontWeight = FontWeight.SemiBold)
                                     }
                                 }
 
                                 if (!person.bio.isNullOrBlank()) {
                                     Spacer(modifier = Modifier.height(16.dp))
                                     Text(
-                                        text = "Bio",
+                                        text = stringResource(R.string.library_bio),
                                         style = MaterialTheme.typography.titleMedium,
                                         color = TextPrimary,
                                         fontWeight = FontWeight.SemiBold,
@@ -227,7 +229,7 @@ fun PersonDetailScreen(
                                     .padding(vertical = 16.dp),
                             ) {
                                 Text(
-                                    text = "Filmography (${state.movies.size})",
+                                    text = stringResource(R.string.library_filmography_section, state.movies.size),
                                     style = MaterialTheme.typography.titleLarge,
                                     fontWeight = FontWeight.Bold,
                                     modifier = Modifier.padding(horizontal = 48.dp, vertical = 8.dp),

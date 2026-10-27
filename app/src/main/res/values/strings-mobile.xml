@@ -1,0 +1,78 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <!-- Auth: server -->
+    <string name="mobile_server_subtitle">Enter your server address</string>
+    <string name="mobile_server_url_label">Server URL</string>
+    <string name="mobile_connecting">Connecting…</string>
+    <string name="mobile_retry_saved_session">Retry saved session</string>
+    <string name="mobile_http_consent_title">Allow unencrypted connection?</string>
+    <string name="mobile_http_consent_message">Allow HTTP for %1$s on this device?</string>
+    <string name="mobile_allow">Allow</string>
+
+    <!-- Auth: login / quick connect / library select -->
+    <string name="mobile_login_title">Sign in</string>
+    <string name="mobile_change_server">Change server</string>
+    <string name="mobile_quick_connect_subtitle">Enter this code in Jellyfin account settings</string>
+    <string name="mobile_preparing_code">Preparing code…</string>
+    <string name="mobile_code_expired">The code expired. Start Quick Connect again.</string>
+    <string name="mobile_library_select_title">Choose a library</string>
+    <string name="mobile_library_select_subtitle">Select the collection to browse</string>
+
+    <!-- Home -->
+    <string name="mobile_browse_library">Browse library</string>
+    <string name="mobile_surprise_me">Surprise me</string>
+    <string name="mobile_unwatched">Unwatched</string>
+    <string name="mobile_try_again">Try again</string>
+    <string name="mobile_continue_watching">Continue watching</string>
+    <string name="mobile_recently_added">Recently added</string>
+    <string name="mobile_watch_history">Watch history</string>
+    <string name="mobile_random_picks">Random picks</string>
+    <string name="mobile_performers">Performers</string>
+    <string name="mobile_retry_categories">Retry categories</string>
+
+    <!-- Library -->
+    <string name="mobile_favorites">Favorites</string>
+    <string name="mobile_hd">HD</string>
+    <string name="mobile_shuffle">Shuffle</string>
+    <string name="mobile_sort">Sort</string>
+    <string name="mobile_sort_newest">Newest</string>
+    <string name="mobile_sort_title">Title</string>
+    <string name="mobile_sort_rating">Rating</string>
+    <string name="mobile_genre">Genre</string>
+    <string name="mobile_all_genres">All genres</string>
+    <string name="mobile_studio">Studio</string>
+    <string name="mobile_all_studios">All studios</string>
+    <string name="mobile_performer">Performer</string>
+    <string name="mobile_all_performers">All performers</string>
+    <string name="mobile_load_more">Load more</string>
+    <string name="mobile_back_all_categories">"‹  All categories"</string>
+    <string name="mobile_back_all_studios">"‹  All studios"</string>
+    <string name="mobile_back_channels">"‹  Channels"</string>
+    <string name="mobile_titles_count">%1$d titles</string>
+    <string name="mobile_find_performer">Find a performer</string>
+    <string name="mobile_photo_only">Photo only</string>
+    <string name="mobile_all">All</string>
+    <string name="mobile_no_channels">No channels available</string>
+    <string name="mobile_open_channel">Open channel</string>
+    <string name="mobile_hide">Hide</string>
+    <string name="mobile_no_channel_videos">No videos in this channel yet</string>
+
+    <!-- Search -->
+    <string name="mobile_search_hint">Movies, performers, channels</string>
+    <string name="mobile_recent_searches">Recent searches</string>
+    <string name="mobile_movies">Movies</string>
+    <string name="mobile_channel_videos">Channel videos</string>
+    <string name="mobile_no_results">Nothing found for \"%1$s\".</string>
+
+    <!-- Item detail -->
+    <string name="mobile_details">Details</string>
+    <string name="mobile_play">Play</string>
+    <string name="mobile_resume">Resume</string>
+    <string name="mobile_favorite_on">♥ Favorite</string>
+    <string name="mobile_favorite_off">♡ Favorite</string>
+    <string name="mobile_watched">Watched</string>
+    <string name="mobile_mark_watched">Mark watched</string>
+    <string name="mobile_genres">Genres</string>
+    <string name="mobile_cast">Cast</string>
+    <string name="mobile_similar">Similar</string>
+</resources>

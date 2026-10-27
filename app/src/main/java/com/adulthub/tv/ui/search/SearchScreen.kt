@@ -46,6 +46,7 @@ import androidx.compose.ui.focus.onFocusChanged
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.SolidColor
 import androidx.compose.ui.layout.ContentScale
+import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.TextStyle
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.input.ImeAction
@@ -57,6 +58,7 @@ import androidx.tv.material3.Card
 import androidx.tv.material3.CardDefaults
 import androidx.tv.material3.MaterialTheme
 import androidx.tv.material3.Text
+import com.adulthub.tv.R
 import com.adulthub.tv.data.jellyfin.JellyfinClientManager
 import com.adulthub.tv.data.model.TvItem
 import com.adulthub.tv.data.model.TvPerson
@@ -144,7 +146,7 @@ fun SearchScreen(
                     onClick = { viewModel.clearQuery() },
                     modifier = Modifier.height(48.dp),
                 ) {
-                    Text("Clear", fontWeight = FontWeight.SemiBold)
+                    Text(stringResource(R.string.action_confirm_clear), fontWeight = FontWeight.SemiBold)
                 }
 
                 Spacer(modifier = Modifier.width(12.dp))
@@ -155,7 +157,7 @@ fun SearchScreen(
                 onClick = onNavigateBack,
                 modifier = Modifier.height(48.dp),
             ) {
-                Text("Back", fontWeight = FontWeight.SemiBold)
+                Text(stringResource(R.string.action_back), fontWeight = FontWeight.SemiBold)
             }
         }
 
@@ -170,7 +172,7 @@ fun SearchScreen(
                         .weight(1f),
                     contentAlignment = Alignment.Center,
                 ) {
-                    LoadingIndicator(message = "Searching for '${uiState.query}'…")
+                    LoadingIndicator(message = stringResource(R.string.library_searching_for, uiState.query))
                 }
             }
 
@@ -182,7 +184,7 @@ fun SearchScreen(
                     contentAlignment = Alignment.Center,
                 ) {
                     ErrorMessage(
-                        message = uiState.errorMessage ?: "Search failed",
+                        message = uiState.errorMessage ?: stringResource(R.string.library_search_failed),
                         onRetry = { viewModel.retry() },
                         modifier = Modifier.fillMaxWidth(0.5f),
                     )
@@ -201,7 +203,7 @@ fun SearchScreen(
                         modifier = Modifier.padding(horizontal = 48.dp),
                     ) {
                         Text(
-                            text = "Search Movies & Performers",
+                            text = stringResource(R.string.library_search_title),
                             style = MaterialTheme.typography.headlineMedium.copy(
                                 fontWeight = FontWeight.Bold,
                                 color = TextPrimary,
@@ -209,7 +211,7 @@ fun SearchScreen(
                         )
                         Spacer(modifier = Modifier.height(8.dp))
                         Text(
-                            text = "Use the remote to enter movie titles, genres, or actor names.",
+                            text = stringResource(R.string.library_search_subtitle),
                             style = MaterialTheme.typography.bodyMedium.copy(
                                 color = TextSecondary,
                             ),
@@ -217,7 +219,7 @@ fun SearchScreen(
                         if (uiState.recentQueries.isNotEmpty()) {
                             Spacer(modifier = Modifier.height(24.dp))
                             Text(
-                                text = "Recent Searches",
+                                text = stringResource(R.string.library_recent_searches),
                                 style = MaterialTheme.typography.titleMedium.copy(
                                     fontWeight = FontWeight.SemiBold,
                                     color = NeonPink,
@@ -251,7 +253,7 @@ fun SearchScreen(
                     Column(horizontalAlignment = Alignment.CenterHorizontally) {
                         Spacer(modifier = Modifier.height(12.dp))
                         Text(
-                            text = "No results found",
+                            text = stringResource(R.string.library_no_results_found),
                             style = MaterialTheme.typography.headlineMedium.copy(
                                 fontWeight = FontWeight.Bold,
                                 color = TextPrimary,
@@ -259,7 +261,7 @@ fun SearchScreen(
                         )
                         Spacer(modifier = Modifier.height(8.dp))
                         Text(
-                            text = "No movies, performers, or channel videos matched '${uiState.query}'. Try another keyword.",
+                            text = stringResource(R.string.library_no_results_for_query, uiState.query),
                             style = MaterialTheme.typography.bodyMedium.copy(
                                 color = TextSecondary,
                             ),
@@ -305,6 +307,7 @@ private fun SearchInputField(
     modifier: Modifier = Modifier,
 ) {
     val interactionSource = remember { MutableInteractionSource() }
+    val searchInputHint = stringResource(R.string.library_search_input_hint)
     val isFocused by interactionSource.collectIsFocusedAsState()
     var isEditing by rememberSaveable { mutableStateOf(false) }
     var editorHadFocus by rememberSaveable { mutableStateOf(false) }
@@ -366,7 +369,7 @@ private fun SearchInputField(
             )
         } else {
             Text(
-                text = value.ifEmpty { "Search movies, performers, categories…" },
+                text = value.ifEmpty { searchInputHint },
                 style = TextStyle(
                     color = if (value.isEmpty()) Color.White.copy(alpha = 0.45f) else Color.White,
                     fontSize = 16.sp,
@@ -408,7 +411,7 @@ private fun SearchResultsList(
         if (movies.isNotEmpty()) {
             item(key = "section_movies_header", span = { GridItemSpan(maxLineSpan) }) {
                 Text(
-                    text = "Movies (${movies.size})",
+                    text = stringResource(R.string.library_section_movies, movies.size),
                     style = MaterialTheme.typography.titleLarge.copy(
                         fontWeight = FontWeight.Bold,
                         color = TextPrimary,
@@ -436,7 +439,7 @@ private fun SearchResultsList(
         if (actors.isNotEmpty()) {
             item(key = "section_actors_header", span = { GridItemSpan(maxLineSpan) }) {
                 Text(
-                    text = "Performers (${actors.size})",
+                    text = stringResource(R.string.library_section_performers, actors.size),
                     style = MaterialTheme.typography.titleLarge.copy(
                         fontWeight = FontWeight.Bold,
                         color = TextPrimary,
@@ -460,7 +463,7 @@ private fun SearchResultsList(
         if (channelVideos.isNotEmpty()) {
             item(key = "section_channel_videos_header", span = { GridItemSpan(maxLineSpan) }) {
                 Text(
-                    text = "Resolver Videos (${channelVideos.size})",
+                    text = stringResource(R.string.library_section_channel_videos, channelVideos.size),
                     style = MaterialTheme.typography.titleLarge.copy(
                         fontWeight = FontWeight.Bold,
                         color = TextPrimary,
@@ -483,7 +486,7 @@ private fun SearchResultsList(
         if (isLoading) {
             item(key = "search_in_progress", span = { GridItemSpan(maxLineSpan) }) {
                 LoadingIndicator(
-                    message = "Searching remaining sources…",
+                    message = stringResource(R.string.library_searching_remaining_sources),
                     modifier = Modifier.fillMaxWidth().padding(vertical = 24.dp),
                 )
             }

@@ -36,6 +36,7 @@ import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.graphicsLayer
 import androidx.compose.ui.layout.ContentScale
+import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.text.style.TextOverflow
@@ -47,6 +48,7 @@ import androidx.tv.material3.CardDefaults
 import androidx.tv.material3.MaterialTheme
 import androidx.tv.material3.Text
 import coil.compose.AsyncImage
+import com.adulthub.tv.R
 import com.adulthub.tv.data.model.ChannelSortMode
 import com.adulthub.tv.data.model.DurationFilter
 import com.adulthub.tv.data.model.TvChannel
@@ -166,9 +168,9 @@ fun ChannelsTab(
                     )
                     Text(
                         text = if (state.hasMoreVideos) {
-                            "(${state.channelVideos.size}+)"
+                            stringResource(R.string.library_video_count_plus, state.channelVideos.size)
                         } else {
-                            "(${state.channelVideos.size})"
+                            stringResource(R.string.library_video_count, state.channelVideos.size)
                         },
                         style = MaterialTheme.typography.bodySmall,
                         color = TextSecondary,
@@ -192,7 +194,7 @@ fun ChannelsTab(
                         },
                         modifier = Modifier.height(34.dp),
                     ) {
-                        Text(text = "Sort: ${state.sortMode.label}", fontSize = 12.sp)
+                        Text(text = stringResource(R.string.library_sort_value, state.sortMode.label), fontSize = 12.sp)
                     }
 
                     // Duration Filter Cycler Button
@@ -209,9 +211,9 @@ fun ChannelsTab(
                         modifier = Modifier.height(34.dp),
                     ) {
                         val durationText = if (state.durationFilter == DurationFilter.ALL) {
-                            "Duration: All"
+                            stringResource(R.string.filter_duration_all)
                         } else {
-                            "Duration: ${state.durationFilter.label}"
+                            stringResource(R.string.library_filter_duration, state.durationFilter.label)
                         }
                         Text(text = durationText, fontSize = 12.sp)
                     }
@@ -221,7 +223,7 @@ fun ChannelsTab(
                         onClick = onHideChannel,
                         modifier = Modifier.height(34.dp),
                     ) {
-                        Text(text = "Hide Channel", fontSize = 12.sp)
+                        Text(text = stringResource(R.string.action_hide_channel), fontSize = 12.sp)
                     }
 
                     // Back to Channels Button
@@ -229,7 +231,7 @@ fun ChannelsTab(
                         onClick = onBackToChannels,
                         modifier = Modifier.height(34.dp),
                     ) {
-                        Text(text = "Back to Channels", fontSize = 12.sp)
+                        Text(text = stringResource(R.string.library_back_to_channels), fontSize = 12.sp)
                     }
                 }
             }
@@ -239,7 +241,7 @@ fun ChannelsTab(
                     modifier = Modifier.fillMaxSize(),
                     contentAlignment = Alignment.Center,
                 ) {
-                    LoadingIndicator(message = "Loading channel videos…")
+                    LoadingIndicator(message = stringResource(R.string.library_loading_channel_videos))
                 }
             } else if (state.channelVideosError != null && state.channelVideos.isEmpty()) {
                 Box(
@@ -258,7 +260,7 @@ fun ChannelsTab(
                     contentAlignment = Alignment.Center,
                 ) {
                     Text(
-                        text = "No videos found in ${state.selectedChannel.title}",
+                        text = stringResource(R.string.library_no_videos_in_channel, state.selectedChannel.title),
                         style = MaterialTheme.typography.bodyLarge,
                         color = TextSecondary,
                     )
@@ -299,7 +301,7 @@ fun ChannelsTab(
                                     .padding(vertical = 16.dp),
                                 contentAlignment = Alignment.Center,
                             ) {
-                                LoadingIndicator(message = "Loading more channel videos…")
+                                LoadingIndicator(message = stringResource(R.string.library_loading_more_channel_videos))
                             }
                         }
                     }
@@ -316,7 +318,7 @@ fun ChannelsTab(
                                     onClick = onLoadMore,
                                     modifier = Modifier.height(44.dp),
                                 ) {
-                                    Text(text = "Load More Videos ↓")
+                                    Text(text = stringResource(R.string.library_load_more_videos))
                                 }
                             }
                         }
@@ -340,7 +342,7 @@ fun ChannelsTab(
                                     onClick = onLoadMore,
                                     modifier = Modifier.height(36.dp),
                                 ) {
-                                    Text(text = "Retry Loading More")
+                                    Text(text = stringResource(R.string.library_retry_loading_more))
                                 }
                             }
                         }
@@ -356,7 +358,7 @@ fun ChannelsTab(
                 verticalAlignment = Alignment.CenterVertically,
             ) {
                 Text(
-                    text = "${state.channels.size} Telegram channels",
+                    text = stringResource(R.string.library_video_channels_count, state.channels.size),
                     style = MaterialTheme.typography.bodyMedium,
                     color = TextSecondary,
                 )
@@ -368,7 +370,7 @@ fun ChannelsTab(
                         modifier = Modifier.fillMaxSize(),
                         contentAlignment = Alignment.Center,
                     ) {
-                        LoadingIndicator(message = "Loading channels…")
+                        LoadingIndicator(message = stringResource(R.string.library_loading_channels))
                     }
                 }
                 state.errorMessage != null && state.channels.isEmpty() -> {
@@ -389,7 +391,7 @@ fun ChannelsTab(
                         contentAlignment = Alignment.Center,
                     ) {
                         Text(
-                            text = "No channels available",
+                            text = stringResource(R.string.library_no_channels_available),
                             style = MaterialTheme.typography.bodyLarge,
                             color = TextSecondary,
                         )
@@ -482,6 +484,7 @@ private fun ChannelVideoCard(
     modifier: Modifier = Modifier,
 ) {
     val totalSec = video.duration.toLong()
+    val untitledVideo = stringResource(R.string.library_untitled_video)
     val formattedDuration = if (totalSec > 0) {
         val h = totalSec / 3600
         val m = (totalSec % 3600) / 60
@@ -536,7 +539,7 @@ private fun ChannelVideoCard(
                             .padding(horizontal = 6.dp, vertical = 2.dp),
                     ) {
                         Text(
-                            text = "WATCHED",
+                            text = stringResource(R.string.library_watched_badge),
                             color = NeonPink,
                             fontSize = 10.sp,
                             fontWeight = FontWeight.Bold,
@@ -578,7 +581,7 @@ private fun ChannelVideoCard(
                     .padding(12.dp),
             ) {
                 Text(
-                    text = video.title.ifBlank { "Untitled video" },
+                    text = video.title.ifBlank { untitledVideo },
                     style = MaterialTheme.typography.titleMedium,
                     color = TextPrimary,
                     maxLines = 2,

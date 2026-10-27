@@ -36,14 +36,12 @@ import kotlinx.coroutines.launch
 import kotlinx.coroutines.suspendCancellableCoroutine
 
 import com.adulthub.tv.data.local.BufferProfile
-import com.adulthub.tv.data.network.ServiceUrlPolicy
-import com.adulthub.tv.data.network.ServiceUrlValidation
 import com.adulthub.tv.data.resolver.VideoVariant
 import com.adulthub.tv.data.resolver.formatBitrate
 import com.adulthub.tv.data.resolver.formatQualityDescriptor
 import okhttp3.OkHttpClient
 import okhttp3.HttpUrl.Companion.toHttpUrlOrNull
-import java.io.IOException
+import java.util.concurrent.atomic.AtomicLong
 import kotlin.coroutines.resume
 
 private const val TAG = "PlayerManager"
@@ -53,8 +51,6 @@ private const val MAX_AUTOMATIC_RETRIES = 3
 private const val STABLE_PLAYBACK_MS = 30_000L
 private const val QUALITY_SWITCH_TIMEOUT_MS = 20_000L
 private const val QUALITY_SWITCH_MAX_PROGRESS_EXTENSIONS = 2
-private const val PLAYBACK_POLICY_ORIGIN_HEADER = "X-AdultHub-Playback-Origin"
-private const val PLAYBACK_POLICY_HEADERS_HEADER = "X-AdultHub-Playback-Headers"
 
 private data class PlaybackRequest(
     val itemId: String,
@@ -91,49 +87,17 @@ class PlayerManager(
     private var pendingQualitySwitch: PendingQualitySwitch? = null
     private var qualitySwitchTimeoutJob: Job? = null
     private var released = false
-    private val httpClient by lazy {
+    private val httpClientLazy = lazy {
         OkHttpClient.Builder()
             .connectTimeout(15, java.util.concurrent.TimeUnit.SECONDS)
-            .readTimeout(20, java.util.concurrent.TimeUnit.SECONDS)
-            .addNetworkInterceptor { chain ->
-                val request = chain.request()
-                val allowedOrigin = request.header(PLAYBACK_POLICY_ORIGIN_HEADER).orEmpty()
-                val forwardedHeaders = request.header(PLAYBACK_POLICY_HEADERS_HEADER)
-                    .orEmpty()
-                    .split(',')
-                    .filter(String::isNotBlank)
-                val requestWithoutPolicy = request.newBuilder()
-                    .removeHeader(PLAYBACK_POLICY_ORIGIN_HEADER)
-                    .removeHeader(PLAYBACK_POLICY_HEADERS_HEADER)
-                val safeRequest = requestWithoutPolicy.build()
-                if (request.url.isHttps) {
-                    val redirectedOrigin = "${request.url.scheme}://${request.url.host}:${request.url.port}"
-                    val originSafeRequest = if (redirectedOrigin == allowedOrigin) safeRequest else {
-                        requestWithoutPolicy.apply {
-                            forwardedHeaders.forEach(::removeHeader)
-                            removeHeader("Authorization")
-                            removeHeader("Cookie")
-                            removeHeader("X-Emby-Token")
-                        }.build()
-                    }
-                    chain.proceed(originSafeRequest)
-                } else {
-                    when (val validation = ServiceUrlPolicy.inspect(request.url.toString(), allowQuery = true)) {
-                        is ServiceUrlValidation.Valid -> {
-                            if (!validation.value.usesCleartext) {
-                                throw IOException("Blocked an insecure stream redirect")
-                            }
-                            if (validation.value.origin != allowedOrigin) {
-                                throw IOException("Blocked a cleartext redirect to a different host")
-                            }
-                            chain.proceed(safeRequest)
-                        }
-                        is ServiceUrlValidation.Invalid -> throw IOException("Blocked an insecure stream redirect: ${validation.reason}")
-                    }
-                }
-            }
+            // A proxy or transcode stream can hold the socket quiet while the resolver
+            // pulls the file from Telegram; a short read timeout turns that stall into a
+            // spurious network error and an unnecessary retry.
+            .readTimeout(60, java.util.concurrent.TimeUnit.SECONDS)
+            .addNetworkInterceptor(PlaybackPolicyInterceptor())
             .build()
     }
+    private val httpClient: OkHttpClient get() = httpClientLazy.value
     private var preparingStartedAt: Long? = null
     private var readyLoggedForCurrentMedia = false
     private var videoDecoderName: String? = null
@@ -150,7 +114,9 @@ class PlayerManager(
     @Volatile private var streamFileSizeBytes: Long? = null
     @Volatile private var streamContentType: String? = null
     val currentStreamFileSizeBytes: Long? get() = streamFileSizeBytes
-    @Volatile private var totalBytesTransferred = 0L
+    // Written from the ExoPlayer loader thread and read on the main thread, so a plain
+    // volatile += would lose increments between the read and the write-back.
+    private val totalBytesTransferred = AtomicLong()
     private var downloadRateSampleBytes = 0L
     private var downloadRateSampleAtMs = 0L
     private var lastDownloadRateBps: Long? = null
@@ -524,7 +490,7 @@ class PlayerManager(
                     finishQualitySwitch(false)
                     return@launch
                 }
-                val transferred = totalBytesTransferred
+                val transferred = totalBytesTransferred.get()
                 val progressed = transferred > transferredBytesAtLastCheck
                 transferredBytesAtLastCheck = transferred
                 if (progressed && progressExtensions < QUALITY_SWITCH_MAX_PROGRESS_EXTENSIONS) {
@@ -566,7 +532,7 @@ class PlayerManager(
         pendingSeekAtMs = null
         seekBufferingStartedAtMs = null
         lastSeekBufferDurationMs = null
-        totalBytesTransferred = 0L
+        totalBytesTransferred.set(0L)
         downloadRateSampleBytes = 0L
         downloadRateSampleAtMs = 0L
         lastDownloadRateBps = null
@@ -594,7 +560,7 @@ class PlayerManager(
                 upstream = httpDataSourceFactory.createDataSource(),
                 onFileSize = { size -> if (size > 0L) streamFileSizeBytes = size },
                 onContentType = { contentType -> streamContentType = contentType },
-                onBytesTransferred = { count -> totalBytesTransferred += count },
+                onBytesTransferred = { count -> totalBytesTransferred.addAndGet(count.toLong()) },
             )
         }
         val mediaSourceFactory = DefaultMediaSourceFactory(trackingDataSourceFactory)
@@ -775,6 +741,14 @@ class PlayerManager(
         }
         mediaSession = null
         exoPlayer.release()
+        // The client owns its dispatcher and connection pool, and a screen is entered and
+        // left many times per session; without this each visit keeps threads and idle
+        // connections alive until the process dies.
+        if (httpClientLazy.isInitialized()) {
+            val client = httpClientLazy.value
+            client.dispatcher.executorService.shutdown()
+            client.connectionPool.evictAll()
+        }
     }
 
     fun getTechnicalInfo(
@@ -785,37 +759,8 @@ class PlayerManager(
         val videoFormat = exoPlayer.videoFormat
         val audioFormat = exoPlayer.audioFormat
 
-        val isVideoSw = videoDecoderName?.let {
-            val n = it.lowercase()
-            n.startsWith("c2.android.") || n.startsWith("omx.google.") || n.contains("ffmpeg") || n.contains("sw")
-        } ?: false
-
-        val isAudioSw = audioDecoderName?.let {
-            val n = it.lowercase()
-            n.startsWith("c2.android.") || n.startsWith("omx.google.") || n.contains("ffmpeg") || n.contains("sw")
-        } ?: false
-
-        val decoderMode = when {
-            videoDecoderName == null && audioDecoderName == null -> "Hardware (HW)"
-            isVideoSw || isAudioSw -> {
-                val parts = listOfNotNull(
-                    if (isVideoSw) "V:SW" else null,
-                    if (isAudioSw) "A:SW" else null,
-                ).joinToString(", ")
-                "Fallback ($parts)"
-            }
-            else -> "Hardware (HW)"
-        }
-
-        val isTelegramProxy = playbackInfo.streamUrl.contains("/stream?mode=proxy", ignoreCase = true)
-        val isTranscode = playbackInfo.streamUrl.contains("m3u8", ignoreCase = true) ||
-                playbackInfo.streamUrl.contains("transcoding", ignoreCase = true)
-
-        val playMethod = when {
-            isTelegramProxy -> "Direct Stream (Telegram Proxy)"
-            isTranscode -> "Transcode"
-            else -> "Direct Play"
-        }
+        val decoderLabel = decoderMode(videoDecoderName, audioDecoderName)
+        val playMethodLabel = playMethod(playbackInfo.streamUrl)
 
         val res = if (videoFormat != null && videoFormat.width > 0 && videoFormat.height > 0) {
             "${videoFormat.width}x${videoFormat.height}"
@@ -883,7 +828,7 @@ class PlayerManager(
         val bufferHealth = (exoPlayer.bufferedPosition - exoPlayer.currentPosition).coerceAtLeast(0L)
 
         return PlaybackTechnicalInfo(
-            playMethod = playMethod,
+            playMethod = playMethodLabel,
             resolution = res,
             frameRate = fps,
             videoCodec = vCodec,
@@ -899,7 +844,7 @@ class PlayerManager(
             ),
             retryCount = totalRetryCount,
             resolverLatencyMs = resolverLatencyMs,
-            decoderMode = decoderMode,
+            decoderMode = decoderLabel,
             droppedFrames = totalDroppedFrames,
             firstFrameMs = firstFrameMs,
             rebufferCount = rebufferCount,
@@ -920,7 +865,7 @@ class PlayerManager(
      */
     private fun sampleDownloadRateBps(): Long? {
         val now = SystemClock.elapsedRealtime()
-        val bytes = totalBytesTransferred
+        val bytes = totalBytesTransferred.get()
         if (downloadRateSampleAtMs == 0L) {
             downloadRateSampleAtMs = now
             downloadRateSampleBytes = bytes
@@ -967,50 +912,6 @@ private fun formatFileSize(bytes: Long?): String {
 
 private const val MIN_TRUSTWORTHY_FILE_SIZE_BYTES = 1024L * 1024L
 private const val MEDIA_SESSION_ID = "AdultHubTvSession"
-
-private class FileSizeTrackingDataSource(
-    private val upstream: DataSource,
-    private val onFileSize: (Long) -> Unit,
-    private val onContentType: (String) -> Unit,
-    private val onBytesTransferred: (Int) -> Unit,
-) : DataSource {
-    override fun addTransferListener(transferListener: androidx.media3.datasource.TransferListener) {
-        upstream.addTransferListener(transferListener)
-    }
-
-    override fun open(dataSpec: DataSpec): Long {
-        val length = upstream.open(dataSpec)
-        val headers = upstream.responseHeaders
-        headers.entries.firstOrNull { it.key.equals("Content-Type", ignoreCase = true) }
-            ?.value?.firstOrNull()?.let(onContentType)
-        val contentRange = headers.entries.firstOrNull { it.key.equals("Content-Range", ignoreCase = true) }
-            ?.value?.firstOrNull()
-        val totalFromRange = contentRange
-            ?.substringAfterLast('/', "")
-            ?.toLongOrNull()
-            ?.takeIf { it > 0L }
-        val totalFromFullResponse = length
-            .takeIf { dataSpec.position == 0L && dataSpec.length == C.LENGTH_UNSET.toLong() && it > 0L }
-
-        (totalFromRange ?: totalFromFullResponse)?.let { totalSize ->
-            onFileSize(totalSize)
-            Log.i(TAG, "Detected stream size=$totalSize bytes")
-        }
-        return length
-    }
-
-    override fun read(buffer: ByteArray, offset: Int, length: Int): Int {
-        val read = upstream.read(buffer, offset, length)
-        if (read > 0) onBytesTransferred(read)
-        return read
-    }
-
-    override fun getUri(): Uri? = upstream.uri
-
-    override fun getResponseHeaders(): Map<String, List<String>> = upstream.responseHeaders
-
-    override fun close() = upstream.close()
-}
 
 private fun containerLabel(value: String): String? = when (value.substringBefore(';').trim().lowercase()) {
     "mkv", "matroska", "video/x-matroska" -> "MKV"

@@ -42,12 +42,14 @@ import androidx.compose.ui.focus.onFocusChanged
 import androidx.compose.ui.focus.focusRestorer
 import androidx.compose.ui.focus.focusRequester
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.compose.ui.window.Dialog
 import androidx.tv.material3.MaterialTheme
 import androidx.tv.material3.Text
+import com.adulthub.tv.R
 import com.adulthub.tv.data.model.DurationFilter
 import com.adulthub.tv.data.model.TvCategory
 import com.adulthub.tv.data.model.TvItem
@@ -117,7 +119,7 @@ fun AllItemsTab(
         ) {
             Row(horizontalArrangement = Arrangement.spacedBy(10.dp)) {
                 Text(
-                    text = "${state.totalCount} movies",
+                    text = stringResource(R.string.library_movies_count, state.totalCount),
                     style = MaterialTheme.typography.bodyMedium,
                     color = TextSecondary,
                     modifier = Modifier.align(Alignment.CenterVertically),
@@ -134,13 +136,15 @@ fun AllItemsTab(
                     },
                     modifier = Modifier.height(36.dp),
                 ) {
-                    val label = when (state.sortBy) {
-                        "DateCreated" -> "Date Added"
-                        "SortName" -> "Title"
-                        "Runtime" -> "Duration"
-                        else -> "Default"
-                    }
-                    Text(text = "Sort: $label", fontSize = 12.sp)
+                    val label = stringResource(
+                        when (state.sortBy) {
+                            "DateCreated" -> R.string.library_sort_by_date_added
+                            "SortName" -> R.string.library_sort_by_title
+                            "Runtime" -> R.string.library_sort_by_duration
+                            else -> R.string.library_sort_by_default
+                        },
+                    )
+                    Text(text = stringResource(R.string.library_sort_value, label), fontSize = 12.sp)
                 }
 
                 // Sort Order Button
@@ -155,7 +159,11 @@ fun AllItemsTab(
                     },
                     modifier = Modifier.height(36.dp),
                 ) {
-                    val arrow = if (state.sortOrder == SortOrder.DESCENDING) "↓ Desc" else "↑ Asc"
+                    val arrow = if (state.sortOrder == SortOrder.DESCENDING) {
+                        stringResource(R.string.library_sort_order_desc)
+                    } else {
+                        stringResource(R.string.library_sort_order_asc)
+                    }
                     Text(text = arrow, fontSize = 12.sp)
                 }
 
@@ -165,35 +173,35 @@ fun AllItemsTab(
                         onClick = onToggleFavorites,
                         modifier = Modifier.height(36.dp),
                     ) {
-                        Text(text = "Favorites", fontSize = 12.sp)
+                        Text(text = stringResource(R.string.library_filter_favorites), fontSize = 12.sp)
                     }
                 } else {
                     TvSecondaryButton(
                         onClick = onToggleFavorites,
                         modifier = Modifier.height(36.dp),
                     ) {
-                        Text(text = "Favorites", fontSize = 12.sp)
+                        Text(text = stringResource(R.string.library_filter_favorites), fontSize = 12.sp)
                     }
                 }
 
                 if (state.unwatchedOnly) {
                     TvPrimaryButton(onClick = onToggleUnwatched, modifier = Modifier.height(36.dp)) {
-                        Text(text = "Unwatched", fontSize = 12.sp)
+                        Text(text = stringResource(R.string.library_filter_unwatched), fontSize = 12.sp)
                     }
                 } else {
                     TvSecondaryButton(onClick = onToggleUnwatched, modifier = Modifier.height(36.dp)) {
-                        Text(text = "Unwatched", fontSize = 12.sp)
+                        Text(text = stringResource(R.string.library_filter_unwatched), fontSize = 12.sp)
                     }
                 }
 
                 // HD Only Toggle
                 if (state.hdOnly) {
                     TvPrimaryButton(onClick = onToggleHdOnly, modifier = Modifier.height(36.dp)) {
-                        Text(text = "HD Only", fontSize = 12.sp)
+                        Text(text = stringResource(R.string.filter_quality_hd), fontSize = 12.sp)
                     }
                 } else {
                     TvSecondaryButton(onClick = onToggleHdOnly, modifier = Modifier.height(36.dp)) {
-                        Text(text = "HD Only", fontSize = 12.sp)
+                        Text(text = stringResource(R.string.filter_quality_hd), fontSize = 12.sp)
                     }
                 }
             }
@@ -219,17 +227,35 @@ fun AllItemsTab(
                 Text(state.durationFilter.label, fontSize = 12.sp)
             }
             TvSecondaryButton(onClick = { filterPicker = CatalogFilter.GENRE; onLoadGenres() }, modifier = Modifier.height(36.dp)) {
-                Text("Genre: ${state.selectedGenre?.name ?: "All"}", fontSize = 12.sp)
+                Text(
+                    stringResource(
+                        R.string.library_filter_genre,
+                        state.selectedGenre?.name ?: stringResource(R.string.library_filter_all),
+                    ),
+                    fontSize = 12.sp,
+                )
             }
             TvSecondaryButton(onClick = { filterPicker = CatalogFilter.STUDIO; onLoadStudios() }, modifier = Modifier.height(36.dp)) {
-                Text("Studio: ${state.selectedStudio?.name ?: "All"}", fontSize = 12.sp)
+                Text(
+                    stringResource(
+                        R.string.library_filter_studio,
+                        state.selectedStudio?.name ?: stringResource(R.string.library_filter_all),
+                    ),
+                    fontSize = 12.sp,
+                )
             }
             TvSecondaryButton(onClick = { filterPicker = CatalogFilter.PERFORMER; onLoadPerformers() }, modifier = Modifier.height(36.dp)) {
-                Text("Performer: ${state.selectedPerformer?.name ?: "All"}", fontSize = 12.sp)
+                Text(
+                    stringResource(
+                        R.string.library_filter_performer,
+                        state.selectedPerformer?.name ?: stringResource(R.string.library_filter_all),
+                    ),
+                    fontSize = 12.sp,
+                )
             }
             Spacer(modifier = Modifier.weight(1f))
             TvPrimaryButton(onClick = onSurpriseMe, modifier = Modifier.height(36.dp)) {
-                Text("Surprise Me", fontSize = 12.sp)
+                Text(stringResource(R.string.home_play_random), fontSize = 12.sp)
             }
         }
 
@@ -250,11 +276,13 @@ fun AllItemsTab(
                 CatalogFilter.PERFORMER -> state.isLoadingPerformers
             }
             CatalogFilterDialog(
-                title = when (picker) {
-                    CatalogFilter.GENRE -> "Choose a genre"
-                    CatalogFilter.STUDIO -> "Choose a studio"
-                    CatalogFilter.PERFORMER -> "Choose a performer"
-                },
+                title = stringResource(
+                    when (picker) {
+                        CatalogFilter.GENRE -> R.string.library_choose_genre
+                        CatalogFilter.STUDIO -> R.string.library_choose_studio
+                        CatalogFilter.PERFORMER -> R.string.library_choose_performer
+                    },
+                ),
                 options = options,
                 selectedId = selectedId,
                 isLoading = isLoading,
@@ -276,7 +304,7 @@ fun AllItemsTab(
                     modifier = Modifier.fillMaxSize(),
                     contentAlignment = Alignment.Center,
                 ) {
-                    LoadingIndicator(message = "Loading movies…")
+                    LoadingIndicator(message = stringResource(R.string.library_loading_movies))
                 }
             }
             state.errorMessage != null && state.items.isEmpty() -> {
@@ -297,7 +325,7 @@ fun AllItemsTab(
                     contentAlignment = Alignment.Center,
                 ) {
                     Text(
-                        text = "No movies found matching current filters",
+                        text = stringResource(R.string.library_no_movies_matching_filters),
                         style = MaterialTheme.typography.bodyLarge,
                         color = TextSecondary,
                     )
@@ -338,13 +366,13 @@ fun AllItemsTab(
                                 contentAlignment = Alignment.Center,
                             ) {
                                 if (state.isLoadingMore) {
-                                    LoadingIndicator(message = "Loading more movies…")
+                                    LoadingIndicator(message = stringResource(R.string.library_loading_more_movies))
                                 } else {
                                     TvSecondaryButton(
                                         onClick = onLoadMore,
                                         modifier = Modifier.height(44.dp),
                                     ) {
-                                        Text(text = "Load More Movies ↓")
+                                        Text(text = stringResource(R.string.library_load_more_movies))
                                     }
                                 }
                             }
@@ -370,6 +398,7 @@ private fun CatalogFilterDialog(
     onSelect: (String?) -> Unit,
 ) {
     var query by remember(title) { mutableStateOf("") }
+    val filterListHint = stringResource(R.string.library_filter_list_hint)
     val searchFocus = remember(title) { FocusRequester() }
     val searchInteraction = remember(title) { MutableInteractionSource() }
     val isSearchFocused by searchInteraction.collectIsFocusedAsState()
@@ -438,14 +467,14 @@ private fun CatalogFilterDialog(
                             },
                         decorationBox = { inner ->
                             if (query.isEmpty()) {
-                                Text("Filter list…", color = Color.White.copy(alpha = 0.45f), fontSize = 16.sp)
+                                Text(filterListHint, color = Color.White.copy(alpha = 0.45f), fontSize = 16.sp)
                             }
                             inner()
                         },
                     )
                 } else {
                     Text(
-                        query.ifEmpty { "Filter list…" },
+                        query.ifEmpty { filterListHint },
                         color = if (query.isEmpty()) Color.White.copy(alpha = 0.45f) else Color.White,
                         fontSize = 16.sp,
                     )
@@ -454,26 +483,26 @@ private fun CatalogFilterDialog(
             Spacer(modifier = Modifier.height(12.dp))
             if (isLoading) {
                 Box(modifier = Modifier.weight(1f).fillMaxWidth(), contentAlignment = Alignment.Center) {
-                    LoadingIndicator(message = "Loading filters…")
+                    LoadingIndicator(message = stringResource(R.string.library_loading_filters))
                 }
             } else {
                 LazyColumn(modifier = Modifier.weight(1f, fill = false)) {
                     item(key = "all") {
-                        FilterOptionButton("All", isSelected = selectedId == null) { onSelect(null) }
+                        FilterOptionButton(stringResource(R.string.library_filter_all), isSelected = selectedId == null) { onSelect(null) }
                     }
                     items(filteredOptions, key = { it.id }) { choice ->
                         FilterOptionButton(choice.name, isSelected = selectedId == choice.id) { onSelect(choice.id) }
                     }
                     if (filteredOptions.isEmpty()) {
                         item(key = "empty") {
-                            Text("No matches found. Close and open the filter to retry.", color = TextSecondary)
+                            Text(stringResource(R.string.library_filter_no_matches), color = TextSecondary)
                         }
                     }
                 }
             }
             Spacer(modifier = Modifier.height(12.dp))
             TvSecondaryButton(onClick = onDismiss, modifier = Modifier.height(40.dp)) {
-                Text("Close")
+                Text(stringResource(R.string.library_action_close))
             }
         }
     }

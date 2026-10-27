@@ -29,6 +29,7 @@ import androidx.compose.ui.graphics.Color
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.flow.distinctUntilChanged
 import androidx.compose.ui.graphics.graphicsLayer
+import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.text.style.TextOverflow
@@ -39,6 +40,7 @@ import androidx.tv.material3.Card
 import androidx.tv.material3.CardDefaults
 import androidx.tv.material3.MaterialTheme
 import androidx.tv.material3.Text
+import com.adulthub.tv.R
 import com.adulthub.tv.data.model.TvItem
 import com.adulthub.tv.data.model.TvStudio
 import com.adulthub.tv.ui.components.ErrorMessage
@@ -136,14 +138,14 @@ fun StudiosTab(
                     )
                     val countText = if (state.totalCount > 0) {
                         if (state.hasMoreStudioMovies) {
-                            "${state.studioMovies.size} of ${state.totalCount} movies"
+                            stringResource(R.string.library_movies_of_total, state.studioMovies.size, state.totalCount)
                         } else {
-                            "${state.studioMovies.size} movies"
+                            stringResource(R.string.library_movies_count, state.studioMovies.size)
                         }
                     } else if (state.hasMoreStudioMovies) {
-                        "${state.studioMovies.size}+ movies"
+                        stringResource(R.string.library_movies_count_plus, state.studioMovies.size)
                     } else {
-                        "${state.studioMovies.size} movies"
+                        stringResource(R.string.library_movies_count, state.studioMovies.size)
                     }
                     Text(
                         text = countText,
@@ -153,7 +155,7 @@ fun StudiosTab(
                 }
 
                 TvSecondaryButton(onClick = onBackToStudios) {
-                    Text(text = "Back to Studios")
+                    Text(text = stringResource(R.string.library_back_to_studios))
                 }
             }
 
@@ -162,7 +164,7 @@ fun StudiosTab(
                     modifier = Modifier.fillMaxSize(),
                     contentAlignment = Alignment.Center,
                 ) {
-                    LoadingIndicator(message = "Loading studio movies…")
+                    LoadingIndicator(message = stringResource(R.string.library_loading_studio_movies))
                 }
             } else if (state.studioMoviesError != null && state.studioMovies.isEmpty()) {
                 Box(
@@ -181,7 +183,7 @@ fun StudiosTab(
                     contentAlignment = Alignment.Center,
                 ) {
                     Text(
-                        text = "No movies found for ${state.selectedStudio.name}",
+                        text = stringResource(R.string.library_no_movies_for_studio, state.selectedStudio.name),
                         style = MaterialTheme.typography.bodyLarge,
                         color = TextSecondary,
                     )
@@ -220,7 +222,7 @@ fun StudiosTab(
                                     .padding(vertical = 16.dp),
                                 contentAlignment = Alignment.Center,
                             ) {
-                                LoadingIndicator(message = "Loading more studio movies…")
+                                LoadingIndicator(message = stringResource(R.string.library_loading_more_studio_movies))
                             }
                         }
                     }
@@ -237,7 +239,7 @@ fun StudiosTab(
                                     onClick = onLoadMore,
                                     modifier = Modifier.height(44.dp),
                                 ) {
-                                    Text(text = "Load More Movies ↓")
+                                    Text(text = stringResource(R.string.library_load_more_movies))
                                 }
                             }
                         }
@@ -255,7 +257,7 @@ fun StudiosTab(
                                     onClick = onLoadMore,
                                     modifier = Modifier.height(44.dp),
                                 ) {
-                                    Text(text = "Retry Loading More Movies")
+                                    Text(text = stringResource(R.string.library_retry_loading_more_movies))
                                 }
                             }
                         }
@@ -271,7 +273,7 @@ fun StudiosTab(
                 verticalAlignment = Alignment.CenterVertically,
             ) {
                 Text(
-                    text = "${state.studios.size} studios",
+                    text = stringResource(R.string.library_studios_count, state.studios.size),
                     style = MaterialTheme.typography.bodyMedium,
                     color = TextSecondary,
                 )
@@ -283,7 +285,7 @@ fun StudiosTab(
                         modifier = Modifier.fillMaxSize(),
                         contentAlignment = Alignment.Center,
                     ) {
-                        LoadingIndicator(message = "Loading studios…")
+                        LoadingIndicator(message = stringResource(R.string.library_loading_studios))
                     }
                 }
                 state.errorMessage != null && state.studios.isEmpty() -> {
@@ -304,7 +306,7 @@ fun StudiosTab(
                         contentAlignment = Alignment.Center,
                     ) {
                         Text(
-                            text = "No studios found in this library",
+                            text = stringResource(R.string.library_no_studios_in_library),
                             style = MaterialTheme.typography.bodyLarge,
                             color = TextSecondary,
                         )
@@ -382,7 +384,7 @@ private fun StudioCard(
             studio.movieCount?.takeIf { it > 0 }?.let { movieCount ->
                 Spacer(modifier = Modifier.height(4.dp))
                 Text(
-                    text = "$movieCount movies",
+                    text = stringResource(R.string.library_movies_count, movieCount),
                     style = MaterialTheme.typography.bodySmall,
                     color = TextSecondary,
                     fontSize = 12.sp,

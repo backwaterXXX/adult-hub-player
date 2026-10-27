@@ -22,6 +22,7 @@ import androidx.compose.runtime.remember
 import androidx.compose.runtime.produceState
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.focus.FocusRequester
 import androidx.compose.ui.focus.focusRequester
@@ -36,6 +37,7 @@ import androidx.compose.ui.unit.sp
 import androidx.compose.ui.window.Dialog
 import androidx.tv.material3.MaterialTheme
 import androidx.tv.material3.Text
+import com.adulthub.tv.R
 import com.adulthub.tv.ui.theme.CardSurface
 import com.adulthub.tv.ui.theme.NeonPink
 import com.adulthub.tv.ui.theme.SurfaceDark
@@ -79,13 +81,13 @@ fun LicensesDialog(
             ) {
                 Column {
                     Text(
-                        text = "Third-Party Licenses",
+                        text = stringResource(R.string.licenses_title),
                         style = MaterialTheme.typography.headlineSmall.copy(fontWeight = FontWeight.Bold),
                         color = NeonPink,
                     )
                     Spacer(Modifier.height(4.dp))
                     Text(
-                        text = "Open-source software licenses and LGPL-3.0 copyleft disclosures",
+                        text = stringResource(R.string.licenses_subtitle),
                         style = MaterialTheme.typography.bodySmall,
                         color = TextSecondary,
                     )
@@ -95,7 +97,7 @@ fun LicensesDialog(
                     onClick = onDismiss,
                     modifier = Modifier.focusRequester(closeFocusRequester),
                 ) {
-                    Text("Close", fontWeight = FontWeight.SemiBold)
+                    Text(stringResource(R.string.action_close), fontWeight = FontWeight.SemiBold)
                 }
             }
 

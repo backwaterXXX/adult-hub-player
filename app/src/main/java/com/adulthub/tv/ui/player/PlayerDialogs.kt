@@ -33,6 +33,7 @@ import androidx.compose.ui.draw.clip
 import androidx.compose.ui.focus.FocusRequester
 import androidx.compose.ui.focus.focusRequester
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
@@ -44,6 +45,7 @@ import androidx.tv.material3.MaterialTheme
 import androidx.tv.material3.OutlinedButton
 import androidx.tv.material3.OutlinedButtonDefaults
 import androidx.tv.material3.Text
+import com.adulthub.tv.R
 import com.adulthub.tv.ui.theme.NeonPink
 import com.adulthub.tv.ui.theme.SurfaceDark
 
@@ -76,7 +78,7 @@ fun ResumePlaybackDialog(
             horizontalAlignment = Alignment.CenterHorizontally,
         ) {
             Text(
-                text = "Resume Playback?",
+                text = stringResource(R.string.player_resume_title),
                 style = MaterialTheme.typography.headlineMedium.copy(
                     fontWeight = FontWeight.Bold,
                     color = Color.White,
@@ -87,7 +89,7 @@ fun ResumePlaybackDialog(
             Spacer(modifier = Modifier.height(16.dp))
 
             Text(
-                text = "Would you like to resume from ${formatTime(resumePositionMs)} or start over from the beginning?",
+                text = stringResource(R.string.player_resume_message, formatTime(resumePositionMs)),
                 style = MaterialTheme.typography.bodyLarge.copy(
                     color = Color.White.copy(alpha = 0.8f),
                 ),
@@ -123,7 +125,7 @@ fun ResumePlaybackDialog(
                             modifier = Modifier.size(20.dp),
                         )
                         Text(
-                            text = "Resume (${formatTime(resumePositionMs)})",
+                            text = stringResource(R.string.player_resume_action, formatTime(resumePositionMs)),
                             fontWeight = FontWeight.Bold,
                         )
                     }
@@ -160,7 +162,7 @@ fun ResumePlaybackDialog(
                             modifier = Modifier.size(18.dp),
                         )
                         Text(
-                            text = "Start Over",
+                            text = stringResource(R.string.player_start_over),
                             fontWeight = FontWeight.Medium,
                         )
                     }
@@ -185,6 +187,7 @@ fun EndOfMovieDialog(
     }
 
     val isCountingDown = countdownSeconds != null && countdownSeconds > 0
+    val countdownSec = countdownSeconds ?: 0
 
     Box(
         modifier = modifier
@@ -202,7 +205,7 @@ fun EndOfMovieDialog(
             horizontalAlignment = Alignment.CenterHorizontally,
         ) {
             Text(
-                text = if (isCountingDown) "Next Movie in ${countdownSeconds}s" else "Scene Finished",
+                text = if (isCountingDown) stringResource(R.string.player_next_in_seconds, countdownSec) else stringResource(R.string.player_scene_finished),
                 style = MaterialTheme.typography.headlineMedium.copy(
                     fontWeight = FontWeight.Bold,
                     color = Color.White,
@@ -213,7 +216,7 @@ fun EndOfMovieDialog(
             Spacer(modifier = Modifier.height(12.dp))
 
             Text(
-                text = if (isCountingDown) "Playing next movie automatically or cancel to stay." else "What would you like to watch next?",
+                text = if (isCountingDown) stringResource(R.string.player_autoplay_hint) else stringResource(R.string.player_next_question),
                 style = MaterialTheme.typography.bodyLarge.copy(
                     color = Color.White.copy(alpha = 0.8f),
                 ),
@@ -249,7 +252,7 @@ fun EndOfMovieDialog(
                             modifier = Modifier.size(20.dp),
                         )
                         Text(
-                            text = if (isCountingDown) "Play now" else "Next movie",
+                            text = if (isCountingDown) stringResource(R.string.player_play_now) else stringResource(R.string.player_next_movie),
                             fontWeight = FontWeight.Bold,
                         )
                     }
@@ -286,7 +289,7 @@ fun EndOfMovieDialog(
                             modifier = Modifier.size(18.dp),
                         )
                         Text(
-                            text = if (isCountingDown) "Cancel" else "Back to Details",
+                            text = if (isCountingDown) stringResource(R.string.player_cancel) else stringResource(R.string.player_back_to_details),
                             fontWeight = FontWeight.Medium,
                         )
                     }
@@ -302,6 +305,7 @@ fun PlaybackErrorDialog(
     onRetry: () -> Unit,
     onBack: () -> Unit,
     modifier: Modifier = Modifier,
+    retryMessage: String? = null,
 ) {
     val retryButtonFocusRequester = remember { FocusRequester() }
 
@@ -325,7 +329,7 @@ fun PlaybackErrorDialog(
             horizontalAlignment = Alignment.CenterHorizontally,
         ) {
             Text(
-                text = "Playback Error",
+                text = stringResource(R.string.player_error_title),
                 style = MaterialTheme.typography.headlineMedium.copy(
                     fontWeight = FontWeight.Bold,
                     color = Color.Red,
@@ -342,6 +346,17 @@ fun PlaybackErrorDialog(
                 ),
                 textAlign = TextAlign.Center,
             )
+
+            retryMessage?.let { message ->
+                Spacer(modifier = Modifier.height(12.dp))
+                Text(
+                    text = message,
+                    style = MaterialTheme.typography.bodyMedium.copy(
+                        color = Color(0xFFFFB74D),
+                    ),
+                    textAlign = TextAlign.Center,
+                )
+            }
 
             Spacer(modifier = Modifier.height(28.dp))
 
@@ -372,7 +387,7 @@ fun PlaybackErrorDialog(
                             modifier = Modifier.size(18.dp),
                         )
                         Text(
-                            text = "Retry",
+                            text = stringResource(R.string.player_retry),
                             fontWeight = FontWeight.Bold,
                         )
                     }
@@ -409,7 +424,7 @@ fun PlaybackErrorDialog(
                             modifier = Modifier.size(18.dp),
                         )
                         Text(
-                            text = "Back",
+                            text = stringResource(R.string.player_back),
                             fontWeight = FontWeight.Medium,
                         )
                     }
@@ -445,7 +460,7 @@ fun PlaybackInfoOverlay(
                 verticalAlignment = Alignment.CenterVertically,
             ) {
                 Text(
-                    text = "TECHNICAL STATS",
+                    text = stringResource(R.string.player_tech_stats_title),
                     style = MaterialTheme.typography.titleMedium.copy(
                         fontWeight = FontWeight.Bold,
                         color = Color.White,
@@ -462,7 +477,7 @@ fun PlaybackInfoOverlay(
                         .padding(horizontal = 8.dp, vertical = 3.dp),
                 ) {
                     Text(
-                        text = if (isDirect) "DIRECT" else "TRANSCODE",
+                        text = if (isDirect) stringResource(R.string.player_tech_direct) else stringResource(R.string.player_tech_transcode),
                         color = NeonPink,
                         fontWeight = FontWeight.Bold,
                         fontSize = 11.sp,
@@ -479,43 +494,59 @@ fun PlaybackInfoOverlay(
                     .padding(horizontal = 12.dp, vertical = 8.dp),
                 verticalArrangement = Arrangement.spacedBy(6.dp),
             ) {
-                TechnicalInfoRow(label = "Stream Mode", value = technicalInfo.playMethod)
-                TechnicalInfoRow(label = "Decoder", value = technicalInfo.decoderMode)
+                TechnicalInfoRow(label = stringResource(R.string.player_tech_stream_mode), value = technicalInfo.playMethod)
+                TechnicalInfoRow(label = stringResource(R.string.player_tech_decoder), value = technicalInfo.decoderMode)
                 if (technicalInfo.resolverLatencyMs != null && technicalInfo.resolverLatencyMs > 0L) {
-                    TechnicalInfoRow(label = "Resolver Latency", value = "${technicalInfo.resolverLatencyMs} ms")
+                    TechnicalInfoRow(
+                        label = stringResource(R.string.player_tech_resolver_latency),
+                        value = stringResource(R.string.player_tech_value_ms, technicalInfo.resolverLatencyMs),
+                    )
                 }
                 if (technicalInfo.retryCount > 0) {
-                    TechnicalInfoRow(label = "Retries", value = "${technicalInfo.retryCount}")
+                    TechnicalInfoRow(label = stringResource(R.string.player_tech_retries), value = "${technicalInfo.retryCount}")
                 }
                 technicalInfo.firstFrameMs?.let { startupMs ->
-                    TechnicalInfoRow(label = "First Frame", value = "${startupMs} ms")
+                    TechnicalInfoRow(
+                        label = stringResource(R.string.player_tech_first_frame),
+                        value = stringResource(R.string.player_tech_value_ms, startupMs),
+                    )
                 }
                 TechnicalInfoRow(
-                    label = "Rebuffering",
-                    value = "${technicalInfo.rebufferCount} events / ${technicalInfo.rebufferDurationMs / 1000}s",
+                    label = stringResource(R.string.player_tech_rebuffering),
+                    value = stringResource(
+                        R.string.player_tech_rebuffer_events,
+                        technicalInfo.rebufferCount,
+                        technicalInfo.rebufferDurationMs / 1000,
+                    ),
                 )
                 technicalInfo.lastSeekBufferDurationMs?.let { seekBufferMs ->
-                    TechnicalInfoRow(label = "Last Seek Buffer", value = "${seekBufferMs} ms")
+                    TechnicalInfoRow(
+                        label = stringResource(R.string.player_tech_last_seek_buffer),
+                        value = stringResource(R.string.player_tech_value_ms, seekBufferMs),
+                    )
                 }
-                TechnicalInfoRow(label = "Dropped Frames", value = "${technicalInfo.droppedFrames}")
-                TechnicalInfoRow(label = "Resolution", value = technicalInfo.resolution)
-                TechnicalInfoRow(label = "Quality", value = technicalInfo.qualityLabel)
-                TechnicalInfoRow(label = "Video Codec", value = technicalInfo.videoCodec)
+                TechnicalInfoRow(label = stringResource(R.string.player_tech_dropped_frames), value = "${technicalInfo.droppedFrames}")
+                TechnicalInfoRow(label = stringResource(R.string.player_tech_resolution), value = technicalInfo.resolution)
+                TechnicalInfoRow(label = stringResource(R.string.player_tech_quality), value = technicalInfo.qualityLabel)
+                TechnicalInfoRow(label = stringResource(R.string.player_tech_video_codec), value = technicalInfo.videoCodec)
                 if (technicalInfo.frameRate.isNotBlank()) {
-                    TechnicalInfoRow(label = "Frame Rate", value = technicalInfo.frameRate)
+                    TechnicalInfoRow(label = stringResource(R.string.player_tech_frame_rate), value = technicalInfo.frameRate)
                 }
                 if (technicalInfo.videoBitrate.isNotBlank()) {
-                    TechnicalInfoRow(label = "Content Bitrate", value = technicalInfo.videoBitrate)
+                    TechnicalInfoRow(label = stringResource(R.string.player_tech_content_bitrate), value = technicalInfo.videoBitrate)
                 }
-                TechnicalInfoRow(label = "Download Speed", value = technicalInfo.downloadRate)
-                TechnicalInfoRow(label = "Audio Codec", value = technicalInfo.audioCodec)
-                TechnicalInfoRow(label = "Audio Channels", value = technicalInfo.audioChannels)
+                TechnicalInfoRow(label = stringResource(R.string.player_tech_download_speed), value = technicalInfo.downloadRate)
+                TechnicalInfoRow(label = stringResource(R.string.player_tech_audio_codec), value = technicalInfo.audioCodec)
+                TechnicalInfoRow(label = stringResource(R.string.player_tech_audio_channels), value = technicalInfo.audioChannels)
                 if (technicalInfo.audioSampleRate.isNotBlank()) {
-                    TechnicalInfoRow(label = "Sample Rate", value = technicalInfo.audioSampleRate)
+                    TechnicalInfoRow(label = stringResource(R.string.player_tech_sample_rate), value = technicalInfo.audioSampleRate)
                 }
-                TechnicalInfoRow(label = "Buffer Ahead", value = "${technicalInfo.bufferHealthMs / 1000}s")
-                TechnicalInfoRow(label = "Container", value = technicalInfo.container)
-                TechnicalInfoRow(label = "File Size", value = technicalInfo.fileSize)
+                TechnicalInfoRow(
+                    label = stringResource(R.string.player_tech_buffer_ahead),
+                    value = stringResource(R.string.player_tech_value_seconds, technicalInfo.bufferHealthMs / 1000),
+                )
+                TechnicalInfoRow(label = stringResource(R.string.player_tech_container), value = technicalInfo.container)
+                TechnicalInfoRow(label = stringResource(R.string.player_tech_file_size), value = technicalInfo.fileSize)
             }
         }
     }

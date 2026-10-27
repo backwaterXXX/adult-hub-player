@@ -102,7 +102,6 @@
     <string name="sort_latest">Latest</string>
     <string name="sort_longest">Longest</string>
     <string name="sort_shortest">Shortest</string>
-    <string name="sort_channel_label">Sort:</string>
 
     <!-- Privacy & Data -->
     <string name="settings_privacy_title">Privacy &amp; Data</string>
@@ -148,4 +147,11 @@
 
     <!-- Navigation / Exit -->
     <string name="press_back_again_to_exit">Press Back again to exit</string>
+
+    <!-- Shared components -->
+    <string name="action_close">Close</string>
+    <string name="card_watched">WATCHED</string>
+    <string name="card_movies_count">%1$d movies</string>
+    <string name="licenses_title">Third-Party Licenses</string>
+    <string name="licenses_subtitle">Open-source software licenses and LGPL-3.0 copyleft disclosures</string>
 </resources>

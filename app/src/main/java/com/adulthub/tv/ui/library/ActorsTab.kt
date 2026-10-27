@@ -25,16 +25,19 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.focus.FocusRequester
 import androidx.compose.ui.focus.focusRequester
+import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.tv.material3.MaterialTheme
 import androidx.tv.material3.Text
+import com.adulthub.tv.R
 import com.adulthub.tv.data.model.TvPerson
 import com.adulthub.tv.ui.components.ErrorMessage
 import com.adulthub.tv.ui.components.LoadingIndicator
 import com.adulthub.tv.ui.components.PersonCard
 import com.adulthub.tv.ui.components.TvPrimaryButton
 import com.adulthub.tv.ui.components.TvSecondaryButton
+import com.adulthub.tv.ui.components.TvTextField
 import com.adulthub.tv.ui.theme.TextSecondary
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.flow.distinctUntilChanged
@@ -48,6 +51,7 @@ fun ActorsTab(
     onRetry: () -> Unit,
     onLoadMore: () -> Unit,
     getImageUrl: (TvPerson) -> String,
+    onSearchQueryChange: (String) -> Unit,
     modifier: Modifier = Modifier,
 ) {
     val alphabet = ('A'..'Z').toList()
@@ -92,6 +96,15 @@ fun ActorsTab(
             .fillMaxSize()
             .padding(horizontal = 48.dp),
     ) {
+        TvTextField(
+            value = state.searchQuery,
+            onValueChange = onSearchQueryChange,
+            label = stringResource(R.string.library_find_a_performer),
+            hint = stringResource(R.string.library_performer_name_hint),
+            modifier = Modifier
+                .fillMaxWidth()
+                .padding(top = 12.dp),
+        )
         // Controls: Alphabet & Photo filter (Photo only placed BEFORE "ALL")
         Row(
             modifier = Modifier
@@ -111,14 +124,14 @@ fun ActorsTab(
                             onClick = onToggleOnlyWithPhoto,
                             modifier = Modifier.height(34.dp),
                         ) {
-                            Text(text = "Photo only", fontSize = 12.sp)
+                            Text(text = stringResource(R.string.library_photo_only), fontSize = 12.sp)
                         }
                     } else {
                         TvSecondaryButton(
                             onClick = onToggleOnlyWithPhoto,
                             modifier = Modifier.height(34.dp),
                         ) {
-                            Text(text = "Photo only", fontSize = 12.sp)
+                            Text(text = stringResource(R.string.library_photo_only), fontSize = 12.sp)
                         }
                     }
                 }
@@ -130,14 +143,14 @@ fun ActorsTab(
                             onClick = { onSelectLetter(null) },
                             modifier = Modifier.height(34.dp),
                         ) {
-                            Text(text = "ALL", fontSize = 12.sp)
+                            Text(text = stringResource(R.string.library_letter_all), fontSize = 12.sp)
                         }
                     } else {
                         TvSecondaryButton(
                             onClick = { onSelectLetter(null) },
                             modifier = Modifier.height(34.dp),
                         ) {
-                            Text(text = "ALL", fontSize = 12.sp)
+                            Text(text = stringResource(R.string.library_letter_all), fontSize = 12.sp)
                         }
                     }
                 }
@@ -166,7 +179,7 @@ fun ActorsTab(
 
         // Subtitle / count
         Text(
-            text = "Showing ${state.filteredPersons.size} of ${state.totalCount} performers",
+            text = stringResource(R.string.library_showing_performers, state.filteredPersons.size, state.totalCount),
             style = MaterialTheme.typography.bodySmall,
             color = TextSecondary,
             modifier = Modifier.padding(bottom = 8.dp),
@@ -178,7 +191,7 @@ fun ActorsTab(
                     modifier = Modifier.fillMaxSize(),
                     contentAlignment = Alignment.Center,
                 ) {
-                    LoadingIndicator(message = "Loading actors…")
+                    LoadingIndicator(message = stringResource(R.string.library_loading_actors))
                 }
             }
             state.errorMessage != null && state.allPersons.isEmpty() -> {
@@ -199,7 +212,7 @@ fun ActorsTab(
                     contentAlignment = Alignment.Center,
                 ) {
                     Text(
-                        text = "No performers match the selected filter",
+                        text = stringResource(R.string.library_no_performers_matching_filter),
                         style = MaterialTheme.typography.bodyLarge,
                         color = TextSecondary,
                     )
@@ -238,7 +251,7 @@ fun ActorsTab(
                                     .padding(vertical = 12.dp),
                                 contentAlignment = Alignment.Center,
                             ) {
-                                LoadingIndicator(message = "Loading more actors…")
+                                LoadingIndicator(message = stringResource(R.string.library_loading_more_actors))
                             }
                         }
                     }
@@ -255,7 +268,7 @@ fun ActorsTab(
                                     color = TextSecondary,
                                 )
                                 TvSecondaryButton(onClick = onLoadMore) {
-                                    Text(text = "Retry")
+                                    Text(text = stringResource(R.string.action_retry))
                                 }
                             }
                         }

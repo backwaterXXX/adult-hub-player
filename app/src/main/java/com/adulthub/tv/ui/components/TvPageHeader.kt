@@ -12,10 +12,12 @@ import androidx.compose.foundation.layout.width
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.tv.material3.MaterialTheme
 import androidx.tv.material3.Text
+import com.adulthub.tv.R
 import com.adulthub.tv.ui.theme.NeonPink
 import com.adulthub.tv.ui.theme.TextSecondary
 
@@ -38,7 +40,7 @@ fun TvPageHeader(
             onClick = onBack,
             modifier = Modifier.height(40.dp),
         ) {
-            Text(text = "Back", fontWeight = FontWeight.SemiBold)
+            Text(text = stringResource(R.string.action_back), fontWeight = FontWeight.SemiBold)
         }
 
         Spacer(modifier = Modifier.width(24.dp))

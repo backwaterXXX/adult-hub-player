@@ -19,6 +19,7 @@ import com.adulthub.tv.data.repository.StudioRepository
 import com.adulthub.tv.data.resolver.VideoDto
 import com.adulthub.tv.data.resolver.resolveResolverUrl
 import kotlinx.coroutines.Job
+import kotlinx.coroutines.delay
 import kotlinx.coroutines.flow.MutableSharedFlow
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.SharedFlow
@@ -182,6 +183,7 @@ class LibraryViewModel(
     private val _navEvents = MutableSharedFlow<LibraryNavEvent>()
     val navEvents: SharedFlow<LibraryNavEvent> = _navEvents.asSharedFlow()
     private var actorsLoadJob: Job? = null
+    private var actorSearchJob: Job? = null
     private var categoryMoviesJob: Job? = null
     private var studioMoviesJob: Job? = null
     private var allItemsLoadJob: Job? = null
@@ -737,7 +739,13 @@ class LibraryViewModel(
                 )
             )
         }
-        loadActors(reset = true)
+        // The query is a server side filter, so one request per keystroke would cancel the
+        // previous page for a result that is already obsolete.
+        actorSearchJob?.cancel()
+        actorSearchJob = viewModelScope.launch {
+            delay(ACTOR_SEARCH_DEBOUNCE_MS)
+            loadActors(reset = true)
+        }
     }
 
 private fun filterActors(
@@ -1048,6 +1056,13 @@ private fun filterActors(
                 limit = 100,
             )
 
+            // The fallback is a network call, so it is resolved before the state update:
+            // update{} re-runs its whole lambda whenever another writer wins the
+            // compare-and-set, which would repeat the request.
+            val fallbackResult = historyResult.exceptionOrNull()
+                ?.takeIf { reset && _uiState.value.channelsState.selectedChannel?.id == channel.id }
+                ?.let { channelRepository.getCategoryVideos(channelId = channel.id) }
+
             var shouldAutoFetch = false
             _uiState.update { state ->
                 if (state.channelsState.selectedChannel?.id != channel.id) return@update state
@@ -1081,9 +1096,7 @@ private fun filterActors(
                     },
                     onFailure = { error ->
                         if (reset) {
-                            // Fallback to getCategoryVideos on initial load if getChannelHistory fails
-                            val fallbackResult = channelRepository.getCategoryVideos(channelId = channel.id)
-                            fallbackResult.fold(
+                            fallbackResult?.fold(
                                 onSuccess = { fallbackVideos ->
                                     val distinct = fallbackVideos.distinctBy { it.providerVideoId.ifBlank { it.id } }
                                     val sortedFallback = applyChannelFilters(
@@ -1114,7 +1127,11 @@ private fun filterActors(
                                         nextOffsetId = null,
                                     ))
                                 }
-                            )
+                            ) ?: state.copy(channelsState = state.channelsState.copy(
+                                isLoadingVideos = false,
+                                isLoadingMoreVideos = false,
+                                channelVideosError = error.localizedMessage ?: "Failed to load channel videos",
+                            ))
                         } else {
                             state.copy(channelsState = state.channelsState.copy(
                                 isLoadingMoreVideos = false,
@@ -1268,6 +1285,8 @@ private fun filterActors(
         private const val KEY_ONLY_WITH_PHOTO = "library_only_with_photo"
         private const val KEY_CHANNEL_DURATION_FILTER = "library_channel_duration_filter"
         private const val KEY_HIDDEN_CHANNELS = "library_hidden_channels"
+
+        private const val ACTOR_SEARCH_DEBOUNCE_MS = 300L
     }
 }
 
