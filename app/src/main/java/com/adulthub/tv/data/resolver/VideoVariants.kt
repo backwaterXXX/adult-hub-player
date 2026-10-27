@@ -2,6 +2,9 @@ package com.adulthub.tv.data.resolver
 
 import retrofit2.HttpException
 
+/** The identifier the resolver uses for the untouched original file. */
+const val ORIGINAL_VARIANT_ID = "original"
+
 /** A single playable quality variant reported by the resolver. */
 data class VideoVariant(
     val id: String,
@@ -27,7 +30,7 @@ sealed interface VideoVariantsResult {
     data object OriginalOnly : VideoVariantsResult
 
     /** The server is still transcoding; only the original plays for now. */
-    data class Processing(val original: VideoVariant?) : VideoVariantsResult
+    data object Processing : VideoVariantsResult
 
     /** The resolver does not expose variants (legacy server or unknown video). */
     data object Unsupported : VideoVariantsResult
@@ -51,10 +54,9 @@ fun VideoVariantDto.toDomain(): VideoVariant = VideoVariant(
 
 fun classifyVariantsResponse(dto: VideoVariantsDto): VideoVariantsResult {
     val variants = dto.variants.map { it.toDomain() }
-    val original = variants.firstOrNull { it.isOriginal }
     val alternatives = variants.filterNot { it.isOriginal }
     return when {
-        dto.status == "processing" || dto.videoProcessingPending -> VideoVariantsResult.Processing(original)
+        dto.status == "processing" || dto.videoProcessingPending -> VideoVariantsResult.Processing
         dto.hasAlternatives && alternatives.isNotEmpty() -> VideoVariantsResult.Available(variants)
         else -> VideoVariantsResult.OriginalOnly
     }
@@ -85,10 +87,12 @@ fun classifyVariantsError(error: Exception): VideoVariantsResult {
  *
  * The height names the resolution; the original is always marked. When several variants
  * are selectable, codec and file size are appended so users can compare formats and weights.
+ * Variants that stay identical on all three get a positional suffix, so no two entries in
+ * the picker read the same.
  */
 fun buildQualityLabels(variants: List<VideoVariant>): List<String> {
     val decorate = variants.size > 1
-    return variants.map { variant ->
+    val baseLabels = variants.map { variant ->
         val parts = mutableListOf(variant.qualityBaseLabel())
         if (decorate) {
             variant.codec?.let { parts.add(it) }
@@ -96,6 +100,10 @@ fun buildQualityLabels(variants: List<VideoVariant>): List<String> {
         }
         if (variant.isOriginal) parts.add("(Original)")
         parts.joinToString(" ").trim()
+    }
+    val repeated = baseLabels.groupingBy { it }.eachCount().filterValues { it > 1 }.keys
+    return baseLabels.mapIndexed { index, label ->
+        if (label in repeated) "$label #${index + 1}" else label
     }
 }
 

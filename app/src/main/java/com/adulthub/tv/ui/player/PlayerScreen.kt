@@ -140,7 +140,6 @@ fun PlayerScreen(
     var resizeMode by rememberSaveable { mutableIntStateOf(AspectRatioFrameLayout.RESIZE_MODE_FIT) }
     var playbackSpeed by rememberSaveable { mutableFloatStateOf(1.0f) }
     var autoplayCountdownSec by remember { mutableStateOf<Int?>(null) }
-    var qualitySwitchToken by remember { mutableIntStateOf(0) }
     val playPauseFocusRequester = remember { FocusRequester() }
     val rootFocusRequester = remember { FocusRequester() }
 
@@ -153,27 +152,20 @@ fun PlayerScreen(
 
     val requestQualityChange: (String) -> Unit = { variantId ->
         if (viewModel.beginQualitySwitch(variantId)) {
-            val token = ++qualitySwitchToken
             coroutineScope.launch {
-                // The new address is prepared while the current source keeps playing.
+                // The new address is prepared while the current source keeps playing. The view
+                // model ignores a switch whose playback request was superseded, so a late result
+                // can neither hijack the new media nor overwrite its quality state.
                 val info = viewModel.resolveQualityStreamUrl(variantId)
-                if (token != qualitySwitchToken) {
-                    // Another playback started meanwhile; its state reset covers this one.
-                    return@launch
-                }
                 if (info == null) {
-                    viewModel.abortQualitySwitch("Could not change quality. Keeping current stream.")
+                    viewModel.abortQualitySwitch(QUALITY_SWITCH_FAILURE_MESSAGE)
                     return@launch
                 }
                 val swapped = playerManager.switchQualityStream(info.streamUrl, viewModel.variantFor(variantId))
-                if (token != qualitySwitchToken) {
-                    // Another playback started meanwhile; its state reset covers this one.
-                    return@launch
-                }
                 if (swapped) {
                     viewModel.confirmQualitySwitch(variantId)
                 } else {
-                    viewModel.abortQualitySwitch("Could not change quality. Keeping current stream.")
+                    viewModel.abortQualitySwitch(QUALITY_SWITCH_FAILURE_MESSAGE)
                 }
             }
         }
@@ -204,10 +196,6 @@ fun PlayerScreen(
     }
 
     val readyState = uiState as? PlayerUiState.Ready
-    // A new movie or a reload supersedes any quality switch that is still resolving.
-    LaunchedEffect(readyState?.playbackRequestId) {
-        qualitySwitchToken++
-    }
     val pendingResumeDialogPosition = readyState?.pendingResumePositionMs?.takeIf { it > 0L }
     val phashVideoId = readyState?.item?.let { com.adulthub.tv.player.adultHubVideoId(it) }
     val phashStatus = phashVideoId?.let { phashJobStatuses[it] }
@@ -572,7 +560,6 @@ fun PlayerScreen(
                     seekStepSec = seekStepSec,
                     qualityOptions = qualityState.options,
                     isQualitySwitching = qualityState.isSwitching,
-                    isQualityFetching = qualityState.isFetching,
                     qualityLoadFailed = qualityState.qualityUnavailableMessage != null,
                     onQualitySelected = requestQualityChange,
                     onQualityRetry = { viewModel.retryQualityFetch() },
@@ -637,7 +624,6 @@ fun PlayerScreen(
                     },
                     qualityOptions = qualityState.options,
                     isQualitySwitching = qualityState.isSwitching,
-                    isQualityFetching = qualityState.isFetching,
                     qualityLoadFailed = qualityState.qualityUnavailableMessage != null,
                     onQualitySelected = requestQualityChange,
                     onQualityRetry = { viewModel.retryQualityFetch() },
@@ -738,3 +724,4 @@ fun PlayerScreen(
 }
 
 private const val PHASH_STATUS_VISIBLE_MS = 10_000L
+private const val QUALITY_SWITCH_FAILURE_MESSAGE = "Could not change quality. Keeping current stream."

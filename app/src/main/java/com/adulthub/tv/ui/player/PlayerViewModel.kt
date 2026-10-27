@@ -14,6 +14,7 @@ import com.adulthub.tv.data.model.TvItem
 import com.adulthub.tv.data.repository.ChannelRepository
 import com.adulthub.tv.data.repository.LibraryRepository
 import com.adulthub.tv.data.repository.PlaybackRepository
+import com.adulthub.tv.data.resolver.ORIGINAL_VARIANT_ID
 import com.adulthub.tv.data.resolver.VideoVariant
 import com.adulthub.tv.data.resolver.VideoVariantsResult
 import com.adulthub.tv.player.PlaybackReporter
@@ -22,6 +23,7 @@ import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.flow.firstOrNull
 import kotlinx.coroutines.Job
+import kotlinx.coroutines.delay
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.CoroutineScope
 
@@ -52,6 +54,8 @@ class PlayerViewModel(
 
     companion object {
         private const val PERF_TAG = "PlaybackPerf"
+        private const val MAX_PROCESSING_POLLS = 2
+        private const val PROCESSING_POLL_INTERVAL_MS = 20_000L
     }
 
     private val _uiState = MutableStateFlow<PlayerUiState>(PlayerUiState.Loading)
@@ -66,6 +70,9 @@ class PlayerViewModel(
     private var qualityVariants: List<VideoVariant> = emptyList()
     private var selectedVariantId: String? = null
     private var qualityFetchJob: Job? = null
+
+    /** The playback request the accepted quality switch belongs to, or null when none is running. */
+    private var qualitySwitchRequestId: Long? = null
 
     private val _isPlaybackEnded = MutableStateFlow(false)
     val isPlaybackEnded: StateFlow<Boolean> = _isPlaybackEnded.asStateFlow()
@@ -380,13 +387,16 @@ class PlayerViewModel(
      * Opens a quality switch.
      *
      * Returns false while another switch is still running, so overlapping switches
-     * are impossible from the moment the request is accepted.
+     * are impossible from the moment the request is accepted. The accepted switch is
+     * bound to the current playback request: a new movie makes it stale, and [confirmQualitySwitch]
+     * and [abortQualitySwitch] then do nothing instead of rewriting the new state.
      */
     fun beginQualitySwitch(variantId: String): Boolean {
         val state = _quality.value
         if (state.isSwitching || state.isFetching) return false
         if (qualityVariants.none { it.id == variantId }) return false
         if (variantId == (selectedVariantId ?: ORIGINAL_VARIANT_ID)) return false
+        qualitySwitchRequestId = playbackRequestCounter
         _quality.value = state.copy(isSwitching = true, qualityUnavailableMessage = null)
         return true
     }
@@ -395,14 +405,18 @@ class PlayerViewModel(
      * Prepares the address of another quality without touching the running playback.
      *
      * The current source keeps playing while this resolves. The caller only swaps
-     * the source after a URL came back.
+     * the source after a URL came back. A switch that a new playback already superseded
+     * resolves nothing, so its address can never reach the player.
      */
     suspend fun resolveQualityStreamUrl(variantId: String): PlaybackInfo? {
+        if (qualitySwitchRequestId != playbackRequestCounter) return null
         val ready = _uiState.value as? PlayerUiState.Ready ?: return null
         return playbackRepository.resolvePlaybackInfo(ready.item, variantId).getOrNull()
     }
 
     fun confirmQualitySwitch(variantId: String) {
+        if (qualitySwitchRequestId != playbackRequestCounter) return
+        qualitySwitchRequestId = null
         selectedVariantId = variantId.takeIf { it != ORIGINAL_VARIANT_ID }
         _quality.value = _quality.value.copy(
             isSwitching = false,
@@ -412,6 +426,8 @@ class PlayerViewModel(
 
     /** Ends a switch that never reached the player; the current source keeps running. */
     fun abortQualitySwitch(message: String) {
+        if (qualitySwitchRequestId != playbackRequestCounter) return
+        qualitySwitchRequestId = null
         _quality.value = _quality.value.copy(
             isSwitching = false,
             qualityUnavailableMessage = message,
@@ -442,6 +458,7 @@ class PlayerViewModel(
         qualityFetchJob = null
         qualityVariants = emptyList()
         selectedVariantId = null
+        qualitySwitchRequestId = null
         _quality.value = PlayerQualityState()
         _qualityMessage.value = null
     }
@@ -455,14 +472,27 @@ class PlayerViewModel(
         }
         _quality.value = PlayerQualityState(isFetching = true)
         qualityFetchJob = viewModelScope.launch {
-            val result = playbackRepository.fetchVideoVariants(ref)
-            if (playbackRequestId != playbackRequestCounter) return@launch
-            qualityVariants = variantsFor(result)
-            _quality.value = when (result) {
-                is VideoVariantsResult.Failed -> PlayerQualityState(
-                    qualityUnavailableMessage = "Could not load available qualities",
-                )
-                else -> PlayerQualityState(options = qualityOptionsFor(result, selectedVariantId))
+            // A video that is still being transcoded gains its alternatives during playback,
+            // so the answer is asked again a bounded number of times instead of staying hidden
+            // until the viewer leaves the player.
+            var processingPolls = 0
+            while (true) {
+                val result = playbackRepository.fetchVideoVariants(ref)
+                if (playbackRequestId != playbackRequestCounter) return@launch
+                if (result == VideoVariantsResult.Processing && processingPolls < MAX_PROCESSING_POLLS) {
+                    processingPolls++
+                    delay(PROCESSING_POLL_INTERVAL_MS)
+                    if (playbackRequestId != playbackRequestCounter) return@launch
+                    continue
+                }
+                qualityVariants = variantsFor(result)
+                _quality.value = when (result) {
+                    is VideoVariantsResult.Failed -> PlayerQualityState(
+                        qualityUnavailableMessage = "Could not load available qualities",
+                    )
+                    else -> PlayerQualityState(options = qualityOptionsFor(result, selectedVariantId))
+                }
+                return@launch
             }
         }
     }

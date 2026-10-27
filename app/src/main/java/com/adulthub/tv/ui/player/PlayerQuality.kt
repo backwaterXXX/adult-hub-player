@@ -1,5 +1,6 @@
 package com.adulthub.tv.ui.player
 
+import com.adulthub.tv.data.resolver.ORIGINAL_VARIANT_ID
 import com.adulthub.tv.data.resolver.VideoVariant
 import com.adulthub.tv.data.resolver.VideoVariantsResult
 import com.adulthub.tv.data.resolver.buildQualityLabels
@@ -24,8 +25,6 @@ data class PlayerQualityState(
     val isSwitching: Boolean = false,
     val qualityUnavailableMessage: String? = null,
 )
-
-const val ORIGINAL_VARIANT_ID = "original"
 
 fun buildQualityOptions(variants: List<VideoVariant>, selectedVariantId: String?): List<QualityOption> {
     if (variants.isEmpty()) return emptyList()

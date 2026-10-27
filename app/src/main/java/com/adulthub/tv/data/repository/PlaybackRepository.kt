@@ -6,6 +6,7 @@ import com.adulthub.tv.data.jellyfin.JellyfinClientManager
 import com.adulthub.tv.data.local.SettingsDataStore
 import com.adulthub.tv.data.model.PlaybackInfo
 import com.adulthub.tv.data.model.TvItem
+import com.adulthub.tv.data.resolver.ORIGINAL_VARIANT_ID
 import com.adulthub.tv.data.resolver.VideoVariantsResult
 import com.adulthub.tv.data.resolver.ResolverApi
 import com.adulthub.tv.data.resolver.classifyVariantsError
@@ -28,6 +29,7 @@ import java.net.URI
 import okhttp3.HttpUrl.Companion.toHttpUrlOrNull
 
 private const val PLAYBACK_TAG = "PlaybackRepository"
+private const val VARIANT_QUERY_PARAMETER = "variant"
 
 private suspend inline fun <T> capturePlaybackResult(crossinline block: suspend () -> T): Result<T> =
     try {
@@ -81,19 +83,22 @@ open class PlaybackRepository(
             val resolverServedSource = hasHttpMediaSource &&
                 runCatching { URI(mediaSourcePath.orEmpty()).rawPath }.getOrNull()
                     ?.startsWith("/admin/play/") == true
-            val selectedVariantId = variantId?.trim()?.takeIf { it.isNotEmpty() && it != "original" }
+            val selectedVariantId = variantId?.trim()?.takeIf { it.isNotEmpty() && it != ORIGINAL_VARIANT_ID }
+            val explicitVariantId = variantId?.trim()?.takeIf { it.isNotEmpty() }
             val streamUrl = when {
                 hasHttpMediaSource -> {
                     val configuredResolver = settingsDataStore.getResolverBaseUrl()
                     val allowedResolver = if (configuredResolver.isBlank()) "" else {
                         settingsDataStore.requireAllowedServiceUrl(configuredResolver).normalized
                     }
+                    // An unset variant must not touch the address at all; only an explicit
+                    // "original" clears a variant that the source already carries.
                     appendVariantQuery(
                         rewriteResolverMediaSourceUrl(
                             mediaSourcePath = mediaSourcePath,
                             resolverOrigin = allowedResolver,
                         ),
-                        selectedVariantId.takeIf { resolverServedSource },
+                        explicitVariantId.takeIf { resolverServedSource },
                     )
                 }
                 resolverRef != null -> {
@@ -271,24 +276,27 @@ internal fun resolverStreamUrl(origin: String, ref: String, variantId: String?):
     appendVariantQuery("$origin/admin/play/${Uri.encode(ref)}/stream?mode=proxy", variantId)
 
 /**
- * Appends the `variant` query parameter.
+ * Sets or clears the `variant` query parameter.
  *
- * The original needs no parameter, so the address of the default stream stays exactly
- * the one a resolver without variant support already served.
+ * Without an explicit choice the address is returned untouched: rebuilding a URL through
+ * HttpUrl normalizes percent-escapes, default ports and trailing slashes, which must never
+ * happen to a signed media source. Only the deliberate "original" selection clears the
+ * parameter, because a stale one would pin the wrong file version.
  */
 internal fun appendVariantQuery(url: String, variantId: String?): String {
-    val requested = variantId?.trim()?.takeIf { it.isNotEmpty() && it != "original" }
+    val requested = variantId?.trim()?.takeIf { it.isNotEmpty() } ?: return url
+    val isOriginal = requested == ORIGINAL_VARIANT_ID
     val httpUrl = url.toHttpUrlOrNull()
     if (httpUrl != null) {
         val builder = httpUrl.newBuilder()
-        if (requested != null) {
-            builder.setQueryParameter("variant", requested)
+        if (isOriginal) {
+            builder.removeAllQueryParameters(VARIANT_QUERY_PARAMETER)
         } else {
-            builder.removeAllQueryParameters("variant")
+            builder.setQueryParameter(VARIANT_QUERY_PARAMETER, requested)
         }
         return builder.build().toString()
     }
-    if (requested == null) return url
+    if (isOriginal) return url
     val encoded = buildString {
         for (character in requested) {
             if (character.isLetterOrDigit() || character in "-._~") append(character)
@@ -296,5 +304,5 @@ internal fun appendVariantQuery(url: String, variantId: String?): String {
         }
     }
     val separator = if ('?' in url) '&' else '?'
-    return "$url$separator" + "variant=$encoded"
+    return "$url$separator" + "$VARIANT_QUERY_PARAMETER=$encoded"
 }

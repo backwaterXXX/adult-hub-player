@@ -79,6 +79,7 @@ import androidx.media3.ui.AspectRatioFrameLayout
 import android.os.SystemClock
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.flow.StateFlow
+import com.adulthub.tv.data.resolver.ORIGINAL_VARIANT_ID
 import com.adulthub.tv.ui.theme.NeonPink
 import com.adulthub.tv.ui.theme.SurfaceDark
 
@@ -113,7 +114,6 @@ fun PlayerOverlay(
     onResizeModeChange: (Int) -> Unit = {},
     qualityOptions: List<QualityOption> = emptyList(),
     isQualitySwitching: Boolean = false,
-    isQualityFetching: Boolean = false,
     qualityLoadFailed: Boolean = false,
     onQualitySelected: (String) -> Unit = {},
     onQualityRetry: () -> Unit = {},

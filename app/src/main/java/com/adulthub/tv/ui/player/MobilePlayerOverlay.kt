@@ -56,6 +56,7 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import androidx.media3.ui.AspectRatioFrameLayout
+import com.adulthub.tv.data.resolver.ORIGINAL_VARIANT_ID
 import com.adulthub.tv.ui.theme.NeonPink
 import kotlinx.coroutines.flow.StateFlow
 
@@ -87,7 +88,6 @@ fun MobilePlayerOverlay(
     seekStepSec: Int,
     qualityOptions: List<QualityOption> = emptyList(),
     isQualitySwitching: Boolean = false,
-    isQualityFetching: Boolean = false,
     qualityLoadFailed: Boolean = false,
     onQualitySelected: (String) -> Unit = {},
     onQualityRetry: () -> Unit = {},

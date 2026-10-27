@@ -108,4 +108,14 @@ class PlaybackRepositoryTest {
             appendVariantQuery(url, "original"),
         )
     }
+
+    @Test
+    fun `an address without any variant choice is returned untouched`() {
+        // Rebuilding through HttpUrl would normalize escapes, ports and trailing slashes,
+        // which must never happen to a signed media source address.
+        val url = "https://media.example.test:443/videos/42/stream.mp4?api_key=Sig%2Fnature%2Bx"
+
+        assertEquals(url, appendVariantQuery(url, null))
+        assertEquals(url, appendVariantQuery(url, "   "))
+    }
 }

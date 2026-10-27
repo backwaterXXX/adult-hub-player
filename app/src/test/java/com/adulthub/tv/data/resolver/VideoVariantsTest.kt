@@ -153,13 +153,12 @@ class VideoVariantsTest {
     }
 
     @Test
-    fun `labels name the original and keep equal resolutions distinguishable`() {
+    fun `labels name the original and every selectable variant carries codec and size`() {
         val variants = (classifyVariantsResponse(json.decodeFromString<VideoVariantsDto>(contractExample))
             as VideoVariantsResult.Available).variants
 
         val labels = buildQualityLabels(variants)
 
-        // Two 1280p variants share the resolution, so codec and size tell them apart.
         assertEquals("1280p h264 5.6 MB (Original)", labels[0])
         assertEquals("1280p h264 3.8 MB", labels[1])
         assertEquals("852p av01 1.4 MB", labels[2])
@@ -181,6 +180,28 @@ class VideoVariantsTest {
         )
 
         assertEquals(listOf("1280p (Original)"), buildQualityLabels(listOf(variant)))
+    }
+
+    @Test
+    fun `variants that are identical on every detail still get different labels`() {
+        val clone = { id: String ->
+            VideoVariant(
+                id = id,
+                isOriginal = false,
+                width = 1920,
+                height = 1080,
+                codec = "h264",
+                mimeType = "video/mp4",
+                fileSizeBytes = null,
+                durationSec = null,
+                bitrate = null,
+                estimatedAverageBitrate = null,
+            )
+        }
+
+        val labels = buildQualityLabels(listOf(clone("a"), clone("b")))
+
+        assertEquals(listOf("1080p h264 #1", "1080p h264 #2"), labels)
     }
 
     @Test

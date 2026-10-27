@@ -52,6 +52,7 @@ private const val POSITION_POLL_INTERVAL_MS = 1_000L
 private const val MAX_AUTOMATIC_RETRIES = 3
 private const val STABLE_PLAYBACK_MS = 30_000L
 private const val QUALITY_SWITCH_TIMEOUT_MS = 20_000L
+private const val QUALITY_SWITCH_MAX_PROGRESS_EXTENSIONS = 2
 private const val PLAYBACK_POLICY_ORIGIN_HEADER = "X-AdultHub-Playback-Origin"
 private const val PLAYBACK_POLICY_HEADERS_HEADER = "X-AdultHub-Playback-Headers"
 
@@ -271,6 +272,11 @@ class PlayerManager(
                 }
                 Player.STATE_ENDED -> {
                     finishBufferingMeasurement()
+                    // An ended stream is a finished switch: without this the switch would hang
+                    // until the timeout, which would then replay the previous source.
+                    pendingQualitySwitch?.let { pending ->
+                        finishQualitySwitch(pending.phase == QualitySwitchPhase.CANDIDATE)
+                    }
                     onPlaybackEnded?.invoke()
                 }
                 Player.STATE_IDLE -> finishBufferingMeasurement()
@@ -493,20 +499,42 @@ class PlayerManager(
         pendingQualitySwitch = null
         qualitySwitchTimeoutJob?.cancel()
         qualitySwitchTimeoutJob = null
-        if (pending.continuation.isActive) pending.continuation.resume(succeeded)
+        if (!pending.continuation.isActive) return
+        // Plain Dispatchers.Main always queues, so the waiting switch resumes in its own
+        // frame. Resuming inline would run it inside prepareAndPlay or release on the
+        // Main.immediate scope, before that call finished its own bookkeeping.
+        coroutineScope.launch(Dispatchers.Main) {
+            if (pending.continuation.isActive) pending.continuation.resume(succeeded)
+        }
     }
 
     private fun scheduleQualitySwitchTimeout(pending: PendingQualitySwitch) {
         qualitySwitchTimeoutJob?.cancel()
         qualitySwitchTimeoutJob = coroutineScope.launch(Dispatchers.Main) {
-            delay(QUALITY_SWITCH_TIMEOUT_MS)
-            if (pendingQualitySwitch !== pending || released) return@launch
-            if (pending.phase == QualitySwitchPhase.CANDIDATE) {
+            // A lighter variant of a still transcoding file can need far longer than one window
+            // to reach READY. Extra windows are granted only while bytes keep arriving, which
+            // tells a slow stream apart from a stalled one.
+            var transferredBytesAtLastCheck = 0L
+            var progressExtensions = 0
+            while (true) {
+                delay(QUALITY_SWITCH_TIMEOUT_MS)
+                if (pendingQualitySwitch !== pending || released) return@launch
+                if (pending.phase != QualitySwitchPhase.CANDIDATE) {
+                    Log.w(TAG, "Restoring previous stream timed out")
+                    finishQualitySwitch(false)
+                    return@launch
+                }
+                val transferred = totalBytesTransferred
+                val progressed = transferred > transferredBytesAtLastCheck
+                transferredBytesAtLastCheck = transferred
+                if (progressed && progressExtensions < QUALITY_SWITCH_MAX_PROGRESS_EXTENSIONS) {
+                    progressExtensions += 1
+                    Log.i(TAG, "Quality switch is still downloading; extending the timeout")
+                    continue
+                }
                 Log.w(TAG, "Quality switch timed out; restoring previous stream")
                 restoreQualitySwitch(pending)
-            } else {
-                Log.w(TAG, "Restoring previous stream timed out")
-                finishQualitySwitch(false)
+                return@launch
             }
         }
     }

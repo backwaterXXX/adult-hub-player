@@ -18,6 +18,11 @@ import org.junit.Assert.assertTrue
 import org.junit.Before
 import org.junit.Test
 import org.junit.runner.RunWith
+import java.util.concurrent.CountDownLatch
+import java.util.concurrent.TimeUnit
+import java.util.concurrent.atomic.AtomicReference
+
+private const val QUALITY_SWITCH_SETTLE_SECONDS = 10L
 
 /**
  * The ExoPlayer of the player manager has to be used on the main thread, so every call runs
@@ -118,15 +123,20 @@ class PlayerManagerInstrumentedTest {
             onMain {
                 manager.prepareAndPlay("https://example.com/video.mp4")
             }
-            var switchResult: Boolean? = null
+            val switchOutcome = AtomicReference<Boolean?>(null)
+            val switchFinished = CountDownLatch(1)
             scope.launch {
-                switchResult = manager.switchQualityStream("https://example.com/video_low.mp4", null)
+                switchOutcome.set(manager.switchQualityStream("https://example.com/video_low.mp4", null))
+                switchFinished.countDown()
             }
             onMain {
                 manager.release()
             }
-            InstrumentationRegistry.getInstrumentation().waitForIdleSync()
-            assertFalse(switchResult == true)
+            assertTrue(
+                "release() must resolve a pending quality switch instead of leaving it hanging",
+                switchFinished.await(QUALITY_SWITCH_SETTLE_SECONDS, TimeUnit.SECONDS),
+            )
+            assertFalse(switchOutcome.get()!!)
         } finally {
             onMain { manager.release() }
         }
@@ -139,15 +149,20 @@ class PlayerManagerInstrumentedTest {
             onMain {
                 manager.prepareAndPlay("https://example.com/video.mp4")
             }
-            var switchResult: Boolean? = null
+            val switchOutcome = AtomicReference<Boolean?>(null)
+            val switchFinished = CountDownLatch(1)
             scope.launch {
-                switchResult = manager.switchQualityStream("https://example.com/video_low.mp4", null)
+                switchOutcome.set(manager.switchQualityStream("https://example.com/video_low.mp4", null))
+                switchFinished.countDown()
             }
             onMain {
                 manager.prepareAndPlay("https://example.com/video_2.mp4")
             }
-            InstrumentationRegistry.getInstrumentation().waitForIdleSync()
-            assertFalse(switchResult == true)
+            assertTrue(
+                "A new playback must resolve the pending quality switch of the previous one",
+                switchFinished.await(QUALITY_SWITCH_SETTLE_SECONDS, TimeUnit.SECONDS),
+            )
+            assertFalse(switchOutcome.get()!!)
         } finally {
             onMain { manager.release() }
         }

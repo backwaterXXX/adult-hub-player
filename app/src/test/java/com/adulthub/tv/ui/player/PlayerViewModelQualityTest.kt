@@ -216,6 +216,55 @@ class PlayerViewModelQualityTest {
         assertEquals("original", viewModel.quality.value.options.first { it.isSelected }.variantId)
         assertNull(viewModel.activeVariant()?.takeIf { !it.isOriginal })
     }
+
+    @Test
+    fun `a switch superseded by a new movie resolves nothing and cannot rewrite the new state`() = runTest(testDispatcher) {
+        fakePlaybackRepo.variantsResult = VideoVariantsResult.Available(listOf(originalVariant, lightVariant))
+        val viewModel = buildViewModel()
+        viewModel.loadItem(telegramItem.id)
+        advanceUntilIdle()
+        assertTrue(viewModel.beginQualitySwitch("alt_5393558434975097219"))
+
+        // The late result of the old switch arrives after the player moved to another movie.
+        viewModel.loadItem("telegram:-1001618765010:21406:5393323762257019999")
+        advanceUntilIdle()
+
+        assertNull(viewModel.resolveQualityStreamUrl("alt_5393558434975097219"))
+        viewModel.confirmQualitySwitch("alt_5393558434975097219")
+        viewModel.abortQualitySwitch("Could not change quality. Keeping current stream.")
+
+        assertEquals("original", viewModel.quality.value.options.first { it.isSelected }.variantId)
+        assertNull(viewModel.qualityMessage.value)
+        assertNull(fakePlaybackRepo.lastVariantId)
+    }
+
+    @Test
+    fun `a video still being transcoded is asked again and then offers the alternatives`() = runTest(testDispatcher) {
+        fakePlaybackRepo.variantsResults = listOf(
+            VideoVariantsResult.Processing,
+            VideoVariantsResult.Available(listOf(originalVariant, lightVariant)),
+        )
+        val viewModel = buildViewModel()
+
+        viewModel.loadItem(telegramItem.id)
+        advanceUntilIdle()
+
+        assertEquals(2, viewModel.quality.value.options.size)
+        assertEquals(2, fakePlaybackRepo.variantsFetches)
+    }
+
+    @Test
+    fun `a video that never finishes transcoding stops polling and keeps the selector hidden`() = runTest(testDispatcher) {
+        fakePlaybackRepo.variantsResult = VideoVariantsResult.Processing
+        val viewModel = buildViewModel()
+
+        viewModel.loadItem(telegramItem.id)
+        advanceUntilIdle()
+
+        assertTrue(viewModel.quality.value.options.isEmpty())
+        assertNull(viewModel.quality.value.qualityUnavailableMessage)
+        assertEquals(3, fakePlaybackRepo.variantsFetches)
+    }
 }
 
 private class QualityFakeLibraryRepository(private val item: TvItem) :
@@ -225,6 +274,10 @@ private class QualityFakeLibraryRepository(private val item: TvItem) :
 
 private class QualityFakePlaybackRepository : PlaybackRepository(mockk(relaxed = true), mockk(relaxed = true)) {
     var variantsResult: VideoVariantsResult = VideoVariantsResult.Unsupported
+
+    /** Successive answers for tests that need the resolver to change its mind. */
+    var variantsResults: List<VideoVariantsResult> = emptyList()
+    var variantsFetches = 0
     var lastVariantId: String? = null
 
     override suspend fun resolvePlaybackInfo(item: TvItem, variantId: String?): Result<PlaybackInfo> {
@@ -241,5 +294,9 @@ private class QualityFakePlaybackRepository : PlaybackRepository(mockk(relaxed =
         )
     }
 
-    override suspend fun fetchVideoVariants(resolverVideoId: String?): VideoVariantsResult = variantsResult
+    override suspend fun fetchVideoVariants(resolverVideoId: String?): VideoVariantsResult {
+        val answer = variantsResults.getOrElse(variantsFetches) { variantsResult }
+        variantsFetches++
+        return answer
+    }
 }
