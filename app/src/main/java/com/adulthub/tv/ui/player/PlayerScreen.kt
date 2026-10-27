@@ -58,6 +58,8 @@ import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.launch
+import java.util.Locale
+import kotlin.math.abs
 import com.adulthub.tv.diagnostics.AppLog as Log
 import org.koin.androidx.compose.koinViewModel
 import org.koin.compose.koinInject
@@ -76,6 +78,18 @@ fun PlayerScreen(
     val coroutineScope = rememberCoroutineScope()
     val activity = context as? Activity
     val lifecycleOwner = context as? LifecycleOwner
+
+    // Resolved during composition: a handler that pulls a string from LocalContext can be
+    // running against a configuration the current values were not drawn for.
+    val qualitySwitchFailureMessage = stringResource(R.string.player_quality_switch_failure)
+    val streamRefreshFailureMessage = stringResource(R.string.player_stream_refresh_failure)
+    val seekForwardTemplate = stringResource(R.string.player_seek_forward)
+    val seekBackwardTemplate = stringResource(R.string.player_seek_backward)
+    fun seekFeedbackLabel(deltaMs: Long): String = String.format(
+        Locale.getDefault(),
+        if (deltaMs > 0) seekForwardTemplate else seekBackwardTemplate,
+        abs(deltaMs / 1000),
+    )
 
     // Keep screen on during playback
     DisposableEffect(Unit) {
@@ -161,14 +175,14 @@ fun PlayerScreen(
                 // can neither hijack the new media nor overwrite its quality state.
                 val info = viewModel.resolveQualityStreamUrl(variantId)
                 if (info == null) {
-                    viewModel.abortQualitySwitch(context.getString(R.string.player_quality_switch_failure))
+                    viewModel.abortQualitySwitch(qualitySwitchFailureMessage)
                     return@launch
                 }
                 val swapped = playerManager.switchQualityStream(info.streamUrl, viewModel.variantFor(variantId))
                 if (swapped) {
                     viewModel.confirmQualitySwitch(variantId)
                 } else {
-                    viewModel.abortQualitySwitch(context.getString(R.string.player_quality_switch_failure))
+                    viewModel.abortQualitySwitch(qualitySwitchFailureMessage)
                 }
             }
         }
@@ -399,7 +413,7 @@ fun PlayerScreen(
                             if (!isOsdVisible && !isPlaybackEnded && playerError == null && !showInfoDialog) {
                                 val delta = -seekStepSec * 1_000L
                                 playerManager.seekBy(delta)
-                                seekFeedback = context.getString(R.string.player_seek_backward, seekStepSec)
+                                seekFeedback = seekFeedbackLabel(-delta.toLong())
                                 viewModel.playbackReporter.reportProgressNow(
                                     playerManager.currentPositionMs.value,
                                     !playerManager.isPlaying.value,
@@ -412,7 +426,7 @@ fun PlayerScreen(
                             if (!isOsdVisible && !isPlaybackEnded && playerError == null && !showInfoDialog) {
                                 val delta = seekStepSec * 1_000L
                                 playerManager.seekBy(delta)
-                                seekFeedback = context.getString(R.string.player_seek_forward, seekStepSec)
+                                seekFeedback = seekFeedbackLabel(delta.toLong())
                                 viewModel.playbackReporter.reportProgressNow(
                                     playerManager.currentPositionMs.value,
                                     !playerManager.isPlaying.value,
@@ -538,7 +552,7 @@ fun PlayerScreen(
                     },
                     onSeekRelative = { deltaMs ->
                         playerManager.seekBy(deltaMs)
-                        seekFeedback = if (deltaMs > 0) context.getString(R.string.player_seek_forward, deltaMs / 1000) else context.getString(R.string.player_seek_backward, -deltaMs / 1000)
+                        seekFeedback = seekFeedbackLabel(deltaMs)
                         viewModel.playbackReporter.reportProgressNow(playerManager.currentPositionMs.value, !playerManager.isPlaying.value, reportingSessionId)
                     },
                     onSeekTo = { positionMs ->
@@ -594,7 +608,7 @@ fun PlayerScreen(
                     onMuteClick = { playerManager.toggleMute() },
                     onSeekRelative = { deltaMs ->
                         playerManager.seekBy(deltaMs)
-                        seekFeedback = if (deltaMs > 0) context.getString(R.string.player_seek_forward, deltaMs / 1000) else context.getString(R.string.player_seek_backward, -deltaMs / 1000)
+                        seekFeedback = seekFeedbackLabel(deltaMs)
                         viewModel.playbackReporter.reportProgressNow(
                             playerManager.currentPositionMs.value,
                             !playerManager.isPlaying.value,
@@ -714,7 +728,7 @@ fun PlayerScreen(
                                         itemId = state.item.id,
                                     )
                                 } else {
-                                    retryMessage = context.getString(R.string.player_stream_refresh_failure)
+                                    retryMessage = streamRefreshFailureMessage
                                 }
                             }
                         },
