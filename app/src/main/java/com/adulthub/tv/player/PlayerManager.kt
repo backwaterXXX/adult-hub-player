@@ -599,6 +599,9 @@ class PlayerManager(
                 // The stream address is resolved again. A runtime error often means
                 // that the previous address expired, and reusing it would fail again.
                 val streamUrl = resolveStreamUrlForRetry(request, positionMs)
+                // The resolution is suspending: a new film or a stop may have started
+                // meanwhile, and its state must not receive the outcome of this retry.
+                if (generation != playbackGeneration) return@launch
                 if (streamUrl == null) {
                     _errorMessage.value = "The stream address could not be refreshed"
                     Log.w(TAG, "Automatic retry failed because the stream address could not be refreshed")
@@ -734,6 +737,7 @@ class PlayerManager(
     }
 
     private fun stopPositionPolling() {
+        retryBudget.stopTracking()
         positionPollJob?.cancel()
         positionPollJob = null
     }

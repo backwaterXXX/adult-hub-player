@@ -1,8 +1,10 @@
 package com.adulthub.tv.player
 
+import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.test.runTest
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertFalse
+import org.junit.Assert.assertNotNull
 import org.junit.Assert.assertNull
 import org.junit.Assert.assertTrue
 import org.junit.Test
@@ -68,6 +70,22 @@ class RetryPolicyTest {
         }
 
         // Only the seconds without buffering count, so the budget is still used.
+        assertEquals(1, budget.attemptCount)
+    }
+
+    @Test
+    fun `a pause that stops polling does not count as playback`() {
+        val budget = RetryBudget(30_000L)
+        budget.registerFailure()
+
+        budget.track(0L, playing = true)
+        budget.track(1_000L, playing = true)
+        // Polling stops with the pause and resumes a minute later; the break must not
+        // be measured as playback.
+        budget.stopTracking()
+        budget.track(61_000L, playing = true)
+        budget.track(62_000L, playing = true)
+
         assertEquals(1, budget.attemptCount)
     }
 
@@ -179,4 +197,34 @@ class RetryPolicyTest {
 
             assertNull(url)
         }
+
+    @Test
+    fun `a provider that throws fails the retry instead of using the expired address`() =
+        runTest(timeout = 120.seconds) {
+            val url = resolveRetryStreamUrl(
+                provider = { _, _ -> throw IllegalStateException("resolver offline") },
+                itemId = "movie-1",
+                positionMs = 42_000L,
+                fallbackUrl = "https://resolver.example.com/expired.mp4",
+            )
+
+            assertNull(url)
+        }
+
+    @Test
+    fun `cancelling the retry propagates instead of failing it`() = runTest(timeout = 120.seconds) {
+        var thrown: CancellationException? = null
+        try {
+            resolveRetryStreamUrl(
+                provider = { _, _ -> throw CancellationException("playback stopped") },
+                itemId = "movie-1",
+                positionMs = 42_000L,
+                fallbackUrl = "https://resolver.example.com/expired.mp4",
+            )
+        } catch (error: CancellationException) {
+            thrown = error
+        }
+
+        assertNotNull(thrown)
+    }
 }

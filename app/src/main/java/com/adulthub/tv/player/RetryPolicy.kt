@@ -1,5 +1,7 @@
 package com.adulthub.tv.player
 
+import kotlinx.coroutines.CancellationException
+
 /**
  * Tracks the automatic retry budget of a playback.
  *
@@ -45,6 +47,16 @@ internal class RetryBudget(
         attempts = 0
     }
 
+    /**
+     * Ends the current measurement without touching the used attempts.
+     *
+     * Position polling stops while the player is paused or buffering, so the next
+     * tick starts from scratch instead of counting the whole break as playback.
+     */
+    fun stopTracking() {
+        lastPlayingTickMs = null
+    }
+
     /** Forgets the budget, for example when a new playback starts. */
     fun reset() {
         attempts = 0
@@ -75,6 +87,13 @@ internal suspend fun resolveRetryStreamUrl(
     fallbackUrl: String,
 ): String? {
     if (provider == null) return fallbackUrl
-    val refreshed = runCatching { provider(itemId, positionMs) }.getOrNull()
+    val refreshed = try {
+        provider(itemId, positionMs)
+    } catch (cancelled: CancellationException) {
+        // A stopped playback cancels the retry; that is not a failed refresh.
+        throw cancelled
+    } catch (error: Exception) {
+        null
+    }
     return refreshed?.takeIf { it.isNotBlank() }
 }
