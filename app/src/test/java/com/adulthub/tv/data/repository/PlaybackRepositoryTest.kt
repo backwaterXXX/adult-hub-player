@@ -122,7 +122,7 @@ class PlaybackRepositoryTest {
     @Test
     fun `jellyfin headers are kept on the jellyfin origin`() {
         val headers = mapOf(
-            "Authorization" to "Bearer token",
+            "Authorization" to "MediaBrowser Token=\"token\"",
             "X-Emby-Token" to "token",
             "Referer" to "https://media.example.test",
         )
@@ -131,6 +131,7 @@ class PlaybackRepositoryTest {
             headers = headers,
             streamUrl = "https://media.example.test/videos/42/stream.mp4",
             serverUrl = "https://media.example.test/",
+            accessToken = "token",
         )
 
         assertEquals(headers, result)
@@ -140,26 +141,49 @@ class PlaybackRepositoryTest {
     fun `jellyfin credentials never follow a stream to another origin`() {
         val result = filterPlaybackHeaders(
             headers = mapOf(
-                "Authorization" to "Bearer token",
-                "Cookie" to "session=1",
+                "Authorization" to "MediaBrowser Token=\"token\"",
+                "Cookie" to "jellyfin=token",
                 "X-Emby-Token" to "token",
                 "X-MediaBrowser-Token" to "token",
-                "Proxy-Authorization" to "Basic x",
+                "X-Playback-Referer" to "https://media.example.test/?token",
                 "Referer" to "https://media.example.test",
             ),
             streamUrl = "http://192.168.1.100:8099/admin/play/telegram:1/stream?mode=proxy",
             serverUrl = "http://192.168.1.50:8096",
+            accessToken = "token",
         )
 
         assertEquals(mapOf("Referer" to "https://media.example.test"), result)
     }
 
     @Test
-    fun `without a known server origin credentials are dropped`() {
+    fun `credentials of an external source survive a cross-origin stream`() {
+        // A CDN may authenticate with its own Basic credentials or cookie; neither
+        // belongs to Jellyfin, even when the header name matches a Jellyfin one.
+        val headers = mapOf(
+            "Authorization" to "Basic dXNlcjpwYXNz",
+            "Cookie" to "cdn_session=abc123",
+            "Proxy-Authorization" to "Basic cHJveHk=",
+            "X-Emby-Token" to "issued-by-the-source",
+        )
+
+        val result = filterPlaybackHeaders(
+            headers = headers,
+            streamUrl = "https://cdn.example.test/video.mp4",
+            serverUrl = "http://192.168.1.50:8096",
+            accessToken = "token",
+        )
+
+        assertEquals(headers, result)
+    }
+
+    @Test
+    fun `without a known server origin jellyfin credentials are dropped`() {
         val result = filterPlaybackHeaders(
             headers = mapOf("Authorization" to "Bearer token", "Accept" to "video/*"),
             streamUrl = "https://cdn.example.test/video.mp4",
             serverUrl = null,
+            accessToken = "token",
         )
 
         assertEquals(mapOf("Accept" to "video/*"), result)
@@ -171,6 +195,7 @@ class PlaybackRepositoryTest {
             headers = mapOf("Authorization" to "Bearer token"),
             streamUrl = "not a url",
             serverUrl = "https://media.example.test",
+            accessToken = "token",
         )
 
         assertEquals(emptyMap<String, String>(), result)

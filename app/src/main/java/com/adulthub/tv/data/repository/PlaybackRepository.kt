@@ -124,6 +124,7 @@ open class PlaybackRepository(
                 }.toMap(),
                 streamUrl = streamUrl,
                 serverUrl = clientManager.currentServerUrl,
+                accessToken = clientManager.getApiOrNull()?.accessToken,
             )
             val playbackInfo = PlaybackInfo(
                 itemId = item.id,
@@ -280,34 +281,27 @@ internal fun telegramResolverRef(item: TvItem): String? = when {
 internal fun resolverStreamUrl(origin: String, ref: String, variantId: String?): String =
     appendVariantQuery("$origin/admin/play/${Uri.encode(ref)}/stream?mode=proxy", variantId)
 
-private val SENSITIVE_PLAYBACK_HEADERS = setOf(
-    "authorization",
-    "cookie",
-    "x-emby-token",
-    "x-mediabrowser-token",
-    "proxy-authorization",
-)
-
 /**
- * Drops session credentials that Jellyfin attached to a media source when the
- * stream is served by another origin.
+ * Drops Jellyfin session credentials from a media source when the stream is
+ * served by another origin.
  *
- * A resolver-served source carries its own opaque identifier and never needs the
- * Jellyfin token, so forwarding the headers of the server request would leak the
- * account credentials to a different host. Non-sensitive headers such as a
- * referer stay untouched for external sources that require them.
+ * The headers come from the media source description, so a header name does not
+ * say who issued it: a CDN may require its own Authorization or Cookie header.
+ * Only a value that carries the signed-in access token belongs to Jellyfin, so
+ * everything else is left untouched and an external source keeps the credentials
+ * it requires.
  */
 internal fun filterPlaybackHeaders(
     headers: Map<String, String>,
     streamUrl: String,
     serverUrl: String?,
+    accessToken: String?,
 ): Map<String, String> {
     if (headers.isEmpty()) return emptyMap()
     val streamOrigin = originOf(streamUrl) ?: return emptyMap()
     if (streamOrigin == serverUrl?.let(::originOf)) return headers
-    return headers.filterKeys { name ->
-        name.lowercase(java.util.Locale.ROOT) !in SENSITIVE_PLAYBACK_HEADERS
-    }
+    val token = accessToken?.takeIf { it.isNotBlank() } ?: return headers
+    return headers.filterValues { value -> !value.contains(token) }
 }
 
 private fun originOf(url: String): String? =
