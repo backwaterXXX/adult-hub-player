@@ -57,7 +57,15 @@ import com.adulthub.tv.ui.theme.TextSecondary
 import kotlinx.coroutines.delay
 import org.koin.androidx.compose.koinViewModel
 
-private fun Context.findActivity(): Activity? {
+/**
+ * How long the app stays armed for a second Back press after the exit prompt appears.
+ *
+ * A TV remote is pressed slowly, and the prompt itself is easy to miss; two seconds is
+ * short enough that a user who reads the prompt before pressing again misses the window.
+ */
+internal const val EXIT_CONFIRM_WINDOW_MS = 3_000L
+
+internal fun Context.findActivity(): Activity? {
     var current = this
     while (current is ContextWrapper) {
         if (current is Activity) return current
@@ -340,7 +348,7 @@ private fun TvExitPrompt(
 
     LaunchedEffect(showExitPrompt) {
         if (showExitPrompt) {
-            delay(2_000L)
+            delay(EXIT_CONFIRM_WINDOW_MS)
             showExitPrompt = false
         }
     }
@@ -348,7 +356,7 @@ private fun TvExitPrompt(
     BackHandler(enabled = true) {
         if (isFirstScreen) {
             val now = SystemClock.elapsedRealtime()
-            if (now - lastBackPressTime < 2_000L) {
+            if (now - lastBackPressTime < EXIT_CONFIRM_WINDOW_MS) {
                 context.findActivity()?.finish()
             } else {
                 lastBackPressTime = now

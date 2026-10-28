@@ -1,6 +1,5 @@
 package com.adulthub.tv.ui.navigation
 
-import android.app.Activity
 import android.os.SystemClock
 import android.widget.Toast
 import androidx.activity.compose.BackHandler
@@ -14,10 +13,12 @@ import androidx.compose.runtime.*
 import androidx.compose.ui.Modifier
 import androidx.compose.foundation.layout.padding
 import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.res.stringResource
 import androidx.navigation.NavHostController
 import androidx.navigation.NavType
 import androidx.navigation.compose.*
 import androidx.navigation.navArgument
+import com.adulthub.tv.R
 import com.adulthub.tv.ui.auth.*
 import com.adulthub.tv.ui.detail.ItemDetailViewModel
 import com.adulthub.tv.ui.home.HomeViewModel
@@ -64,8 +65,15 @@ fun MobileAppNavigation(modifier: Modifier = Modifier) {
                 AuthNavEvent.NavigateToHome -> Screen.Home.route
                 AuthNavEvent.NavigateToServer -> Screen.Server.route
             }
+            // Login and quick connect are pushed on top of the server screen, so Back
+            // returns there instead of leaving the app. Every other event moves the
+            // session to a new root and has to drop the previous screens.
+            val keepBackStack = event is AuthNavEvent.NavigateToLogin ||
+                event is AuthNavEvent.NavigateToQuickConnect
             nav.navigate(destination) {
-                popUpTo(nav.graph.id) { inclusive = false }
+                if (!keepBackStack) {
+                    popUpTo(nav.graph.id) { inclusive = false }
+                }
                 launchSingleTop = true
             }
         }
@@ -77,6 +85,7 @@ fun MobileAppNavigation(modifier: Modifier = Modifier) {
             MobileBottomBar(navController = nav)
         },
     ) { padding ->
+        MobileExitHandler(navController = nav)
         NavHost(navController = nav, startDestination = Screen.Splash.route, modifier = Modifier.padding(padding)) {
             composable(Screen.Splash.route) { MobilePage("Adult Hub", "Connecting to your library…") }
             composable(Screen.Server.route) { MobileServerScreen(auth) }
@@ -132,6 +141,35 @@ fun MobileAppNavigation(modifier: Modifier = Modifier) {
 }
 
 /**
+ * Double Back exits the app from the screens that start a session.
+ *
+ * The handler sits outside the bottom bar, so it also covers the server screen where
+ * the bar is hidden. It is registered before the graph on purpose: a Back press on a
+ * deeper screen stays with that screen and with the navigation graph.
+ */
+@Composable
+private fun MobileExitHandler(navController: NavHostController) {
+    val entry by navController.currentBackStackEntryAsState()
+    val route = entry?.destination?.route
+    val isExitScreen = route == Screen.Home.route || route == Screen.Server.route
+    val context = LocalContext.current
+    val exitMessage = stringResource(R.string.press_back_again_to_exit)
+    var lastBackPressAt by remember { mutableLongStateOf(0L) }
+
+    LaunchedEffect(route) { lastBackPressAt = 0L }
+
+    BackHandler(enabled = isExitScreen) {
+        val now = SystemClock.elapsedRealtime()
+        if (now - lastBackPressAt < EXIT_CONFIRM_WINDOW_MS) {
+            context.findActivity()?.finish()
+        } else {
+            lastBackPressAt = now
+            Toast.makeText(context, exitMessage, Toast.LENGTH_SHORT).show()
+        }
+    }
+}
+
+/**
  * Bottom navigation bar of the mobile variant.
  *
  * The current route is read inside this composable, so navigating in the graph does not
@@ -142,18 +180,6 @@ private fun MobileBottomBar(navController: NavHostController) {
     val entry by navController.currentBackStackEntryAsState()
     val route = entry?.destination?.route
     val showBar = route in MOBILE_TOP_LEVEL_ROUTES
-    val context = LocalContext.current
-    var lastHomeBackAt by remember { mutableLongStateOf(0L) }
-    LaunchedEffect(route) { lastHomeBackAt = 0L }
-
-    BackHandler(enabled = route == Screen.Home.route) {
-        val now = SystemClock.elapsedRealtime()
-        if (now - lastHomeBackAt < 2_000L) (context as? Activity)?.finish()
-        else {
-            lastHomeBackAt = now
-            Toast.makeText(context, "Press Back again to exit", Toast.LENGTH_SHORT).show()
-        }
-    }
 
     if (!showBar) return
 
