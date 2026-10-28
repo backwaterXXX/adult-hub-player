@@ -6,6 +6,7 @@ import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.flow.first
+import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.sync.Mutex
 import kotlinx.coroutines.sync.withLock
@@ -28,18 +29,33 @@ class AppUpdateManager(
     val state: StateFlow<AppUpdateState> = _state.asStateFlow()
     private val operation = Mutex()
 
+    /**
+     * Serializes writes to [AppUpdateState.enabled] with the settings read in init.
+     *
+     * The operation lock cannot be used here: a check may be downloading an APK for
+     * minutes, and the auto-update switch must not wait for it.
+     */
+    private val enabledLock = Mutex()
+
     init {
         scope.launch {
-            _state.value = _state.value.copy(
-                enabled = settings.autoUpdateEnabled.first(),
-            )
             val restoredUpdate = repository.restoreDownloadedUpdate()
-            if (restoredUpdate != null) {
-                _state.value = _state.value.copy(
-                    update = restoredUpdate,
-                    downloadProgress = 1f,
-                    message = "Version ${restoredUpdate.manifest.versionName} is ready to install",
-                )
+            enabledLock.withLock {
+                val enabled = settings.autoUpdateEnabled.first()
+                _state.update { state ->
+                    // A check that already finished owns the update slot; a late
+                    // restore must not replace its result.
+                    if (restoredUpdate == null || state.update != null) {
+                        state.copy(enabled = enabled)
+                    } else {
+                        state.copy(
+                            enabled = enabled,
+                            update = restoredUpdate,
+                            downloadProgress = 1f,
+                            message = "Version ${restoredUpdate.manifest.versionName} is ready to install",
+                        )
+                    }
+                }
             }
         }
     }
@@ -69,56 +85,62 @@ class AppUpdateManager(
     }
 
     suspend fun setEnabled(enabled: Boolean) {
-        settings.setAutoUpdateEnabled(enabled)
-        _state.value = _state.value.copy(enabled = enabled)
+        enabledLock.withLock {
+            settings.setAutoUpdateEnabled(enabled)
+            _state.update { it.copy(enabled = enabled) }
+        }
         if (enabled) checkAutomaticallyIfDue()
     }
 
     fun showMessage(message: String) {
-        _state.value = _state.value.copy(message = message)
+        _state.update { it.copy(message = message) }
     }
 
     private suspend fun checkAndDownload() {
-        _state.value = _state.value.copy(isChecking = true, isDownloading = false, downloadProgress = 0f, message = "Checking for updates…")
+        _state.update { it.copy(isChecking = true, isDownloading = false, downloadProgress = 0f, message = "Checking for updates…") }
         try {
             val result = repository.checkAndDownload { received, total ->
-                _state.value = _state.value.copy(
-                    isChecking = false,
-                    isDownloading = true,
-                    downloadProgress = if (total <= 0) 0f else (received.toFloat() / total).coerceIn(0f, 1f),
-                    message = "Downloading update…",
-                )
+                _state.update {
+                    it.copy(
+                        isChecking = false,
+                        isDownloading = true,
+                        downloadProgress = if (total <= 0) 0f else (received.toFloat() / total).coerceIn(0f, 1f),
+                        message = "Downloading update…",
+                    )
+                }
             }
             if (result !is UpdateCheckResult.Failed) {
                 settings.setLastUpdateCheck(System.currentTimeMillis())
             }
-            _state.value = when (result) {
-                is UpdateCheckResult.UpdateReady -> _state.value.copy(
-                    isChecking = false,
-                    isDownloading = false,
-                    downloadProgress = 1f,
-                    update = result.update,
-                    message = "Version ${result.update.manifest.versionName} is ready to install",
-                )
-                UpdateCheckResult.UpToDate -> _state.value.copy(
-                    isChecking = false,
-                    isDownloading = false,
-                    update = null,
-                    message = "App is up to date",
-                )
-                is UpdateCheckResult.Failed -> _state.value.copy(
-                    isChecking = false,
-                    isDownloading = false,
-                    message = result.message,
-                )
+            _state.update { state ->
+                when (result) {
+                    is UpdateCheckResult.UpdateReady -> state.copy(
+                        isChecking = false,
+                        isDownloading = false,
+                        downloadProgress = 1f,
+                        update = result.update,
+                        message = "Version ${result.update.manifest.versionName} is ready to install",
+                    )
+                    UpdateCheckResult.UpToDate -> state.copy(
+                        isChecking = false,
+                        isDownloading = false,
+                        update = null,
+                        message = "App is up to date",
+                    )
+                    is UpdateCheckResult.Failed -> state.copy(
+                        isChecking = false,
+                        isDownloading = false,
+                        message = result.message,
+                    )
+                }
             }
         } catch (error: kotlinx.coroutines.CancellationException) {
             throw error
         } catch (error: Exception) {
-            _state.value = _state.value.copy(message = error.message ?: "Update check failed")
+            _state.update { it.copy(message = error.message ?: "Update check failed") }
         } finally {
             // A cancelled check must not leave the screen stuck on "Downloading update…".
-            _state.value = _state.value.copy(isChecking = false, isDownloading = false)
+            _state.update { it.copy(isChecking = false, isDownloading = false) }
         }
     }
 

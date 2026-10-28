@@ -253,8 +253,12 @@ open class SettingsDataStore(
         // is known before the first image request instead of after the settings screen is opened.
         val decodedOrigins = oldOrigins.mapNotNull { encryptedValue.decode(it) }.toSet()
         approvedCleartextOriginsSnapshot.set(decodedOrigins)
-        val encryptedOrigins = decodedOrigins.map { encryptedValue.encode(it) }.toSet()
-        val originsNeedUpdate = oldOrigins != encryptedOrigins
+        // The encryption is randomized, so comparing re-encrypted values would report a change
+        // on every start. Only plaintext entries actually need to be rewritten.
+        val originsNeedUpdate = oldOrigins.any { !encryptedValue.isEncrypted(it) }
+        val encryptedOrigins = oldOrigins.mapTo(mutableSetOf()) { value ->
+            if (encryptedValue.isEncrypted(value)) value else encryptedValue.encode(value)
+        }
         val versionNeedsUpdate = snapshot[KEY_SCHEMA_VERSION] != CURRENT_SCHEMA_VERSION
         val hasLegacyUpdateSource = snapshot[LEGACY_KEY_UPDATE_BASE_URL] != null
         // The library selection used to be stored without an account, so it is moved into

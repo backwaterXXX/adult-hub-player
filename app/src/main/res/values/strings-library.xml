@@ -118,4 +118,5 @@
     <string name="library_label_filmography">"Filmography: "</string>
     <string name="library_bio">Bio</string>
     <string name="library_filmography_section">Filmography (%1$d)</string>
+    <string name="library_failed_to_load_filmography">Could not load the filmography.</string>
 </resources>

@@ -177,6 +177,37 @@ class SettingsDataStoreTest {
     }
 
     @Test
+    fun `migration leaves encrypted origins untouched on later starts`() = runTest(timeout = 120.seconds) {
+        // Real encryption uses a random IV, so equal plaintext encrypts to a different
+        // value every time. The mock reproduces that to catch needless rewrites.
+        var counter = 0
+        coEvery { crypto.encrypt(any()) } answers { "enc_${counter++}_" + firstArg<String>() }
+        coEvery { crypto.decrypt(any()) } answers {
+            val arg = firstArg<String>()
+            if (arg.startsWith("enc_")) arg.removePrefix("enc_").substringAfter('_') else arg
+        }
+
+        dataStore.edit { prefs ->
+            prefs[stringSetPreferencesKey("approved_cleartext_origins")] =
+                setOf("http://192.168.1.50:8000", "https://example.org")
+        }
+
+        settingsDataStore.migrateSensitiveValues()
+        val afterFirstRun = dataStore.data.first()[stringSetPreferencesKey("approved_cleartext_origins")].orEmpty()
+        assertEquals(2, afterFirstRun.size)
+        assertTrue(afterFirstRun.all { it.startsWith("enc:v1:") })
+
+        settingsDataStore.migrateSensitiveValues()
+        val afterSecondRun = dataStore.data.first()[stringSetPreferencesKey("approved_cleartext_origins")].orEmpty()
+
+        assertEquals(afterFirstRun, afterSecondRun)
+        assertEquals(
+            setOf("http://192.168.1.50:8000", "https://example.org"),
+            settingsDataStore.approvedCleartextOrigins.first(),
+        )
+    }
+
+    @Test
     fun `export and import non-secret configuration roundtrip`() = runTest(timeout = 120.seconds) {
         settingsDataStore.setSelectedLibrary("exported-lib", "Exported Name")
         settingsDataStore.setResolverBaseUrl("https://resolver.export.test")

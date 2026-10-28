@@ -200,6 +200,10 @@ class SearchViewModel(
                 SettingsDataStore.DEFAULT_RESOLVER_URL
             }
 
+            // A response that was superseded by a newer query neither enters the
+            // history nor clears the spinner of the search the user is waiting for.
+            if (searchTerm != _query.value) return@coroutineScope
+
             searchHistoryStore?.recordQuery(searchTerm, accountKey)
             if (searchTerm != _query.value) return@coroutineScope
 

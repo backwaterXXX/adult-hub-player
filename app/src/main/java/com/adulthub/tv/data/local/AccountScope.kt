@@ -85,17 +85,23 @@ class AccountScope(
         .map { state -> markerOf(state) }
         .distinctUntilChanged()
 
-    override suspend fun currentOwner(): SessionOwner = SessionOwner(
-        accountKey = accountKey.first(),
-        sessionMarker = sessionMarker.first(),
-    )
+    override suspend fun currentOwner(): SessionOwner = ownerOf(authDataStore.authState.first())
 
     override suspend fun isCurrent(owner: SessionOwner): Boolean =
-        sessionMarker.first() == owner.sessionMarker
+        ownerOf(authDataStore.authState.first()) == owner
 
     companion object {
         /** Namespace used while no account is signed in. */
         const val ANONYMOUS_KEY = "anonymous"
+
+        /**
+         * Both fields come from one auth state, so an operation never captures the
+         * key of one account together with the marker of another.
+         */
+        private fun ownerOf(state: AuthState): SessionOwner = SessionOwner(
+            accountKey = keyOf(state),
+            sessionMarker = markerOf(state),
+        )
 
         fun keyOf(state: AuthState): String = when (state) {
             is AuthState.Authenticated -> digest(state.serverUrl, state.userId)

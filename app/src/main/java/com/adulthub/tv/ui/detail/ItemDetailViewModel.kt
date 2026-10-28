@@ -55,7 +55,7 @@ class ItemDetailViewModel(
         currentItemId = itemId
 
         viewModelScope.launch {
-            _uiState.update { it.copy(isLoading = true, errorMessage = null) }
+            _uiState.update { it.copy(isLoading = true, errorMessage = null, isLoadingSimilar = false) }
             val itemResult = libraryRepository.getItemDetails(itemId)
 
             _uiState.update { state ->
@@ -87,6 +87,8 @@ class ItemDetailViewModel(
         viewModelScope.launch {
             _uiState.update { it.copy(isLoadingSimilar = true) }
             val similarResult = libraryRepository.getSimilarItems(itemId, limit = 12)
+            // The screen may already show another item when the answer arrives.
+            if (currentItemId != itemId) return@launch
             _uiState.update { state ->
                 state.copy(
                     similarItems = similarResult.getOrDefault(emptyList()),
@@ -107,8 +109,10 @@ class ItemDetailViewModel(
         viewModelScope.launch {
             val result = libraryRepository.toggleFavorite(currentItem.id, newFavorite)
             if (result.isFailure) {
-                // Revert on failure
-                _uiState.update { it.copy(isFavorite = !newFavorite) }
+                // Revert on failure, but never the favorite flag of another item.
+                _uiState.update { state ->
+                    if (state.item?.id == currentItem.id) state.copy(isFavorite = !newFavorite) else state
+                }
             }
         }
     }
@@ -117,8 +121,12 @@ class ItemDetailViewModel(
         val currentItem = _uiState.value.item ?: return
         val newPlayed = !currentItem.isPlayed
 
-        // Optimistic update
-        _uiState.update { it.copy(item = currentItem.copy(isPlayed = newPlayed)) }
+        // Optimistic update of the watched flag only, so a favorite toggled in the
+        // meantime is not overwritten.
+        _uiState.update { state ->
+            val item = state.item
+            if (item?.id == currentItem.id) state.copy(item = item.copy(isPlayed = newPlayed)) else state
+        }
 
         viewModelScope.launch {
             val watchedStateId = if (currentItem.isTelegram) {
@@ -128,8 +136,15 @@ class ItemDetailViewModel(
             }
             val result = libraryRepository.markAsPlayed(watchedStateId, newPlayed)
             if (result.isFailure) {
-                // Revert on failure
-                _uiState.update { it.copy(item = currentItem) }
+                // Revert the flag instead of the whole item snapshot.
+                _uiState.update { state ->
+                    val item = state.item
+                    if (item?.id == currentItem.id) {
+                        state.copy(item = item.copy(isPlayed = currentItem.isPlayed))
+                    } else {
+                        state
+                    }
+                }
             }
         }
     }

@@ -21,6 +21,7 @@ import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.produceState
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.rememberCoroutineScope
+import androidx.compose.runtime.rememberUpdatedState
 import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
@@ -127,6 +128,9 @@ fun PlayerScreen(
     val seekStepSec by settingsDataStore.seekStepSec.collectAsStateWithLifecycle(initialValue = 15)
     val autoplayNext by settingsDataStore.autoplayNext.collectAsStateWithLifecycle(initialValue = false)
     val reportingSessionId by viewModel.reportingSessionId.collectAsStateWithLifecycle()
+    // PlayerManager callbacks outlive a single playback request, so they read the
+    // session through a state holder instead of capturing the value at composition.
+    val currentReportingSessionId by rememberUpdatedState(reportingSessionId)
     val phashCoordinator: com.adulthub.tv.player.PhashCoordinator = koinInject()
     val phashJobStatuses by phashCoordinator.jobStatuses.collectAsStateWithLifecycle()
 
@@ -204,11 +208,11 @@ fun PlayerScreen(
             viewModel.playbackReporter.reportStart(
                 positionMs = posMs,
                 canSeek = playerManager.exoPlayer.isCurrentMediaItemSeekable,
-                sessionId = reportingSessionId,
+                sessionId = currentReportingSessionId,
             )
         }
         playerManager.onPlaybackEnded = {
-            viewModel.onPlaybackEnded(playerManager.currentPositionMs.value, reportingSessionId)
+            viewModel.onPlaybackEnded(playerManager.currentPositionMs.value, currentReportingSessionId)
         }
     }
 

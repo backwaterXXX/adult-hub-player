@@ -20,6 +20,7 @@ data class PersonDetailUiState(
     val movies: List<TvItem> = emptyList(),
     val isLoading: Boolean = true,
     val errorMessage: String? = null,
+    val moviesErrorMessage: String? = null,
 )
 
 sealed interface PersonDetailNavEvent {
@@ -45,8 +46,11 @@ class PersonDetailViewModel(
         currentPersonId = personId
 
         viewModelScope.launch {
-            _uiState.update { it.copy(isLoading = true, errorMessage = null) }
+            _uiState.update { it.copy(isLoading = true, errorMessage = null, moviesErrorMessage = null) }
             val personResult = personRepository.getPersonDetails(personId, personName)
+
+            // The screen may already show another performer when the answer arrives.
+            if (currentPersonId != personId) return@launch
 
             _uiState.update { state ->
                 personResult.fold(
@@ -66,11 +70,34 @@ class PersonDetailViewModel(
             }
 
             if (personResult.isSuccess) {
-                val moviesResult = personRepository.getPersonMovies(personId = personId, limit = 100)
-                _uiState.update { state ->
-                    state.copy(movies = moviesResult.getOrDefault(emptyList()))
-                }
+                loadMovies(personId)
             }
+        }
+    }
+
+    /** Retries the filmography without reloading the performer profile. */
+    fun reloadMovies() {
+        val personId = currentPersonId ?: return
+        viewModelScope.launch {
+            _uiState.update { it.copy(moviesErrorMessage = null) }
+            loadMovies(personId)
+        }
+    }
+
+    private suspend fun loadMovies(personId: String) {
+        val moviesResult = personRepository.getPersonMovies(personId = personId, limit = 100)
+        if (currentPersonId != personId) return
+        _uiState.update { state ->
+            moviesResult.fold(
+                onSuccess = { movies -> state.copy(movies = movies, moviesErrorMessage = null) },
+                onFailure = { error ->
+                    // The profile loaded, so a filmography failure is reported next to
+                    // the section it belongs to instead of replacing the whole screen.
+                    state.copy(
+                        moviesErrorMessage = error.localizedMessage ?: "Failed to load the filmography",
+                    )
+                },
+            )
         }
     }
 

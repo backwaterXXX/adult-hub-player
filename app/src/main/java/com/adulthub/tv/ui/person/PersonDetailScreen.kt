@@ -250,6 +250,24 @@ fun PersonDetailScreen(
                                 }
                             }
                         }
+                    } else if (state.moviesErrorMessage != null) {
+                        item {
+                            Column(
+                                modifier = Modifier
+                                    .fillMaxWidth()
+                                    .padding(horizontal = 48.dp, vertical = 16.dp),
+                            ) {
+                                Text(
+                                    text = stringResource(R.string.library_failed_to_load_filmography),
+                                    style = MaterialTheme.typography.bodyMedium,
+                                    color = TextSecondary,
+                                )
+                                Spacer(modifier = Modifier.height(8.dp))
+                                TvSecondaryButton(onClick = { viewModel.reloadMovies() }) {
+                                    Text(text = stringResource(R.string.action_retry))
+                                }
+                            }
+                        }
                     }
                 }
             }

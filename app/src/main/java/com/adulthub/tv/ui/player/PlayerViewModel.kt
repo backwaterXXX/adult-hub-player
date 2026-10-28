@@ -22,6 +22,7 @@ import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.flow.firstOrNull
+import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.Job
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.launch
@@ -513,7 +514,19 @@ class PlayerViewModel(
         _uiState.value = ready.copy(item = updatedItem)
         if (runCatching { java.util.UUID.fromString(updatedItem.id) }.isSuccess) {
             viewModelScope.launch {
-                libraryRepository.toggleFavorite(updatedItem.id, newFav)
+                val result = libraryRepository.toggleFavorite(updatedItem.id, newFav)
+                if (result.isFailure) {
+                    // Only the flag is reverted, and only for the same film: the
+                    // player may already show another one when the failure arrives.
+                    _uiState.update { state ->
+                        val current = state as? PlayerUiState.Ready
+                        if (current?.item?.id == updatedItem.id) {
+                            current.copy(item = current.item.copy(isFavorite = !newFav))
+                        } else {
+                            state
+                        }
+                    }
+                }
             }
         }
     }

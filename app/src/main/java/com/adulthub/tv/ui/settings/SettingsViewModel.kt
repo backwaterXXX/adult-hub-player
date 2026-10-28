@@ -89,77 +89,89 @@ class SettingsViewModel(
 
     fun loadSettings() {
         viewModelScope.launch {
-            val authState = authRepository.authState.firstOrNull()
-            val (serverUrl, serverName, username, userId) = when (authState) {
-                is AuthState.Authenticated -> listOf(
-                    authState.serverUrl,
-                    authState.serverName.ifEmpty { "Jellyfin Server" },
-                    authState.username,
-                    authState.userId,
-                )
-                else -> listOf("", "", "", "")
+            try {
+                loadSettingsSnapshot()
+            } catch (cancelled: CancellationException) {
+                throw cancelled
+            } catch (error: Exception) {
+                _uiState.update {
+                    it.copy(statusMessage = "Could not load settings: ${error.localizedMessage ?: "storage error"}")
+                }
             }
+        }
+    }
 
-            val libraryId = settingsDataStore.selectedLibraryId.firstOrNull().orEmpty()
-            val libraryName = settingsDataStore.selectedLibraryName.firstOrNull().orEmpty()
-            val resolverUrl = settingsDataStore.resolverBaseUrl.firstOrNull() ?: SettingsDataStore.DEFAULT_RESOLVER_URL
-            val resolverUrlSource = settingsDataStore.resolverBaseUrlSource.firstOrNull() ?: ResolverUrlSource.DEFAULT
-            val approvedHttpOrigins = settingsDataStore.approvedCleartextOrigins.firstOrNull().orEmpty()
-            val cacheLimit = settingsDataStore.cacheLimitMb.firstOrNull() ?: SettingsDataStore.DEFAULT_CACHE_LIMIT_MB
-            val phashOnPlayback = settingsDataStore.phashOnPlayback.firstOrNull() ?: false
-            val bufferProfile = settingsDataStore.bufferProfile.firstOrNull() ?: BufferProfile.STANDARD
-            val lowRamMode = settingsDataStore.lowRamMode.firstOrNull() ?: false
-            val seekStepSec = settingsDataStore.seekStepSec.firstOrNull() ?: SettingsDataStore.DEFAULT_SEEK_STEP_SEC
-            val autoplayNext = settingsDataStore.autoplayNext.firstOrNull() ?: false
-            val savedHomeCategoryIds = settingsDataStore.selectedHomeCategoryIds.firstOrNull()
-            val hiddenChannels = settingsDataStore.hiddenChannelIds.firstOrNull().orEmpty()
-            val excluded = settingsDataStore.excludedTags.firstOrNull().orEmpty()
-            val pendingImport = runCatching { userScopedDataMigration?.hasPendingImport() }.getOrNull() ?: false
+    private suspend fun loadSettingsSnapshot() {
+        val authState = authRepository.authState.firstOrNull()
+        val (serverUrl, serverName, username, userId) = when (authState) {
+            is AuthState.Authenticated -> listOf(
+                authState.serverUrl,
+                authState.serverName.ifEmpty { "Jellyfin Server" },
+                authState.username,
+                authState.userId,
+            )
+            else -> listOf("", "", "", "")
+        }
 
-            val librariesResult = libraryRepository.getLibraries()
-            val libraries = librariesResult.getOrDefault(emptyList())
-            val genresResult = libraryRepository.getGenres(limit = 200)
-            val homeCategories = genresResult.getOrDefault(emptyList())
-            val selectedHomeCategoryIds = savedHomeCategoryIds
-                ?: homeCategories.take(2).map { it.id }.toSet()
+        val libraryId = settingsDataStore.selectedLibraryId.firstOrNull().orEmpty()
+        val libraryName = settingsDataStore.selectedLibraryName.firstOrNull().orEmpty()
+        val resolverUrl = settingsDataStore.resolverBaseUrl.firstOrNull() ?: SettingsDataStore.DEFAULT_RESOLVER_URL
+        val resolverUrlSource = settingsDataStore.resolverBaseUrlSource.firstOrNull() ?: ResolverUrlSource.DEFAULT
+        val approvedHttpOrigins = settingsDataStore.approvedCleartextOrigins.firstOrNull().orEmpty()
+        val cacheLimit = settingsDataStore.cacheLimitMb.firstOrNull() ?: SettingsDataStore.DEFAULT_CACHE_LIMIT_MB
+        val phashOnPlayback = settingsDataStore.phashOnPlayback.firstOrNull() ?: false
+        val bufferProfile = settingsDataStore.bufferProfile.firstOrNull() ?: BufferProfile.STANDARD
+        val lowRamMode = settingsDataStore.lowRamMode.firstOrNull() ?: false
+        val seekStepSec = settingsDataStore.seekStepSec.firstOrNull() ?: SettingsDataStore.DEFAULT_SEEK_STEP_SEC
+        val autoplayNext = settingsDataStore.autoplayNext.firstOrNull() ?: false
+        val savedHomeCategoryIds = settingsDataStore.selectedHomeCategoryIds.firstOrNull()
+        val hiddenChannels = settingsDataStore.hiddenChannelIds.firstOrNull().orEmpty()
+        val excluded = settingsDataStore.excludedTags.firstOrNull().orEmpty()
+        val pendingImport = runCatching { userScopedDataMigration?.hasPendingImport() }.getOrNull() ?: false
 
-            // An id alone tells the viewer nothing about the channel they hid, but the titles
-            // live behind the resolver, so they are only requested when there is a list to label.
-            val hiddenChannelNames = if (hiddenChannels.isEmpty()) {
-                emptyMap()
-            } else {
-                channelRepository?.getCategories()?.getOrDefault(emptyList())
-                    ?.associate { channel -> channel.id to channel.title }
-                    ?: emptyMap()
-            }
+        val librariesResult = libraryRepository.getLibraries()
+        val libraries = librariesResult.getOrDefault(emptyList())
+        val genresResult = libraryRepository.getGenres(limit = 200)
+        val homeCategories = genresResult.getOrDefault(emptyList())
+        val selectedHomeCategoryIds = savedHomeCategoryIds
+            ?: homeCategories.take(2).map { it.id }.toSet()
 
-            _uiState.update {
-                it.copy(
-                    serverUrl = serverUrl,
-                    serverName = serverName,
-                    username = username,
-                    userId = userId,
-                    selectedLibraryId = libraryId,
-                    selectedLibraryName = libraryName.ifEmpty { "None Selected" },
-                    resolverBaseUrl = resolverUrl,
-                    resolverBaseUrlSource = resolverUrlSource,
-                    resolverUrlDraft = resolverUrl,
-                    approvedCleartextOrigins = approvedHttpOrigins,
-                    cacheLimitMb = cacheLimit,
-                    phashOnPlayback = phashOnPlayback,
-                    bufferProfile = bufferProfile,
-                    lowRamMode = lowRamMode,
-                    seekStepSec = seekStepSec,
-                    autoplayNext = autoplayNext,
-                    availableHomeCategories = homeCategories,
-                    selectedHomeCategoryIds = selectedHomeCategoryIds,
-                    hiddenChannelIds = hiddenChannels,
-                    hiddenChannelNames = hiddenChannelNames,
-                    excludedTags = excluded,
-                    availableLibraries = libraries,
-                    hasPendingHistoryImport = pendingImport,
-                )
-            }
+        // An id alone tells the viewer nothing about the channel they hid, but the titles
+        // live behind the resolver, so they are only requested when there is a list to label.
+        val hiddenChannelNames = if (hiddenChannels.isEmpty()) {
+            emptyMap()
+        } else {
+            channelRepository?.getCategories()?.getOrDefault(emptyList())
+                ?.associate { channel -> channel.id to channel.title }
+                ?: emptyMap()
+        }
+
+        _uiState.update {
+            it.copy(
+                serverUrl = serverUrl,
+                serverName = serverName,
+                username = username,
+                userId = userId,
+                selectedLibraryId = libraryId,
+                selectedLibraryName = libraryName.ifEmpty { "None Selected" },
+                resolverBaseUrl = resolverUrl,
+                resolverBaseUrlSource = resolverUrlSource,
+                resolverUrlDraft = resolverUrl,
+                approvedCleartextOrigins = approvedHttpOrigins,
+                cacheLimitMb = cacheLimit,
+                phashOnPlayback = phashOnPlayback,
+                bufferProfile = bufferProfile,
+                lowRamMode = lowRamMode,
+                seekStepSec = seekStepSec,
+                autoplayNext = autoplayNext,
+                availableHomeCategories = homeCategories,
+                selectedHomeCategoryIds = selectedHomeCategoryIds,
+                hiddenChannelIds = hiddenChannels,
+                hiddenChannelNames = hiddenChannelNames,
+                excludedTags = excluded,
+                availableLibraries = libraries,
+                hasPendingHistoryImport = pendingImport,
+            )
         }
     }
 
@@ -296,14 +308,14 @@ class SettingsViewModel(
     fun toggleHomeCategory(categoryId: String) {
         val currentIds = _uiState.value.selectedHomeCategoryIds
         val selectedIds = if (categoryId in currentIds) currentIds - categoryId else currentIds + categoryId
-        _uiState.update {
-            it.copy(
-                selectedHomeCategoryIds = selectedIds,
-                statusMessage = "Home category selection saved",
-            )
-        }
         viewModelScope.launch {
-            persist { settingsDataStore.setSelectedHomeCategoryIds(selectedIds) }
+            if (!persist { settingsDataStore.setSelectedHomeCategoryIds(selectedIds) }) return@launch
+            _uiState.update {
+                it.copy(
+                    selectedHomeCategoryIds = selectedIds,
+                    statusMessage = "Home category selection saved",
+                )
+            }
         }
     }
 
@@ -517,7 +529,7 @@ class SettingsViewModel(
 
     fun unhideChannel(channelId: String) {
         viewModelScope.launch {
-            settingsDataStore.unhideChannel(channelId)
+            if (!persist { settingsDataStore.unhideChannel(channelId) }) return@launch
             _uiState.update { state ->
                 state.copy(
                     hiddenChannelIds = state.hiddenChannelIds - channelId,
@@ -529,7 +541,7 @@ class SettingsViewModel(
 
     fun removeExcludedTag(tag: String) {
         viewModelScope.launch {
-            settingsDataStore.removeExcludedTag(tag)
+            if (!persist { settingsDataStore.removeExcludedTag(tag) }) return@launch
             _uiState.update { state ->
                 state.copy(
                     excludedTags = state.excludedTags - tag,
@@ -543,7 +555,7 @@ class SettingsViewModel(
         val trimmed = tag.trim()
         if (trimmed.isBlank()) return
         viewModelScope.launch {
-            settingsDataStore.excludeTag(trimmed)
+            if (!persist { settingsDataStore.excludeTag(trimmed) }) return@launch
             _uiState.update { state ->
                 state.copy(
                     excludedTags = state.excludedTags + trimmed,
