@@ -212,6 +212,16 @@ fun PlayerScreen(
         }
     }
 
+    // A random video is resolved while the previous one is still loaded. Pausing it
+    // keeps the user from hearing a video the screen no longer shows, and a failed
+    // request stops it entirely, so audio never continues behind the error dialog.
+    LaunchedEffect(isLoadingRandom) {
+        if (isLoadingRandom) playerManager.pause()
+    }
+    LaunchedEffect(uiState is PlayerUiState.Error) {
+        if (uiState is PlayerUiState.Error) playerManager.stop()
+    }
+
     val readyState = uiState as? PlayerUiState.Ready
     val pendingResumeDialogPosition = readyState?.pendingResumePositionMs?.takeIf { it > 0L }
     val phashVideoId = readyState?.item?.let { com.adulthub.tv.player.adultHubVideoId(it) }

@@ -157,13 +157,13 @@ class AuthDataStore(
     }
 
     suspend fun clearSession() {
-        context.authDataStore.edit { preferences ->
+        editSession { preferences ->
             preferences.clearAuthSession()
         }
     }
 
     private suspend fun clearSessionIfTokenMatches(encryptedToken: String) {
-        context.authDataStore.edit { preferences ->
+        editSession { preferences ->
             // A new login may have replaced the unreadable token while this value was being decrypted.
             if (preferences[KEY_ENCRYPTED_TOKEN] == encryptedToken) {
                 preferences.clearAuthSession()
@@ -172,7 +172,7 @@ class AuthDataStore(
     }
 
     private suspend fun clearSessionIfSnapshotMatches(snapshot: AuthSessionSnapshot) {
-        context.authDataStore.edit { preferences ->
+        editSession { preferences ->
             if (
                 preferences[KEY_SERVER_URL] == snapshot.serverUrl &&
                 preferences[KEY_USER_ID] == snapshot.userId &&
@@ -182,6 +182,20 @@ class AuthDataStore(
             ) {
                 preferences.clearAuthSession()
             }
+        }
+    }
+
+    /**
+     * Reports a failed session write through the same boundary as every other
+     * preference store, so a caller never has to handle a raw [IOException].
+     */
+    private suspend fun editSession(
+        transform: (androidx.datastore.preferences.core.MutablePreferences) -> Unit,
+    ) {
+        try {
+            context.authDataStore.edit { preferences -> transform(preferences) }
+        } catch (error: IOException) {
+            throw PreferenceWriteException("The session could not be cleared", error)
         }
     }
 

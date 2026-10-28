@@ -2,7 +2,6 @@ package com.adulthub.tv.data.repository
 
 import com.adulthub.tv.data.jellyfin.JellyfinClientManager
 import com.adulthub.tv.data.local.AuthDataStore
-import com.adulthub.tv.data.local.PreferenceWriteException
 import com.adulthub.tv.data.local.SettingsDataStore
 import com.adulthub.tv.data.model.AuthState
 import com.adulthub.tv.data.model.ServerInfo
@@ -231,7 +230,9 @@ open class AuthRepository(
     open suspend fun logout(): Result<Unit> = withContext(Dispatchers.IO) {
         try {
             authDataStore.clearSession()
-        } catch (error: PreferenceWriteException) {
+        } catch (cancelled: CancellationException) {
+            throw cancelled
+        } catch (error: Exception) {
             Log.w(TAG, "Sign out failed because the session could not be cleared")
             return@withContext Result.failure(error)
         }

@@ -240,11 +240,20 @@ class PlayerViewModel(
             // Stop the reporting session of this playback. The session this view
             // model knows is preferred, so a caller without an id cannot stop the
             // session of another player.
-            playbackReporter.stopSession(currentPositionMs, reportingSessionId ?: _reportingSessionId.value)
+            val stoppedSessionId = reportingSessionId ?: _reportingSessionId.value
+            playbackReporter.stopSession(currentPositionMs, stoppedSessionId)
+            // The session is gone, so nothing may report into it any more. A session
+            // that the next playback starts replaces this value.
+            if (stoppedSessionId != null && _reportingSessionId.value == stoppedSessionId) {
+                _reportingSessionId.value = null
+            }
 
             val currentId = currentItem?.id
             val libraryId = settingsDataStore.selectedLibraryId.firstOrNull()
             if (playbackRequestId != playbackRequestCounter) return@launch
+            // The random playback belongs to the account that is signed in now, not
+            // to the account of the video that is being replaced.
+            playbackOwner = accountScope?.currentOwner()
 
             var randomItem = currentItem?.genres?.firstOrNull()?.let { genre ->
                 libraryRepository.getRandomItemFiltered(

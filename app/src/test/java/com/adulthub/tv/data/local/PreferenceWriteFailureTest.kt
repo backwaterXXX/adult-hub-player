@@ -110,6 +110,24 @@ class PreferenceWriteFailureTest {
     }
 
     @Test
+    fun `a raw storage failure during sign out is returned instead of thrown`() = runTest(timeout = 120.seconds) {
+        val authDataStore = mockk<AuthDataStore>()
+        val clientManager = mockk<JellyfinClientManager>(relaxed = true)
+        val settingsDataStore = mockk<SettingsDataStore>(relaxed = true)
+        every { authDataStore.authState } returns kotlinx.coroutines.flow.flowOf(
+            com.adulthub.tv.data.model.AuthState.NotAuthenticated,
+        )
+        coEvery { authDataStore.clearSession() } throws IOException("disk full")
+        val repository = AuthRepository(clientManager, authDataStore, settingsDataStore)
+
+        val result = repository.logout()
+
+        assertTrue(result.isFailure)
+        assertTrue(result.exceptionOrNull() is IOException)
+        coVerify(exactly = 0) { clientManager.clearSession() }
+    }
+
+    @Test
     fun `a failed import is reported to the caller`() = runTest(timeout = 120.seconds) {
         val watchHistoryStore = mockk<WatchHistoryStore>(relaxed = true)
         coEvery { watchHistoryStore.hasLegacyData() } returns true

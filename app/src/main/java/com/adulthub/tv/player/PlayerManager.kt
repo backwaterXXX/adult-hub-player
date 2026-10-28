@@ -222,7 +222,6 @@ class PlayerManager(
                     retryJob = null
                     _retryStatus.value = null
                     _errorMessage.value = null
-                    retryBudget.reset()
                     if (!readyLoggedForCurrentMedia) {
                         readyLoggedForCurrentMedia = true
                         preparingStartedAt?.let { startedAt ->
@@ -651,6 +650,27 @@ class PlayerManager(
 
     fun pause() {
         exoPlayer.pause()
+    }
+
+    /**
+     * Stops the current playback without starting another one.
+     *
+     * A screen that shows a playback error uses this, so the previous media cannot
+     * keep playing audio behind the dialog. A running retry and a pending quality
+     * switch belong to the stopped playback and end with it.
+     */
+    fun stop() {
+        if (released) return
+        finishQualitySwitch(false)
+        playbackGeneration += 1
+        retryJob?.cancel()
+        retryJob = null
+        playbackRequest = null
+        activeQuality = null
+        _retryStatus.value = null
+        stopPositionPolling()
+        exoPlayer.stop()
+        _isPlaying.value = false
     }
 
     fun togglePlayPause() {

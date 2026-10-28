@@ -118,15 +118,20 @@ open class PlaybackRepository(
             val resolverVideoId = resolverRef?.takeIf { !hasHttpMediaSource || resolverServedSource }
             settingsDataStore.requireAllowedServiceUrl(streamUrl, allowQuery = true)
 
+            val playbackHeaders = filterPlaybackHeaders(
+                headers = mediaSource?.requiredHttpHeaders.orEmpty().mapNotNull { (name, value) ->
+                    value?.let { name to it }
+                }.toMap(),
+                streamUrl = streamUrl,
+                serverUrl = clientManager.currentServerUrl,
+            )
             val playbackInfo = PlaybackInfo(
                 itemId = item.id,
                 streamUrl = streamUrl,
                 mediaSourceId = mediaSourceId,
                 playSessionId = playSessionId,
                 startPositionTicks = item.playbackPositionTicks,
-                headers = mediaSource?.requiredHttpHeaders.orEmpty().mapNotNull { (name, value) ->
-                    value?.let { name to it }
-                }.toMap(),
+                headers = playbackHeaders,
                 playMethod = when {
                     mediaSource?.supportsDirectPlay == true -> PlayMethod.DIRECT_PLAY
                     mediaSource?.supportsDirectStream == true -> PlayMethod.DIRECT_STREAM
@@ -274,6 +279,39 @@ internal fun telegramResolverRef(item: TvItem): String? = when {
 
 internal fun resolverStreamUrl(origin: String, ref: String, variantId: String?): String =
     appendVariantQuery("$origin/admin/play/${Uri.encode(ref)}/stream?mode=proxy", variantId)
+
+private val SENSITIVE_PLAYBACK_HEADERS = setOf(
+    "authorization",
+    "cookie",
+    "x-emby-token",
+    "x-mediabrowser-token",
+    "proxy-authorization",
+)
+
+/**
+ * Drops session credentials that Jellyfin attached to a media source when the
+ * stream is served by another origin.
+ *
+ * A resolver-served source carries its own opaque identifier and never needs the
+ * Jellyfin token, so forwarding the headers of the server request would leak the
+ * account credentials to a different host. Non-sensitive headers such as a
+ * referer stay untouched for external sources that require them.
+ */
+internal fun filterPlaybackHeaders(
+    headers: Map<String, String>,
+    streamUrl: String,
+    serverUrl: String?,
+): Map<String, String> {
+    if (headers.isEmpty()) return emptyMap()
+    val streamOrigin = originOf(streamUrl) ?: return emptyMap()
+    if (streamOrigin == serverUrl?.let(::originOf)) return headers
+    return headers.filterKeys { name ->
+        name.lowercase(java.util.Locale.ROOT) !in SENSITIVE_PLAYBACK_HEADERS
+    }
+}
+
+private fun originOf(url: String): String? =
+    url.toHttpUrlOrNull()?.let { "${it.scheme}://${it.host}:${it.port}" }
 
 /**
  * Sets or clears the `variant` query parameter.

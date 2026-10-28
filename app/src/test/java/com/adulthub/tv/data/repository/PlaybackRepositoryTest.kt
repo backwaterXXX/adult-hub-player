@@ -118,4 +118,61 @@ class PlaybackRepositoryTest {
         assertEquals(url, appendVariantQuery(url, null))
         assertEquals(url, appendVariantQuery(url, "   "))
     }
+
+    @Test
+    fun `jellyfin headers are kept on the jellyfin origin`() {
+        val headers = mapOf(
+            "Authorization" to "Bearer token",
+            "X-Emby-Token" to "token",
+            "Referer" to "https://media.example.test",
+        )
+
+        val result = filterPlaybackHeaders(
+            headers = headers,
+            streamUrl = "https://media.example.test/videos/42/stream.mp4",
+            serverUrl = "https://media.example.test/",
+        )
+
+        assertEquals(headers, result)
+    }
+
+    @Test
+    fun `jellyfin credentials never follow a stream to another origin`() {
+        val result = filterPlaybackHeaders(
+            headers = mapOf(
+                "Authorization" to "Bearer token",
+                "Cookie" to "session=1",
+                "X-Emby-Token" to "token",
+                "X-MediaBrowser-Token" to "token",
+                "Proxy-Authorization" to "Basic x",
+                "Referer" to "https://media.example.test",
+            ),
+            streamUrl = "http://192.168.1.100:8099/admin/play/telegram:1/stream?mode=proxy",
+            serverUrl = "http://192.168.1.50:8096",
+        )
+
+        assertEquals(mapOf("Referer" to "https://media.example.test"), result)
+    }
+
+    @Test
+    fun `without a known server origin credentials are dropped`() {
+        val result = filterPlaybackHeaders(
+            headers = mapOf("Authorization" to "Bearer token", "Accept" to "video/*"),
+            streamUrl = "https://cdn.example.test/video.mp4",
+            serverUrl = null,
+        )
+
+        assertEquals(mapOf("Accept" to "video/*"), result)
+    }
+
+    @Test
+    fun `a stream address without an http origin sends no server headers`() {
+        val result = filterPlaybackHeaders(
+            headers = mapOf("Authorization" to "Bearer token"),
+            streamUrl = "not a url",
+            serverUrl = "https://media.example.test",
+        )
+
+        assertEquals(emptyMap<String, String>(), result)
+    }
 }
