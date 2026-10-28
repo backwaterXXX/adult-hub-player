@@ -423,7 +423,7 @@ fun PlayerScreen(
                             if (!isOsdVisible && !isPlaybackEnded && playerError == null && !showInfoDialog) {
                                 val delta = -seekStepSec * 1_000L
                                 playerManager.seekBy(delta)
-                                seekFeedback = seekFeedbackLabel(-delta.toLong())
+                                seekFeedback = seekFeedbackLabel(delta)
                                 viewModel.playbackReporter.reportProgressNow(
                                     playerManager.currentPositionMs.value,
                                     !playerManager.isPlaying.value,
