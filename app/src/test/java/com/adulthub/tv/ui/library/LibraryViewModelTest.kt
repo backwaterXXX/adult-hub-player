@@ -1,5 +1,6 @@
 package com.adulthub.tv.ui.library
 
+import android.content.Context
 import com.adulthub.tv.data.jellyfin.JellyfinClientManager
 import com.adulthub.tv.data.model.ChannelSortMode
 import com.adulthub.tv.data.model.DurationFilter
@@ -47,6 +48,7 @@ class LibraryViewModelTest {
     private val fakeStudioRepository = FakeStudioRepository()
     private val fakeChannelRepository = FakeChannelRepository()
     private val clientManager: JellyfinClientManager = mockk(relaxed = true)
+    private val context: Context = mockk(relaxed = true)
 
     private val sampleMovie1 = TvItem(id = "movie-1", title = "Alpha Movie", isFavorite = true)
     private val sampleMovie2 = TvItem(id = "movie-2", title = "Beta Movie", isFavorite = false)
@@ -82,6 +84,7 @@ class LibraryViewModelTest {
             studioRepository = fakeStudioRepository,
             channelRepository = fakeChannelRepository,
             clientManager = clientManager,
+            context = context,
         )
 
         advanceUntilIdle()
@@ -102,6 +105,7 @@ class LibraryViewModelTest {
             studioRepository = fakeStudioRepository,
             channelRepository = fakeChannelRepository,
             clientManager = clientManager,
+            context = context,
         )
 
         advanceUntilIdle()
@@ -144,6 +148,7 @@ class LibraryViewModelTest {
             studioRepository = fakeStudioRepository,
             channelRepository = fakeChannelRepository,
             clientManager = clientManager,
+            context = context,
         )
 
         advanceUntilIdle()
@@ -166,6 +171,7 @@ class LibraryViewModelTest {
             studioRepository = fakeStudioRepository,
             channelRepository = fakeChannelRepository,
             clientManager = clientManager,
+            context = context,
         )
 
         advanceUntilIdle()
@@ -186,6 +192,7 @@ class LibraryViewModelTest {
             studioRepository = fakeStudioRepository,
             channelRepository = fakeChannelRepository,
             clientManager = clientManager,
+            context = context,
         )
 
         viewModel.selectTab(LibraryTab.ACTORS)
@@ -214,6 +221,7 @@ class LibraryViewModelTest {
             studioRepository = fakeStudioRepository,
             channelRepository = fakeChannelRepository,
             clientManager = clientManager,
+            context = context,
         )
 
         advanceUntilIdle()
@@ -240,6 +248,7 @@ class LibraryViewModelTest {
             studioRepository = fakeStudioRepository,
             channelRepository = fakeChannelRepository,
             clientManager = clientManager,
+            context = context,
         )
 
         advanceUntilIdle()
@@ -259,6 +268,7 @@ class LibraryViewModelTest {
             studioRepository = fakeStudioRepository,
             channelRepository = fakeChannelRepository,
             clientManager = clientManager,
+            context = context,
         )
         advanceUntilIdle()
 
@@ -293,6 +303,7 @@ class LibraryViewModelTest {
             studioRepository = fakeStudioRepository,
             channelRepository = fakeChannelRepository,
             clientManager = clientManager,
+            context = context,
         )
 
         viewModel.selectTab(LibraryTab.STUDIOS)
@@ -324,6 +335,7 @@ class LibraryViewModelTest {
             studioRepository = fakeStudioRepository,
             channelRepository = fakeChannelRepository,
             clientManager = clientManager,
+            context = context,
         )
 
         viewModel.selectCategory(category)
@@ -367,6 +379,7 @@ class LibraryViewModelTest {
             studioRepository = fakeStudioRepository,
             channelRepository = fakeChannelRepository,
             clientManager = clientManager,
+            context = context,
         )
 
         viewModel.selectCategory(category)
@@ -403,6 +416,7 @@ class LibraryViewModelTest {
             studioRepository = fakeStudioRepository,
             channelRepository = fakeChannelRepository,
             clientManager = clientManager,
+            context = context,
         )
 
         viewModel.selectStudio(sampleStudio)
@@ -451,6 +465,7 @@ class LibraryViewModelTest {
             studioRepository = fakeStudioRepository,
             channelRepository = fakeChannelRepository,
             clientManager = clientManager,
+            context = context,
         )
 
         advanceUntilIdle()
@@ -502,6 +517,7 @@ class LibraryViewModelTest {
             studioRepository = fakeStudioRepository,
             channelRepository = fakeChannelRepository,
             clientManager = clientManager,
+            context = context,
         )
         viewModel.setChannelDurationFilter(com.adulthub.tv.data.model.DurationFilter.LONG)
 
@@ -531,6 +547,7 @@ class LibraryViewModelTest {
             studioRepository = fakeStudioRepository,
             channelRepository = fakeChannelRepository,
             clientManager = clientManager,
+            context = context,
         )
 
         advanceUntilIdle()
@@ -572,6 +589,7 @@ class LibraryViewModelTest {
             studioRepository = fakeStudioRepository,
             channelRepository = fakeChannelRepository,
             clientManager = clientManager,
+            context = context,
         )
         advanceUntilIdle()
         viewModel.selectChannel(sampleChannel)
@@ -610,6 +628,7 @@ class LibraryViewModelTest {
             studioRepository = fakeStudioRepository,
             channelRepository = fakeChannelRepository,
             clientManager = clientManager,
+            context = context,
         )
         advanceUntilIdle()
         viewModel.selectChannel(sampleChannel)
@@ -629,6 +648,7 @@ class LibraryViewModelTest {
             studioRepository = fakeStudioRepository,
             channelRepository = fakeChannelRepository,
             clientManager = clientManager,
+            context = context,
         )
         advanceUntilIdle()
 
@@ -658,6 +678,7 @@ class LibraryViewModelTest {
             studioRepository = fakeStudioRepository,
             channelRepository = fakeChannelRepository,
             clientManager = clientManager,
+            context = context,
         )
         advanceUntilIdle()
 
@@ -688,6 +709,7 @@ class LibraryViewModelTest {
             studioRepository = fakeStudioRepository,
             channelRepository = fakeChannelRepository,
             clientManager = clientManager,
+            context = context,
         )
         advanceUntilIdle()
 
@@ -844,6 +866,7 @@ class LibraryViewModelTest {
             channelRepository = fakeChannelRepository,
             clientManager = clientManager,
             savedStateHandle = handle,
+            context = context,
         )
         advanceUntilIdle()
 
@@ -861,6 +884,7 @@ class LibraryViewModelTest {
             channelRepository = fakeChannelRepository,
             clientManager = clientManager,
             savedStateHandle = handle,
+            context = context,
         )
         advanceUntilIdle()
 

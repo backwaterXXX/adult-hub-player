@@ -60,6 +60,7 @@ import com.adulthub.tv.ui.components.MovieCard
 import com.adulthub.tv.ui.components.PersonCard
 import com.adulthub.tv.ui.components.TvPrimaryButton
 import com.adulthub.tv.ui.components.TvSecondaryButton
+import com.adulthub.tv.ui.components.formattedDurationLabel
 import com.adulthub.tv.ui.components.isPoorThumbnail
 import com.adulthub.tv.ui.theme.CardSurface
 import com.adulthub.tv.ui.theme.CardSurfaceFocused
@@ -84,9 +85,9 @@ fun ItemDetailScreen(
     onNavigateToPlayer: (String, Boolean?) -> Unit,
     onNavigateToItemDetail: (String) -> Unit,
     onNavigateToPersonDetail: (String, String) -> Unit,
+    modifier: Modifier = Modifier,
     onNavigateToSearch: (String) -> Unit = {},
     isCurrentDestination: Boolean = true,
-    modifier: Modifier = Modifier,
     viewModel: ItemDetailViewModel = koinViewModel(),
 ) {
     val state by viewModel.uiState.collectAsStateWithLifecycle()
@@ -271,11 +272,12 @@ fun ItemDetailScreen(
                                     verticalAlignment = Alignment.CenterVertically,
                                     horizontalArrangement = Arrangement.spacedBy(8.dp),
                                 ) {
+                                    val durationText = formattedDurationLabel(item)
                                     val meta = buildString {
                                         item.year?.let { append("$it") }
-                                        if (item.formattedDuration.isNotBlank()) {
+                                        if (durationText.isNotBlank()) {
                                             if (isNotEmpty()) append(" • ")
-                                            append(item.formattedDuration)
+                                            append(durationText)
                                         }
                                         val studio = item.studios.firstOrNull()
                                         if (!studio.isNullOrBlank()) {

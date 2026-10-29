@@ -19,10 +19,12 @@ import androidx.compose.ui.ExperimentalComposeUiApi
 import androidx.compose.ui.focus.FocusRequester
 import androidx.compose.ui.focus.focusRequester
 import androidx.compose.ui.focus.focusRestorer
+import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import androidx.tv.material3.Text
+import com.adulthub.tv.R
 import com.adulthub.tv.ui.components.TvPrimaryButton
 import com.adulthub.tv.ui.components.TvPageHeader
 import com.adulthub.tv.ui.components.TvSecondaryButton
@@ -36,10 +38,10 @@ fun LibraryScreen(
     onNavigateBack: () -> Unit,
     onNavigateToItemDetail: (String) -> Unit,
     onNavigateToPersonDetail: (String, String) -> Unit,
+    modifier: Modifier = Modifier,
     onNavigateToPlayer: (String) -> Unit = {},
     initialCategoryId: String? = null,
     isCurrentDestination: Boolean = true,
-    modifier: Modifier = Modifier,
     viewModel: LibraryViewModel = koinViewModel(),
 ) {
     val state by viewModel.uiState.collectAsStateWithLifecycle()
@@ -102,7 +104,7 @@ fun LibraryScreen(
         ) {
             // Header with Back button and TabRow
             TvPageHeader(
-                title = "Catalog",
+                title = stringResource(R.string.library_catalog_title),
                 onBack = handleBack,
             ) {
                 // Tabs
@@ -114,7 +116,7 @@ fun LibraryScreen(
                             modifier = Modifier.height(38.dp),
                         ) {
                             Text(
-                                text = tab.title,
+                                text = stringResource(tab.titleRes),
                                 fontSize = 13.sp,
                                 fontWeight = androidx.compose.ui.text.font.FontWeight.SemiBold,
                             )
@@ -125,7 +127,7 @@ fun LibraryScreen(
                             modifier = Modifier.height(38.dp),
                         ) {
                             Text(
-                                text = tab.title,
+                                text = stringResource(tab.titleRes),
                                 fontSize = 13.sp,
                             )
                         }

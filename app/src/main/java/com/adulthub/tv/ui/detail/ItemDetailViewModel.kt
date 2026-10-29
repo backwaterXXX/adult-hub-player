@@ -1,7 +1,10 @@
 package com.adulthub.tv.ui.detail
 
+import android.annotation.SuppressLint
+import android.content.Context
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
+import com.adulthub.tv.R
 import com.adulthub.tv.data.jellyfin.JellyfinClientManager
 import com.adulthub.tv.data.local.SettingsDataStore
 import com.adulthub.tv.data.model.ShuffleContextMode
@@ -35,10 +38,12 @@ sealed interface ItemDetailNavEvent {
     data object NavigateBack : ItemDetailNavEvent
 }
 
+@SuppressLint("StaticFieldLeak")
 class ItemDetailViewModel(
     private val libraryRepository: LibraryRepository,
     private val clientManager: JellyfinClientManager,
     private val settingsDataStore: SettingsDataStore? = null,
+    private val context: Context,
 ) : ViewModel() {
 
     private val _uiState = MutableStateFlow(ItemDetailUiState())
@@ -70,7 +75,7 @@ class ItemDetailViewModel(
                     onFailure = { error ->
                         state.copy(
                             isLoading = false,
-                            errorMessage = error.localizedMessage ?: "Failed to load movie details",
+                            errorMessage = error.localizedMessage ?: context.getString(R.string.library_error_movie_details),
                         )
                     }
                 )

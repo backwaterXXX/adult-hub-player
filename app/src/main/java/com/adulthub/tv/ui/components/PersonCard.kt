@@ -15,6 +15,7 @@ import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.res.pluralStringResource
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.graphicsLayer
@@ -123,7 +124,11 @@ fun PersonCard(
                 if (person.movieCount > 0) {
                     Spacer(modifier = Modifier.height(2.dp))
                     Text(
-                        text = stringResource(R.string.card_movies_count, person.movieCount),
+                        text = pluralStringResource(
+                            R.plurals.card_movies_count,
+                            person.movieCount,
+                            person.movieCount,
+                        ),
                         style = MaterialTheme.typography.bodySmall,
                         color = TextSecondary,
                         maxLines = 1,

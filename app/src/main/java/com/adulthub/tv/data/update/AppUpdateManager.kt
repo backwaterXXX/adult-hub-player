@@ -1,5 +1,7 @@
 package com.adulthub.tv.data.update
 
+import android.content.Context
+import com.adulthub.tv.R
 import com.adulthub.tv.data.local.SettingsDataStore
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.flow.MutableStateFlow
@@ -24,6 +26,7 @@ class AppUpdateManager(
     private val repository: AppUpdateRepository,
     private val settings: SettingsDataStore,
     private val scope: CoroutineScope,
+    private val context: Context,
 ) {
     private val _state = MutableStateFlow(AppUpdateState())
     val state: StateFlow<AppUpdateState> = _state.asStateFlow()
@@ -52,7 +55,10 @@ class AppUpdateManager(
                             enabled = enabled,
                             update = restoredUpdate,
                             downloadProgress = 1f,
-                            message = "Version ${restoredUpdate.manifest.versionName} is ready to install",
+                            message = context.getString(
+                                R.string.settings_update_version_ready,
+                                restoredUpdate.manifest.versionName,
+                            ),
                         )
                     }
                 }
@@ -97,7 +103,14 @@ class AppUpdateManager(
     }
 
     private suspend fun checkAndDownload() {
-        _state.update { it.copy(isChecking = true, isDownloading = false, downloadProgress = 0f, message = "Checking for updates…") }
+        _state.update {
+            it.copy(
+                isChecking = true,
+                isDownloading = false,
+                downloadProgress = 0f,
+                message = context.getString(R.string.settings_update_checking),
+            )
+        }
         try {
             val result = repository.checkAndDownload { received, total ->
                 _state.update {
@@ -105,7 +118,7 @@ class AppUpdateManager(
                         isChecking = false,
                         isDownloading = true,
                         downloadProgress = if (total <= 0) 0f else (received.toFloat() / total).coerceIn(0f, 1f),
-                        message = "Downloading update…",
+                        message = context.getString(R.string.settings_update_downloading),
                     )
                 }
             }
@@ -119,13 +132,16 @@ class AppUpdateManager(
                         isDownloading = false,
                         downloadProgress = 1f,
                         update = result.update,
-                        message = "Version ${result.update.manifest.versionName} is ready to install",
+                        message = context.getString(
+                            R.string.settings_update_version_ready,
+                            result.update.manifest.versionName,
+                        ),
                     )
                     UpdateCheckResult.UpToDate -> state.copy(
                         isChecking = false,
                         isDownloading = false,
                         update = null,
-                        message = "App is up to date",
+                        message = context.getString(R.string.settings_update_up_to_date),
                     )
                     is UpdateCheckResult.Failed -> state.copy(
                         isChecking = false,
@@ -137,7 +153,11 @@ class AppUpdateManager(
         } catch (error: kotlinx.coroutines.CancellationException) {
             throw error
         } catch (error: Exception) {
-            _state.update { it.copy(message = error.message ?: "Update check failed") }
+            _state.update {
+                it.copy(
+                    message = error.message ?: context.getString(R.string.settings_update_check_failed),
+                )
+            }
         } finally {
             // A cancelled check must not leave the screen stuck on "Downloading update…".
             _state.update { it.copy(isChecking = false, isDownloading = false) }

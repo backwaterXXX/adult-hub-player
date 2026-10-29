@@ -42,6 +42,7 @@ import androidx.compose.ui.focus.onFocusChanged
 import androidx.compose.ui.focus.focusRestorer
 import androidx.compose.ui.focus.focusRequester
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.res.pluralStringResource
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
@@ -76,6 +77,7 @@ fun AllItemsTab(
     onSortChange: (String, SortOrder) -> Unit,
     onToggleFavorites: () -> Unit,
     onToggleUnwatched: () -> Unit,
+    modifier: Modifier = Modifier,
     onDurationFilterChange: (DurationFilter) -> Unit = {},
     onToggleHdOnly: () -> Unit = {},
     onSelectGenre: (TvCategory?) -> Unit,
@@ -86,7 +88,6 @@ fun AllItemsTab(
     onLoadPerformers: () -> Unit,
     onSurpriseMe: () -> Unit,
     getImageUrl: (TvItem) -> String,
-    modifier: Modifier = Modifier,
 ) {
     var filterPicker by rememberSaveable { mutableStateOf<CatalogFilter?>(null) }
     val gridState = rememberLazyGridState()
@@ -119,7 +120,11 @@ fun AllItemsTab(
         ) {
             Row(horizontalArrangement = Arrangement.spacedBy(10.dp)) {
                 Text(
-                    text = stringResource(R.string.library_movies_count, state.totalCount),
+                    text = pluralStringResource(
+                        R.plurals.library_movies_count,
+                        state.totalCount,
+                        state.totalCount,
+                    ),
                     style = MaterialTheme.typography.bodyMedium,
                     color = TextSecondary,
                     modifier = Modifier.align(Alignment.CenterVertically),
@@ -224,7 +229,7 @@ fun AllItemsTab(
                 },
                 modifier = Modifier.height(36.dp),
             ) {
-                Text(state.durationFilter.label, fontSize = 12.sp)
+                Text(stringResource(state.durationFilter.labelRes), fontSize = 12.sp)
             }
             TvSecondaryButton(onClick = { filterPicker = CatalogFilter.GENRE; onLoadGenres() }, modifier = Modifier.height(36.dp)) {
                 Text(

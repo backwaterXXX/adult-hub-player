@@ -25,6 +25,7 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.focus.FocusRequester
 import androidx.compose.ui.focus.focusRequester
+import androidx.compose.ui.res.pluralStringResource
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
@@ -179,7 +180,12 @@ fun ActorsTab(
 
         // Subtitle / count
         Text(
-            text = stringResource(R.string.library_showing_performers, state.filteredPersons.size, state.totalCount),
+            text = pluralStringResource(
+                R.plurals.library_showing_performers,
+                state.totalCount,
+                state.filteredPersons.size,
+                state.totalCount,
+            ),
             style = MaterialTheme.typography.bodySmall,
             color = TextSecondary,
             modifier = Modifier.padding(bottom = 8.dp),

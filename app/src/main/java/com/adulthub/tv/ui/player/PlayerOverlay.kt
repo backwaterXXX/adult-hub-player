@@ -60,8 +60,11 @@ import androidx.compose.ui.input.key.KeyEventType
 import androidx.compose.ui.input.key.key
 import androidx.compose.ui.input.key.onPreviewKeyEvent
 import androidx.compose.ui.input.key.type
+import androidx.compose.ui.res.pluralStringResource
 import androidx.compose.ui.res.stringResource
+import androidx.compose.ui.semantics.ProgressBarRangeInfo
 import androidx.compose.ui.semantics.contentDescription
+import androidx.compose.ui.semantics.progressBarRangeInfo
 import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextOverflow
@@ -84,6 +87,7 @@ import com.adulthub.tv.R
 import com.adulthub.tv.data.resolver.ORIGINAL_VARIANT_ID
 import com.adulthub.tv.ui.theme.NeonPink
 import com.adulthub.tv.ui.theme.SurfaceDark
+import java.util.Locale
 
 private const val SEEK_REPEAT_WINDOW_MS = 1_000L
 private const val MAX_SEEK_STEP_SECONDS = 60
@@ -105,6 +109,7 @@ fun PlayerOverlay(
     onRandomClick: () -> Unit,
     onInfoClick: () -> Unit,
     onBackClick: () -> Unit,
+    modifier: Modifier = Modifier,
     isFavorite: Boolean = false,
     onToggleFavorite: () -> Unit = {},
     seekStepSec: Int = 15,
@@ -119,7 +124,6 @@ fun PlayerOverlay(
     qualityLoadFailed: Boolean = false,
     onQualitySelected: (String) -> Unit = {},
     onQualityRetry: () -> Unit = {},
-    modifier: Modifier = Modifier,
 ) {
     // The position flow is collected here (and not in the parent screen) so that the 1 Hz
     // position updates only recompose the overlay instead of the whole player screen.
@@ -422,7 +426,11 @@ fun PlayerOverlay(
                     ) {
                         OsdIconButton(
                             icon = Icons.Rounded.FastRewind,
-                            contentDescription = stringResource(R.string.player_cd_rewind, nextSeekStepSeconds),
+                            contentDescription = pluralStringResource(
+                                R.plurals.player_cd_rewind,
+                                nextSeekStepSeconds,
+                                nextSeekStepSeconds,
+                            ),
                             onClick = { seekWithAcceleration(-1) },
                         )
                         Spacer(modifier = Modifier.width(16.dp))
@@ -440,7 +448,11 @@ fun PlayerOverlay(
                         Spacer(modifier = Modifier.width(16.dp))
                         OsdIconButton(
                             icon = Icons.Rounded.FastForward,
-                            contentDescription = stringResource(R.string.player_cd_forward, nextSeekStepSeconds),
+                            contentDescription = pluralStringResource(
+                                R.plurals.player_cd_forward,
+                                nextSeekStepSeconds,
+                                nextSeekStepSeconds,
+                            ),
                             onClick = { seekWithAcceleration(1) },
                         )
                         Spacer(modifier = Modifier.width(16.dp))
@@ -576,7 +588,7 @@ private fun OsdIconButton(
     ) {
         Icon(
             imageVector = icon,
-            contentDescription = contentDescription,
+            contentDescription = null,
             modifier = Modifier.size(iconSize),
         )
     }
@@ -587,8 +599,8 @@ private fun OsdActionChip(
     icon: ImageVector,
     text: String,
     onClick: () -> Unit,
-    isActive: Boolean = false,
     modifier: Modifier = Modifier,
+    isActive: Boolean = false,
 ) {
     OutlinedButton(
         onClick = onClick,
@@ -643,6 +655,8 @@ private fun FocusableProgressBar(
 ) {
     val interactionSource = remember { MutableInteractionSource() }
     val isFocused by interactionSource.collectIsFocusedAsState()
+    val seekBarDescription = stringResource(R.string.player_cd_seek_bar)
+    val clampedProgress = progress.coerceIn(0f, 1f)
 
     Box(
         modifier = modifier
@@ -654,6 +668,10 @@ private fun FocusableProgressBar(
                 shape = RoundedCornerShape(14.dp),
             )
             .focusable(interactionSource = interactionSource)
+            .semantics {
+                contentDescription = seekBarDescription
+                progressBarRangeInfo = ProgressBarRangeInfo(clampedProgress, 0f..1f)
+            }
             .onPreviewKeyEvent { event ->
                 if (event.type == KeyEventType.KeyDown) {
                     when (event.key) {
@@ -698,8 +716,8 @@ fun formatTime(ms: Long): String {
     val seconds = totalSeconds % 60L
 
     return if (hours > 0) {
-        String.format("%d:%02d:%02d", hours, minutes, seconds)
+        String.format(Locale.US, "%d:%02d:%02d", hours, minutes, seconds)
     } else {
-        String.format("%02d:%02d", minutes, seconds)
+        String.format(Locale.US, "%02d:%02d", minutes, seconds)
     }
 }

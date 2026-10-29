@@ -174,9 +174,10 @@ fun MovieCard(
                 }
 
                 // Duration badge bottom-right
-                if (item.formattedDuration.isNotBlank()) {
+                val durationText = formattedDurationLabel(item)
+                if (durationText.isNotBlank()) {
                     DurationBadge(
-                        durationText = item.formattedDuration,
+                        durationText = durationText,
                         modifier = Modifier
                             .align(Alignment.BottomEnd)
                             .padding(horizontal = 8.dp, vertical = if (!item.isPlayed && item.progressFraction > 0f) 12.dp else 8.dp),

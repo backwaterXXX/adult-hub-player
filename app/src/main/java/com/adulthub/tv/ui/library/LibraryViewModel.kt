@@ -1,8 +1,12 @@
 package com.adulthub.tv.ui.library
 
+import android.annotation.SuppressLint
+import android.content.Context
+import androidx.annotation.StringRes
 import androidx.lifecycle.SavedStateHandle
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
+import com.adulthub.tv.R
 import com.adulthub.tv.data.jellyfin.JellyfinClientManager
 import com.adulthub.tv.data.local.SettingsDataStore
 import com.adulthub.tv.data.model.ChannelSortMode
@@ -34,12 +38,12 @@ import org.jellyfin.sdk.model.api.ItemFilter
 import org.jellyfin.sdk.model.api.SortOrder
 import java.util.UUID
 
-enum class LibraryTab(val title: String) {
-    ALL("Movies"),
-    CATEGORIES("Categories"),
-    ACTORS("Actors"),
-    STUDIOS("Studios"),
-    CHANNELS("Channels"),
+enum class LibraryTab(@StringRes val titleRes: Int) {
+    ALL(R.string.library_tab_movies),
+    CATEGORIES(R.string.library_tab_categories),
+    ACTORS(R.string.library_tab_actors),
+    STUDIOS(R.string.library_tab_studios),
+    CHANNELS(R.string.library_tab_channels),
 }
 
 data class AllItemsTabState(
@@ -167,6 +171,7 @@ sealed interface LibraryNavEvent {
     data class NavigateToPlayer(val itemId: String) : LibraryNavEvent
 }
 
+@SuppressLint("StaticFieldLeak")
 class LibraryViewModel(
     private val libraryRepository: LibraryRepository,
     private val personRepository: PersonRepository,
@@ -175,6 +180,7 @@ class LibraryViewModel(
     private val clientManager: JellyfinClientManager,
     private val settingsDataStore: SettingsDataStore? = null,
     private val savedStateHandle: SavedStateHandle = SavedStateHandle(),
+    private val context: Context,
 ) : ViewModel() {
 
     private val _uiState = MutableStateFlow(LibraryUiState())
@@ -347,7 +353,7 @@ class LibraryViewModel(
                         state.copy(
                             categoriesState = state.categoriesState.copy(
                                 isLoading = false,
-                                errorMessage = error.localizedMessage ?: "Failed to load categories",
+                                errorMessage = error.localizedMessage ?: context.getString(R.string.library_error_categories),
                             )
                         )
                     }
@@ -445,7 +451,7 @@ class LibraryViewModel(
                             categoriesState = state.categoriesState.copy(
                                 isLoadingCategoryMovies = false,
                                 isLoadingMoreCategoryMovies = false,
-                                categoryMoviesError = error.localizedMessage ?: "Failed to load category movies",
+                                categoryMoviesError = error.localizedMessage ?: context.getString(R.string.library_error_category_movies),
                             )
                         )
                     }
@@ -531,7 +537,7 @@ class LibraryViewModel(
                             allState = state.allState.copy(
                                 isLoading = false,
                                 isLoadingMore = false,
-                                errorMessage = error.localizedMessage ?: "Failed to load movies",
+                                errorMessage = error.localizedMessage ?: context.getString(R.string.library_error_movies),
                             )
                         )
                     }
@@ -692,7 +698,7 @@ class LibraryViewModel(
                         state.copy(actorsState = actors.copy(
                             isLoading = false,
                             isLoadingMore = false,
-                            errorMessage = error.localizedMessage ?: "Failed to load actors",
+                            errorMessage = error.localizedMessage ?: context.getString(R.string.library_error_actors),
                         ))
                     },
                 )
@@ -784,7 +790,7 @@ private fun filterActors(
                         state.copy(
                             studiosState = state.studiosState.copy(
                                 isLoading = false,
-                                errorMessage = error.localizedMessage ?: "Failed to load studios",
+                                errorMessage = error.localizedMessage ?: context.getString(R.string.library_error_studios),
                             )
                         )
                     }
@@ -881,7 +887,7 @@ private fun filterActors(
                             studiosState = state.studiosState.copy(
                                 isLoadingStudioMovies = false,
                                 isLoadingMoreStudioMovies = false,
-                                studioMoviesError = error.localizedMessage ?: "Failed to load studio movies",
+                                studioMoviesError = error.localizedMessage ?: context.getString(R.string.library_error_studio_movies),
                             )
                         )
                     }
@@ -914,7 +920,7 @@ private fun filterActors(
                         state.copy(
                             channelsState = state.channelsState.copy(
                                 isLoading = false,
-                                errorMessage = error.localizedMessage ?: "Failed to load channels",
+                                errorMessage = error.localizedMessage ?: context.getString(R.string.library_error_channels),
                             )
                         )
                     }
@@ -1122,7 +1128,7 @@ private fun filterActors(
                                         channelVideos = emptyList(),
                                         isLoadingVideos = false,
                                         isLoadingMoreVideos = false,
-                                        channelVideosError = fallbackError.localizedMessage ?: error.localizedMessage ?: "Failed to load channel videos",
+                                        channelVideosError = fallbackError.localizedMessage ?: error.localizedMessage ?: context.getString(R.string.library_error_channel_videos),
                                         hasMoreVideos = false,
                                         nextOffsetId = null,
                                     ))
@@ -1130,12 +1136,12 @@ private fun filterActors(
                             ) ?: state.copy(channelsState = state.channelsState.copy(
                                 isLoadingVideos = false,
                                 isLoadingMoreVideos = false,
-                                channelVideosError = error.localizedMessage ?: "Failed to load channel videos",
+                                channelVideosError = error.localizedMessage ?: context.getString(R.string.library_error_channel_videos),
                             ))
                         } else {
                             state.copy(channelsState = state.channelsState.copy(
                                 isLoadingMoreVideos = false,
-                                channelVideosError = error.localizedMessage ?: "Failed to load more channel videos",
+                                channelVideosError = error.localizedMessage ?: context.getString(R.string.library_error_more_channel_videos),
                             ))
                         }
                     },

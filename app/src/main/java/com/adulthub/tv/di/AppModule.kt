@@ -41,12 +41,13 @@ val appModule = module {
     single { ResolverApiClient() }
     single { kotlinx.coroutines.CoroutineScope(kotlinx.coroutines.SupervisorJob() + kotlinx.coroutines.Dispatchers.IO) }
     single { AppUpdateRepository(androidContext(), get()) }
-    single { AppUpdateManager(get(), get(), get()) }
+    single { AppUpdateManager(get(), get(), get(), androidContext()) }
     single {
         com.adulthub.tv.player.PhashCoordinator(
             authDataStore = get(), jellyfinClientManager = get(), settingsDataStore = get(), apiClient = get(), applicationScope = get(),
             jobStore = get(),
             accountScope = get(),
+            context = androidContext(),
         )
     }
     single<ResolverApi> { DynamicResolverApi(get(), get()) }

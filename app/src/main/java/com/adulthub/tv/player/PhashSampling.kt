@@ -1,5 +1,7 @@
 package com.adulthub.tv.player
 
+import android.content.Context
+import com.adulthub.tv.R
 import com.adulthub.tv.diagnostics.AppLog as Log
 import com.adulthub.tv.data.jellyfin.JellyfinClientManager
 import com.adulthub.tv.data.local.AccountScope
@@ -57,10 +59,13 @@ class PhashCoordinator(
     private val applicationScope: kotlinx.coroutines.CoroutineScope,
     private val accountScope: AccountScope? = null,
     private val budget: PhashBudget = PhashBudget(),
+    private val context: Context,
 ) {
     private val inFlight = java.util.concurrent.ConcurrentHashMap.newKeySet<String>()
     private val _jobStatuses = MutableStateFlow<Map<String, PhashUiStatus>>(emptyMap())
     val jobStatuses: StateFlow<Map<String, PhashUiStatus>> = _jobStatuses.asStateFlow()
+    private val timeoutMessage: String
+        get() = context.getString(R.string.phash_timeout)
 
     init {
         // A job already accepted by the resolver outlives the player and the app process.
@@ -73,7 +78,7 @@ class PhashCoordinator(
                     // not continued and it leaves the store, so it is not started
                     // again at the next launch.
                     jobStore.remove(record.videoId, owner?.accountKey)
-                    setStatus(record.videoId, PhashUiStatus(TIMEOUT_MESSAGE, terminal = true))
+                    setStatus(record.videoId, PhashUiStatus(timeoutMessage, terminal = true))
                     return@forEach
                 }
                 setStatus(record.videoId, statusFor(record))
@@ -110,7 +115,7 @@ class PhashCoordinator(
                 throw cancelled
             } catch (error: Exception) {
                 Log.i(PHASH_TAG, "job handling failed (${error.javaClass.simpleName})")
-                setStatus(videoId, PhashUiStatus("Resolver status unavailable; try again later"))
+                setStatus(videoId, PhashUiStatus(context.getString(R.string.phash_status_unavailable)))
             } finally {
                 inFlight.remove(videoId)
             }
@@ -137,7 +142,7 @@ class PhashCoordinator(
         val token = jellyfinClientManager.getApiOrNull()?.accessToken?.takeIf { it.isNotBlank() }
         if (stored != null && stored.state in ACTIVE_STATES && !stored.jobId.isNullOrBlank()) {
             if (token == null) {
-                setStatus(videoId, PhashUiStatus("Sign in again to check video matching"))
+                setStatus(videoId, PhashUiStatus(context.getString(R.string.phash_sign_in_to_check)))
                 return
             }
             poll(videoId, stored.jobId!!, owner, resolverUrl, token, startedAt, stored.durationUs)
@@ -155,19 +160,19 @@ class PhashCoordinator(
             return
         }
         if (authDataStore.getAuthState() !is AuthState.Authenticated) {
-            setStatus(videoId, PhashUiStatus("Sign in to queue video matching"))
+            setStatus(videoId, PhashUiStatus(context.getString(R.string.phash_sign_in_to_queue)))
             return
         }
         if (token == null) {
-            setStatus(videoId, PhashUiStatus("Sign in to queue video matching"))
+            setStatus(videoId, PhashUiStatus(context.getString(R.string.phash_sign_in_to_queue)))
             return
         }
         if (resolverUrl.isBlank()) {
-            setStatus(videoId, PhashUiStatus("Set a Resolver URL to queue video matching"))
+            setStatus(videoId, PhashUiStatus(context.getString(R.string.phash_set_resolver_url)))
             return
         }
 
-        setStatus(videoId, PhashUiStatus("Sending task to Resolver"))
+        setStatus(videoId, PhashUiStatus(context.getString(R.string.phash_sending)))
         jobStore.save(
             StoredPhashJob(
                 videoId = videoId,
@@ -186,17 +191,17 @@ class PhashCoordinator(
                 }
                 if (!response.ok) {
                     jobStore.remove(videoId, accountKey)
-                    setStatus(videoId, PhashUiStatus("Resolver rejected the video matching task"))
+                    setStatus(videoId, PhashUiStatus(context.getString(R.string.phash_rejected_task)))
                     return
                 }
                 val jobId = response.jobId
                 if (jobId.isNullOrBlank()) {
                     if (response.alreadyComputed || response.state.equals("done", true)) {
                         jobStore.save(StoredPhashJob(videoId, state = "done"), accountKey)
-                        setStatus(videoId, PhashUiStatus("Video matching complete", terminal = true))
+                        setStatus(videoId, PhashUiStatus(context.getString(R.string.phash_complete), terminal = true))
                     } else {
                         jobStore.remove(videoId, accountKey)
-                        setStatus(videoId, PhashUiStatus("Resolver returned no task ID"))
+                        setStatus(videoId, PhashUiStatus(context.getString(R.string.phash_no_task_id)))
                     }
                     return
                 }
@@ -213,7 +218,7 @@ class PhashCoordinator(
                 setStatus(videoId, statusFor(record))
                 if (response.alreadyComputed || state in SUCCESS_STATES) {
                     jobStore.save(record.copy(state = "done", errorCode = null), accountKey)
-                    setStatus(videoId, PhashUiStatus("Video matching complete", terminal = true))
+                    setStatus(videoId, PhashUiStatus(context.getString(R.string.phash_complete), terminal = true))
                 } else if (state in ACTIVE_STATES || state.isBlank()) {
                     poll(videoId, jobId, owner, resolverUrl, token, startedAt, durationUs)
                 } else {
@@ -224,7 +229,7 @@ class PhashCoordinator(
                 lastHttpCode = error.code()
                 if (error.code() == 401 || error.code() == 403) {
                     jobStore.remove(videoId, accountKey)
-                    setStatus(videoId, PhashUiStatus("Jellyfin authorization was rejected"))
+                    setStatus(videoId, PhashUiStatus(context.getString(R.string.phash_jellyfin_rejected)))
                     Log.i(PHASH_TAG, "enqueue request failed (HTTP ${error.code()})")
                     return
                 }
@@ -240,8 +245,10 @@ class PhashCoordinator(
                         jobStore.remove(videoId, accountKey)
                     }
                     val message = if (error.code() == 409) {
-                        "This video matching task failed earlier; retry it from Resolver tasks"
-                    } else "Resolver rejected the task (HTTP ${error.code()})"
+                        context.getString(R.string.phash_earlier_task_failed)
+                    } else {
+                        context.getString(R.string.phash_rejected_http, error.code())
+                    }
                     setStatus(videoId, PhashUiStatus(message, terminal = error.code() == 409))
                     Log.i(PHASH_TAG, "enqueue request failed (HTTP ${error.code()})")
                     return
@@ -259,8 +266,8 @@ class PhashCoordinator(
         // Keep the submitting record: repeating POST is safe because the resolver returns the
         // existing queued/processing job for the same video and server profile.
         setStatus(videoId, PhashUiStatus(
-            if (lastHttpCode == null) "Resolver unavailable; task will retry when opened again"
-            else "Resolver unavailable (HTTP $lastHttpCode); task will retry when opened again",
+            if (lastHttpCode == null) context.getString(R.string.phash_unavailable_retry)
+            else context.getString(R.string.phash_unavailable_http_retry, lastHttpCode),
         ))
     }
 
@@ -298,13 +305,13 @@ class PhashCoordinator(
                 return
             }
             if (owner != null && accountScope?.isCurrent(owner) == false) {
-                setStatus(videoId, PhashUiStatus("The session changed; the task stays with its account"))
+                setStatus(videoId, PhashUiStatus(context.getString(R.string.phash_session_changed)))
                 return
             }
             // The task belongs to the Resolver it was sent to. It is not continued
             // against another address.
             if (settingsDataStore.getResolverBaseUrl() != resolverUrl) {
-                setStatus(videoId, PhashUiStatus("The Resolver address changed; the task stays with its account"))
+                setStatus(videoId, PhashUiStatus(context.getString(R.string.phash_resolver_changed)))
                 return
             }
             try {
@@ -313,12 +320,12 @@ class PhashCoordinator(
                 val response = withTimeout(15_000L) { api.getPhashJob(token, jobId) }
                 val job = response.job
                 if (!response.ok || job == null || job.id != jobId || job.videoId != videoId) {
-                    setStatus(videoId, PhashUiStatus("Resolver returned an invalid task status"))
+                    setStatus(videoId, PhashUiStatus(context.getString(R.string.phash_invalid_status)))
                     return
                 }
                 val profile = job.decoderProfile
                 if (profile != null && profile !in SUPPORTED_DECODER_PROFILES) {
-                    setStatus(videoId, PhashUiStatus("Resolver task uses an unsupported decoder profile"))
+                    setStatus(videoId, PhashUiStatus(context.getString(R.string.phash_unsupported_decoder)))
                     return
                 }
                 val state = job.state.lowercase()
@@ -333,7 +340,7 @@ class PhashCoordinator(
                 jobStore.save(record, accountKey)
                 when (state) {
                     in SUCCESS_STATES -> {
-                        setStatus(videoId, PhashUiStatus("Video matching complete", terminal = true))
+                        setStatus(videoId, PhashUiStatus(context.getString(R.string.phash_complete), terminal = true))
                         return
                     }
                     "failed", "cancelled" -> {
@@ -345,36 +352,39 @@ class PhashCoordinator(
                         backoffMs = STATUS_POLL_INTERVAL_MS
                     }
                     else -> {
-                        setStatus(videoId, PhashUiStatus("Unsupported Resolver task state: $state", terminal = true))
+                        setStatus(videoId, PhashUiStatus(
+                            context.getString(R.string.phash_unsupported_state, state),
+                            terminal = true,
+                        ))
                         return
                     }
                 }
             } catch (_: TimeoutCancellationException) {
                 Log.i(PHASH_TAG, "status request timed out; retrying")
-                setStatus(videoId, PhashUiStatus("Resolver unavailable; retrying status check"))
+                setStatus(videoId, PhashUiStatus(context.getString(R.string.phash_status_retrying)))
                 backoffMs = (backoffMs * 2).coerceAtMost(MAX_STATUS_BACKOFF_MS)
             } catch (cancelled: CancellationException) {
                 throw cancelled
             } catch (error: HttpException) {
                 if (error.code() == 401 || error.code() == 403) {
-                    setStatus(videoId, PhashUiStatus("Jellyfin authorization was rejected; sign in again"))
+                    setStatus(videoId, PhashUiStatus(context.getString(R.string.phash_jellyfin_rejected_again)))
                     return
                 }
                 if (error.code() == 404) {
                     jobStore.remove(videoId, accountKey)
-                    setStatus(videoId, PhashUiStatus("Resolver task is no longer available"))
+                    setStatus(videoId, PhashUiStatus(context.getString(R.string.phash_task_gone)))
                     return
                 }
                 if (!isRetryable(error.code())) {
-                    setStatus(videoId, PhashUiStatus("Could not check Resolver task (HTTP ${error.code()})"))
+                    setStatus(videoId, PhashUiStatus(context.getString(R.string.phash_check_failed_http, error.code())))
                     return
                 }
                 Log.i(PHASH_TAG, "status request failed (HTTP ${error.code()}); retrying")
-                setStatus(videoId, PhashUiStatus("Resolver unavailable; retrying status check"))
+                setStatus(videoId, PhashUiStatus(context.getString(R.string.phash_status_retrying)))
                 backoffMs = (backoffMs * 2).coerceAtMost(MAX_STATUS_BACKOFF_MS)
             } catch (error: Exception) {
                 Log.i(PHASH_TAG, "status request failed (${error.javaClass.simpleName}); retrying")
-                setStatus(videoId, PhashUiStatus("Resolver unavailable; retrying status check"))
+                setStatus(videoId, PhashUiStatus(context.getString(R.string.phash_status_retrying)))
                 backoffMs = (backoffMs * 2).coerceAtMost(MAX_STATUS_BACKOFF_MS)
             }
         }
@@ -405,7 +415,7 @@ class PhashCoordinator(
             ),
             accountKey,
         )
-        setStatus(videoId, PhashUiStatus(TIMEOUT_MESSAGE, terminal = true))
+        setStatus(videoId, PhashUiStatus(timeoutMessage, terminal = true))
         Log.i(PHASH_TAG, "the task used up its polling budget")
     }
 
@@ -417,19 +427,20 @@ class PhashCoordinator(
     }
 
     private fun statusFor(record: StoredPhashJob): PhashUiStatus = when (record.state.lowercase()) {
-        "submitting" -> PhashUiStatus("Sending task to Resolver")
-        "queued" -> PhashUiStatus("Video matching queued on Resolver")
-        "processing" -> PhashUiStatus("Resolver is processing video matching")
-        in SUCCESS_STATES -> PhashUiStatus("Video matching complete", terminal = true)
+        "submitting" -> PhashUiStatus(context.getString(R.string.phash_sending))
+        "queued" -> PhashUiStatus(context.getString(R.string.phash_queued))
+        "processing" -> PhashUiStatus(context.getString(R.string.phash_processing))
+        in SUCCESS_STATES -> PhashUiStatus(context.getString(R.string.phash_complete), terminal = true)
         "failed", "cancelled" -> PhashUiStatus(
             if (record.errorCode == TIMEOUT_ERROR_CODE) {
-                TIMEOUT_MESSAGE
+                timeoutMessage
             } else {
-                "Video matching failed${record.errorCode?.let { " ($it)" }.orEmpty()}"
+                record.errorCode?.let { context.getString(R.string.phash_failed_with_code, it) }
+                    ?: context.getString(R.string.phash_failed)
             },
             terminal = true,
         )
-        else -> PhashUiStatus("Resolver task state: ${record.state}")
+        else -> PhashUiStatus(context.getString(R.string.phash_state, record.state))
     }
 
     private fun isRetryable(code: Int): Boolean = code == 429 || code >= 500
@@ -438,7 +449,6 @@ class PhashCoordinator(
         private const val STATUS_POLL_INTERVAL_MS = 5_000L
         private const val MAX_STATUS_BACKOFF_MS = 60_000L
         private const val TIMEOUT_ERROR_CODE = "timeout"
-        private const val TIMEOUT_MESSAGE = "Video matching timed out"
         private val ACTIVE_STATES = setOf("queued", "processing")
         private val SUCCESS_STATES = setOf("done", "completed", "succeeded")
         private val TERMINAL_STATES = SUCCESS_STATES + setOf("failed", "cancelled")

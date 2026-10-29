@@ -48,7 +48,10 @@
     <string name="mobile_back_all_categories">"‹  All categories"</string>
     <string name="mobile_back_all_studios">"‹  All studios"</string>
     <string name="mobile_back_channels">"‹  Channels"</string>
-    <string name="mobile_titles_count">%1$d titles</string>
+    <plurals name="mobile_titles_count">
+        <item quantity="one">%1$d title</item>
+        <item quantity="other">%1$d titles</item>
+    </plurals>
     <string name="mobile_find_performer">Find a performer</string>
     <string name="mobile_photo_only">Photo only</string>
     <string name="mobile_all">All</string>

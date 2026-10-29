@@ -9,13 +9,32 @@ import com.adulthub.tv.ui.person.PersonDetailViewModel
 import com.adulthub.tv.ui.player.PlayerViewModel
 import com.adulthub.tv.ui.search.SearchViewModel
 import com.adulthub.tv.ui.settings.SettingsViewModel
+import org.koin.android.ext.koin.androidContext
 import org.koin.core.module.dsl.viewModel
 import org.koin.core.module.dsl.viewModelOf
 import org.koin.dsl.module
 
 val viewModelModule = module {
-    viewModel { AuthViewModel(get(), get(), get(), SessionRestoreRetryPolicy()) }
-    viewModelOf(::HomeViewModel)
+    viewModel {
+        AuthViewModel(
+            authRepository = get(),
+            libraryRepository = get(),
+            settingsDataStore = get(),
+            sessionRestoreRetry = SessionRestoreRetryPolicy(),
+            context = androidContext(),
+        )
+    }
+    viewModel {
+        HomeViewModel(
+            libraryRepository = get(),
+            personRepository = get(),
+            settingsDataStore = get(),
+            clientManager = get(),
+            telegramProgressStore = getOrNull(),
+            watchHistoryStore = getOrNull(),
+            context = androidContext(),
+        )
+    }
     viewModelOf(::LibraryViewModel)
     viewModelOf(::ItemDetailViewModel)
     viewModelOf(::PersonDetailViewModel)
@@ -31,8 +50,21 @@ val viewModelModule = module {
             watchHistoryStore = getOrNull(),
             persistenceScope = getOrNull(),
             accountScope = getOrNull(),
+            context = androidContext(),
         )
     }
     viewModelOf(::SearchViewModel)
-    viewModelOf(::SettingsViewModel)
+    viewModel {
+        SettingsViewModel(
+            authRepository = get(),
+            libraryRepository = get(),
+            settingsDataStore = get(),
+            channelRepository = getOrNull(),
+            watchHistoryStore = getOrNull(),
+            telegramProgressStore = getOrNull(),
+            searchHistoryStore = getOrNull(),
+            userScopedDataMigration = getOrNull(),
+            context = androidContext(),
+        )
+    }
 }

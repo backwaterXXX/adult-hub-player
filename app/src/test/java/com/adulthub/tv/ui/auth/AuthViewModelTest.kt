@@ -1,5 +1,6 @@
 package com.adulthub.tv.ui.auth
 
+import android.content.Context
 import com.adulthub.tv.data.local.SettingsDataStore
 import com.adulthub.tv.data.model.AuthState
 import com.adulthub.tv.data.repository.AuthRepository
@@ -27,6 +28,7 @@ class AuthViewModelTest {
     private val authRepository: AuthRepository = mockk(relaxed = true)
     private val libraryRepository: LibraryRepository = mockk(relaxed = true)
     private val settingsDataStore: SettingsDataStore = mockk(relaxed = true)
+    private val context: Context = mockk(relaxed = true)
 
     @Before
     fun setUp() {
@@ -43,7 +45,7 @@ class AuthViewModelTest {
     fun `restore navigation event remains available to a late collector`() = runTest(dispatcher) {
         coEvery { authRepository.restoreSession() } returns AuthState.NotAuthenticated
 
-        val viewModel = AuthViewModel(authRepository, libraryRepository, settingsDataStore)
+        val viewModel = AuthViewModel(authRepository, libraryRepository, settingsDataStore, context = context)
         advanceUntilIdle()
 
         assertEquals(AuthNavEvent.NavigateToServer, viewModel.navEvents.first())

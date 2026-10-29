@@ -25,6 +25,7 @@ import org.jellyfin.sdk.model.api.PlayMethod
 import org.jellyfin.sdk.model.api.MediaSourceInfo
 import org.jellyfin.sdk.model.api.RepeatMode
 import java.util.UUID
+import java.util.Locale
 import java.net.URI
 import okhttp3.HttpUrl.Companion.toHttpUrlOrNull
 
@@ -330,9 +331,14 @@ internal fun appendVariantQuery(url: String, variantId: String?): String {
     }
     if (isOriginal) return url
     val encoded = buildString {
-        for (character in requested) {
-            if (character.isLetterOrDigit() || character in "-._~") append(character)
-            else append("%%%02X".format(character.code))
+        for (byte in requested.toByteArray(Charsets.UTF_8)) {
+            val value = byte.toInt() and 0xFF
+            val character = value.toChar()
+            if (value < 0x80 && (character.isLetterOrDigit() || character in "-._~")) {
+                append(character)
+            } else {
+                append(String.format(Locale.US, "%%%02X", value))
+            }
         }
     }
     val separator = if ('?' in url) '&' else '?'

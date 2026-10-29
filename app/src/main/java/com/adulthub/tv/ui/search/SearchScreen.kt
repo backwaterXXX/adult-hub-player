@@ -83,13 +83,13 @@ import org.koin.compose.koinInject
 @Composable
 @OptIn(ExperimentalComposeUiApi::class)
 fun SearchScreen(
-    initialQuery: String? = null,
     onNavigateBack: () -> Unit,
     onNavigateToItemDetail: (itemId: String) -> Unit,
     onNavigateToPersonDetail: (personId: String, personName: String) -> Unit,
+    modifier: Modifier = Modifier,
+    initialQuery: String? = null,
     onNavigateToPlayer: (itemId: String) -> Unit = {},
     isCurrentDestination: Boolean = true,
-    modifier: Modifier = Modifier,
     viewModel: SearchViewModel = koinViewModel(),
 ) {
     val uiState by viewModel.uiState.collectAsStateWithLifecycle()

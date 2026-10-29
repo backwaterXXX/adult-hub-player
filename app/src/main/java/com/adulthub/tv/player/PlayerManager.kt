@@ -5,6 +5,7 @@ import android.net.Uri
 import android.os.SystemClock
 import com.adulthub.tv.diagnostics.AppLog as Log
 import com.adulthub.tv.BuildConfig
+import com.adulthub.tv.R
 import androidx.media3.common.AudioAttributes
 import androidx.media3.common.C
 import androidx.media3.common.MediaItem
@@ -296,27 +297,33 @@ class PlayerManager(
             val friendlyMessage = when (error.errorCode) {
                 PlaybackException.ERROR_CODE_IO_NETWORK_CONNECTION_FAILED,
                 PlaybackException.ERROR_CODE_IO_NETWORK_CONNECTION_TIMEOUT ->
-                    "Network error. Please check your connection."
+                    context.getString(R.string.player_error_network)
                 PlaybackException.ERROR_CODE_IO_BAD_HTTP_STATUS ->
-                    "Server error loading video stream."
+                    context.getString(R.string.player_error_server)
                 PlaybackException.ERROR_CODE_DECODER_INIT_FAILED,
                 PlaybackException.ERROR_CODE_DECODING_FAILED,
                 PlaybackException.ERROR_CODE_DECODER_QUERY_FAILED ->
-                    "Audio/video decoder error. Hardware codec failed to decode this stream."
+                    context.getString(R.string.player_error_decoder)
                 PlaybackException.ERROR_CODE_AUDIO_TRACK_INIT_FAILED,
                 PlaybackException.ERROR_CODE_AUDIO_TRACK_WRITE_FAILED ->
-                    "Audio output error on device."
-                else -> error.localizedMessage ?: "Unknown playback error occurred."
+                    context.getString(R.string.player_error_audio_output)
+                else -> error.localizedMessage ?: context.getString(R.string.player_error_unknown)
             }
             val failureStage = when {
-                error.errorCode == PlaybackException.ERROR_CODE_IO_BAD_HTTP_STATUS -> "Server response"
-                error.errorCodeName.startsWith("ERROR_CODE_IO_") -> "Network"
-                error.errorCodeName.startsWith("ERROR_CODE_PARSING_") -> "Media format"
-                error.errorCodeName.contains("DECOD", ignoreCase = true) -> "Video decoder"
-                error.errorCodeName.startsWith("ERROR_CODE_AUDIO_TRACK_") -> "Audio output"
-                else -> "Playback"
+                error.errorCode == PlaybackException.ERROR_CODE_IO_BAD_HTTP_STATUS ->
+                    context.getString(R.string.player_stage_server_response)
+                error.errorCodeName.startsWith("ERROR_CODE_IO_") -> context.getString(R.string.player_stage_network)
+                error.errorCodeName.startsWith("ERROR_CODE_PARSING_") -> context.getString(R.string.player_stage_media_format)
+                error.errorCodeName.contains("DECOD", ignoreCase = true) -> context.getString(R.string.player_stage_video_decoder)
+                error.errorCodeName.startsWith("ERROR_CODE_AUDIO_TRACK_") -> context.getString(R.string.player_stage_audio_output)
+                else -> context.getString(R.string.player_stage_playback)
             }
-            val diagnosticMessage = "$friendlyMessage\n\nStage: $failureStage\nCode: ${error.errorCodeName}"
+            val diagnosticMessage = context.getString(
+                R.string.player_error_diagnostic,
+                friendlyMessage,
+                failureStage,
+                error.errorCodeName,
+            )
             _errorMessage.value = diagnosticMessage
             onPlaybackError?.invoke(diagnosticMessage)
         }

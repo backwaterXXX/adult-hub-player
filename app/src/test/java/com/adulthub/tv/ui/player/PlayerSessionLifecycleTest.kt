@@ -1,5 +1,6 @@
 package com.adulthub.tv.ui.player
 
+import android.content.Context
 import com.adulthub.tv.data.local.SettingsDataStore
 import com.adulthub.tv.data.local.TelegramProgressRecord
 import com.adulthub.tv.data.local.TelegramProgressStore
@@ -47,6 +48,7 @@ class PlayerSessionLifecycleTest {
     private val fakePlaybackRepo = FakeLifecyclePlaybackRepository()
     private val settingsDataStore: SettingsDataStore = mockk(relaxed = true)
     private val progressStore = RecordingProgressStore()
+    private val context: Context = mockk(relaxed = true)
 
     private val firstItem = TvItem(
         id = "movie-1",
@@ -79,6 +81,7 @@ class PlayerSessionLifecycleTest {
         playbackReporter = reporter,
         telegramProgressStore = progressStore,
         persistenceScope = scope,
+        context = context,
     )
 
     @Test

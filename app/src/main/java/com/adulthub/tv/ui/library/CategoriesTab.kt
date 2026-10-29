@@ -29,6 +29,7 @@ import androidx.compose.ui.graphics.Color
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.flow.distinctUntilChanged
 import androidx.compose.ui.graphics.graphicsLayer
+import androidx.compose.ui.res.pluralStringResource
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
@@ -138,14 +139,31 @@ fun CategoriesTab(
                     )
                     val countText = if (state.totalCount > 0) {
                         if (state.hasMoreCategoryMovies) {
-                            stringResource(R.string.library_movies_of_total, state.categoryMovies.size, state.totalCount)
+                            pluralStringResource(
+                                R.plurals.library_movies_of_total,
+                                state.totalCount,
+                                state.categoryMovies.size,
+                                state.totalCount,
+                            )
                         } else {
-                            stringResource(R.string.library_movies_count, state.categoryMovies.size)
+                            pluralStringResource(
+                                R.plurals.library_movies_count,
+                                state.categoryMovies.size,
+                                state.categoryMovies.size,
+                            )
                         }
                     } else if (state.hasMoreCategoryMovies) {
-                        stringResource(R.string.library_movies_count_plus, state.categoryMovies.size)
+                        pluralStringResource(
+                            R.plurals.library_movies_count_plus,
+                            state.categoryMovies.size,
+                            state.categoryMovies.size,
+                        )
                     } else {
-                        stringResource(R.string.library_movies_count, state.categoryMovies.size)
+                        pluralStringResource(
+                            R.plurals.library_movies_count,
+                            state.categoryMovies.size,
+                            state.categoryMovies.size,
+                        )
                     }
                     Text(
                         text = countText,
@@ -273,7 +291,11 @@ fun CategoriesTab(
                 verticalAlignment = Alignment.CenterVertically,
             ) {
                 Text(
-                    text = stringResource(R.string.library_categories_count, state.categories.size),
+                    text = pluralStringResource(
+                        R.plurals.library_categories_count,
+                        state.categories.size,
+                        state.categories.size,
+                    ),
                     style = MaterialTheme.typography.bodyMedium,
                     color = TextSecondary,
                 )
@@ -381,7 +403,11 @@ private fun CategoryCard(
             if (category.movieCount > 0) {
                 Spacer(modifier = Modifier.height(4.dp))
                 Text(
-                    text = stringResource(R.string.library_movies_count, category.movieCount),
+                    text = pluralStringResource(
+                        R.plurals.library_movies_count,
+                        category.movieCount,
+                        category.movieCount,
+                    ),
                     style = MaterialTheme.typography.bodySmall,
                     color = TextSecondary,
                 )

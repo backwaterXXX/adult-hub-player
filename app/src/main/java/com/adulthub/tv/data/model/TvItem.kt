@@ -54,16 +54,4 @@ data class TvItem(
             runtimeTicks != null && runtimeTicks > 0L -> (playbackPositionTicks.toDouble() / runtimeTicks.toDouble()).toFloat().coerceIn(0f, 1f)
             else -> 0f
         }
-
-    val formattedDuration: String
-        get() {
-            val minutes = runtimeMinutes ?: return ""
-            val hours = minutes / 60
-            val remMinutes = minutes % 60
-            return if (hours > 0) {
-                "${hours}h ${remMinutes}m"
-            } else {
-                "${minutes}m"
-            }
-        }
 }

@@ -36,6 +36,7 @@ import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.graphicsLayer
 import androidx.compose.ui.layout.ContentScale
+import androidx.compose.ui.res.pluralStringResource
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
@@ -78,12 +79,12 @@ fun ChannelsTab(
     onBackToChannels: () -> Unit,
     onRetry: () -> Unit,
     onRetryChannelVideos: () -> Unit,
+    modifier: Modifier = Modifier,
     onLoadMore: () -> Unit = {},
     onSortModeChange: (ChannelSortMode) -> Unit = {},
     onHideChannel: () -> Unit = {},
     onDurationFilterChange: (DurationFilter) -> Unit = {},
     getVideoThumbnailUrl: (String?) -> String = { it.orEmpty() },
-    modifier: Modifier = Modifier,
 ) {
     val telegramProgressStore: com.adulthub.tv.data.local.TelegramProgressStore = koinInject()
     val progressList by telegramProgressStore.allProgress.collectAsStateWithLifecycle(initialValue = emptyList())
@@ -194,7 +195,7 @@ fun ChannelsTab(
                         },
                         modifier = Modifier.height(34.dp),
                     ) {
-                        Text(text = stringResource(R.string.library_sort_value, state.sortMode.label), fontSize = 12.sp)
+                        Text(text = stringResource(R.string.library_sort_value, stringResource(state.sortMode.labelRes)), fontSize = 12.sp)
                     }
 
                     // Duration Filter Cycler Button
@@ -213,7 +214,7 @@ fun ChannelsTab(
                         val durationText = if (state.durationFilter == DurationFilter.ALL) {
                             stringResource(R.string.filter_duration_all)
                         } else {
-                            stringResource(R.string.library_filter_duration, state.durationFilter.label)
+                            stringResource(R.string.library_filter_duration, stringResource(state.durationFilter.labelRes))
                         }
                         Text(text = durationText, fontSize = 12.sp)
                     }
@@ -358,7 +359,11 @@ fun ChannelsTab(
                 verticalAlignment = Alignment.CenterVertically,
             ) {
                 Text(
-                    text = stringResource(R.string.library_video_channels_count, state.channels.size),
+                    text = pluralStringResource(
+                        R.plurals.library_video_channels_count,
+                        state.channels.size,
+                        state.channels.size,
+                    ),
                     style = MaterialTheme.typography.bodyMedium,
                     color = TextSecondary,
                 )
@@ -478,10 +483,10 @@ private fun ChannelCard(
 private fun ChannelVideoCard(
     video: VideoDto,
     thumbnailUrl: String,
-    isPlayed: Boolean = false,
-    progressFraction: Float = 0f,
     onClick: () -> Unit,
     modifier: Modifier = Modifier,
+    isPlayed: Boolean = false,
+    progressFraction: Float = 0f,
 ) {
     val totalSec = video.duration.toLong()
     val untitledVideo = stringResource(R.string.library_untitled_video)

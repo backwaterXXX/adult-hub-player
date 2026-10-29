@@ -1,5 +1,6 @@
 package com.adulthub.tv.ui.detail
 
+import android.content.Context
 import com.adulthub.tv.data.jellyfin.JellyfinClientManager
 import com.adulthub.tv.data.model.TvItem
 import com.adulthub.tv.data.repository.LibraryRepository
@@ -27,6 +28,7 @@ class ItemDetailViewModelTest {
 
     private val fakeLibraryRepository = FakeLibraryRepository()
     private val clientManager: JellyfinClientManager = mockk(relaxed = true)
+    private val context: Context = mockk(relaxed = true)
 
     private val sampleItem = TvItem(
         id = "movie-1",
@@ -59,6 +61,7 @@ class ItemDetailViewModelTest {
         val viewModel = ItemDetailViewModel(
             libraryRepository = fakeLibraryRepository,
             clientManager = clientManager,
+            context = context,
         )
 
         viewModel.loadDetails("movie-1")
@@ -81,6 +84,7 @@ class ItemDetailViewModelTest {
         val viewModel = ItemDetailViewModel(
             libraryRepository = fakeLibraryRepository,
             clientManager = clientManager,
+            context = context,
         )
 
         viewModel.loadDetails("movie-1")
@@ -108,6 +112,7 @@ class ItemDetailViewModelTest {
         val viewModel = ItemDetailViewModel(
             libraryRepository = fakeLibraryRepository,
             clientManager = clientManager,
+            context = context,
         )
 
         viewModel.loadDetails("internal-item-id")
@@ -124,6 +129,7 @@ class ItemDetailViewModelTest {
         val viewModel = ItemDetailViewModel(
             libraryRepository = fakeLibraryRepository,
             clientManager = clientManager,
+            context = context,
         )
 
         viewModel.loadDetails("movie-1")
@@ -148,6 +154,7 @@ class ItemDetailViewModelTest {
         val viewModel = ItemDetailViewModel(
             libraryRepository = fakeLibraryRepository,
             clientManager = clientManager,
+            context = context,
         )
 
         viewModel.loadDetails("movie-1")
@@ -174,6 +181,7 @@ class ItemDetailViewModelTest {
             libraryRepository = fakeLibraryRepository,
             clientManager = clientManager,
             settingsDataStore = settingsDataStore,
+            context = context,
         )
 
         viewModel.excludeTag("pov")

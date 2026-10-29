@@ -1,5 +1,6 @@
 package com.adulthub.tv.ui.player
 
+import android.content.Context
 import androidx.lifecycle.ViewModelStore
 import com.adulthub.tv.data.local.SettingsDataStore
 import com.adulthub.tv.data.local.TelegramProgressRecord
@@ -37,6 +38,7 @@ class PlayerViewModelLifecycleTest {
     private val telegramProgressStore: TelegramProgressStore = mockk(relaxed = true)
     private val libraryRepository = LifecycleFakeLibraryRepository()
     private val playbackRepository = LifecycleFakePlaybackRepository()
+    private val context: Context = mockk(relaxed = true)
 
     private val telegramItem = TvItem(
         id = "telegram:-1001234567890",
@@ -77,6 +79,7 @@ class PlayerViewModelLifecycleTest {
             playbackReporter = playbackReporter,
             telegramProgressStore = telegramProgressStore,
             persistenceScope = persistenceScope,
+            context = context,
         )
 
         viewModel.loadItem(telegramItem.id)

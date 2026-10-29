@@ -1,5 +1,6 @@
 package com.adulthub.tv.ui.player
 
+import android.content.Context
 import com.adulthub.tv.data.local.SettingsDataStore
 import com.adulthub.tv.data.local.TelegramProgressRecord
 import com.adulthub.tv.data.local.TelegramProgressStore
@@ -39,6 +40,7 @@ class PlayerViewModelTest {
     private val fakeLibraryRepo = FakeLibraryRepository()
     private val fakePlaybackRepo = FakePlaybackRepository()
     private val settingsDataStore: SettingsDataStore = mockk(relaxed = true)
+    private val context: Context = mockk(relaxed = true)
 
     private val sampleItem = TvItem(
         id = "movie-1",
@@ -81,6 +83,7 @@ class PlayerViewModelTest {
             playbackRepository = fakePlaybackRepo,
             settingsDataStore = settingsDataStore,
             playbackReporter = playbackReporter,
+            context = context,
         )
 
         viewModel.loadItem("movie-1")
@@ -102,6 +105,7 @@ class PlayerViewModelTest {
             playbackRepository = fakePlaybackRepo,
             settingsDataStore = settingsDataStore,
             playbackReporter = playbackReporter,
+            context = context,
         )
 
         viewModel.loadItem("movie-2")
@@ -122,6 +126,7 @@ class PlayerViewModelTest {
             playbackRepository = fakePlaybackRepo,
             settingsDataStore = settingsDataStore,
             playbackReporter = playbackReporter,
+            context = context,
         )
 
         viewModel.loadItem("movie-2", resume = false)
@@ -142,6 +147,7 @@ class PlayerViewModelTest {
             playbackRepository = fakePlaybackRepo,
             settingsDataStore = settingsDataStore,
             playbackReporter = playbackReporter,
+            context = context,
         )
 
         viewModel.loadItem("movie-1")
@@ -165,6 +171,7 @@ class PlayerViewModelTest {
             playbackRepository = fakePlaybackRepo,
             settingsDataStore = settingsDataStore,
             playbackReporter = playbackReporter,
+            context = context,
         )
 
         viewModel.loadItem("unknown-id")
@@ -186,6 +193,7 @@ class PlayerViewModelTest {
             playbackRepository = fakePlaybackRepo,
             settingsDataStore = settingsDataStore,
             playbackReporter = playbackReporter,
+            context = context,
         )
 
         viewModel.loadItem("movie-1")
@@ -210,6 +218,7 @@ class PlayerViewModelTest {
             playbackRepository = fakePlaybackRepo,
             settingsDataStore = settingsDataStore,
             playbackReporter = playbackReporter,
+            context = context,
         )
 
         viewModel.loadItem("movie-1")
@@ -240,6 +249,7 @@ class PlayerViewModelTest {
             settingsDataStore = settingsDataStore,
             playbackReporter = playbackReporter,
             channelRepository = channelRepo,
+            context = context,
         )
 
         viewModel.loadItem("-1001188284602:100:12345")
@@ -279,6 +289,7 @@ class PlayerViewModelTest {
             playbackReporter = playbackReporter,
             channelRepository = channelRepo,
             telegramProgressStore = tgStore,
+            context = context,
         )
 
         viewModel.loadItem("-1001188284602:100:12345")
@@ -317,6 +328,7 @@ class PlayerViewModelTest {
             playbackReporter = PlaybackReporter(fakePlaybackRepo, CoroutineScope(testDispatcher)),
             channelRepository = channelRepo,
             telegramProgressStore = telegramStore,
+            context = context,
         )
 
         viewModel.loadItem(videoId)

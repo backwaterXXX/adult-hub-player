@@ -50,6 +50,7 @@ import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.graphicsLayer
 import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.res.pluralStringResource
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextOverflow
@@ -252,7 +253,7 @@ fun MobilePlayerOverlay(
                     }
 
                     Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceEvenly, verticalAlignment = Alignment.CenterVertically) {
-                        IconButton(onClick = { onSeekRelative(-seekStepSec * 1_000L); onInteraction() }) { Icon(Icons.Rounded.FastRewind, stringResource(R.string.player_cd_rewind, seekStepSec), tint = Color.White, modifier = Modifier.size(30.dp)) }
+                        IconButton(onClick = { onSeekRelative(-seekStepSec * 1_000L); onInteraction() }) { Icon(Icons.Rounded.FastRewind, pluralStringResource(R.plurals.player_cd_rewind, seekStepSec, seekStepSec), tint = Color.White, modifier = Modifier.size(30.dp)) }
                         IconButton(
                             onClick = { onPlayPauseClick(); onInteraction() },
                             enabled = !isBuffering,
@@ -260,7 +261,7 @@ fun MobilePlayerOverlay(
                         ) {
                             Icon(if (isPlaying) Icons.Rounded.Pause else Icons.Rounded.PlayArrow, stringResource(if (isPlaying) R.string.player_cd_pause else R.string.player_cd_play), tint = Color.White, modifier = Modifier.size(36.dp))
                         }
-                        IconButton(onClick = { onSeekRelative(seekStepSec * 1_000L); onInteraction() }) { Icon(Icons.Rounded.FastForward, stringResource(R.string.player_cd_forward, seekStepSec), tint = Color.White, modifier = Modifier.size(30.dp)) }
+                        IconButton(onClick = { onSeekRelative(seekStepSec * 1_000L); onInteraction() }) { Icon(Icons.Rounded.FastForward, pluralStringResource(R.plurals.player_cd_forward, seekStepSec, seekStepSec), tint = Color.White, modifier = Modifier.size(30.dp)) }
                         IconButton(onClick = { onRandomClick(); onInteraction() }) { Icon(Icons.Rounded.Shuffle, stringResource(R.string.player_cd_random_mobile), tint = Color.White) }
                         // The quality button joins the bar only while another file version
                         // is actually selectable.

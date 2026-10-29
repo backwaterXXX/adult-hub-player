@@ -12,10 +12,12 @@ import androidx.compose.foundation.layout.width
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.tv.material3.MaterialTheme
 import androidx.tv.material3.Text
+import com.adulthub.tv.R
 import com.adulthub.tv.ui.theme.NeonPink
 import com.adulthub.tv.ui.theme.TextPrimary
 import com.adulthub.tv.ui.theme.TextSecondary
@@ -28,7 +30,7 @@ fun SectionRow(
     isLoading: Boolean = false,
     errorMessage: String? = null,
     isEmpty: Boolean = false,
-    emptyMessage: String = "No items available",
+    emptyMessage: String? = null,
     onRetry: (() -> Unit)? = null,
     headerAction: (@Composable () -> Unit)? = null,
     content: @Composable () -> Unit,
@@ -78,7 +80,7 @@ fun SectionRow(
                         .padding(horizontal = 48.dp),
                     contentAlignment = Alignment.CenterStart,
                 ) {
-                    LoadingIndicator(message = "Loading $title…")
+                    LoadingIndicator(message = stringResource(R.string.section_loading, title))
                 }
             }
             errorMessage != null -> {
@@ -104,7 +106,7 @@ fun SectionRow(
                     contentAlignment = Alignment.CenterStart,
                 ) {
                     Text(
-                        text = emptyMessage,
+                        text = emptyMessage ?: stringResource(R.string.section_no_items),
                         style = MaterialTheme.typography.bodyMedium,
                         color = TextSecondary,
                     )

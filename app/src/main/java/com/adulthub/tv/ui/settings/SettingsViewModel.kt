@@ -1,5 +1,6 @@
 package com.adulthub.tv.ui.settings
 
+import android.annotation.SuppressLint
 import android.content.Context
 import android.content.ClipData
 import android.content.Intent
@@ -7,6 +8,7 @@ import android.net.Uri
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import coil.Coil
+import com.adulthub.tv.R
 import com.adulthub.tv.diagnostics.AppLog
 import com.adulthub.tv.data.local.SettingsDataStore
 import com.adulthub.tv.data.model.AuthState
@@ -65,10 +67,11 @@ data class SettingsUiState(
     val hasPendingHistoryImport: Boolean = false,
     val statusMessage: String? = null,
     val isCheckingConnections: Boolean = false,
-    val jellyfinConnectionStatus: String = "Not checked",
-    val resolverConnectionStatus: String = "Not checked",
+    val jellyfinConnectionStatus: String = "",
+    val resolverConnectionStatus: String = "",
 )
 
+@SuppressLint("StaticFieldLeak")
 class SettingsViewModel(
     private val authRepository: AuthRepository,
     private val libraryRepository: LibraryRepository,
@@ -78,9 +81,15 @@ class SettingsViewModel(
     private val telegramProgressStore: TelegramProgressStore? = null,
     private val searchHistoryStore: SearchHistoryStore? = null,
     private val userScopedDataMigration: UserScopedDataMigration? = null,
+    private val context: Context,
 ) : ViewModel() {
 
-    private val _uiState = MutableStateFlow(SettingsUiState())
+    private val _uiState = MutableStateFlow(
+        SettingsUiState(
+            jellyfinConnectionStatus = context.getString(R.string.settings_connection_not_checked),
+            resolverConnectionStatus = context.getString(R.string.settings_connection_not_checked),
+        )
+    )
     val uiState: StateFlow<SettingsUiState> = _uiState.asStateFlow()
 
     init {
@@ -95,7 +104,12 @@ class SettingsViewModel(
                 throw cancelled
             } catch (error: Exception) {
                 _uiState.update {
-                    it.copy(statusMessage = "Could not load settings: ${error.localizedMessage ?: "storage error"}")
+                    it.copy(
+                        statusMessage = context.getString(
+                            R.string.settings_error_load,
+                            error.localizedMessage ?: context.getString(R.string.error_storage),
+                        ),
+                    )
                 }
             }
         }
@@ -106,7 +120,7 @@ class SettingsViewModel(
         val (serverUrl, serverName, username, userId) = when (authState) {
             is AuthState.Authenticated -> listOf(
                 authState.serverUrl,
-                authState.serverName.ifEmpty { "Jellyfin Server" },
+                authState.serverName.ifEmpty { context.getString(R.string.settings_server_name_default) },
                 authState.username,
                 authState.userId,
             )
@@ -153,7 +167,7 @@ class SettingsViewModel(
                 username = username,
                 userId = userId,
                 selectedLibraryId = libraryId,
-                selectedLibraryName = libraryName.ifEmpty { "None Selected" },
+                selectedLibraryName = libraryName.ifEmpty { context.getString(R.string.settings_no_library_selected) },
                 resolverBaseUrl = resolverUrl,
                 resolverBaseUrlSource = resolverUrlSource,
                 resolverUrlDraft = resolverUrl,
@@ -191,9 +205,9 @@ class SettingsViewModel(
                     it.copy(
                         hasPendingHistoryImport = false,
                         statusMessage = if (imported) {
-                            "The history of the previous install was imported into this account"
+                            context.getString(R.string.settings_import_done)
                         } else {
-                            "There was nothing to import"
+                            context.getString(R.string.settings_import_nothing)
                         },
                     )
                 }
@@ -202,7 +216,10 @@ class SettingsViewModel(
             } catch (error: Exception) {
                 _uiState.update {
                     it.copy(
-                        statusMessage = "The import failed: ${error.localizedMessage ?: "storage error"}",
+                        statusMessage = context.getString(
+                            R.string.settings_import_failed,
+                            error.localizedMessage ?: context.getString(R.string.error_storage),
+                        ),
                     )
                 }
             }
@@ -232,7 +249,7 @@ class SettingsViewModel(
                     selectedLibraryName = library.name,
                     availableHomeCategories = categories,
                     selectedHomeCategoryIds = selectedIds,
-                    statusMessage = "Active library changed to: ${library.name}",
+                    statusMessage = context.getString(R.string.settings_library_changed, library.name),
                 )
             }
         }
@@ -244,7 +261,11 @@ class SettingsViewModel(
             _uiState.update {
                 it.copy(
                     cacheLimitMb = limitMb,
-                    statusMessage = "Cache limit set to: ${if (limitMb == 0) "Off" else "$limitMb MB"}. Restart the app to apply it.",
+                    statusMessage = if (limitMb == 0) {
+                        context.getString(R.string.settings_cache_limit_set_off)
+                    } else {
+                        context.getString(R.string.settings_cache_limit_set, limitMb)
+                    },
                 )
             }
         }
@@ -263,7 +284,10 @@ class SettingsViewModel(
             _uiState.update {
                 it.copy(
                     bufferProfile = profile,
-                    statusMessage = "Buffer profile set to: ${profile.label}",
+                    statusMessage = context.getString(
+                        R.string.settings_buffer_profile_set,
+                        context.getString(profile.labelRes),
+                    ),
                 )
             }
         }
@@ -275,7 +299,11 @@ class SettingsViewModel(
             _uiState.update {
                 it.copy(
                     lowRamMode = enabled,
-                    statusMessage = if (enabled) "Low-memory mode enabled" else "Low-memory mode disabled",
+                    statusMessage = if (enabled) {
+                        context.getString(R.string.settings_low_ram_enabled)
+                    } else {
+                        context.getString(R.string.settings_low_ram_disabled)
+                    },
                 )
             }
         }
@@ -287,7 +315,11 @@ class SettingsViewModel(
             _uiState.update {
                 it.copy(
                     seekStepSec = seconds,
-                    statusMessage = "Seek step set to $seconds sec",
+                    statusMessage = context.resources.getQuantityString(
+                        R.plurals.settings_seek_step_set,
+                        seconds,
+                        seconds,
+                    ),
                 )
             }
         }
@@ -299,7 +331,11 @@ class SettingsViewModel(
             _uiState.update {
                 it.copy(
                     autoplayNext = enabled,
-                    statusMessage = if (enabled) "Auto-play next enabled" else "Auto-play next disabled",
+                    statusMessage = if (enabled) {
+                        context.getString(R.string.settings_autoplay_enabled)
+                    } else {
+                        context.getString(R.string.settings_autoplay_disabled)
+                    },
                 )
             }
         }
@@ -313,7 +349,7 @@ class SettingsViewModel(
             _uiState.update {
                 it.copy(
                     selectedHomeCategoryIds = selectedIds,
-                    statusMessage = "Home category selection saved",
+                    statusMessage = context.getString(R.string.settings_home_categories_saved),
                 )
             }
         }
@@ -351,7 +387,12 @@ class SettingsViewModel(
                 throw cancelled
             } catch (error: Exception) {
                 _uiState.update {
-                    it.copy(statusMessage = "Could not save HTTP consent: ${error.localizedMessage ?: "storage error"}")
+                    it.copy(
+                        statusMessage = context.getString(
+                            R.string.settings_error_http_consent,
+                            error.localizedMessage ?: context.getString(R.string.error_storage),
+                        ),
+                    )
                 }
                 return@launch
             }
@@ -384,9 +425,9 @@ class SettingsViewModel(
                 it.copy(
                     approvedCleartextOrigins = origins,
                     statusMessage = if (signedOut) {
-                        "HTTP consent removed for $origin"
+                        context.getString(R.string.settings_http_consent_removed, origin)
                     } else {
-                        "HTTP consent removed for $origin, but the sign-out failed"
+                        context.getString(R.string.settings_http_consent_removed_signout_failed, origin)
                     },
                     isLoggedOut = currentServerUsesOrigin && signedOut,
                 )
@@ -409,8 +450,12 @@ class SettingsViewModel(
                 resolverBaseUrl = effectiveUrl,
                 resolverBaseUrlSource = source,
                 resolverUrlDraft = effectiveUrl,
-                resolverConnectionStatus = "Not checked",
-                statusMessage = if (url.isBlank()) "Using Jellyfin server URL" else "Resolver URL updated",
+                resolverConnectionStatus = context.getString(R.string.settings_connection_not_checked),
+                statusMessage = if (url.isBlank()) {
+                    context.getString(R.string.settings_resolver_using_server)
+                } else {
+                    context.getString(R.string.settings_resolver_updated)
+                },
             )
         }
     }
@@ -424,8 +469,8 @@ class SettingsViewModel(
             _uiState.update {
                 it.copy(
                     isCheckingConnections = true,
-                    jellyfinConnectionStatus = "Checking…",
-                    resolverConnectionStatus = "Checking…",
+                    jellyfinConnectionStatus = context.getString(R.string.settings_connection_checking),
+                    resolverConnectionStatus = context.getString(R.string.settings_connection_checking),
                 )
             }
             val (jellyfin, resolver) = coroutineScope {
@@ -438,7 +483,7 @@ class SettingsViewModel(
                     isCheckingConnections = false,
                     jellyfinConnectionStatus = connectionMessage(jellyfin),
                     resolverConnectionStatus = when {
-                        resolver == null -> "Not configured"
+                        resolver == null -> context.getString(R.string.settings_not_configured)
                         else -> connectionMessage(resolver)
                     },
                 )
@@ -451,7 +496,13 @@ class SettingsViewModel(
         viewModelScope.launch {
             val cleared = withContext(Dispatchers.IO) { clearImageCache(context) }
             _uiState.update {
-                it.copy(statusMessage = if (cleared) "Cache cleared successfully" else "Could not clear the image cache")
+                it.copy(
+                    statusMessage = if (cleared) {
+                        context.getString(R.string.settings_cache_cleared)
+                    } else {
+                        context.getString(R.string.settings_cache_clear_failed)
+                    },
+                )
             }
         }
     }
@@ -508,22 +559,28 @@ class SettingsViewModel(
 
     fun clearWatchHistory() {
         viewModelScope.launch {
-            if (!clearStore("watch history") { watchHistoryStore?.clearHistory() }) return@launch
-            _uiState.update { it.copy(statusMessage = "Watch history cleared") }
+            if (!clearStore(context.getString(R.string.settings_label_watch_history)) { watchHistoryStore?.clearHistory() }) return@launch
+            _uiState.update {
+                it.copy(statusMessage = context.getString(R.string.settings_clear_history_done))
+            }
         }
     }
 
     fun clearResumeProgress() {
         viewModelScope.launch {
-            if (!clearStore("resume progress") { telegramProgressStore?.clearAll() }) return@launch
-            _uiState.update { it.copy(statusMessage = "Resume progress cleared") }
+            if (!clearStore(context.getString(R.string.settings_label_resume_progress)) { telegramProgressStore?.clearAll() }) return@launch
+            _uiState.update {
+                it.copy(statusMessage = context.getString(R.string.settings_clear_resume_done))
+            }
         }
     }
 
     fun clearSearchHistory() {
         viewModelScope.launch {
-            if (!clearStore("search history") { searchHistoryStore?.clearHistory() }) return@launch
-            _uiState.update { it.copy(statusMessage = "Search history cleared") }
+            if (!clearStore(context.getString(R.string.settings_label_search_history)) { searchHistoryStore?.clearHistory() }) return@launch
+            _uiState.update {
+                it.copy(statusMessage = context.getString(R.string.settings_clear_search_done))
+            }
         }
     }
 
@@ -533,7 +590,7 @@ class SettingsViewModel(
             _uiState.update { state ->
                 state.copy(
                     hiddenChannelIds = state.hiddenChannelIds - channelId,
-                    statusMessage = "Channel unhidden",
+                    statusMessage = context.getString(R.string.settings_channel_unhidden),
                 )
             }
         }
@@ -545,7 +602,7 @@ class SettingsViewModel(
             _uiState.update { state ->
                 state.copy(
                     excludedTags = state.excludedTags - tag,
-                    statusMessage = "Tag '$tag' unexcluded",
+                    statusMessage = context.getString(R.string.settings_tag_unexcluded, tag),
                 )
             }
         }
@@ -559,21 +616,24 @@ class SettingsViewModel(
             _uiState.update { state ->
                 state.copy(
                     excludedTags = state.excludedTags + trimmed,
-                    statusMessage = "Tag '$trimmed' excluded",
+                    statusMessage = context.getString(R.string.settings_tag_excluded, trimmed),
                 )
             }
         }
     }
 
-    fun logout(context: Context? = null) {
+    fun logout(cacheContext: Context? = null) {
         viewModelScope.launch {
-            context?.let { withContext(Dispatchers.IO) { clearImageCache(it) } }
+            cacheContext?.let { withContext(Dispatchers.IO) { clearImageCache(it) } }
             // The session is only closed when the stored session could be cleared.
             authRepository.logout().onFailure { error ->
                 _uiState.update {
                     it.copy(
                         isLoggedOut = false,
-                        statusMessage = "Sign out failed: ${error.localizedMessage ?: "storage error"}",
+                        statusMessage = context.getString(
+                            R.string.settings_error_sign_out,
+                            error.localizedMessage ?: context.getString(R.string.error_storage),
+                        ),
                     )
                 }
                 return@launch
@@ -595,7 +655,12 @@ class SettingsViewModel(
         throw cancelled
     } catch (error: Exception) {
         _uiState.update {
-            it.copy(statusMessage = "Could not save the setting: ${error.localizedMessage ?: "storage error"}")
+            it.copy(
+                statusMessage = context.getString(
+                    R.string.settings_error_save,
+                    error.localizedMessage ?: context.getString(R.string.error_storage),
+                ),
+            )
         }
         false
     }
@@ -614,13 +679,24 @@ class SettingsViewModel(
         throw cancelled
     } catch (error: Exception) {
         _uiState.update {
-            it.copy(statusMessage = "Could not clear the $label: ${error.localizedMessage ?: "storage error"}")
+            it.copy(
+                statusMessage = context.getString(
+                    R.string.settings_error_clear,
+                    label,
+                    error.localizedMessage ?: context.getString(R.string.error_storage),
+                ),
+            )
         }
         false
     }
-}
 
-private fun <T> connectionMessage(result: Result<T>): String = result.fold(
-    onSuccess = { "Connected" },
-    onFailure = { error -> "Unavailable: ${error.localizedMessage ?: "Request failed"}".take(100) },
-)
+    private fun <T> connectionMessage(result: Result<T>): String = result.fold(
+        onSuccess = { context.getString(R.string.settings_connection_connected) },
+        onFailure = { error ->
+            context.getString(
+                R.string.settings_connection_unavailable,
+                error.localizedMessage ?: context.getString(R.string.settings_error_request_failed),
+            ).take(100)
+        },
+    )
+}

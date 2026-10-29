@@ -4,6 +4,7 @@ import android.content.Context
 import androidx.datastore.core.DataStore
 import androidx.datastore.preferences.core.PreferenceDataStoreFactory
 import androidx.datastore.preferences.core.Preferences
+import com.adulthub.tv.R
 import com.adulthub.tv.data.jellyfin.JellyfinClientManager
 import com.adulthub.tv.data.local.AccountKeyProvider
 import com.adulthub.tv.data.local.AccountScope
@@ -73,6 +74,7 @@ class PhashSessionTest {
     fun setUp() {
         authState = MutableStateFlow(firstSession)
         accountScope = AccountScope(authDataStore(authState))
+        every { context.getString(R.string.phash_timeout) } returns "Video matching timed out"
     }
 
     private fun createJobStore(scope: kotlinx.coroutines.CoroutineScope): PhashJobStore {
@@ -133,6 +135,7 @@ class PhashSessionTest {
             jobStore = jobStore,
             applicationScope = backgroundScope,
             accountScope = accountScope,
+            context = context,
         )
 
         val item = TvItem(
@@ -215,6 +218,7 @@ class PhashSessionTest {
             accountScope = accountScope,
             // One status request is allowed, so the budget is used up with it.
             budget = PhashBudget(totalLifetimeMs = 600_000L, maxPolls = 1),
+            context = context,
         )
 
         val item = TvItem(

@@ -90,6 +90,16 @@ class PlaybackRepositoryTest {
     }
 
     @Test
+    fun `non-ascii characters are encoded as utf-8 bytes when the url cannot be parsed`() {
+        val url = "/stream?mode=proxy"
+
+        assertEquals(
+            "$url&variant=%C5%BC%C3%B3%C5%82w",
+            appendVariantQuery(url, "żółw"),
+        )
+    }
+
+    @Test
     fun `existing variant parameter is replaced instead of duplicated`() {
         val url = "http://resolver/stream?mode=proxy&variant=old_1"
 

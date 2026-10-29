@@ -1,5 +1,7 @@
 package com.adulthub.tv.ui.settings
 
+import android.content.Context
+import com.adulthub.tv.R
 import com.adulthub.tv.data.local.AccountKeyProvider
 import com.adulthub.tv.data.local.SearchHistoryStore
 import com.adulthub.tv.data.local.SettingsDataStore
@@ -12,6 +14,7 @@ import com.adulthub.tv.data.repository.LibraryRepository
 import com.adulthub.tv.data.repository.TvLibrary
 import com.adulthub.tv.data.model.TvChannel
 import com.adulthub.tv.data.resolver.ResolverApi
+import io.mockk.every
 import io.mockk.mockk
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.ExperimentalCoroutinesApi
@@ -38,6 +41,7 @@ class SettingsViewModelTest {
     private val fakeAuthRepo = FakeSettingsAuthRepo()
     private val fakeLibraryRepo = FakeSettingsLibraryRepo()
     private val fakeDataStore = FakeSettingsDataStore()
+    private val context: Context = mockk(relaxed = true)
 
     private val testLibrary = TvLibrary(id = "lib-1", name = "Adult Movies")
 
@@ -45,6 +49,16 @@ class SettingsViewModelTest {
     fun setUp() {
         Dispatchers.setMain(testDispatcher)
         fakeLibraryRepo.librariesResult = Result.success(listOf(testLibrary))
+        every { context.getString(R.string.settings_connection_connected) } returns "Connected"
+        every { context.getString(R.string.settings_connection_unavailable, "Resolver timeout") } returns
+            "Unavailable: Resolver timeout"
+        every { context.getString(R.string.settings_clear_history_done) } returns "Watch history cleared"
+        every { context.getString(R.string.settings_clear_resume_done) } returns "Resume progress cleared"
+        every { context.getString(R.string.settings_clear_search_done) } returns "Search history cleared"
+        every { context.getString(R.string.settings_buffer_large) } returns "Large buffer (30s / 120s)"
+        every {
+            context.getString(R.string.settings_buffer_profile_set, "Large buffer (30s / 120s)")
+        } returns "Buffer profile set to: Large buffer (30s / 120s)"
     }
 
     @After
@@ -58,6 +72,7 @@ class SettingsViewModelTest {
             authRepository = fakeAuthRepo,
             libraryRepository = fakeLibraryRepo,
             settingsDataStore = fakeDataStore,
+            context = context,
         )
         advanceUntilIdle()
 
@@ -79,6 +94,7 @@ class SettingsViewModelTest {
             authRepository = fakeAuthRepo,
             libraryRepository = fakeLibraryRepo,
             settingsDataStore = fakeDataStore,
+            context = context,
         )
         advanceUntilIdle()
 
@@ -107,6 +123,7 @@ class SettingsViewModelTest {
             authRepository = fakeAuthRepo,
             libraryRepository = fakeLibraryRepo,
             settingsDataStore = fakeDataStore,
+            context = context,
         )
         advanceUntilIdle()
 
@@ -123,6 +140,7 @@ class SettingsViewModelTest {
             authRepository = fakeAuthRepo,
             libraryRepository = fakeLibraryRepo,
             settingsDataStore = fakeDataStore,
+            context = context,
         )
         advanceUntilIdle()
 
@@ -139,6 +157,7 @@ class SettingsViewModelTest {
             authRepository = fakeAuthRepo,
             libraryRepository = fakeLibraryRepo,
             settingsDataStore = fakeDataStore,
+            context = context,
         )
         advanceUntilIdle()
 
@@ -155,6 +174,7 @@ class SettingsViewModelTest {
             authRepository = fakeAuthRepo,
             libraryRepository = fakeLibraryRepo,
             settingsDataStore = fakeDataStore,
+            context = context,
         )
         advanceUntilIdle()
 
@@ -177,6 +197,7 @@ class SettingsViewModelTest {
             authRepository = fakeAuthRepo,
             libraryRepository = fakeLibraryRepo,
             settingsDataStore = fakeDataStore,
+            context = context,
         )
         advanceUntilIdle()
 
@@ -194,6 +215,7 @@ class SettingsViewModelTest {
             authRepository = fakeAuthRepo,
             libraryRepository = fakeLibraryRepo,
             settingsDataStore = fakeDataStore,
+            context = context,
         )
         advanceUntilIdle()
 
@@ -211,6 +233,7 @@ class SettingsViewModelTest {
             authRepository = fakeAuthRepo,
             libraryRepository = fakeLibraryRepo,
             settingsDataStore = fakeDataStore,
+            context = context,
         )
         advanceUntilIdle()
 
@@ -231,6 +254,7 @@ class SettingsViewModelTest {
             libraryRepository = fakeLibraryRepo,
             settingsDataStore = fakeDataStore,
             channelRepository = resolverRepository,
+            context = context,
         )
         advanceUntilIdle()
 
@@ -247,6 +271,7 @@ class SettingsViewModelTest {
             authRepository = fakeAuthRepo,
             libraryRepository = fakeLibraryRepo,
             settingsDataStore = fakeDataStore,
+            context = context,
         )
         advanceUntilIdle()
 
@@ -264,6 +289,7 @@ class SettingsViewModelTest {
             authRepository = fakeAuthRepo,
             libraryRepository = fakeLibraryRepo,
             settingsDataStore = fakeDataStore,
+            context = context,
         )
         advanceUntilIdle()
 
@@ -280,6 +306,7 @@ class SettingsViewModelTest {
             authRepository = fakeAuthRepo,
             libraryRepository = fakeLibraryRepo,
             settingsDataStore = fakeDataStore,
+            context = context,
         )
         advanceUntilIdle()
 
@@ -298,6 +325,7 @@ class SettingsViewModelTest {
             libraryRepository = fakeLibraryRepo,
             settingsDataStore = fakeDataStore,
             watchHistoryStore = fakeWatchHistoryStore,
+            context = context,
         )
         advanceUntilIdle()
 
@@ -316,6 +344,7 @@ class SettingsViewModelTest {
             libraryRepository = fakeLibraryRepo,
             settingsDataStore = fakeDataStore,
             telegramProgressStore = fakeProgressStore,
+            context = context,
         )
         advanceUntilIdle()
 
@@ -334,6 +363,7 @@ class SettingsViewModelTest {
             libraryRepository = fakeLibraryRepo,
             settingsDataStore = fakeDataStore,
             searchHistoryStore = fakeSearchStore,
+            context = context,
         )
         advanceUntilIdle()
 
@@ -350,6 +380,7 @@ class SettingsViewModelTest {
             authRepository = fakeAuthRepo,
             libraryRepository = fakeLibraryRepo,
             settingsDataStore = fakeDataStore,
+            context = context,
         )
         advanceUntilIdle()
 
@@ -369,6 +400,7 @@ class SettingsViewModelTest {
             authRepository = fakeAuthRepo,
             libraryRepository = fakeLibraryRepo,
             settingsDataStore = fakeDataStore,
+            context = context,
         )
         advanceUntilIdle()
 

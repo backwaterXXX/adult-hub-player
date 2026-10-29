@@ -1,7 +1,10 @@
 package com.adulthub.tv.ui.auth
 
+import android.annotation.SuppressLint
+import android.content.Context
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
+import com.adulthub.tv.R
 import com.adulthub.tv.data.local.SettingsDataStore
 import com.adulthub.tv.data.model.AuthState
 import com.adulthub.tv.data.model.ServerInfo
@@ -67,11 +70,13 @@ sealed interface AuthNavEvent {
     data object NavigateToServer : AuthNavEvent
 }
 
+@SuppressLint("StaticFieldLeak")
 class AuthViewModel(
     private val authRepository: AuthRepository,
     private val libraryRepository: LibraryRepository,
     private val settingsDataStore: SettingsDataStore,
     private val sessionRestoreRetry: SessionRestoreRetryPolicy = SessionRestoreRetryPolicy(),
+    private val context: Context,
 ) : ViewModel() {
 
     private val _serverState = MutableStateFlow(ServerUiState())
@@ -111,7 +116,12 @@ class AuthViewModel(
                 throw cancelled
             } catch (error: Exception) {
                 _serverState.update {
-                    it.copy(errorMessage = "Could not restore saved settings: ${error.localizedMessage ?: "storage error"}")
+                    it.copy(
+                        errorMessage = context.getString(
+                            R.string.auth_error_restore_settings,
+                            error.localizedMessage ?: context.getString(R.string.error_storage),
+                        ),
+                    )
                 }
                 _navEvents.send(AuthNavEvent.NavigateToServer)
                 return@launch
@@ -133,7 +143,7 @@ class AuthViewModel(
                     } else {
                         _serverState.update {
                             it.copy(
-                                errorMessage = "Saved server unavailable. Please reconnect.",
+                                errorMessage = context.getString(R.string.auth_saved_server_unavailable),
                                 sessionRestoreFailed = true,
                             )
                         }
@@ -208,7 +218,7 @@ class AuthViewModel(
         val targetUrl = (url ?: _serverState.value.serverUrl).trim().trimEnd('/')
         _serverState.update { it.copy(sessionRestoreFailed = false) }
         if (targetUrl.isBlank()) {
-            _serverState.update { it.copy(errorMessage = "Server address cannot be empty") }
+            _serverState.update { it.copy(errorMessage = context.getString(R.string.auth_error_server_empty)) }
             return
         }
 
@@ -244,7 +254,12 @@ class AuthViewModel(
                 throw cancelled
             } catch (error: Exception) {
                 _serverState.update {
-                    it.copy(errorMessage = "Could not save HTTP consent: ${error.localizedMessage ?: "storage error"}")
+                    it.copy(
+                        errorMessage = context.getString(
+                            R.string.auth_error_save_http_consent,
+                            error.localizedMessage ?: context.getString(R.string.error_storage),
+                        ),
+                    )
                 }
                 return@launch
             }
@@ -278,7 +293,12 @@ class AuthViewModel(
             _navEvents.send(AuthNavEvent.NavigateToLogin(targetUrl))
         }.onFailure { error ->
             _serverState.update {
-                it.copy(errorMessage = "Could not connect to server: ${error.localizedMessage ?: "Unknown error"}")
+                it.copy(
+                    errorMessage = context.getString(
+                        R.string.auth_error_connect,
+                        error.localizedMessage ?: context.getString(R.string.error_unknown),
+                    ),
+                )
             }
         }
     }
@@ -294,7 +314,7 @@ class AuthViewModel(
     fun signIn() {
         val state = _loginState.value
         if (state.username.isBlank()) {
-            _loginState.update { it.copy(errorMessage = "Username cannot be empty") }
+            _loginState.update { it.copy(errorMessage = context.getString(R.string.auth_error_username_empty)) }
             return
         }
 
@@ -311,7 +331,12 @@ class AuthViewModel(
                 loadLibraries()
             }.onFailure { error ->
                 _loginState.update {
-                    it.copy(errorMessage = "Sign in failed: ${error.localizedMessage ?: "Invalid credentials"}")
+                    it.copy(
+                        errorMessage = context.getString(
+                            R.string.auth_error_sign_in,
+                            error.localizedMessage ?: context.getString(R.string.auth_error_invalid_credentials),
+                        ),
+                    )
                 }
             }
         }
@@ -350,7 +375,12 @@ class AuthViewModel(
             }.onFailure { error ->
                 if (generation != quickConnectGeneration) return@onFailure
                 _quickConnectState.update {
-                    it.copy(errorMessage = "Quick Connect unavailable: ${error.localizedMessage ?: "Error"}")
+                    it.copy(
+                        errorMessage = context.getString(
+                            R.string.auth_error_quick_connect,
+                            error.localizedMessage ?: context.getString(R.string.auth_error_generic),
+                        ),
+                    )
                 }
             }
         }
@@ -377,7 +407,12 @@ class AuthViewModel(
                         loadLibraries()
                     }.onFailure { error ->
                         _quickConnectState.update {
-                            it.copy(errorMessage = "Quick Connect exchange failed: ${error.localizedMessage}")
+                            it.copy(
+                                errorMessage = context.getString(
+                                    R.string.auth_error_quick_connect_exchange,
+                                    error.localizedMessage.orEmpty(),
+                                ),
+                            )
                         }
                     }
                     return@launch
@@ -387,7 +422,11 @@ class AuthViewModel(
             if (generation != quickConnectGeneration) return@launch
             // Timed out
             _quickConnectState.update {
-                it.copy(isPolling = false, isExpired = true, errorMessage = "Code expired. Please request a new code.")
+                it.copy(
+                    isPolling = false,
+                    isExpired = true,
+                    errorMessage = context.getString(R.string.auth_error_code_expired),
+                )
             }
         }
     }
@@ -415,7 +454,7 @@ class AuthViewModel(
                     val stored = runCatching { settingsDataStore.setSelectedLibrary(singleLib.id, singleLib.name) }
                     if (stored.isFailure) {
                         _libraryState.update {
-                            it.copy(errorMessage = "Could not save the library selection.")
+                            it.copy(errorMessage = context.getString(R.string.auth_error_save_library))
                         }
                         return@onSuccess
                     }
@@ -425,12 +464,17 @@ class AuthViewModel(
                     _navEvents.send(AuthNavEvent.NavigateToLibrarySelect)
                 } else {
                     _libraryState.update {
-                        it.copy(errorMessage = "No video libraries found on this server.")
+                        it.copy(errorMessage = context.getString(R.string.auth_error_no_libraries))
                     }
                 }
             }.onFailure { error ->
                 _libraryState.update {
-                    it.copy(errorMessage = "Failed to load libraries: ${error.localizedMessage}")
+                    it.copy(
+                        errorMessage = context.getString(
+                            R.string.auth_error_load_libraries,
+                            error.localizedMessage.orEmpty(),
+                        ),
+                    )
                 }
             }
         }
@@ -440,7 +484,7 @@ class AuthViewModel(
         viewModelScope.launch {
             val stored = runCatching { settingsDataStore.setSelectedLibrary(library.id, library.name) }
             if (stored.isFailure) {
-                _libraryState.update { it.copy(errorMessage = "Could not save the library selection.") }
+                _libraryState.update { it.copy(errorMessage = context.getString(R.string.auth_error_save_library)) }
                 return@launch
             }
             _navEvents.send(AuthNavEvent.NavigateToHome)
@@ -453,7 +497,12 @@ class AuthViewModel(
             // the server screen as if the account was closed.
             authRepository.logout().onFailure { error ->
                 _serverState.update {
-                    it.copy(errorMessage = "Sign out failed: ${error.localizedMessage ?: "storage error"}")
+                    it.copy(
+                        errorMessage = context.getString(
+                            R.string.auth_error_sign_out,
+                            error.localizedMessage ?: context.getString(R.string.error_storage),
+                        ),
+                    )
                 }
                 return@launch
             }

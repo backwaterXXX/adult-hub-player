@@ -69,9 +69,9 @@ import org.koin.compose.koinInject
 @Composable
 fun PlayerScreen(
     itemId: String,
-    resume: Boolean? = null,
     onBack: () -> Unit,
     modifier: Modifier = Modifier,
+    resume: Boolean? = null,
     mobileControls: Boolean = false,
     viewModel: PlayerViewModel = koinViewModel(),
 ) {
@@ -87,7 +87,7 @@ fun PlayerScreen(
     val seekForwardTemplate = stringResource(R.string.player_seek_forward)
     val seekBackwardTemplate = stringResource(R.string.player_seek_backward)
     fun seekFeedbackLabel(deltaMs: Long): String = String.format(
-        Locale.getDefault(),
+        Locale.US,
         if (deltaMs > 0) seekForwardTemplate else seekBackwardTemplate,
         abs(deltaMs / 1000),
     )

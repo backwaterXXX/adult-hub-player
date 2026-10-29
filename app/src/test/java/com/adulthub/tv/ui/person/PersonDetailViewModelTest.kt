@@ -1,5 +1,6 @@
 package com.adulthub.tv.ui.person
 
+import android.content.Context
 import com.adulthub.tv.data.jellyfin.JellyfinClientManager
 import com.adulthub.tv.data.model.TvItem
 import com.adulthub.tv.data.model.TvPerson
@@ -27,6 +28,7 @@ class PersonDetailViewModelTest {
 
     private val fakePersonRepository = FakePersonRepository()
     private val clientManager: JellyfinClientManager = mockk(relaxed = true)
+    private val context: Context = mockk(relaxed = true)
 
     private val samplePerson = TvPerson(
         id = "person-1",
@@ -59,6 +61,7 @@ class PersonDetailViewModelTest {
         val viewModel = PersonDetailViewModel(
             personRepository = fakePersonRepository,
             clientManager = clientManager,
+            context = context,
         )
 
         viewModel.loadPerson("person-1", "Eva Elfie")
@@ -80,6 +83,7 @@ class PersonDetailViewModelTest {
         val viewModel = PersonDetailViewModel(
             personRepository = fakePersonRepository,
             clientManager = clientManager,
+            context = context,
         )
 
         viewModel.loadPerson("person-1", "Eva Elfie")

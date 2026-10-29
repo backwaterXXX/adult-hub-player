@@ -1,6 +1,7 @@
 package com.adulthub.tv.data.local
 
 import android.content.Context
+import androidx.annotation.StringRes
 import androidx.datastore.core.DataStore
 import androidx.datastore.preferences.core.Preferences
 import androidx.datastore.preferences.core.booleanPreferencesKey
@@ -11,6 +12,7 @@ import androidx.datastore.preferences.core.longPreferencesKey
 import androidx.datastore.preferences.core.stringPreferencesKey
 import androidx.datastore.preferences.core.stringSetPreferencesKey
 import androidx.datastore.preferences.preferencesDataStore
+import com.adulthub.tv.R
 import com.adulthub.tv.data.model.ChannelSortMode
 import com.adulthub.tv.data.model.AuthState
 import com.adulthub.tv.data.network.ServiceUrl
@@ -31,15 +33,15 @@ private val Context.settingsDataStore: DataStore<Preferences> by preferencesData
 
 enum class BufferProfile(
     val id: String,
-    val label: String,
+    @StringRes val labelRes: Int,
     val minBufferMs: Int,
     val maxBufferMs: Int,
     val playbackStartMs: Int,
     val rebufferMs: Int,
 ) {
-    FAST_START("fast_start", "Fast start (5s / 20s)", 5_000, 20_000, 1_000, 2_000),
-    STANDARD("standard", "Standard (15s / 50s)", 15_000, 50_000, 1_500, 3_000),
-    LARGE("large", "Large buffer (30s / 120s)", 30_000, 120_000, 2_500, 5_000);
+    FAST_START("fast_start", R.string.settings_buffer_fast, 5_000, 20_000, 1_000, 2_000),
+    STANDARD("standard", R.string.settings_buffer_standard, 15_000, 50_000, 1_500, 3_000),
+    LARGE("large", R.string.settings_buffer_large, 30_000, 120_000, 2_500, 5_000);
 
     companion object {
         fun fromId(id: String?): BufferProfile = entries.firstOrNull { it.id == id } ?: STANDARD

@@ -33,6 +33,7 @@ import androidx.compose.ui.focus.focusRequester
 import androidx.compose.ui.focus.focusRestorer
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.layout.ContentScale
+import androidx.compose.ui.res.pluralStringResource
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
@@ -63,8 +64,8 @@ fun PersonDetailScreen(
     personName: String,
     onNavigateBack: () -> Unit,
     onNavigateToItemDetail: (String) -> Unit,
-    isCurrentDestination: Boolean = true,
     modifier: Modifier = Modifier,
+    isCurrentDestination: Boolean = true,
     viewModel: PersonDetailViewModel = koinViewModel(),
 ) {
     val state by viewModel.uiState.collectAsStateWithLifecycle()
@@ -196,7 +197,7 @@ fun PersonDetailScreen(
                                     val count = if (state.movies.isNotEmpty()) state.movies.size else person.movieCount
                                     Row {
                                         Text(text = stringResource(R.string.library_label_filmography), style = MaterialTheme.typography.bodyMedium, color = TextSecondary)
-                                        Text(text = stringResource(R.string.library_scenes_count, count), style = MaterialTheme.typography.bodyMedium, color = TextPrimary, fontWeight = FontWeight.SemiBold)
+                                        Text(text = pluralStringResource(R.plurals.library_scenes_count, count, count), style = MaterialTheme.typography.bodyMedium, color = TextPrimary, fontWeight = FontWeight.SemiBold)
                                     }
                                 }
 

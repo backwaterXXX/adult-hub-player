@@ -1,10 +1,13 @@
 package com.adulthub.tv.data.model
 
-enum class DurationFilter(val label: String, val minMinutes: Int?, val maxMinutes: Int?) {
-    ALL("All", null, null),
-    SHORT("<15m", 0, 15),
-    MEDIUM("15–40m", 15, 40),
-    LONG("40m+", 40, null);
+import androidx.annotation.StringRes
+import com.adulthub.tv.R
+
+enum class DurationFilter(@StringRes val labelRes: Int, val minMinutes: Int?, val maxMinutes: Int?) {
+    ALL(R.string.filter_all, null, null),
+    SHORT(R.string.duration_short, 0, 15),
+    MEDIUM(R.string.duration_medium, 15, 40),
+    LONG(R.string.duration_long, 40, null);
 
     fun matchesMinutes(minutes: Int?): Boolean {
         if (this == ALL) return true
@@ -24,9 +27,9 @@ enum class DurationFilter(val label: String, val minMinutes: Int?, val maxMinute
     }
 }
 
-enum class QualityFilter(val label: String) {
-    ALL("All"),
-    HD("HD only");
+enum class QualityFilter(@StringRes val labelRes: Int) {
+    ALL(R.string.filter_all),
+    HD(R.string.quality_hd_only);
 
     fun matches(item: TvItem): Boolean {
         if (this == ALL) return true
@@ -34,9 +37,9 @@ enum class QualityFilter(val label: String) {
     }
 }
 
-enum class ShuffleContextMode(val label: String) {
-    DEFAULT("Any Random"),
-    UNWATCHED("Unwatched Only"),
-    SAME_PERFORMER("Same Performer"),
-    SAME_CATEGORY("Same Category"),
+enum class ShuffleContextMode(@StringRes val labelRes: Int) {
+    DEFAULT(R.string.shuffle_any_random),
+    UNWATCHED(R.string.shuffle_unwatched),
+    SAME_PERFORMER(R.string.shuffle_same_performer_mode),
+    SAME_CATEGORY(R.string.shuffle_same_category_mode),
 }

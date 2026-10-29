@@ -87,7 +87,12 @@ fun MobileAppNavigation(modifier: Modifier = Modifier) {
     ) { padding ->
         MobileExitHandler(navController = nav)
         NavHost(navController = nav, startDestination = Screen.Splash.route, modifier = Modifier.padding(padding)) {
-            composable(Screen.Splash.route) { MobilePage("Adult Hub", "Connecting to your library…") }
+            composable(Screen.Splash.route) {
+                MobilePage(
+                    title = stringResource(R.string.app_name),
+                    subtitle = stringResource(R.string.mobile_splash_subtitle),
+                )
+            }
             composable(Screen.Server.route) { MobileServerScreen(auth) }
             composable(Screen.Login.route) { MobileLoginScreen(auth) { nav.popBackStack() } }
             composable(Screen.QuickConnect.route) { MobileQuickConnectScreen(auth) { nav.popBackStack() } }
@@ -133,7 +138,12 @@ fun MobileAppNavigation(modifier: Modifier = Modifier) {
             }
             composable(Screen.Player.route, arguments = listOf(navArgument("itemId") { type = NavType.StringType }, navArgument("resume") { type = NavType.StringType; nullable = true; defaultValue = null })) { back ->
                 AdultHubTvTheme {
-                    PlayerScreen(back.arguments?.getString("itemId").orEmpty(), back.arguments?.getString("resume")?.toBooleanStrictOrNull(), { nav.popBackStack() }, mobileControls = true)
+                    PlayerScreen(
+                        itemId = back.arguments?.getString("itemId").orEmpty(),
+                        onBack = { nav.popBackStack() },
+                        resume = back.arguments?.getString("resume")?.toBooleanStrictOrNull(),
+                        mobileControls = true,
+                    )
                 }
             }
         }
@@ -185,10 +195,10 @@ private fun MobileBottomBar(navController: NavHostController) {
 
     NavigationBar {
         listOf(
-            Screen.Home.route to ("Home" to Icons.Filled.Home),
-            Screen.Library.route to ("Library" to Icons.AutoMirrored.Filled.MenuBook),
-            Screen.Search.route to ("Search" to Icons.Filled.Search),
-            Screen.Settings.route to ("Settings" to Icons.Filled.Settings),
+            Screen.Home.route to (stringResource(R.string.nav_home) to Icons.Filled.Home),
+            Screen.Library.route to (stringResource(R.string.nav_library) to Icons.AutoMirrored.Filled.MenuBook),
+            Screen.Search.route to (stringResource(R.string.nav_search) to Icons.Filled.Search),
+            Screen.Settings.route to (stringResource(R.string.nav_settings) to Icons.Filled.Settings),
         ).forEach { (destination, pair) ->
             val selected = route == destination
             NavigationBarItem(

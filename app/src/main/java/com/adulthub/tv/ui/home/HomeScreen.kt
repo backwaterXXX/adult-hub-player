@@ -328,7 +328,7 @@ fun HomeScreen(
             if (state.categoryRowsLoading || state.categoryRowsErrorMessage != null) {
                 item(key = "home_categories_status") {
                     SectionRow(
-                        title = "Categories",
+                        title = stringResource(R.string.home_categories_title),
                         isLoading = state.categoryRowsLoading,
                         errorMessage = state.categoryRowsErrorMessage,
                         onRetry = viewModel::reloadCategoryRows,
@@ -355,7 +355,7 @@ private fun HomeTopBar(
         // Logo & Library Name
         Row(verticalAlignment = Alignment.CenterVertically) {
             Text(
-                text = "ADULT HUB",
+                text = stringResource(R.string.app_brand),
                 color = NeonPink,
                 fontSize = 24.sp,
                 fontWeight = FontWeight.Bold,

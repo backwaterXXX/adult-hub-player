@@ -50,11 +50,12 @@ fun LicensesDialog(
     modifier: Modifier = Modifier,
 ) {
     val context = LocalContext.current
-    val licenseText by produceState("Loading third-party licenses…", context) {
+    val unavailableText = stringResource(R.string.licenses_unavailable)
+    val licenseText by produceState(stringResource(R.string.licenses_loading), context) {
         value = withContext(Dispatchers.IO) {
             runCatching {
                 context.assets.open("NOTICE.txt").bufferedReader().use { it.readText() }
-            }.getOrDefault("Third-party licenses notice is unavailable.")
+            }.getOrDefault(unavailableText)
         }
     }
     val closeFocusRequester = remember { FocusRequester() }

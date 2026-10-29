@@ -1,7 +1,10 @@
 package com.adulthub.tv.ui.person
 
+import android.annotation.SuppressLint
+import android.content.Context
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
+import com.adulthub.tv.R
 import com.adulthub.tv.data.jellyfin.JellyfinClientManager
 import com.adulthub.tv.data.model.TvItem
 import com.adulthub.tv.data.model.TvPerson
@@ -28,9 +31,11 @@ sealed interface PersonDetailNavEvent {
     data object NavigateBack : PersonDetailNavEvent
 }
 
+@SuppressLint("StaticFieldLeak")
 class PersonDetailViewModel(
     private val personRepository: PersonRepository,
     private val clientManager: JellyfinClientManager,
+    private val context: Context,
 ) : ViewModel() {
 
     private val _uiState = MutableStateFlow(PersonDetailUiState())
@@ -63,7 +68,7 @@ class PersonDetailViewModel(
                     onFailure = { error ->
                         state.copy(
                             isLoading = false,
-                            errorMessage = error.localizedMessage ?: "Failed to load performer details",
+                            errorMessage = error.localizedMessage ?: context.getString(R.string.library_error_performer_details),
                         )
                     }
                 )
@@ -94,7 +99,7 @@ class PersonDetailViewModel(
                     // The profile loaded, so a filmography failure is reported next to
                     // the section it belongs to instead of replacing the whole screen.
                     state.copy(
-                        moviesErrorMessage = error.localizedMessage ?: "Failed to load the filmography",
+                        moviesErrorMessage = error.localizedMessage ?: context.getString(R.string.library_failed_to_load_filmography),
                     )
                 },
             )

@@ -1,8 +1,11 @@
 package com.adulthub.tv.ui.home
 
+import android.annotation.SuppressLint
+import android.content.Context
 import com.adulthub.tv.diagnostics.AppLog as Log
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
+import com.adulthub.tv.R
 import com.adulthub.tv.data.jellyfin.JellyfinClientManager
 import com.adulthub.tv.data.local.SettingsDataStore
 import com.adulthub.tv.data.local.TelegramProgressStore
@@ -73,6 +76,7 @@ sealed interface HomeNavEvent {
     data object NavigateToSettings : HomeNavEvent
 }
 
+@SuppressLint("StaticFieldLeak")
 class HomeViewModel(
     private val libraryRepository: LibraryRepository,
     private val personRepository: PersonRepository,
@@ -80,6 +84,7 @@ class HomeViewModel(
     private val clientManager: JellyfinClientManager,
     private val telegramProgressStore: TelegramProgressStore? = null,
     private val watchHistoryStore: WatchHistoryStore? = null,
+    private val context: Context,
 ) : ViewModel() {
 
     companion object {
@@ -192,7 +197,7 @@ class HomeViewModel(
                         if (filteredTelegram.isNotEmpty()) {
                             state.copy(resumeSection = SectionState(items = filteredTelegram, isLoading = false))
                         } else {
-                            state.copy(resumeSection = SectionState(errorMessage = err.localizedMessage ?: "Failed to load continue watching", isLoading = false))
+                            state.copy(resumeSection = SectionState(errorMessage = err.localizedMessage ?: context.getString(R.string.home_error_resume), isLoading = false))
                         }
                     }
                 )
@@ -224,7 +229,7 @@ class HomeViewModel(
                         state.copy(latestSection = SectionState(items = filtered, isLoading = false))
                     },
                     onFailure = { err ->
-                        state.copy(latestSection = SectionState(errorMessage = err.localizedMessage ?: "Failed to load recently added", isLoading = false))
+                        state.copy(latestSection = SectionState(errorMessage = err.localizedMessage ?: context.getString(R.string.home_error_latest), isLoading = false))
                     }
                 )
             }
@@ -244,7 +249,7 @@ class HomeViewModel(
                         state.copy(randomSection = SectionState(items = filtered, isLoading = false))
                     },
                     onFailure = { err ->
-                        state.copy(randomSection = SectionState(errorMessage = err.localizedMessage ?: "Failed to load random picks", isLoading = false))
+                        state.copy(randomSection = SectionState(errorMessage = err.localizedMessage ?: context.getString(R.string.home_error_random), isLoading = false))
                     }
                 )
             }
@@ -274,7 +279,7 @@ class HomeViewModel(
             _uiState.update {
                 it.copy(
                     categoryRowsLoading = false,
-                    categoryRowsErrorMessage = error.localizedMessage ?: "Failed to load categories",
+                    categoryRowsErrorMessage = error.localizedMessage ?: context.getString(R.string.home_error_categories),
                 )
             }
             return
@@ -327,7 +332,7 @@ class HomeViewModel(
                         state.copy(performersSection = SectionState(items = items, isLoading = false))
                     },
                     onFailure = { err ->
-                        state.copy(performersSection = SectionState(errorMessage = err.localizedMessage ?: "Failed to load performers", isLoading = false))
+                        state.copy(performersSection = SectionState(errorMessage = err.localizedMessage ?: context.getString(R.string.home_error_performers), isLoading = false))
                     }
                 )
             }

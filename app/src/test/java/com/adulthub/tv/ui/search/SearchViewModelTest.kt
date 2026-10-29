@@ -1,5 +1,6 @@
 package com.adulthub.tv.ui.search
 
+import android.content.Context
 import com.adulthub.tv.data.local.AccountKeyProvider
 import com.adulthub.tv.data.local.SearchHistoryStore
 import com.adulthub.tv.data.local.SettingsDataStore
@@ -38,6 +39,7 @@ class SearchViewModelTest {
     private val fakePersonRepository = FakeSearchPersonRepo()
     private val fakeChannelRepository = FakeSearchChannelRepo()
     private val settingsDataStore: SettingsDataStore = mockk(relaxed = true)
+    private val context: Context = mockk(relaxed = true)
 
     private val sampleMovie = TvItem(
         id = "movie-1",
@@ -66,6 +68,7 @@ class SearchViewModelTest {
             libraryRepository = fakeLibraryRepository,
             personRepository = fakePersonRepository,
             settingsDataStore = settingsDataStore,
+            context = context,
         )
 
         val state = viewModel.uiState.value
@@ -87,6 +90,7 @@ class SearchViewModelTest {
             libraryRepository = fakeLibraryRepository,
             personRepository = fakePersonRepository,
             settingsDataStore = settingsDataStore,
+            context = context,
         )
 
         viewModel.onQueryChanged("Action")
@@ -120,6 +124,7 @@ class SearchViewModelTest {
             libraryRepository = fakeLibraryRepository,
             personRepository = fakePersonRepository,
             settingsDataStore = settingsDataStore,
+            context = context,
         )
 
         viewModel.onQueryChanged("Action")
@@ -150,6 +155,7 @@ class SearchViewModelTest {
             libraryRepository = fakeLibraryRepository,
             personRepository = fakePersonRepository,
             settingsDataStore = settingsDataStore,
+            context = context,
         )
 
         viewModel.onQueryChanged("Action")
@@ -177,6 +183,7 @@ class SearchViewModelTest {
             personRepository = fakePersonRepository,
             settingsDataStore = settingsDataStore,
             channelRepository = fakeChannelRepository,
+            context = context,
         )
 
         viewModel.onQueryChanged("Action")
@@ -199,6 +206,7 @@ class SearchViewModelTest {
             personRepository = fakePersonRepository,
             settingsDataStore = settingsDataStore,
             searchHistoryStore = fakeSearchStore,
+            context = context,
         )
 
         viewModel.onQueryChanged("Action")
@@ -227,6 +235,7 @@ class SearchViewModelTest {
             personRepository = fakePersonRepository,
             settingsDataStore = settingsDataStore,
             channelRepository = fakeChannelRepository,
+            context = context,
         )
 
         viewModel.onQueryChanged("Action")
@@ -247,6 +256,7 @@ class SearchViewModelTest {
             libraryRepository = fakeLibraryRepository,
             personRepository = fakePersonRepository,
             settingsDataStore = settingsDataStore,
+            context = context,
         )
 
         viewModel.setLastSelectedKey("movie:123")

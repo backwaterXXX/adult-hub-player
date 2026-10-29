@@ -1,9 +1,12 @@
 package com.adulthub.tv.ui.player
 
+import android.annotation.SuppressLint
+import android.content.Context
 import android.os.SystemClock
 import com.adulthub.tv.diagnostics.AppLog as Log
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
+import com.adulthub.tv.R
 import com.adulthub.tv.data.local.AccountScope
 import com.adulthub.tv.data.local.SessionOwner
 import com.adulthub.tv.data.local.SettingsDataStore
@@ -41,6 +44,7 @@ sealed interface PlayerUiState {
     data class Error(val message: String) : PlayerUiState
 }
 
+@SuppressLint("StaticFieldLeak")
 class PlayerViewModel(
     private val libraryRepository: LibraryRepository,
     private val playbackRepository: PlaybackRepository,
@@ -51,6 +55,7 @@ class PlayerViewModel(
     internal val watchHistoryStore: WatchHistoryStore? = null,
     private val persistenceScope: CoroutineScope? = null,
     private val accountScope: AccountScope? = null,
+    private val context: Context,
 ) : ViewModel() {
 
     companion object {
@@ -140,7 +145,7 @@ class PlayerViewModel(
                 if (cachedVideo != null) {
                     item = TvItem(
                         id = cachedVideo.id,
-                        title = cachedVideo.title.ifBlank { "Channel Video" },
+                        title = cachedVideo.title.ifBlank { context.getString(R.string.player_channel_video) },
                         overview = cachedVideo.description,
                         runtimeTicks = (cachedVideo.duration * 10_000_000).toLong(),
                         genres = cachedVideo.categories,
@@ -153,7 +158,7 @@ class PlayerViewModel(
                     val provRef = if (itemId.startsWith("telegram:")) itemId.removePrefix("telegram:") else itemId
                     item = TvItem(
                         id = itemId,
-                        title = "Channel Video",
+                        title = context.getString(R.string.player_channel_video),
                         providerVideoId = provRef,
                     )
                 }
@@ -161,7 +166,7 @@ class PlayerViewModel(
 
             if (item == null) {
                 _uiState.value = PlayerUiState.Error(
-                    itemResult.exceptionOrNull()?.message ?: "Failed to load video details"
+                    itemResult.exceptionOrNull()?.message ?: context.getString(R.string.player_error_load_details)
                 )
                 return@launch
             }
@@ -174,7 +179,7 @@ class PlayerViewModel(
             val playbackInfo = playbackResult.getOrNull()
             if (playbackInfo == null) {
                 _uiState.value = PlayerUiState.Error(
-                    playbackResult.exceptionOrNull()?.message ?: "Failed to resolve video stream"
+                    playbackResult.exceptionOrNull()?.message ?: context.getString(R.string.player_error_resolve_stream)
                 )
                 return@launch
             }
@@ -295,7 +300,7 @@ class PlayerViewModel(
                 if (cached != null) {
                     randomItem = TvItem(
                         id = cached.id,
-                        title = cached.title.ifBlank { "Channel Video" },
+                        title = cached.title.ifBlank { context.getString(R.string.player_channel_video) },
                         overview = cached.description,
                         runtimeTicks = (cached.duration * 10_000_000).toLong(),
                         genres = cached.categories,
@@ -310,7 +315,7 @@ class PlayerViewModel(
             if (randomItem == null) {
                 if (playbackRequestId != playbackRequestCounter) return@launch
                 _isLoadingRandom.value = false
-                _uiState.value = PlayerUiState.Error("No random video available")
+                _uiState.value = PlayerUiState.Error(context.getString(R.string.player_error_no_random))
                 return@launch
             }
 
@@ -323,7 +328,7 @@ class PlayerViewModel(
             _isLoadingRandom.value = false
             if (playbackInfo == null) {
                 _uiState.value = PlayerUiState.Error(
-                    playbackResult.exceptionOrNull()?.message ?: "Failed to resolve stream for random video"
+                    playbackResult.exceptionOrNull()?.message ?: context.getString(R.string.player_error_random_resolve)
                 )
                 return@launch
             }
@@ -498,7 +503,7 @@ class PlayerViewModel(
                 qualityVariants = variantsFor(result)
                 _quality.value = when (result) {
                     is VideoVariantsResult.Failed -> PlayerQualityState(
-                        qualityUnavailableMessage = "Could not load available qualities",
+                        qualityUnavailableMessage = context.getString(R.string.player_error_quality_unavailable),
                     )
                     else -> PlayerQualityState(options = qualityOptionsFor(result, selectedVariantId))
                 }

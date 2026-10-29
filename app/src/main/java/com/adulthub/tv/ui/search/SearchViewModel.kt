@@ -1,7 +1,10 @@
 package com.adulthub.tv.ui.search
 
+import android.annotation.SuppressLint
+import android.content.Context
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
+import com.adulthub.tv.R
 import com.adulthub.tv.data.local.SearchHistoryStore
 import com.adulthub.tv.data.local.SettingsDataStore
 import com.adulthub.tv.data.model.TvItem
@@ -39,6 +42,7 @@ data class SearchUiState(
     val recentQueries: List<String> = emptyList(),
 )
 
+@SuppressLint("StaticFieldLeak")
 @OptIn(FlowPreview::class)
 class SearchViewModel(
     private val libraryRepository: LibraryRepository,
@@ -47,6 +51,7 @@ class SearchViewModel(
     private val channelRepository: ChannelRepository? = null,
     private val searchHistoryStore: SearchHistoryStore? = null,
     private val accountScope: com.adulthub.tv.data.local.AccountScope? = null,
+    private val context: Context,
 ) : ViewModel() {
 
     private val _query = MutableStateFlow("")
@@ -189,7 +194,7 @@ class SearchViewModel(
 
             val totalSections = 2 + if (channelRepository != null) 1 else 0
             val error = if (successfulSections == 0 && failures.size == totalSections) {
-                failures.firstOrNull()?.message ?: "Search failed. Please try again."
+                failures.firstOrNull()?.message ?: context.getString(R.string.library_search_failed_retry)
             } else null
 
             val resolverBaseUrl = try {

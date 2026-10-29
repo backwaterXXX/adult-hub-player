@@ -1,5 +1,6 @@
 package com.adulthub.tv.ui.home
 
+import android.content.Context
 import com.adulthub.tv.data.jellyfin.JellyfinClientManager
 import com.adulthub.tv.data.local.SettingsDataStore
 import com.adulthub.tv.data.model.TvItem
@@ -36,6 +37,7 @@ class HomeViewModelTest {
     private val fakePersonRepository = FakePersonRepository()
     private val settingsDataStore: SettingsDataStore = mockk(relaxed = true)
     private val clientManager: JellyfinClientManager = mockk(relaxed = true)
+    private val context: Context = mockk(relaxed = true)
 
     private val sampleItem = TvItem(
         id = "movie-1",
@@ -74,6 +76,7 @@ class HomeViewModelTest {
             personRepository = fakePersonRepository,
             settingsDataStore = settingsDataStore,
             clientManager = clientManager,
+            context = context,
         )
 
         advanceUntilIdle()
@@ -104,6 +107,7 @@ class HomeViewModelTest {
             personRepository = fakePersonRepository,
             settingsDataStore = settingsDataStore,
             clientManager = clientManager,
+            context = context,
         )
 
         advanceUntilIdle()
@@ -131,6 +135,7 @@ class HomeViewModelTest {
             personRepository = fakePersonRepository,
             settingsDataStore = settingsDataStore,
             clientManager = clientManager,
+            context = context,
         )
 
         advanceUntilIdle()
@@ -152,6 +157,7 @@ class HomeViewModelTest {
             personRepository = fakePersonRepository,
             settingsDataStore = settingsDataStore,
             clientManager = clientManager,
+            context = context,
         )
 
         advanceUntilIdle()
@@ -172,6 +178,7 @@ class HomeViewModelTest {
             personRepository = fakePersonRepository,
             settingsDataStore = settingsDataStore,
             clientManager = clientManager,
+            context = context,
         )
 
         advanceUntilIdle()
@@ -194,6 +201,7 @@ class HomeViewModelTest {
             personRepository = fakePersonRepository,
             settingsDataStore = settingsDataStore,
             clientManager = clientManager,
+            context = context,
         )
 
         val events = mutableListOf<HomeNavEvent>()
@@ -217,6 +225,7 @@ class HomeViewModelTest {
             personRepository = fakePersonRepository,
             settingsDataStore = settingsDataStore,
             clientManager = clientManager,
+            context = context,
         )
 
         val events = mutableListOf<HomeNavEvent>()
@@ -245,6 +254,7 @@ class HomeViewModelTest {
             personRepository = fakePersonRepository,
             settingsDataStore = settingsDataStore,
             clientManager = clientManager,
+            context = context,
         )
 
         val events = mutableListOf<HomeNavEvent>()

@@ -21,6 +21,7 @@ import androidx.compose.runtime.*
 import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.Alignment
+import androidx.compose.ui.res.pluralStringResource
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.input.KeyboardType
 import androidx.compose.ui.text.input.PasswordVisualTransformation
@@ -38,6 +39,7 @@ import com.adulthub.tv.data.jellyfin.JellyfinClientManager
 import com.adulthub.tv.data.resolver.resolveResolverUrl
 import com.adulthub.tv.ui.auth.AuthViewModel
 import com.adulthub.tv.ui.components.LocalNetworkPermission
+import com.adulthub.tv.ui.components.formattedDurationLabel
 import com.adulthub.tv.ui.home.HomeViewModel
 import com.adulthub.tv.ui.home.SectionState
 import com.adulthub.tv.ui.detail.ItemDetailViewModel
@@ -315,7 +317,7 @@ fun MobileLibraryScreen(vm: LibraryViewModel, initialCategoryId: String?, onItem
             ) {
                 LibraryTab.entries.forEach { option ->
                     TextButton(onClick = { tab = option; vm.selectTab(option) }) {
-                        Text(option.title, color = if (option == tab) NeonPink else MaterialTheme.colorScheme.onSurface)
+                        Text(stringResource(option.titleRes), color = if (option == tab) NeonPink else MaterialTheme.colorScheme.onSurface)
                     }
                 }
             }
@@ -329,7 +331,7 @@ fun MobileLibraryScreen(vm: LibraryViewModel, initialCategoryId: String?, onItem
                     TextButton(onClick = vm::onSurpriseMeClicked) { Text(stringResource(R.string.mobile_shuffle)) }
                 }
                 Row(Modifier.horizontalScroll(rememberScrollState()), horizontalArrangement = Arrangement.spacedBy(4.dp)) {
-                    DurationFilter.entries.forEach { filter -> FilterChip(selected = state.allState.durationFilter == filter, onClick = { vm.setDurationFilter(filter) }, label = { Text(filter.label) }) }
+                    DurationFilter.entries.forEach { filter -> FilterChip(selected = state.allState.durationFilter == filter, onClick = { vm.setDurationFilter(filter) }, label = { Text(stringResource(filter.labelRes)) }) }
                     Box {
                         TextButton(onClick = { sortMenu = true }) { Text(stringResource(R.string.mobile_sort)) }
                         DropdownMenu(expanded = sortMenu, onDismissRequest = { sortMenu = false }) {
@@ -385,7 +387,7 @@ fun MobileLibraryScreen(vm: LibraryViewModel, initialCategoryId: String?, onItem
                 } else {
                     LazyVerticalGrid(columns = GridCells.Adaptive(minSize = 142.dp), verticalArrangement = Arrangement.spacedBy(8.dp), horizontalArrangement = Arrangement.spacedBy(6.dp)) {
                         items(state.categoriesState.categories, key = { it.id }) { category ->
-                            MobileCatalogTile(category.name, stringResource(R.string.mobile_titles_count, category.movieCount)) { vm.selectCategory(category) }
+                            MobileCatalogTile(category.name, pluralStringResource(R.plurals.mobile_titles_count, category.movieCount, category.movieCount)) { vm.selectCategory(category) }
                         }
                     }
                 }
@@ -423,7 +425,7 @@ fun MobileLibraryScreen(vm: LibraryViewModel, initialCategoryId: String?, onItem
                 } else {
                     LazyVerticalGrid(columns = GridCells.Adaptive(minSize = 142.dp), verticalArrangement = Arrangement.spacedBy(8.dp), horizontalArrangement = Arrangement.spacedBy(6.dp)) {
                         items(state.studiosState.studios, key = { it.id }) { studio ->
-                            val subtitle = studio.movieCount?.let { stringResource(R.string.mobile_titles_count, it) }
+                            val subtitle = studio.movieCount?.let { pluralStringResource(R.plurals.mobile_titles_count, it, it) }
                             MobileCatalogTile(studio.name, subtitle) { vm.selectStudio(studio) }
                         }
                     }
@@ -454,8 +456,8 @@ fun MobileLibraryScreen(vm: LibraryViewModel, initialCategoryId: String?, onItem
                         }
                         Text(selected.title, style = MaterialTheme.typography.titleMedium)
                         LazyRow {
-                            items(ChannelSortMode.entries) { mode -> FilterChip(selected = state.channelsState.sortMode == mode, onClick = { vm.setChannelSortMode(mode) }, label = { Text(mode.label) }) }
-                            items(DurationFilter.entries) { filter -> FilterChip(selected = state.channelsState.durationFilter == filter, onClick = { vm.setChannelDurationFilter(filter) }, label = { Text(filter.label) }) }
+                            items(ChannelSortMode.entries) { mode -> FilterChip(selected = state.channelsState.sortMode == mode, onClick = { vm.setChannelSortMode(mode) }, label = { Text(stringResource(mode.labelRes)) }) }
+                            items(DurationFilter.entries) { filter -> FilterChip(selected = state.channelsState.durationFilter == filter, onClick = { vm.setChannelDurationFilter(filter) }, label = { Text(stringResource(filter.labelRes)) }) }
                         }
                         if (state.channelsState.isLoadingVideos) LinearProgressIndicator(Modifier.fillMaxWidth())
                         MobileError(state.channelsState.channelVideosError)
@@ -599,7 +601,8 @@ fun MobileItemDetailScreen(
             if (state.isLoading) LinearProgressIndicator(Modifier.fillMaxWidth())
             state.item?.let { media ->
                 AsyncImage(vm.getItemImageUrl(media), contentDescription = media.title, modifier = Modifier.fillMaxWidth().height(280.dp))
-                Text(listOfNotNull(media.year?.toString(), media.formattedDuration.takeIf(String::isNotBlank)).joinToString(" • "))
+                val durationText = formattedDurationLabel(media)
+                Text(listOfNotNull(media.year?.toString(), durationText.takeIf(String::isNotBlank)).joinToString(" • "))
                 Row(Modifier.horizontalScroll(rememberScrollState()), horizontalArrangement = Arrangement.spacedBy(8.dp)) {
                     Button(onClick = { onPlay(media.id, false) }) { Text(stringResource(R.string.mobile_play)) }
                     OutlinedButton(onClick = { onPlay(media.id, true) }) { Text(stringResource(R.string.mobile_resume)) }
@@ -609,7 +612,7 @@ fun MobileItemDetailScreen(
                 Text(media.overview.orEmpty())
                 Row(Modifier.horizontalScroll(rememberScrollState()), horizontalArrangement = Arrangement.spacedBy(6.dp)) {
                     com.adulthub.tv.data.model.ShuffleContextMode.entries.forEach { mode ->
-                        OutlinedButton(onClick = { vm.playRandomContextual(mode) }) { Text(mode.label) }
+                        OutlinedButton(onClick = { vm.playRandomContextual(mode) }) { Text(stringResource(mode.labelRes)) }
                     }
                 }
                 Text(stringResource(R.string.mobile_genres), style = MaterialTheme.typography.titleMedium)

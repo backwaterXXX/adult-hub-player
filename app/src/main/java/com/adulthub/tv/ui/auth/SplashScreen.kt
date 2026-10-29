@@ -36,7 +36,7 @@ fun SplashScreen(
             verticalArrangement = Arrangement.Center,
         ) {
             Text(
-                text = "ADULT HUB",
+                text = stringResource(R.string.app_brand),
                 color = NeonPink,
                 fontSize = 36.sp,
                 fontWeight = FontWeight.Bold,

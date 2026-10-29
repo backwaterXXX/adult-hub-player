@@ -2,15 +2,57 @@
 <resources>
 
     <!-- Shared library counters -->
-    <string name="library_movies_count">%1$d movies</string>
-    <string name="library_movies_count_plus">%1$d+ movies</string>
-    <string name="library_movies_of_total">%1$d of %2$d movies</string>
-    <string name="library_categories_count">%1$d categories</string>
-    <string name="library_studios_count">%1$d studios</string>
-    <string name="library_video_channels_count">%1$d video channels</string>
-    <string name="library_scenes_count">%1$d scenes</string>
+    <plurals name="library_movies_count">
+        <item quantity="one">%1$d movie</item>
+        <item quantity="other">%1$d movies</item>
+    </plurals>
+    <plurals name="library_movies_count_plus">
+        <item quantity="one">%1$d+ movie</item>
+        <item quantity="other">%1$d+ movies</item>
+    </plurals>
+    <plurals name="library_movies_of_total">
+        <item quantity="one">%1$d of %2$d movie</item>
+        <item quantity="other">%1$d of %2$d movies</item>
+    </plurals>
+    <plurals name="library_categories_count">
+        <item quantity="one">%1$d category</item>
+        <item quantity="other">%1$d categories</item>
+    </plurals>
+    <plurals name="library_studios_count">
+        <item quantity="one">%1$d studio</item>
+        <item quantity="other">%1$d studios</item>
+    </plurals>
+    <plurals name="library_video_channels_count">
+        <item quantity="one">%1$d video channel</item>
+        <item quantity="other">%1$d video channels</item>
+    </plurals>
+    <plurals name="library_scenes_count">
+        <item quantity="one">%1$d scene</item>
+        <item quantity="other">%1$d scenes</item>
+    </plurals>
     <string name="library_video_count">(%1$d)</string>
     <string name="library_video_count_plus">(%1$d+)</string>
+
+    <!-- Library tabs -->
+    <string name="library_tab_movies">Movies</string>
+    <string name="library_tab_categories">Categories</string>
+    <string name="library_tab_actors">Actors</string>
+    <string name="library_tab_studios">Studios</string>
+    <string name="library_tab_channels">Channels</string>
+
+    <!-- View model error fallbacks -->
+    <string name="library_error_categories">Failed to load categories</string>
+    <string name="library_error_category_movies">Failed to load category movies</string>
+    <string name="library_error_movies">Failed to load movies</string>
+    <string name="library_error_actors">Failed to load actors</string>
+    <string name="library_error_studios">Failed to load studios</string>
+    <string name="library_error_studio_movies">Failed to load studio movies</string>
+    <string name="library_error_channels">Failed to load channels</string>
+    <string name="library_error_channel_videos">Failed to load channel videos</string>
+    <string name="library_error_more_channel_videos">Failed to load more channel videos</string>
+    <string name="library_search_failed_retry">Search failed. Please try again.</string>
+    <string name="library_error_movie_details">Failed to load movie details</string>
+    <string name="library_error_performer_details">Failed to load performer details</string>
 
     <!-- Shared filters, loaders and actions -->
     <string name="library_filter_all">All</string>
@@ -76,7 +118,10 @@
     <string name="library_performer_name_hint">Performer name</string>
     <string name="library_photo_only">Photo only</string>
     <string name="library_letter_all">ALL</string>
-    <string name="library_showing_performers">Showing %1$d of %2$d performers</string>
+    <plurals name="library_showing_performers">
+        <item quantity="one">Showing %1$d of %2$d performer</item>
+        <item quantity="other">Showing %1$d of %2$d performers</item>
+    </plurals>
     <string name="library_loading_actors">Loading actors…</string>
     <string name="library_loading_more_actors">Loading more actors…</string>
     <string name="library_no_performers_matching_filter">No performers match the selected filter</string>

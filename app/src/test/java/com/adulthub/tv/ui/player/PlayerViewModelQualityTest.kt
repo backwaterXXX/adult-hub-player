@@ -1,5 +1,6 @@
 package com.adulthub.tv.ui.player
 
+import android.content.Context
 import com.adulthub.tv.data.local.SettingsDataStore
 import com.adulthub.tv.data.model.PlaybackInfo
 import com.adulthub.tv.data.model.TvItem
@@ -68,6 +69,7 @@ class PlayerViewModelQualityTest {
     private val fakePlaybackRepo = QualityFakePlaybackRepository()
     private val fakeLibraryRepo = QualityFakeLibraryRepository(telegramItem)
     private val settingsDataStore: SettingsDataStore = mockk(relaxed = true)
+    private val context: Context = mockk(relaxed = true)
 
     @Before
     fun setUp() {
@@ -84,6 +86,7 @@ class PlayerViewModelQualityTest {
         playbackRepository = fakePlaybackRepo,
         settingsDataStore = settingsDataStore,
         playbackReporter = PlaybackReporter(fakePlaybackRepo, CoroutineScope(testDispatcher)),
+        context = context,
     )
 
     @Test

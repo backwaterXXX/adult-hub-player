@@ -29,6 +29,7 @@ import androidx.compose.ui.graphics.Color
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.flow.distinctUntilChanged
 import androidx.compose.ui.graphics.graphicsLayer
+import androidx.compose.ui.res.pluralStringResource
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
@@ -138,14 +139,31 @@ fun StudiosTab(
                     )
                     val countText = if (state.totalCount > 0) {
                         if (state.hasMoreStudioMovies) {
-                            stringResource(R.string.library_movies_of_total, state.studioMovies.size, state.totalCount)
+                            pluralStringResource(
+                                R.plurals.library_movies_of_total,
+                                state.totalCount,
+                                state.studioMovies.size,
+                                state.totalCount,
+                            )
                         } else {
-                            stringResource(R.string.library_movies_count, state.studioMovies.size)
+                            pluralStringResource(
+                                R.plurals.library_movies_count,
+                                state.studioMovies.size,
+                                state.studioMovies.size,
+                            )
                         }
                     } else if (state.hasMoreStudioMovies) {
-                        stringResource(R.string.library_movies_count_plus, state.studioMovies.size)
+                        pluralStringResource(
+                            R.plurals.library_movies_count_plus,
+                            state.studioMovies.size,
+                            state.studioMovies.size,
+                        )
                     } else {
-                        stringResource(R.string.library_movies_count, state.studioMovies.size)
+                        pluralStringResource(
+                            R.plurals.library_movies_count,
+                            state.studioMovies.size,
+                            state.studioMovies.size,
+                        )
                     }
                     Text(
                         text = countText,
@@ -273,7 +291,11 @@ fun StudiosTab(
                 verticalAlignment = Alignment.CenterVertically,
             ) {
                 Text(
-                    text = stringResource(R.string.library_studios_count, state.studios.size),
+                    text = pluralStringResource(
+                        R.plurals.library_studios_count,
+                        state.studios.size,
+                        state.studios.size,
+                    ),
                     style = MaterialTheme.typography.bodyMedium,
                     color = TextSecondary,
                 )
@@ -384,7 +406,11 @@ private fun StudioCard(
             studio.movieCount?.takeIf { it > 0 }?.let { movieCount ->
                 Spacer(modifier = Modifier.height(4.dp))
                 Text(
-                    text = stringResource(R.string.library_movies_count, movieCount),
+                    text = pluralStringResource(
+                        R.plurals.library_movies_count,
+                        movieCount,
+                        movieCount,
+                    ),
                     style = MaterialTheme.typography.bodySmall,
                     color = TextSecondary,
                     fontSize = 12.sp,

@@ -25,8 +25,8 @@ import com.adulthub.tv.ui.theme.TextSecondary
 
 @Composable
 fun LoadingIndicator(
-    message: String = "",
     modifier: Modifier = Modifier,
+    message: String = "",
 ) {
     val transition = rememberInfiniteTransition(label = "loading_rotation")
     val rotation by transition.animateFloat(

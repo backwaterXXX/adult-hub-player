@@ -47,6 +47,7 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.res.pluralStringResource
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.text.font.FontWeight
@@ -221,7 +222,7 @@ fun SettingsScreen(
                         }
 
                         TvSecondaryButton(
-                            onClick = { viewModel.logout(context) },
+                            onClick = { viewModel.logout(cacheContext = context) },
                             modifier = Modifier.height(44.dp),
                         ) {
                             Text(stringResource(R.string.settings_sign_out), fontWeight = FontWeight.SemiBold)
@@ -382,7 +383,7 @@ fun SettingsScreen(
                                     verticalAlignment = Alignment.CenterVertically,
                                 ) {
                                     Column(Modifier.weight(1f)) {
-                                        Text(profile.label.substringBefore(" ("), color = TextPrimary, fontWeight = FontWeight.SemiBold)
+                                        Text(stringResource(profile.labelRes).substringBefore(" ("), color = TextPrimary, fontWeight = FontWeight.SemiBold)
                                         Text(
                                             text = stringResource(
                                                 R.string.settings_buffer_range,
@@ -403,7 +404,7 @@ fun SettingsScreen(
                             BufferProfile.entries.forEach { profile ->
                                 val isSelected = uiState.bufferProfile == profile
                                 TvChoiceChip(
-                                    label = profile.label,
+                                    label = stringResource(profile.labelRes),
                                     isSelected = isSelected,
                                     onClick = { viewModel.setBufferProfile(profile) },
                                     height = 38.dp,
@@ -474,10 +475,10 @@ fun SettingsScreen(
                             modifier = Modifier.fillMaxWidth(),
                         ) {
                             listOf(
-                                10 to stringResource(R.string.settings_seek_step_sec, 10),
+                                10 to pluralStringResource(R.plurals.settings_seek_step_sec, 10, 10),
                                 15 to stringResource(R.string.settings_seek_step_default),
-                                30 to stringResource(R.string.settings_seek_step_sec, 30),
-                                60 to stringResource(R.string.settings_seek_step_sec, 60),
+                                30 to pluralStringResource(R.plurals.settings_seek_step_sec, 30, 30),
+                                60 to pluralStringResource(R.plurals.settings_seek_step_sec, 60, 60),
                             ).forEach { (step, label) ->
                                 TvChoiceChip(
                                     label = label,

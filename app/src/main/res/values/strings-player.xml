@@ -6,7 +6,7 @@
 
     <!-- Player screen -->
     <string name="player_preparing">Preparing player…</string>
-    <string name="player_loading_stream">Loading stream...</string>
+    <string name="player_loading_stream">Loading stream…</string>
     <string name="player_changing_quality">Changing quality…</string>
     <string name="player_quality_switch_failure">Could not change quality. Keeping current stream.</string>
     <string name="player_stream_refresh_failure">The stream address could not be refreshed. Try again or leave the player.</string>
@@ -33,6 +33,24 @@
     <string name="player_error_title">Playback Error</string>
     <string name="player_retry">Retry</string>
     <string name="player_back">Back</string>
+    <string name="player_channel_video">Channel Video</string>
+    <string name="player_error_load_details">Failed to load video details</string>
+    <string name="player_error_resolve_stream">Failed to resolve video stream</string>
+    <string name="player_error_no_random">No random video available</string>
+    <string name="player_error_random_resolve">Failed to resolve stream for random video</string>
+    <string name="player_error_quality_unavailable">Could not load available qualities</string>
+    <string name="player_error_network">Network error. Please check your connection.</string>
+    <string name="player_error_server">Server error loading video stream.</string>
+    <string name="player_error_decoder">Audio/video decoder error. Hardware codec failed to decode this stream.</string>
+    <string name="player_error_audio_output">Audio output error on device.</string>
+    <string name="player_error_unknown">Unknown playback error occurred.</string>
+    <string name="player_error_diagnostic">%1$s\n\nStage: %2$s\nCode: %3$s</string>
+    <string name="player_stage_server_response">Server response</string>
+    <string name="player_stage_network">Network</string>
+    <string name="player_stage_media_format">Media format</string>
+    <string name="player_stage_video_decoder">Video decoder</string>
+    <string name="player_stage_audio_output">Audio output</string>
+    <string name="player_stage_playback">Playback</string>
 
     <!-- Technical stats overlay -->
     <string name="player_tech_stats_title">TECHNICAL STATS</string>
@@ -60,7 +78,10 @@
     <string name="player_tech_file_size">File Size</string>
     <string name="player_tech_value_ms">%1$d ms</string>
     <string name="player_tech_value_seconds">%1$ds</string>
-    <string name="player_tech_rebuffer_events">%1$d events / %2$ds</string>
+    <plurals name="player_tech_rebuffer_events">
+        <item quantity="one">%1$d event / %2$ds</item>
+        <item quantity="other">%1$d events / %2$ds</item>
+    </plurals>
 
     <!-- TV player overlay -->
     <string name="player_brand">Adult Hub</string>
@@ -73,8 +94,14 @@
     <string name="player_quality_original">Original</string>
 
     <!-- Control descriptions -->
-    <string name="player_cd_rewind">Rewind %1$d seconds</string>
-    <string name="player_cd_forward">Forward %1$d seconds</string>
+    <plurals name="player_cd_rewind">
+        <item quantity="one">Rewind %1$d second</item>
+        <item quantity="other">Rewind %1$d seconds</item>
+    </plurals>
+    <plurals name="player_cd_forward">
+        <item quantity="one">Forward %1$d second</item>
+        <item quantity="other">Forward %1$d seconds</item>
+    </plurals>
     <string name="player_cd_pause">Pause</string>
     <string name="player_cd_play">Play</string>
     <string name="player_cd_mute">Mute</string>
@@ -90,4 +117,35 @@
     <string name="player_cd_change_aspect_ratio">Change aspect ratio</string>
     <string name="player_cd_quality_changing">Changing quality</string>
     <string name="player_cd_quality">Quality: %1$s</string>
+    <string name="player_cd_seek_bar">Playback position</string>
+
+    <!-- Video matching status -->
+    <string name="phash_status_unavailable">Resolver status unavailable; try again later</string>
+    <string name="phash_sign_in_to_check">Sign in again to check video matching</string>
+    <string name="phash_sign_in_to_queue">Sign in to queue video matching</string>
+    <string name="phash_set_resolver_url">Set a Resolver URL to queue video matching</string>
+    <string name="phash_sending">Sending task to Resolver</string>
+    <string name="phash_rejected_task">Resolver rejected the video matching task</string>
+    <string name="phash_complete">Video matching complete</string>
+    <string name="phash_no_task_id">Resolver returned no task ID</string>
+    <string name="phash_jellyfin_rejected">Jellyfin authorization was rejected</string>
+    <string name="phash_earlier_task_failed">This video matching task failed earlier; retry it from Resolver tasks</string>
+    <string name="phash_rejected_http">Resolver rejected the task (HTTP %1$d)</string>
+    <string name="phash_unavailable_retry">Resolver unavailable; task will retry when opened again</string>
+    <string name="phash_unavailable_http_retry">Resolver unavailable (HTTP %1$d); task will retry when opened again</string>
+    <string name="phash_session_changed">The session changed; the task stays with its account</string>
+    <string name="phash_resolver_changed">The Resolver address changed; the task stays with its account</string>
+    <string name="phash_invalid_status">Resolver returned an invalid task status</string>
+    <string name="phash_unsupported_decoder">Resolver task uses an unsupported decoder profile</string>
+    <string name="phash_unsupported_state">Unsupported Resolver task state: %1$s</string>
+    <string name="phash_status_retrying">Resolver unavailable; retrying status check</string>
+    <string name="phash_jellyfin_rejected_again">Jellyfin authorization was rejected; sign in again</string>
+    <string name="phash_task_gone">Resolver task is no longer available</string>
+    <string name="phash_check_failed_http">Could not check Resolver task (HTTP %1$d)</string>
+    <string name="phash_queued">Video matching queued on Resolver</string>
+    <string name="phash_processing">Resolver is processing video matching</string>
+    <string name="phash_failed">Video matching failed</string>
+    <string name="phash_failed_with_code">Video matching failed (%1$s)</string>
+    <string name="phash_state">Resolver task state: %1$s</string>
+    <string name="phash_timeout">Video matching timed out</string>
 </resources>
