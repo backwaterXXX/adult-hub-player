@@ -481,6 +481,7 @@ class SettingsViewModel(
                     resolverConnectionStatus = context.getString(R.string.settings_connection_checking),
                 )
             }
+            val resolverUrl = settingsDataStore.getResolverBaseUrl()
             val (jellyfin, resolver) = coroutineScope {
                 val jellyfinCheck = async { libraryRepository.getLibraries() }
                 val resolverCheck = async { channelRepository?.getCategories() }
@@ -492,6 +493,10 @@ class SettingsViewModel(
                     jellyfinConnectionStatus = connectionMessage(jellyfin),
                     resolverConnectionStatus = when {
                         resolver == null -> context.getString(R.string.settings_not_configured)
+                        resolver.exceptionOrNull().isResolverNotServed() -> context.getString(
+                            R.string.settings_resolver_not_served,
+                            resolverUrl,
+                        )
                         else -> connectionMessage(resolver)
                     },
                 )
@@ -697,6 +702,14 @@ class SettingsViewModel(
         }
         false
     }
+
+    /**
+     * A 404 or 405 from the Resolver endpoint means the address answers but does
+     * not serve the Resolver, which is the LAN Jellyfin fallback case. Other
+     * failures stay generic, so a timeout is not reported as a wrong address.
+     */
+    private fun Throwable?.isResolverNotServed(): Boolean =
+        this is retrofit2.HttpException && code() in setOf(404, 405)
 
     private fun <T> connectionMessage(result: Result<T>): String = result.fold(
         onSuccess = { context.getString(R.string.settings_connection_connected) },

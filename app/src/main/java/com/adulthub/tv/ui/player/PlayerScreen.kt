@@ -64,6 +64,7 @@ import kotlin.math.abs
 import com.adulthub.tv.diagnostics.AppLog as Log
 import org.koin.androidx.compose.koinViewModel
 import org.koin.compose.koinInject
+import org.koin.core.qualifier.named
 
 @OptIn(UnstableApi::class)
 @Composable
@@ -107,10 +108,13 @@ fun PlayerScreen(
     val isLoadingRandom by viewModel.isLoadingRandom.collectAsStateWithLifecycle()
 
     val settingsDataStore: com.adulthub.tv.data.local.SettingsDataStore = koinInject()
+    val playbackHttpClient: okhttp3.OkHttpClient = koinInject(
+        qualifier = named(com.adulthub.tv.di.PLAYBACK_HTTP_CLIENT),
+    )
     val playerViewHolder = remember { mutableStateOf<PlayerView?>(null) }
     val playerManagerState by produceState<PlayerManager?>(null, context, settingsDataStore) {
         val bufferProfile = settingsDataStore.bufferProfile.first()
-        val manager = PlayerManager(context, coroutineScope, bufferProfile)
+        val manager = PlayerManager(context, coroutineScope, bufferProfile, playbackHttpClient)
         // The view is detached before the player is released.
         manager.onBeforeRelease = { playerViewHolder.value?.player = null }
         value = manager

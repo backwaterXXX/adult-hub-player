@@ -153,6 +153,7 @@
     <string name="settings_connection_checking">Checking…</string>
     <string name="settings_connection_connected">Connected</string>
     <string name="settings_connection_unavailable">Unavailable: %1$s</string>
+    <string name="settings_resolver_not_served">No Resolver at %1$s. If the Resolver runs on another address, set it below.</string>
     <string name="settings_error_request_failed">Request failed</string>
     <string name="settings_resolver_using_server">Using Jellyfin server URL</string>
     <string name="settings_resolver_updated">Resolver URL updated</string>

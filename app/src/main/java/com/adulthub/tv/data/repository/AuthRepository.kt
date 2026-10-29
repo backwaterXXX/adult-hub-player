@@ -12,10 +12,12 @@ import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.map
 import kotlinx.coroutines.withContext
+import kotlinx.coroutines.withTimeoutOrNull
 import com.adulthub.tv.diagnostics.AppLog as Log
 import org.jellyfin.sdk.api.client.extensions.authenticateUserByName
 import org.jellyfin.sdk.api.client.extensions.authenticateWithQuickConnect
 import org.jellyfin.sdk.api.client.extensions.quickConnectApi
+import org.jellyfin.sdk.api.client.extensions.sessionApi
 import org.jellyfin.sdk.api.client.extensions.systemApi
 import org.jellyfin.sdk.api.client.extensions.userApi
 
@@ -25,6 +27,7 @@ data class QuickConnectInitResult(
 )
 
 private const val TAG = "AuthRepository"
+private const val SERVER_SIGN_OUT_TIMEOUT_MS = 3_000L
 
 open class AuthRepository(
     private val clientManager: JellyfinClientManager,
@@ -32,6 +35,9 @@ open class AuthRepository(
     private val settingsDataStore: SettingsDataStore,
 ) {
     open val authState: Flow<AuthState> = authDataStore.authState
+
+    /** Jellyfin tokens that the server rejected while they were the active session. */
+    open val sessionRejections: Flow<String> = clientManager.sessionRejections
 
     suspend fun discoverServer(serverUrl: String): Result<ServerInfo> = withContext(Dispatchers.IO) {
         try {
@@ -223,11 +229,29 @@ open class AuthRepository(
     /**
      * Signs the account out.
      *
-     * The stored session is cleared first. When that write fails the session
-     * stays valid, so the client keeps its token and the caller is told that
-     * the sign-out did not happen. The failure is never an unhandled exception.
+     * The token is revoked on the server with a bounded wait, so a slow or
+     * unreachable server cannot block the sign-out. The stored session is cleared
+     * afterwards; when that write fails the session stays valid, so the client
+     * keeps its token and the caller is told that the sign-out did not happen.
+     * The failure is never an unhandled exception.
      */
     open suspend fun logout(): Result<Unit> = withContext(Dispatchers.IO) {
+        val session = currentSessionForSignOut()
+        if (session != null) {
+            try {
+                val api = clientManager.createApi(
+                    baseUrl = session.serverUrl,
+                    accessToken = session.accessToken,
+                )
+                withTimeoutOrNull(SERVER_SIGN_OUT_TIMEOUT_MS) {
+                    api.sessionApi.reportSessionEnded()
+                }
+            } catch (cancelled: CancellationException) {
+                throw cancelled
+            } catch (error: Exception) {
+                Log.w(TAG, "Server-side sign-out failed (${error.javaClass.simpleName})")
+            }
+        }
         try {
             authDataStore.clearSession()
         } catch (cancelled: CancellationException) {
@@ -238,5 +262,37 @@ open class AuthRepository(
         }
         clientManager.clearSession()
         Result.success(Unit)
+    }
+
+    /**
+     * Clears the stored session after the server rejected [rejectedAccessToken].
+     *
+     * The token comparison keeps a late 401 from an earlier session from signing
+     * out the session that replaced it. Returns the session that was cleared, or
+     * null when the rejection does not belong to the stored session.
+     */
+    open suspend fun handleRejectedSession(rejectedAccessToken: String): AuthState.Authenticated? =
+        withContext(Dispatchers.IO) {
+            val session = currentSessionForSignOut() ?: return@withContext null
+            if (session.accessToken != rejectedAccessToken) return@withContext null
+            try {
+                authDataStore.clearSession()
+            } catch (cancelled: CancellationException) {
+                throw cancelled
+            } catch (error: Exception) {
+                Log.w(TAG, "The rejected session could not be cleared")
+                return@withContext null
+            }
+            clientManager.clearSession()
+            session
+        }
+
+    private suspend fun currentSessionForSignOut(): AuthState.Authenticated? = try {
+        authDataStore.getAuthState() as? AuthState.Authenticated
+    } catch (cancelled: CancellationException) {
+        throw cancelled
+    } catch (error: Exception) {
+        Log.w(TAG, "The stored session could not be read (${error.javaClass.simpleName})")
+        null
     }
 }

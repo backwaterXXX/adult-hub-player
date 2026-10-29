@@ -12,6 +12,7 @@ import kotlinx.coroutines.runInterruptible
 import kotlinx.serialization.Serializable
 import kotlinx.serialization.json.Json
 import kotlinx.serialization.encodeToString
+import okhttp3.Interceptor
 import okhttp3.OkHttpClient
 import okhttp3.Request
 import java.io.File
@@ -50,13 +51,17 @@ sealed interface UpdateCheckResult {
 class AppUpdateRepository(
     private val context: Context,
     private val settingsDataStore: SettingsDataStore,
-    private val client: OkHttpClient = OkHttpClient.Builder()
+    client: OkHttpClient = OkHttpClient.Builder()
         .connectTimeout(12, TimeUnit.SECONDS)
         .readTimeout(60, TimeUnit.SECONDS)
         .followRedirects(false)
         .followSslRedirects(false)
         .build(),
+    cleartextInterceptor: Interceptor? = null,
 ) {
+    private val httpClient = client.newBuilder()
+        .apply { cleartextInterceptor?.let(::addNetworkInterceptor) }
+        .build()
     private val json = Json { ignoreUnknownKeys = true }
 
     suspend fun checkAndDownload(onProgress: (Long, Long) -> Unit = { _, _ -> }): UpdateCheckResult {
@@ -239,7 +244,7 @@ class AppUpdateRepository(
                 .header("Accept", accept)
                 .header("X-GitHub-Api-Version", GITHUB_API_VERSION)
                 .header("User-Agent", "AdultHubTV/${BuildConfig.VERSION_NAME}")
-            val response = runInterruptible(Dispatchers.IO) { client.newCall(builder.build()).execute() }
+            val response = runInterruptible(Dispatchers.IO) { httpClient.newCall(builder.build()).execute() }
             if (response.code !in REDIRECT_CODES) return response
             val location = response.header("Location")
             response.close()

@@ -33,7 +33,12 @@ class AdultHubTvApp : Application(), ImageLoaderFactory {
 
     override fun onCreate() {
         super.onCreate()
-        System.setProperty("kotlin-logging-to-android-native", "true")
+        // Release builds keep the SDK on the no-op SLF4J provider: its INFO requests
+        // carry the QuickConnect secret in the query string, so they must not reach
+        // logcat. Debug builds keep the Android logger for diagnostics.
+        if (BuildConfig.DEBUG) {
+            System.setProperty("kotlin-logging-to-android-native", "true")
+        }
 
         startKoin {
             androidContext(this@AdultHubTvApp)
@@ -75,7 +80,9 @@ class AdultHubTvApp : Application(), ImageLoaderFactory {
     override fun newImageLoader(): ImageLoader {
         val cacheLimitMb = imageCacheLimitMb.get()
         val clientManager = GlobalContext.get().get<JellyfinClientManager>()
+        val cleartextInterceptor = GlobalContext.get().get<com.adulthub.tv.data.network.CleartextOriginInterceptor>()
         val imageHttpClient = OkHttpClient.Builder()
+            .addNetworkInterceptor(cleartextInterceptor)
             .addNetworkInterceptor { chain ->
                 val request = chain.request()
                 val urlString = request.url.toString()

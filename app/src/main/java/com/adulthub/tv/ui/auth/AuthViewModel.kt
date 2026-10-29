@@ -105,6 +105,34 @@ class AuthViewModel(
     init {
         checkSession()
         startServerDiscovery()
+        observeRejectedSessions()
+    }
+
+    /**
+     * A Jellyfin 401 on the active token ends the session. Resolver and media
+     * failures never reach this path, because only the Jellyfin client reports them.
+     */
+    private fun observeRejectedSessions() {
+        viewModelScope.launch {
+            authRepository.sessionRejections.collect { rejectedToken ->
+                val rejectedSession = authRepository.handleRejectedSession(rejectedToken) ?: return@collect
+                _serverState.update {
+                    it.copy(
+                        serverUrl = rejectedSession.serverUrl,
+                        sessionRestoreFailed = false,
+                        errorMessage = context.getString(R.string.auth_session_rejected),
+                    )
+                }
+                _loginState.update {
+                    it.copy(
+                        serverUrl = rejectedSession.serverUrl,
+                        username = rejectedSession.username,
+                        errorMessage = null,
+                    )
+                }
+                _navEvents.send(AuthNavEvent.NavigateToServer)
+            }
+        }
     }
 
     fun checkSession() {

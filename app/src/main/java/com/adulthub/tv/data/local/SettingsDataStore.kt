@@ -399,7 +399,16 @@ open class SettingsDataStore(
         return serviceUrl
     }
 
-    fun requireAllowedImageUrl(url: String): ServiceUrl {
+    fun requireAllowedImageUrl(url: String): ServiceUrl = requireAllowedNetworkUrl(url)
+
+    /**
+     * Synchronous form of [requireAllowedServiceUrl] for network interceptors.
+     *
+     * Interceptors run on their own threads and cannot wait for the suspending
+     * data flow, so this reads the consent snapshot that startup and every
+     * consent change keep in sync.
+     */
+    fun requireAllowedNetworkUrl(url: String): ServiceUrl {
         val serviceUrl = when (val validation = ServiceUrlPolicy.inspect(url, allowQuery = true)) {
             is ServiceUrlValidation.Valid -> validation.value
             is ServiceUrlValidation.Invalid -> throw IllegalArgumentException(validation.reason)

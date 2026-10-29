@@ -95,6 +95,7 @@ class PreferenceWriteFailureTest {
         every { authDataStore.authState } returns kotlinx.coroutines.flow.flowOf(
             com.adulthub.tv.data.model.AuthState.NotAuthenticated,
         )
+        coEvery { authDataStore.getAuthState() } returns com.adulthub.tv.data.model.AuthState.NotAuthenticated
         coEvery { authDataStore.clearSession() } throws PreferenceWriteException(
             "The preference could not be stored",
             IOException("disk full"),
@@ -117,6 +118,7 @@ class PreferenceWriteFailureTest {
         every { authDataStore.authState } returns kotlinx.coroutines.flow.flowOf(
             com.adulthub.tv.data.model.AuthState.NotAuthenticated,
         )
+        coEvery { authDataStore.getAuthState() } returns com.adulthub.tv.data.model.AuthState.NotAuthenticated
         coEvery { authDataStore.clearSession() } throws IOException("disk full")
         val repository = AuthRepository(clientManager, authDataStore, settingsDataStore)
 

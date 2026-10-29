@@ -59,6 +59,7 @@
     <!-- Authentication errors -->
     <string name="auth_error_restore_settings">Could not restore saved settings: %1$s</string>
     <string name="auth_saved_server_unavailable">Saved server unavailable. Please reconnect.</string>
+    <string name="auth_session_rejected">The Jellyfin server no longer accepts this session. Sign in again.</string>
     <string name="auth_error_server_empty">Server address cannot be empty</string>
     <string name="auth_error_save_http_consent">Could not save HTTP consent: %1$s</string>
     <string name="auth_error_connect">Could not connect to server: %1$s</string>

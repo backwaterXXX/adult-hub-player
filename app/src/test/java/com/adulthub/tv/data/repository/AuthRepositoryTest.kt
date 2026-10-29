@@ -104,8 +104,65 @@ class AuthRepositoryTest {
 
     @Test
     fun `logout clears the stored session and the active Jellyfin client`() = runTest {
+        coEvery { authDataStore.getAuthState() } returns AuthState.NotAuthenticated
+
         repository.logout()
 
+        coVerify(exactly = 1) { authDataStore.clearSession() }
+        coVerify(exactly = 1) { clientManager.clearSession() }
+    }
+
+    @Test
+    fun `logout revokes the token on the server before the local session is cleared`() = runTest {
+        val session = AuthState.Authenticated(
+            serverUrl = "https://jf.example.com",
+            userId = "user-1",
+            accessToken = "token-1",
+            username = "user",
+            serverName = "jf.example.com",
+        )
+        coEvery { authDataStore.getAuthState() } returns session
+        every { clientManager.createApi(session.serverUrl, session.accessToken) } returns mockApi
+
+        val result = repository.logout()
+
+        assertTrue(result.isSuccess)
+        coVerify(exactly = 1) { clientManager.createApi(session.serverUrl, session.accessToken) }
+        coVerify(exactly = 1) { authDataStore.clearSession() }
+        coVerify(exactly = 1) { clientManager.clearSession() }
+    }
+
+    @Test
+    fun `a rejected token does not clear a session that replaced it`() = runTest {
+        coEvery { authDataStore.getAuthState() } returns AuthState.Authenticated(
+            serverUrl = "https://jf.example.com",
+            userId = "user-1",
+            accessToken = "current-token",
+            username = "user",
+            serverName = "jf.example.com",
+        )
+
+        val cleared = repository.handleRejectedSession("older-token")
+
+        assertEquals(null, cleared)
+        coVerify(exactly = 0) { authDataStore.clearSession() }
+        coVerify(exactly = 0) { clientManager.clearSession() }
+    }
+
+    @Test
+    fun `a rejected active token clears the matching session`() = runTest {
+        val session = AuthState.Authenticated(
+            serverUrl = "https://jf.example.com",
+            userId = "user-1",
+            accessToken = "current-token",
+            username = "user",
+            serverName = "jf.example.com",
+        )
+        coEvery { authDataStore.getAuthState() } returns session
+
+        val cleared = repository.handleRejectedSession("current-token")
+
+        assertEquals(session, cleared)
         coVerify(exactly = 1) { authDataStore.clearSession() }
         coVerify(exactly = 1) { clientManager.clearSession() }
     }

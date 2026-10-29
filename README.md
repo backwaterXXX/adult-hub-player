@@ -78,6 +78,9 @@ adb connect <your-tv-ip>:5555
 adb install -r AdultHubTV-vX.apk
 ```
 
+### Updating from a release before 0.1.70
+The release signing key changed on 2026-10-20. An installation signed with the old key cannot be updated in place, because Android rejects an update whose certificate differs from the installed app. Back up anything you need, uninstall the old app, and install the current APK. Uninstalling removes the app's local data, including the saved server session and watch history. The in-app updater detects such an installation before it downloads anything and shows the same instruction.
+
 ---
 
 ## 🛠️ Quick Start & Setup
@@ -184,7 +187,7 @@ The GitHub Actions release workflow reads these repository Actions secrets and v
 
 The workflow reads the fingerprint only from the repository variable, requires it to match `signing/release-cert.sha256`, and checks both APK signatures before publishing. Remove any legacy secret named `ANDROID_SIGNING_CERT_SHA256` to avoid confusion. Changing the four signing secrets alone cannot silently change the published signing identity.
 
-After the deliberate signing reset on 2026-10-20, existing installations signed with an older key require a one-time uninstall and installation of the new release APK. Uninstalling removes local app data. Both TV and mobile use the new key. Subsequent updates must retain that key, their application IDs, and increasing version codes. The old signing files are archived locally under `docs/bak/`; private GitHub setup values are under `docs/signing-current/`. These directories are ignored by Git and must be backed up securely outside this checkout.
+After the deliberate signing reset on 2026-10-20, existing installations signed with an older key require a one-time uninstall and installation of the new release APK. Uninstalling removes local app data. Both TV and mobile use the new key. Subsequent updates must retain that key, their application IDs, and increasing version codes. The signing material is not part of this repository: keep `release.jks`, `keystore.properties` and the current GitHub Actions values in the secure signing backup outside this checkout.
 
 The app ships the pinned certificate digest as `app/src/main/assets/release_cert.sha256`. An installation that still carries the old certificate detects this before an update download starts and shows a message that asks for a fresh install, instead of failing later with a certificate error. The CI refuses to publish when the asset and `signing/release-cert.sha256` disagree.
 

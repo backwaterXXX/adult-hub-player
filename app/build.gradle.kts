@@ -103,6 +103,8 @@ android {
 
     testOptions {
         unitTests {
+            // Unit tests exercise production code that calls android.util.Log through AppLog;
+            // without defaults the android.jar stub throws "not mocked".
             isReturnDefaultValues = true
         }
     }
@@ -163,8 +165,10 @@ dependencies {
     implementation(libs.retrofit.converter.kotlinx.serialization)
     implementation(libs.okhttp)
 
-    // SLF4J Android logging binding for Jellyfin SDK
-    implementation(libs.slf4j.android)
+    // A no-op SLF4J 2 provider: release builds must not log SDK request URLs
+    // (the QuickConnect secret is part of the URL), debug builds use the Android
+    // logger through the kotlin-logging property.
+    implementation(libs.slf4j.nop)
 
     debugImplementation("androidx.compose.ui:ui-tooling")
     debugImplementation(libs.androidx.compose.ui.test.manifest)

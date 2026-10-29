@@ -76,7 +76,10 @@ class PlayerManager(
     private val context: Context,
     private val coroutineScope: CoroutineScope,
     private val bufferProfile: BufferProfile = BufferProfile.STANDARD,
+    sharedHttpClient: OkHttpClient? = null,
 ) {
+    // A manager without an injected client owns it and releases its threads.
+    private val ownsHttpClient = sharedHttpClient == null
     val exoPlayer: ExoPlayer
     private var mediaSession: MediaSession? = null
     private var positionPollJob: Job? = null
@@ -89,7 +92,7 @@ class PlayerManager(
     private var qualitySwitchTimeoutJob: Job? = null
     private var released = false
     private val httpClientLazy = lazy {
-        OkHttpClient.Builder()
+        sharedHttpClient ?: OkHttpClient.Builder()
             .connectTimeout(15, java.util.concurrent.TimeUnit.SECONDS)
             // A proxy or transcode stream can hold the socket quiet while the resolver
             // pulls the file from Telegram; a short read timeout turns that stall into a
@@ -777,10 +780,11 @@ class PlayerManager(
         }
         mediaSession = null
         exoPlayer.release()
-        // The client owns its dispatcher and connection pool, and a screen is entered and
-        // left many times per session; without this each visit keeps threads and idle
-        // connections alive until the process dies.
-        if (httpClientLazy.isInitialized()) {
+        // A client that this manager created owns its dispatcher and connection pool, and
+        // a screen is entered and left many times per session; without this each visit
+        // keeps threads and idle connections alive until the process dies. A shared
+        // client belongs to the application scope and must stay usable.
+        if (ownsHttpClient && httpClientLazy.isInitialized()) {
             val client = httpClientLazy.value
             client.dispatcher.executorService.shutdown()
             client.connectionPool.evictAll()

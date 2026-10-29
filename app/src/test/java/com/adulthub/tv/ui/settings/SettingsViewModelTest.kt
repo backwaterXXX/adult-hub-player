@@ -16,6 +16,8 @@ import com.adulthub.tv.data.model.TvChannel
 import com.adulthub.tv.data.resolver.ResolverApi
 import io.mockk.every
 import io.mockk.mockk
+import okhttp3.MediaType.Companion.toMediaType
+import okhttp3.ResponseBody.Companion.toResponseBody
 import kotlinx.coroutines.CompletableDeferred
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.ExperimentalCoroutinesApi
@@ -290,6 +292,32 @@ class SettingsViewModelTest {
         assertTrue(viewModel.uiState.value.resolverConnectionStatus.contains("Resolver timeout"))
         assertEquals(false, viewModel.uiState.value.isCheckingConnections)
     }
+    @Test
+    fun `connection check reports an address that does not serve the Resolver`() = runTest(testDispatcher) {
+        every { context.getString(R.string.settings_resolver_not_served, any()) } returns
+            "No Resolver at this address"
+        val notFound = retrofit2.Response.error<Any>(
+            404,
+            "not found".toResponseBody("text/plain".toMediaType()),
+        )
+        val resolverRepository = FakeSettingsChannelRepo().apply {
+            categoriesResult = Result.failure(retrofit2.HttpException(notFound))
+        }
+        val viewModel = SettingsViewModel(
+            authRepository = fakeAuthRepo,
+            libraryRepository = fakeLibraryRepo,
+            settingsDataStore = fakeDataStore,
+            channelRepository = resolverRepository,
+            context = context,
+        )
+        advanceUntilIdle()
+
+        viewModel.checkConnections()
+        advanceUntilIdle()
+
+        assertEquals("No Resolver at this address", viewModel.uiState.value.resolverConnectionStatus)
+    }
+
     @Test
     fun `setBufferProfile updates setting and status message`() = runTest(testDispatcher) {
         val viewModel = SettingsViewModel(

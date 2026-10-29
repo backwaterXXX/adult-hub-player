@@ -19,27 +19,39 @@ private const val TAG = "PlaybackReporter"
 private const val REPORTING_INTERVAL_MS = 10_000L
 private const val PROGRESS_COALESCE_MS = 500L
 
+// Periods add one progress command at a time; the cap only has to absorb a slow server.
+private const val MAX_QUEUED_PROGRESS = 8
+
 class PlaybackReporter(
     private val playbackRepository: PlaybackRepository,
     private val coroutineScope: CoroutineScope,
 ) {
     private var reportingJob: Job? = null
     private val sessionCounter = AtomicLong(0)
-    private val commands = Channel<ReportCommand>(Channel.UNLIMITED)
+    private val commandLock = Any()
+    private val queuedCommands = ArrayDeque<ReportCommand>()
+    private val commandSignal = Channel<Unit>(Channel.CONFLATED)
     private val pendingProgressLock = Any()
     private var pendingProgress: ReportCommand.Progress? = null
     private var pendingProgressJob: Job? = null
 
     init {
         coroutineScope.launch {
-            for (command in commands) {
-                try {
-                    process(command)
-                } catch (e: CancellationException) {
-                    throw e
-                } catch (e: Exception) {
-                    Log.w(TAG, "Playback report command failed (${e.javaClass.simpleName})")
-                }
+            for (unit in commandSignal) {
+                drainCommands()
+            }
+        }
+    }
+
+    private suspend fun drainCommands() {
+        while (true) {
+            val command = synchronized(commandLock) { queuedCommands.removeFirstOrNull() } ?: return
+            try {
+                process(command)
+            } catch (e: CancellationException) {
+                throw e
+            } catch (e: Exception) {
+                Log.w(TAG, "Playback report command failed (${e.javaClass.simpleName})")
             }
         }
     }
@@ -171,8 +183,22 @@ class PlaybackReporter(
     }
 
     private fun enqueue(command: ReportCommand) {
-        val result = commands.trySend(command)
-        if (result.isFailure) {
+        synchronized(commandLock) {
+            if (command is ReportCommand.Progress) {
+                // A newer position replaces a queued progress report of the same session.
+                // Start and Stop keep their place, so the server still sees the session
+                // begin and end in order.
+                val last = queuedCommands.lastOrNull()
+                if (last is ReportCommand.Progress && last.session === command.session) {
+                    queuedCommands.removeLast()
+                } else if (queuedCommands.count { it is ReportCommand.Progress } >= MAX_QUEUED_PROGRESS) {
+                    val oldestProgress = queuedCommands.indexOfFirst { it is ReportCommand.Progress }
+                    if (oldestProgress >= 0) queuedCommands.removeAt(oldestProgress)
+                }
+            }
+            queuedCommands.addLast(command)
+        }
+        if (commandSignal.trySend(Unit).isFailure) {
             Log.w(TAG, "Playback report queue unavailable")
         }
     }
