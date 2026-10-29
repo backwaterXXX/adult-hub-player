@@ -10,7 +10,12 @@ import io.mockk.coVerify
 import io.mockk.coVerifyOrder
 import io.mockk.every
 import io.mockk.mockk
+import kotlinx.coroutines.CompletableDeferred
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.async
 import kotlinx.coroutines.test.runTest
+import kotlinx.coroutines.withContext
+import kotlinx.coroutines.withTimeoutOrNull
 import org.jellyfin.sdk.api.client.ApiClient
 import org.jellyfin.sdk.api.client.Response
 import org.jellyfin.sdk.api.operations.UserApi
@@ -18,9 +23,11 @@ import org.jellyfin.sdk.api.client.extensions.userApi
 import org.jellyfin.sdk.model.api.AuthenticationResult
 import org.jellyfin.sdk.model.api.UserDto
 import org.junit.Assert.assertEquals
+import org.junit.Assert.assertNull
 import org.junit.Assert.assertTrue
 import org.junit.Test
 import java.util.UUID
+import java.util.concurrent.atomic.AtomicReference
 import com.adulthub.tv.data.network.ServiceUrlPolicy
 import com.adulthub.tv.data.network.ServiceUrlValidation
 
@@ -230,6 +237,97 @@ class AuthRepositoryTest {
         val cleared = repository.handleRejectedSession("current-token")
 
         assertEquals(null, cleared)
+    }
+
+    @Test
+    fun `a stale rejection waits for a login that is being saved`() = runTest {
+        val serverUrl = "http://192.168.1.10:8096"
+        val username = "testuser"
+        val password = "secret_password"
+        val userId = UUID.randomUUID()
+        val oldToken = "old-token"
+        val newToken = "new-token"
+        val stored = AtomicReference<AuthState>(
+            AuthState.Authenticated(
+                serverUrl = serverUrl,
+                userId = "user-1",
+                accessToken = oldToken,
+                username = "user",
+                serverName = "192.168.1.10:8096",
+            )
+        )
+        val loginSaving = CompletableDeferred<Unit>()
+        val releaseLogin = CompletableDeferred<Unit>()
+        val rejectionRead = CompletableDeferred<Unit>()
+
+        coEvery { settingsDataStore.requireAllowedServiceUrl(any(), any()) } coAnswers {
+            when (val validation = ServiceUrlPolicy.inspect(firstArg<String>())) {
+                is ServiceUrlValidation.Valid -> validation.value
+                is ServiceUrlValidation.Invalid -> throw IllegalArgumentException(validation.reason)
+            }
+        }
+        val mockUserDto = mockk<UserDto> {
+            every { id } returns userId
+            every { name } returns username
+        }
+        val mockAuthResult = mockk<AuthenticationResult> {
+            every { this@mockk.accessToken } returns newToken
+            every { user } returns mockUserDto
+        }
+        val mockResponse = mockk<Response<AuthenticationResult>> {
+            every { content } returns mockAuthResult
+        }
+        every { clientManager.createApi(serverUrl) } returns mockApi
+        every { mockApi.userApi } returns mockUserApi
+        coEvery { mockUserApi.authenticateUserByName(any()) } returns mockResponse
+
+        coEvery { authDataStore.saveSession(any(), any(), any(), any(), any()) } coAnswers {
+            loginSaving.complete(Unit)
+            releaseLogin.await()
+            stored.set(
+                AuthState.Authenticated(
+                    serverUrl = firstArg(),
+                    userId = secondArg(),
+                    username = thirdArg(),
+                    accessToken = arg<String>(3),
+                    serverName = arg<String>(4),
+                )
+            )
+        }
+        coEvery { authDataStore.getAuthState() } coAnswers {
+            rejectionRead.complete(Unit)
+            stored.get()
+        }
+        coEvery { authDataStore.clearSessionIfAccessTokenMatches(any()) } coAnswers {
+            stored.set(AuthState.NotAuthenticated)
+            true
+        }
+        every { clientManager.clearSessionIfTokenMatches(any()) } returns true
+
+        val loginJob = async(Dispatchers.Default) {
+            repository.login(serverUrl = serverUrl, username = username, password = password)
+        }
+        loginSaving.await()
+
+        val rejectionJob = async(Dispatchers.Default) {
+            repository.handleRejectedSession(oldToken)
+        }
+        // The login holds the session lock inside saveSession, so a stale rejection
+        // must not read the stored session until the new one is saved and activated.
+        withContext(Dispatchers.Default) {
+            withTimeoutOrNull(500L) { rejectionRead.await() }
+        }
+
+        releaseLogin.complete(Unit)
+
+        assertTrue(loginJob.await().isSuccess)
+        assertNull(rejectionJob.await())
+        assertEquals(newToken, (stored.get() as AuthState.Authenticated).accessToken)
+        coVerify(exactly = 0) { authDataStore.clearSessionIfAccessTokenMatches(any()) }
+        coVerify(exactly = 0) { clientManager.clearSessionIfTokenMatches(any()) }
+        coVerify(exactly = 1) {
+            clientManager.updateSession(serverUrl, newToken, userId.toString())
+        }
     }
 
     @Test

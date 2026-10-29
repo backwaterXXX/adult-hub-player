@@ -11,6 +11,8 @@ import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.map
+import kotlinx.coroutines.sync.Mutex
+import kotlinx.coroutines.sync.withLock
 import kotlinx.coroutines.withContext
 import kotlinx.coroutines.withTimeoutOrNull
 import com.adulthub.tv.diagnostics.AppLog as Log
@@ -38,6 +40,13 @@ open class AuthRepository(
 
     /** Jellyfin tokens that the server rejected while they were the active session. */
     open val sessionRejections: Flow<String> = clientManager.sessionRejections
+
+    /**
+     * Serializes every change to the stored session together with the in-memory
+     * client activation, so cleanup never observes a session that was saved but
+     * not yet made active (or the reverse).
+     */
+    private val sessionMutex = Mutex()
 
     suspend fun discoverServer(serverUrl: String): Result<ServerInfo> = withContext(Dispatchers.IO) {
         try {
@@ -93,27 +102,29 @@ open class AuthRepository(
             val userId = user.id.toString()
             val serverName = normalizedUrl.substringAfter("://").substringBefore('/')
 
-            authDataStore.saveSession(
-                serverUrl = normalizedUrl,
-                userId = userId,
-                username = username,
-                accessToken = token,
-                serverName = serverName,
-            )
+            val authenticated = sessionMutex.withLock {
+                authDataStore.saveSession(
+                    serverUrl = normalizedUrl,
+                    userId = userId,
+                    username = username,
+                    accessToken = token,
+                    serverName = serverName,
+                )
 
-            clientManager.updateSession(
-                serverUrl = normalizedUrl,
-                accessToken = token,
-                userId = userId,
-            )
+                clientManager.updateSession(
+                    serverUrl = normalizedUrl,
+                    accessToken = token,
+                    userId = userId,
+                )
 
-            val authenticated = AuthState.Authenticated(
-                serverUrl = normalizedUrl,
-                userId = userId,
-                accessToken = token,
-                username = username,
-                serverName = serverName,
-            )
+                AuthState.Authenticated(
+                    serverUrl = normalizedUrl,
+                    userId = userId,
+                    accessToken = token,
+                    username = username,
+                    serverName = serverName,
+                )
+            }
             Result.success(authenticated)
         } catch (e: CancellationException) {
             throw e
@@ -170,21 +181,21 @@ open class AuthRepository(
             val username = user.name.orEmpty()
             val serverName = normalizedUrl.substringAfter("://").substringBefore('/')
 
-            authDataStore.saveSession(
-                serverUrl = normalizedUrl,
-                userId = userId,
-                username = username,
-                accessToken = token,
-                serverName = serverName,
-            )
+            val authenticated = sessionMutex.withLock {
+                authDataStore.saveSession(
+                    serverUrl = normalizedUrl,
+                    userId = userId,
+                    username = username,
+                    accessToken = token,
+                    serverName = serverName,
+                )
 
-            clientManager.updateSession(
-                serverUrl = normalizedUrl,
-                accessToken = token,
-                userId = userId,
-            )
+                clientManager.updateSession(
+                    serverUrl = normalizedUrl,
+                    accessToken = token,
+                    userId = userId,
+                )
 
-            Result.success(
                 AuthState.Authenticated(
                     serverUrl = normalizedUrl,
                     userId = userId,
@@ -192,7 +203,8 @@ open class AuthRepository(
                     username = username,
                     serverName = serverName,
                 )
-            )
+            }
+            Result.success(authenticated)
         } catch (e: CancellationException) {
             throw e
         } catch (e: Exception) {
@@ -203,27 +215,29 @@ open class AuthRepository(
     suspend fun restoreSession(): AuthState = withContext(Dispatchers.IO) {
         authDataStore.migrateSensitiveValues()
         settingsDataStore.migrateSensitiveValues()
-        val state = authDataStore.getAuthState()
-        if (state is AuthState.Authenticated) {
-            when (val validation = ServiceUrlPolicy.inspect(state.serverUrl)) {
-                is ServiceUrlValidation.Invalid -> return@withContext AuthState.HttpBlocked(
-                    serverUrl = state.serverUrl,
-                    reason = validation.reason,
-                )
-                is ServiceUrlValidation.Valid -> if (
-                    validation.value.usesCleartext &&
-                    !settingsDataStore.isCleartextOriginApproved(state.serverUrl)
-                ) {
-                    return@withContext AuthState.HttpConsentRequired(state.serverUrl)
+        sessionMutex.withLock {
+            val state = authDataStore.getAuthState()
+            if (state is AuthState.Authenticated) {
+                when (val validation = ServiceUrlPolicy.inspect(state.serverUrl)) {
+                    is ServiceUrlValidation.Invalid -> return@withLock AuthState.HttpBlocked(
+                        serverUrl = state.serverUrl,
+                        reason = validation.reason,
+                    )
+                    is ServiceUrlValidation.Valid -> if (
+                        validation.value.usesCleartext &&
+                        !settingsDataStore.isCleartextOriginApproved(state.serverUrl)
+                    ) {
+                        return@withLock AuthState.HttpConsentRequired(state.serverUrl)
+                    }
                 }
+                clientManager.updateSession(
+                    serverUrl = settingsDataStore.requireAllowedServiceUrl(state.serverUrl).normalized,
+                    accessToken = state.accessToken,
+                    userId = state.userId,
+                )
             }
-            clientManager.updateSession(
-                serverUrl = settingsDataStore.requireAllowedServiceUrl(state.serverUrl).normalized,
-                accessToken = state.accessToken,
-                userId = state.userId,
-            )
+            state
         }
-        state
     }
 
     /**
@@ -235,16 +249,19 @@ open class AuthRepository(
      * an unreachable server cannot undo the local sign-out.
      */
     open suspend fun logout(): Result<Unit> = withContext(Dispatchers.IO) {
-        val session = currentSessionForSignOut()
-        try {
-            authDataStore.clearSession()
+        val session = try {
+            sessionMutex.withLock {
+                val current = currentSessionForSignOut()
+                authDataStore.clearSession()
+                clientManager.clearSession()
+                current
+            }
         } catch (cancelled: CancellationException) {
             throw cancelled
         } catch (error: Exception) {
             Log.w(TAG, "Sign out failed because the session could not be cleared")
             return@withContext Result.failure(error)
         }
-        clientManager.clearSession()
         revokeSessionOnServer(session)
         Result.success(Unit)
     }
@@ -277,22 +294,24 @@ open class AuthRepository(
      */
     open suspend fun handleRejectedSession(rejectedAccessToken: String): AuthState.Authenticated? =
         withContext(Dispatchers.IO) {
-            val session = currentSessionForSignOut() ?: return@withContext null
-            if (session.accessToken != rejectedAccessToken) return@withContext null
-            try {
-                if (!authDataStore.clearSessionIfAccessTokenMatches(rejectedAccessToken)) {
-                    return@withContext null
+            sessionMutex.withLock {
+                val session = currentSessionForSignOut() ?: return@withLock null
+                if (session.accessToken != rejectedAccessToken) return@withLock null
+                try {
+                    if (!authDataStore.clearSessionIfAccessTokenMatches(rejectedAccessToken)) {
+                        return@withLock null
+                    }
+                } catch (cancelled: CancellationException) {
+                    throw cancelled
+                } catch (error: Exception) {
+                    Log.w(TAG, "The rejected session could not be cleared")
+                    return@withLock null
                 }
-            } catch (cancelled: CancellationException) {
-                throw cancelled
-            } catch (error: Exception) {
-                Log.w(TAG, "The rejected session could not be cleared")
-                return@withContext null
+                if (!clientManager.clearSessionIfTokenMatches(rejectedAccessToken)) {
+                    return@withLock null
+                }
+                session
             }
-            if (!clientManager.clearSessionIfTokenMatches(rejectedAccessToken)) {
-                return@withContext null
-            }
-            session
         }
 
     private suspend fun currentSessionForSignOut(): AuthState.Authenticated? = try {
