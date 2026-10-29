@@ -17,8 +17,9 @@ import java.io.IOException
 private val Context.authDataStore: DataStore<Preferences> by preferencesDataStore(name = "auth_prefs")
 
 class AuthDataStore(
-    private val context: Context,
+    context: Context,
     private val crypto: KeyStoreCrypto,
+    private val dataStore: DataStore<Preferences> = context.authDataStore,
 ) {
     private val encryptedValue = EncryptedPreferenceValue(crypto)
 
@@ -30,7 +31,7 @@ class AuthDataStore(
         private val KEY_ENCRYPTED_TOKEN = stringPreferencesKey("encrypted_token")
     }
 
-    val authState: Flow<AuthState> = context.authDataStore.data
+    val authState: Flow<AuthState> = dataStore.data
         .catch { exception ->
             if (exception is IOException) {
                 emit(emptyPreferences())
@@ -41,24 +42,22 @@ class AuthDataStore(
         .map { preferences -> decodeAuthState(preferences).state }
 
     suspend fun getAuthState(): AuthState {
-        val preferences = context.authDataStore.data
-            .catch { exception ->
-                if (exception is IOException) emit(emptyPreferences()) else throw exception
-            }
-            .first()
+        val preferences = readPreferences()
         val decoded = decodeAuthState(preferences)
         if (decoded.unreadableToken != null) clearSessionIfTokenMatches(decoded.unreadableToken)
         if (decoded.corruptMetadata != null) clearSessionIfSnapshotMatches(decoded.corruptMetadata)
         return decoded.state
     }
 
+    private suspend fun readPreferences(): Preferences = dataStore.data
+        .catch { exception ->
+            if (exception is IOException) emit(emptyPreferences()) else throw exception
+        }
+        .first()
+
     /** Encrypt existing plaintext session metadata without invalidating older installs. */
     suspend fun migrateSensitiveValues() {
-        val snapshot = context.authDataStore.data
-            .catch { exception ->
-                if (exception is IOException) emit(emptyPreferences()) else throw exception
-            }
-            .first()
+        val snapshot = readPreferences()
         val sensitiveValues = listOf(
             KEY_SERVER_URL to snapshot[KEY_SERVER_URL],
             KEY_USER_ID to snapshot[KEY_USER_ID],
@@ -71,7 +70,7 @@ class AuthDataStore(
         }
         if (replacements.isEmpty()) return
 
-        context.authDataStore.edit { preferences ->
+        dataStore.edit { preferences ->
             replacements.forEach { (key, oldValue, newValue) ->
                 if (preferences[key] == oldValue) preferences[key] = newValue
             }
@@ -143,7 +142,7 @@ class AuthDataStore(
         val encryptedUsername = encryptedValue.encode(username)
         val encryptedServerName = encryptedValue.encode(serverName)
         try {
-            context.authDataStore.edit { preferences ->
+            dataStore.edit { preferences ->
                 preferences[KEY_SERVER_URL] = encryptedServerUrl
                 preferences[KEY_USER_ID] = encryptedUserId
                 preferences[KEY_USERNAME] = encryptedUsername
@@ -162,13 +161,29 @@ class AuthDataStore(
         }
     }
 
-    private suspend fun clearSessionIfTokenMatches(encryptedToken: String) {
+    /**
+     * Clears the stored session only while its token is [accessToken].
+     *
+     * The encrypted token is re-checked inside the edit that removes the session,
+     * so a login that completed while the token was being decrypted is never
+     * deleted by a stale rejection.
+     */
+    suspend fun clearSessionIfAccessTokenMatches(accessToken: String): Boolean {
+        val encryptedToken = readPreferences()[KEY_ENCRYPTED_TOKEN] ?: return false
+        if (crypto.decrypt(encryptedToken) != accessToken) return false
+        return clearSessionIfTokenMatches(encryptedToken)
+    }
+
+    private suspend fun clearSessionIfTokenMatches(encryptedToken: String): Boolean {
+        var cleared = false
         editSession { preferences ->
             // A new login may have replaced the unreadable token while this value was being decrypted.
             if (preferences[KEY_ENCRYPTED_TOKEN] == encryptedToken) {
                 preferences.clearAuthSession()
+                cleared = true
             }
         }
+        return cleared
     }
 
     private suspend fun clearSessionIfSnapshotMatches(snapshot: AuthSessionSnapshot) {
@@ -193,7 +208,7 @@ class AuthDataStore(
         transform: (androidx.datastore.preferences.core.MutablePreferences) -> Unit,
     ) {
         try {
-            context.authDataStore.edit { preferences -> transform(preferences) }
+            dataStore.edit { preferences -> transform(preferences) }
         } catch (error: IOException) {
             throw PreferenceWriteException("The session could not be cleared", error)
         }

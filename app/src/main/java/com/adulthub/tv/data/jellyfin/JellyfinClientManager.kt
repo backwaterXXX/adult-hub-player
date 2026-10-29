@@ -104,6 +104,7 @@ class JellyfinClientManager(
         )
     }
 
+    @Synchronized
     fun updateSession(serverUrl: String, accessToken: String, userId: String) {
         currentServerUrl = serverUrl
         currentUserId = userId
@@ -111,7 +112,20 @@ class JellyfinClientManager(
         currentApi = createApi(serverUrl, accessToken)
     }
 
+    @Synchronized
     fun clearSession() {
+        clearSessionState()
+    }
+
+    /** Clears the client only while its active token is [accessToken]. */
+    @Synchronized
+    fun clearSessionIfTokenMatches(accessToken: String): Boolean {
+        if (currentAccessToken != accessToken) return false
+        clearSessionState()
+        return true
+    }
+
+    private fun clearSessionState() {
         currentServerUrl = null
         currentUserId = null
         currentAccessToken = null

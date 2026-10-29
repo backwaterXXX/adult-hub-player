@@ -2,10 +2,12 @@ package com.adulthub.tv.data.repository
 
 import com.adulthub.tv.data.jellyfin.JellyfinClientManager
 import com.adulthub.tv.data.local.AuthDataStore
+import com.adulthub.tv.data.local.PreferenceWriteException
 import com.adulthub.tv.data.local.SettingsDataStore
 import com.adulthub.tv.data.model.AuthState
 import io.mockk.coEvery
 import io.mockk.coVerify
+import io.mockk.coVerifyOrder
 import io.mockk.every
 import io.mockk.mockk
 import kotlinx.coroutines.test.runTest
@@ -113,7 +115,7 @@ class AuthRepositoryTest {
     }
 
     @Test
-    fun `logout revokes the token on the server before the local session is cleared`() = runTest {
+    fun `logout clears the local session before revoking the token on the server`() = runTest {
         val session = AuthState.Authenticated(
             serverUrl = "https://jf.example.com",
             userId = "user-1",
@@ -127,9 +129,33 @@ class AuthRepositoryTest {
         val result = repository.logout()
 
         assertTrue(result.isSuccess)
-        coVerify(exactly = 1) { clientManager.createApi(session.serverUrl, session.accessToken) }
-        coVerify(exactly = 1) { authDataStore.clearSession() }
+        coVerifyOrder {
+            authDataStore.clearSession()
+            clientManager.createApi(session.serverUrl, session.accessToken)
+        }
         coVerify(exactly = 1) { clientManager.clearSession() }
+    }
+
+    @Test
+    fun `a failed local sign out does not revoke a token that stays stored`() = runTest {
+        val session = AuthState.Authenticated(
+            serverUrl = "https://jf.example.com",
+            userId = "user-1",
+            accessToken = "token-1",
+            username = "user",
+            serverName = "jf.example.com",
+        )
+        coEvery { authDataStore.getAuthState() } returns session
+        coEvery { authDataStore.clearSession() } throws PreferenceWriteException(
+            "The session could not be cleared",
+            java.io.IOException("disk full"),
+        )
+
+        val result = repository.logout()
+
+        assertTrue(result.isFailure)
+        coVerify(exactly = 0) { clientManager.createApi(any(), any()) }
+        coVerify(exactly = 0) { clientManager.clearSession() }
     }
 
     @Test
@@ -146,7 +172,26 @@ class AuthRepositoryTest {
 
         assertEquals(null, cleared)
         coVerify(exactly = 0) { authDataStore.clearSession() }
-        coVerify(exactly = 0) { clientManager.clearSession() }
+        coVerify(exactly = 0) { authDataStore.clearSessionIfAccessTokenMatches(any()) }
+        coVerify(exactly = 0) { clientManager.clearSessionIfTokenMatches(any()) }
+    }
+
+    @Test
+    fun `a login that replaced the session during cleanup is never deleted`() = runTest {
+        coEvery { authDataStore.getAuthState() } returns AuthState.Authenticated(
+            serverUrl = "https://jf.example.com",
+            userId = "user-1",
+            accessToken = "current-token",
+            username = "user",
+            serverName = "jf.example.com",
+        )
+        coEvery { authDataStore.clearSessionIfAccessTokenMatches("current-token") } returns false
+
+        val cleared = repository.handleRejectedSession("current-token")
+
+        assertEquals(null, cleared)
+        coVerify(exactly = 0) { authDataStore.clearSession() }
+        coVerify(exactly = 0) { clientManager.clearSessionIfTokenMatches(any()) }
     }
 
     @Test
@@ -159,12 +204,32 @@ class AuthRepositoryTest {
             serverName = "jf.example.com",
         )
         coEvery { authDataStore.getAuthState() } returns session
+        coEvery { authDataStore.clearSessionIfAccessTokenMatches("current-token") } returns true
+        every { clientManager.clearSessionIfTokenMatches("current-token") } returns true
 
         val cleared = repository.handleRejectedSession("current-token")
 
         assertEquals(session, cleared)
-        coVerify(exactly = 1) { authDataStore.clearSession() }
-        coVerify(exactly = 1) { clientManager.clearSession() }
+        coVerify(exactly = 1) { authDataStore.clearSessionIfAccessTokenMatches("current-token") }
+        coVerify(exactly = 1) { clientManager.clearSessionIfTokenMatches("current-token") }
+        coVerify(exactly = 0) { authDataStore.clearSession() }
+    }
+
+    @Test
+    fun `a newer client session stops a stale rejection from reporting a sign-out`() = runTest {
+        coEvery { authDataStore.getAuthState() } returns AuthState.Authenticated(
+            serverUrl = "https://jf.example.com",
+            userId = "user-1",
+            accessToken = "current-token",
+            username = "user",
+            serverName = "jf.example.com",
+        )
+        coEvery { authDataStore.clearSessionIfAccessTokenMatches("current-token") } returns true
+        every { clientManager.clearSessionIfTokenMatches("current-token") } returns false
+
+        val cleared = repository.handleRejectedSession("current-token")
+
+        assertEquals(null, cleared)
     }
 
     @Test
