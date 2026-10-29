@@ -16,6 +16,7 @@ import com.adulthub.tv.data.model.TvChannel
 import com.adulthub.tv.data.resolver.ResolverApi
 import io.mockk.every
 import io.mockk.mockk
+import kotlinx.coroutines.CompletableDeferred
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.ExperimentalCoroutinesApi
 import kotlinx.coroutines.flow.Flow
@@ -23,6 +24,7 @@ import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.test.StandardTestDispatcher
 import kotlinx.coroutines.test.advanceUntilIdle
 import kotlinx.coroutines.test.resetMain
+import kotlinx.coroutines.test.runCurrent
 import kotlinx.coroutines.test.runTest
 import kotlinx.coroutines.test.setMain
 import org.junit.After
@@ -107,6 +109,29 @@ class SettingsViewModelTest {
         assertEquals("lib-2", viewModel.uiState.value.selectedLibraryId)
         assertEquals("New Releases", viewModel.uiState.value.selectedLibraryName)
         assertNotNull(viewModel.uiState.value.statusMessage)
+    }
+
+    @Test
+    fun `rapid home category toggles keep both selections`() = runTest(testDispatcher) {
+        val viewModel = SettingsViewModel(
+            authRepository = fakeAuthRepo,
+            libraryRepository = fakeLibraryRepo,
+            settingsDataStore = fakeDataStore,
+            context = context,
+        )
+        advanceUntilIdle()
+        val saveGate = CompletableDeferred<Unit>()
+        fakeDataStore.homeCategorySaveGate = saveGate
+
+        viewModel.toggleHomeCategory("a")
+        runCurrent()
+        viewModel.toggleHomeCategory("b")
+        runCurrent()
+        saveGate.complete(Unit)
+        advanceUntilIdle()
+
+        assertEquals(setOf("a", "b"), fakeDataStore.selectedHomeCategoryIds.value)
+        assertEquals(setOf("a", "b"), viewModel.uiState.value.selectedHomeCategoryIds)
     }
 
     @Test
@@ -575,7 +600,10 @@ private class FakeSettingsDataStore : SettingsDataStore(mockk(relaxed = true)) {
         autoplayNext.value = enabled
     }
 
+    var homeCategorySaveGate: CompletableDeferred<Unit>? = null
+
     override suspend fun setSelectedHomeCategoryIds(ids: Set<String>) {
+        homeCategorySaveGate?.await()
         selectedHomeCategoryIds.value = ids
     }
 }

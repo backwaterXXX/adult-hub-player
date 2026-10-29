@@ -29,6 +29,8 @@ import kotlinx.coroutines.coroutineScope
 import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.launch
+import kotlinx.coroutines.sync.Mutex
+import kotlinx.coroutines.sync.withLock
 import kotlinx.coroutines.withContext
 
 import com.adulthub.tv.data.local.SearchHistoryStore
@@ -91,6 +93,10 @@ class SettingsViewModel(
         )
     )
     val uiState: StateFlow<SettingsUiState> = _uiState.asStateFlow()
+
+    // Selection writes replace the whole set, so rapid toggles have to read the
+    // result of the previous write instead of the state captured before it.
+    private val homeCategorySelectionMutex = Mutex()
 
     init {
         loadSettings()
@@ -342,15 +348,17 @@ class SettingsViewModel(
     }
 
     fun toggleHomeCategory(categoryId: String) {
-        val currentIds = _uiState.value.selectedHomeCategoryIds
-        val selectedIds = if (categoryId in currentIds) currentIds - categoryId else currentIds + categoryId
         viewModelScope.launch {
-            if (!persist { settingsDataStore.setSelectedHomeCategoryIds(selectedIds) }) return@launch
-            _uiState.update {
-                it.copy(
-                    selectedHomeCategoryIds = selectedIds,
-                    statusMessage = context.getString(R.string.settings_home_categories_saved),
-                )
+            homeCategorySelectionMutex.withLock {
+                val currentIds = _uiState.value.selectedHomeCategoryIds
+                val selectedIds = if (categoryId in currentIds) currentIds - categoryId else currentIds + categoryId
+                if (!persist { settingsDataStore.setSelectedHomeCategoryIds(selectedIds) }) return@withLock
+                _uiState.update {
+                    it.copy(
+                        selectedHomeCategoryIds = selectedIds,
+                        statusMessage = context.getString(R.string.settings_home_categories_saved),
+                    )
+                }
             }
         }
     }

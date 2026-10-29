@@ -622,7 +622,12 @@ class PlayerManager(
                     resetPlaybackSpeed = false,
                     resumePlayback = resumePlayback,
                 )
+            } catch (cancelled: CancellationException) {
+                // A stopped or replaced playback cancels the retry; the new state must not
+                // receive an error message from the abandoned attempt.
+                throw cancelled
             } catch (error: Exception) {
+                if (generation != playbackGeneration) return@launch
                 _errorMessage.value = error.message?.takeIf(String::isNotBlank) ?: "Could not prepare this video"
                 Log.w(TAG, "Automatic retry preparation failed (${error.javaClass.simpleName})")
             }
