@@ -1,5 +1,6 @@
 package com.adulthub.tv.di
 
+import android.app.Application
 import android.content.Context
 import com.adulthub.tv.data.jellyfin.JellyfinClientManager
 import com.adulthub.tv.data.local.AccountKeyProvider
@@ -73,7 +74,7 @@ class ProductionGraphTest {
         val filesDir = tmpFolder.newFolder("files")
         // One context that returns itself as the application context, so DataStore
         // never reaches an unstubbed context and can resolve its file.
-        val context = mockk<Context>(relaxed = true)
+        val context = mockk<Application>(relaxed = true)
         every { context.applicationContext } returns context
         every { context.filesDir } returns filesDir
         every { context.packageName } returns "com.adulthub.tv"

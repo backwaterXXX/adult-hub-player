@@ -1,5 +1,15 @@
 #!/bin/sh
 
+if [ -z "$JAVA_HOME" ]; then
+    _user_home="$(getent passwd "$(id -un)" 2>/dev/null | cut -d: -f6)"
+    for _candidate in "$HOME/.jdks"/jdk-17* "$_user_home/.jdks"/jdk-17* /usr/lib/jvm/java-17* /usr/lib/jvm/default-java; do
+        if [ -d "$_candidate" ]; then
+            export JAVA_HOME="$_candidate"
+            export PATH="$JAVA_HOME/bin:$PATH"
+            break
+        fi
+    done
+fi
 #
 # Copyright © 2015 the original authors.
 #
@@ -200,7 +210,7 @@ fi
 
 
 # Add default JVM options here. You can also use JAVA_OPTS and GRADLE_OPTS to pass JVM options to this script.
-DEFAULT_JVM_OPTS='"-Xmx64m" "-Xms64m"'
+DEFAULT_JVM_OPTS='-Dfile.encoding=UTF-8 "-Xmx64m" "-Xms64m"'
 
 # Collect all arguments for the java command:
 #   * DEFAULT_JVM_OPTS, JAVA_OPTS, and optsEnvironmentVar are not allowed to contain shell fragments,

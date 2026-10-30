@@ -9,6 +9,7 @@ import com.adulthub.tv.ui.person.PersonDetailViewModel
 import com.adulthub.tv.ui.player.PlayerViewModel
 import com.adulthub.tv.ui.search.SearchViewModel
 import com.adulthub.tv.ui.settings.SettingsViewModel
+import org.koin.android.ext.koin.androidApplication
 import org.koin.android.ext.koin.androidContext
 import org.koin.core.module.dsl.viewModel
 import org.koin.core.module.dsl.viewModelOf
@@ -21,7 +22,7 @@ val viewModelModule = module {
             libraryRepository = get(),
             settingsDataStore = get(),
             sessionRestoreRetry = SessionRestoreRetryPolicy(),
-            context = androidContext(),
+            context = androidApplication(),
         )
     }
     viewModel {
@@ -32,7 +33,7 @@ val viewModelModule = module {
             clientManager = get(),
             telegramProgressStore = getOrNull(),
             watchHistoryStore = getOrNull(),
-            context = androidContext(),
+            context = androidApplication(),
         )
     }
     viewModelOf(::LibraryViewModel)
@@ -50,7 +51,7 @@ val viewModelModule = module {
             watchHistoryStore = getOrNull(),
             persistenceScope = getOrNull(),
             accountScope = getOrNull(),
-            context = androidContext(),
+            context = androidApplication(),
         )
     }
     viewModelOf(::SearchViewModel)
@@ -64,7 +65,7 @@ val viewModelModule = module {
             telegramProgressStore = getOrNull(),
             searchHistoryStore = getOrNull(),
             userScopedDataMigration = getOrNull(),
-            context = androidContext(),
+            context = androidApplication(),
         )
     }
 }

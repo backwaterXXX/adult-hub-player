@@ -114,23 +114,26 @@ class AppUpdateRepository(
         val dir = File(context.filesDir, "updates")
         val manifestFile = File(dir, MANIFEST_FILE_NAME)
         if (!manifestFile.isFile) return null
+        var manifest: UpdateManifest? = null
         return try {
-            val manifest = json.decodeFromString<UpdateManifest>(manifestFile.readText())
-            validateManifest(manifest)
-            if (manifest.versionCode <= BuildConfig.VERSION_CODE) {
-                dir.listFiles()?.filter { it.name.startsWith("update-") || it.name == MANIFEST_FILE_NAME }?.forEach(File::delete)
+            val parsedManifest = json.decodeFromString<UpdateManifest>(manifestFile.readText())
+            manifest = parsedManifest
+            validateManifest(parsedManifest)
+            val apk = File(dir, "update-${parsedManifest.versionCode}.apk")
+            if (parsedManifest.versionCode <= BuildConfig.VERSION_CODE) {
+                manifestFile.delete()
+                apk.delete()
                 return null
             }
-            val apk = File(dir, "update-${manifest.versionCode}.apk")
-            require(apk.isFile && apk.length() == manifest.sizeBytes) { "Saved update file is incomplete" }
-            require(sha256(apk).equals(manifest.sha256, true)) { "Saved update checksum is invalid" }
-            validateApk(apk, manifest)
-            AvailableUpdate(manifest, apk)
+            require(apk.isFile && apk.length() == parsedManifest.sizeBytes) { "Saved update file is incomplete" }
+            require(sha256(apk).equals(parsedManifest.sha256, true)) { "Saved update checksum is invalid" }
+            validateApk(apk, parsedManifest)
+            AvailableUpdate(parsedManifest, apk)
         } catch (error: kotlinx.coroutines.CancellationException) {
             throw error
         } catch (_: Exception) {
             manifestFile.delete()
-            dir.listFiles()?.filter { it.name.startsWith("update-") }?.forEach(File::delete)
+            manifest?.versionCode?.let { File(dir, "update-$it.apk").delete() }
             null
         }
     }

@@ -31,6 +31,9 @@
 
     <!-- Playback error dialog -->
     <string name="player_error_title">Playback Error</string>
+    <string name="player_error_prepare">Could not prepare this video</string>
+    <string name="player_retry_status">Connection interrupted. Retrying automatically (%1$d/%2$d)…</string>
+    <string name="player_error_stream_address_refresh">The stream address could not be refreshed</string>
     <string name="player_retry">Retry</string>
     <string name="player_back">Back</string>
     <string name="player_channel_video">Channel Video</string>

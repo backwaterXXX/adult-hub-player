@@ -299,4 +299,17 @@ class SettingsDataStoreTest {
         assertEquals(30, newSettings.seekStepSec.first())
         assertTrue(newSettings.autoplayNext.first())
     }
+
+    @Test
+    fun `requireAllowedNetworkUrl falls back to persisted preferences before snapshot refresh`() = runTest(timeout = 120.seconds) {
+        val httpUrl = "http://192.168.1.200:8096"
+        settingsDataStore.approveCleartextOrigin(httpUrl)
+
+        // Create a new SettingsDataStore instance sharing the same underlying dataStore
+        // where snapshot has not been refreshed yet (starts as emptySet)
+        val freshInstance = SettingsDataStore(context, crypto, dataStore)
+        val serviceUrl = freshInstance.requireAllowedNetworkUrl("$httpUrl/Items/123/Images/Primary")
+
+        assertEquals("http://192.168.1.200:8096", serviceUrl.origin)
+    }
 }

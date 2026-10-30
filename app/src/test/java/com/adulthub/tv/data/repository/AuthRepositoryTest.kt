@@ -10,9 +10,11 @@ import io.mockk.coVerify
 import io.mockk.coVerifyOrder
 import io.mockk.every
 import io.mockk.mockk
+import io.mockk.verify
 import kotlinx.coroutines.CompletableDeferred
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.async
+import kotlinx.coroutines.sync.Mutex
 import kotlinx.coroutines.test.runTest
 import kotlinx.coroutines.withContext
 import kotlinx.coroutines.withTimeoutOrNull
@@ -23,6 +25,8 @@ import org.jellyfin.sdk.api.client.extensions.userApi
 import org.jellyfin.sdk.model.api.AuthenticationResult
 import org.jellyfin.sdk.model.api.UserDto
 import org.junit.Assert.assertEquals
+import org.junit.Assert.assertFalse
+import org.junit.Assert.assertNotNull
 import org.junit.Assert.assertNull
 import org.junit.Assert.assertTrue
 import org.junit.Test
@@ -237,6 +241,7 @@ class AuthRepositoryTest {
         val cleared = repository.handleRejectedSession("current-token")
 
         assertEquals(null, cleared)
+        verify(exactly = 1) { clientManager.clearSession() }
     }
 
     @Test
@@ -259,6 +264,23 @@ class AuthRepositoryTest {
         val loginSaving = CompletableDeferred<Unit>()
         val releaseLogin = CompletableDeferred<Unit>()
         val rejectionRead = CompletableDeferred<Unit>()
+        val rejectionArrivedAtLock = CompletableDeferred<Unit>()
+
+        val mutexDelegate = Mutex()
+        val signalingMutex = object : Mutex by mutexDelegate {
+            override suspend fun lock(owner: Any?) {
+                if (mutexDelegate.isLocked) {
+                    rejectionArrivedAtLock.complete(Unit)
+                }
+                mutexDelegate.lock(owner)
+            }
+        }
+        val customRepository = AuthRepository(
+            clientManager = clientManager,
+            authDataStore = authDataStore,
+            settingsDataStore = settingsDataStore,
+            sessionMutex = signalingMutex,
+        )
 
         coEvery { settingsDataStore.requireAllowedServiceUrl(any(), any()) } coAnswers {
             when (val validation = ServiceUrlPolicy.inspect(firstArg<String>())) {
@@ -305,20 +327,24 @@ class AuthRepositoryTest {
         every { clientManager.clearSessionIfTokenMatches(any()) } returns true
 
         val loginJob = async(Dispatchers.Default) {
-            repository.login(serverUrl = serverUrl, username = username, password = password)
+            customRepository.login(serverUrl = serverUrl, username = username, password = password)
         }
         loginSaving.await()
 
         val rejectionJob = async(Dispatchers.Default) {
-            repository.handleRejectedSession(oldToken)
+            customRepository.handleRejectedSession(oldToken)
         }
-        // The login holds the session lock inside saveSession, so a stale rejection
-        // must not read the stored session until the new one is saved and activated.
-        withContext(Dispatchers.Default) {
-            withTimeoutOrNull(500L) { rejectionRead.await() }
-        }
+        // Wait until rejection arrives at the locked session mutex. It must not read
+        // the stored session until login finishes saving and activating the new session.
+        rejectionArrivedAtLock.await()
+        assertFalse(rejectionRead.isCompleted)
 
         releaseLogin.complete(Unit)
+
+        val read = withContext(Dispatchers.Default) {
+            withTimeoutOrNull(5_000L) { rejectionRead.await() }
+        }
+        assertNotNull("Rejection should read session once login lock is released", read)
 
         assertTrue(loginJob.await().isSuccess)
         assertNull(rejectionJob.await())

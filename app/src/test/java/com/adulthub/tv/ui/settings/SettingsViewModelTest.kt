@@ -1,5 +1,6 @@
 package com.adulthub.tv.ui.settings
 
+import android.app.Application
 import android.content.Context
 import com.adulthub.tv.R
 import com.adulthub.tv.data.local.AccountKeyProvider
@@ -45,7 +46,7 @@ class SettingsViewModelTest {
     private val fakeAuthRepo = FakeSettingsAuthRepo()
     private val fakeLibraryRepo = FakeSettingsLibraryRepo()
     private val fakeDataStore = FakeSettingsDataStore()
-    private val context: Context = mockk(relaxed = true)
+    private val context: Application = mockk(relaxed = true)
 
     private val testLibrary = TvLibrary(id = "lib-1", name = "Adult Movies")
 

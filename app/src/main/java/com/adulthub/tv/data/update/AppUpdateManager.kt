@@ -42,17 +42,19 @@ class AppUpdateManager(
 
     init {
         scope.launch {
-            val restoredUpdate = repository.restoreDownloadedUpdate()
             enabledLock.withLock {
                 val enabled = settings.autoUpdateEnabled.first()
+                _state.update { it.copy(enabled = enabled) }
+            }
+            val restoredUpdate = repository.restoreDownloadedUpdate()
+            if (restoredUpdate != null) {
                 _state.update { state ->
                     // A check that already finished owns the update slot; a late
                     // restore must not replace its result.
-                    if (restoredUpdate == null || state.update != null) {
-                        state.copy(enabled = enabled)
+                    if (state.update != null) {
+                        state
                     } else {
                         state.copy(
-                            enabled = enabled,
                             update = restoredUpdate,
                             downloadProgress = 1f,
                             message = context.getString(

@@ -392,7 +392,8 @@ class PlayerManager(
         try {
             startPlayback(streamUrl, startPositionMs, title, headers, resetPlaybackSpeed = true, resumePlayback = true)
         } catch (error: Exception) {
-            _errorMessage.value = error.message?.takeIf(String::isNotBlank) ?: "Could not prepare this video"
+            _errorMessage.value = error.message?.takeIf(String::isNotBlank)
+                ?: context.getString(R.string.player_error_prepare)
             Log.w(TAG, "Playback preparation failed (${error.javaClass.simpleName})")
         }
     }
@@ -597,7 +598,7 @@ class PlayerManager(
         val attempt = retryBudget.registerFailure()
         totalRetryCount += 1
         val delayMs = retryDelayMs(attempt)
-        _retryStatus.value = "Connection interrupted. Retrying automatically ($attempt/$MAX_AUTOMATIC_RETRIES)…"
+        _retryStatus.value = context.getString(R.string.player_retry_status, attempt, MAX_AUTOMATIC_RETRIES)
         retryJob?.cancel()
         retryJob = coroutineScope.launch(Dispatchers.Main) {
             delay(delayMs)
@@ -613,7 +614,7 @@ class PlayerManager(
                 // meanwhile, and its state must not receive the outcome of this retry.
                 if (generation != playbackGeneration) return@launch
                 if (streamUrl == null) {
-                    _errorMessage.value = "The stream address could not be refreshed"
+                    _errorMessage.value = context.getString(R.string.player_error_stream_address_refresh)
                     Log.w(TAG, "Automatic retry failed because the stream address could not be refreshed")
                     return@launch
                 }
@@ -631,7 +632,8 @@ class PlayerManager(
                 throw cancelled
             } catch (error: Exception) {
                 if (generation != playbackGeneration) return@launch
-                _errorMessage.value = error.message?.takeIf(String::isNotBlank) ?: "Could not prepare this video"
+                _errorMessage.value = error.message?.takeIf(String::isNotBlank)
+                    ?: context.getString(R.string.player_error_prepare)
                 Log.w(TAG, "Automatic retry preparation failed (${error.javaClass.simpleName})")
             }
         }

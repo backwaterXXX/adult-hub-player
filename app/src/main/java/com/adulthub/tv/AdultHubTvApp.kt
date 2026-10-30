@@ -33,9 +33,9 @@ class AdultHubTvApp : Application(), ImageLoaderFactory {
 
     override fun onCreate() {
         super.onCreate()
-        // Release builds keep the SDK on the no-op SLF4J provider: its INFO requests
-        // carry the QuickConnect secret in the query string, so they must not reach
-        // logcat. Debug builds keep the Android logger for diagnostics.
+        // The Jellyfin SDK is bound to the no-op SLF4J provider in all builds to ensure
+        // credentials like QuickConnect secrets never leak to logcat. For kotlin-logging
+        // usages outside the SDK, debug builds direct output to Android logcat.
         if (BuildConfig.DEBUG) {
             System.setProperty("kotlin-logging-to-android-native", "true")
         }

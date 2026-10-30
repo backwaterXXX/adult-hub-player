@@ -45,6 +45,12 @@ jobs:
       - name: Grant execute permission for gradlew
         run: chmod +x gradlew
 
+      - name: Verify gradlew patches
+        run: |
+          grep -Fq 'export JAVA_HOME="$_candidate"' gradlew || { echo "gradlew missing JAVA_HOME auto-discovery patch" >&2; exit 1; }
+          grep -Fq -- '-Dfile.encoding=UTF-8' gradlew || { echo "gradlew missing -Dfile.encoding=UTF-8" >&2; exit 1; }
+          grep -Fq -- '-Dfile.encoding=UTF-8' gradlew.bat || { echo "gradlew.bat missing -Dfile.encoding=UTF-8" >&2; exit 1; }
+
       - name: Test, lint, and build both APKs
         env:
           UPDATE_GITHUB_OWNER: ${{ github.repository_owner }}
@@ -176,6 +182,12 @@ jobs:
 
       - name: Grant execute permission for gradlew
         run: chmod +x gradlew
+
+      - name: Verify gradlew patches
+        run: |
+          grep -Fq 'export JAVA_HOME="$_candidate"' gradlew || { echo "gradlew missing JAVA_HOME auto-discovery patch" >&2; exit 1; }
+          grep -Fq -- '-Dfile.encoding=UTF-8' gradlew || { echo "gradlew missing -Dfile.encoding=UTF-8" >&2; exit 1; }
+          grep -Fq -- '-Dfile.encoding=UTF-8' gradlew.bat || { echo "gradlew.bat missing -Dfile.encoding=UTF-8" >&2; exit 1; }
 
       - name: Build and verify signed Release APK
         env:

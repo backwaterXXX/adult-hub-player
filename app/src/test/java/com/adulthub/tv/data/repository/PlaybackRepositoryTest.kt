@@ -210,4 +210,58 @@ class PlaybackRepositoryTest {
 
         assertEquals(emptyMap<String, String>(), result)
     }
+
+    @Test
+    fun `without known access token cross-origin stream drops known credential headers`() {
+        val headers = mapOf(
+            "Authorization" to "MediaBrowser Client=\"test\", Token=\"secret\"",
+            "Cookie" to "session=secret",
+            "X-Emby-Token" to "secret",
+            "X-MediaBrowser-Token" to "secret",
+            "Accept" to "video/mp4",
+            "User-Agent" to "AdultHubTV/1.0",
+        )
+
+        val nullTokenResult = filterPlaybackHeaders(
+            headers = headers,
+            streamUrl = "http://192.168.1.100:8099/stream.mp4",
+            serverUrl = "http://192.168.1.50:8096",
+            accessToken = null,
+        )
+
+        assertEquals(
+            mapOf("Accept" to "video/mp4", "User-Agent" to "AdultHubTV/1.0"),
+            nullTokenResult,
+        )
+
+        val blankTokenResult = filterPlaybackHeaders(
+            headers = headers,
+            streamUrl = "http://192.168.1.100:8099/stream.mp4",
+            serverUrl = "http://192.168.1.50:8096",
+            accessToken = "   ",
+        )
+
+        assertEquals(
+            mapOf("Accept" to "video/mp4", "User-Agent" to "AdultHubTV/1.0"),
+            blankTokenResult,
+        )
+    }
+
+    @Test
+    fun `without known access token same-origin stream keeps all headers`() {
+        val headers = mapOf(
+            "Authorization" to "MediaBrowser Token=\"secret\"",
+            "X-Emby-Token" to "secret",
+            "Accept" to "video/mp4",
+        )
+
+        val result = filterPlaybackHeaders(
+            headers = headers,
+            streamUrl = "http://192.168.1.50:8096/stream.mp4",
+            serverUrl = "http://192.168.1.50:8096",
+            accessToken = null,
+        )
+
+        assertEquals(headers, result)
+    }
 }

@@ -9,6 +9,7 @@ import kotlinx.coroutines.Job
 import kotlinx.coroutines.NonCancellable
 import kotlinx.coroutines.channels.Channel
 import kotlinx.coroutines.delay
+import kotlinx.coroutines.ensureActive
 import kotlinx.coroutines.isActive
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
@@ -49,7 +50,8 @@ class PlaybackReporter(
             try {
                 process(command)
             } catch (e: CancellationException) {
-                throw e
+                coroutineScope.ensureActive()
+                Log.w(TAG, "Playback report command was cancelled (${e.message})")
             } catch (e: Exception) {
                 Log.w(TAG, "Playback report command failed (${e.javaClass.simpleName})")
             }

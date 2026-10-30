@@ -24,6 +24,7 @@ import kotlinx.coroutines.flow.catch
 import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.flow.onEach
 import kotlinx.coroutines.flow.map
+import kotlinx.coroutines.runBlocking
 import kotlinx.serialization.Serializable
 import kotlinx.serialization.json.Json
 import java.io.IOException
@@ -322,9 +323,20 @@ open class SettingsDataStore(
      * Synchronous view of [resolverBaseUrl] for the image loader.
      *
      * The image loader runs on its own threads and cannot wait for a suspending
-     * read, so the last known address is kept next to the flow.
+     * read, so the last known address is kept next to the flow. If empty, it
+     * falls back to reading the persisted address synchronously to prevent
+     * startup races.
      */
-    open fun resolverBaseUrlSnapshot(): String = resolverBaseUrlSnapshot.get()
+    open fun resolverBaseUrlSnapshot(): String {
+        val current = resolverBaseUrlSnapshot.get()
+        if (current.isNotEmpty()) return current
+        return runCatching {
+            runBlocking {
+                refreshResolverBaseUrlSnapshot()
+                resolverBaseUrlSnapshot.get()
+            }
+        }.getOrDefault(current)
+    }
 
     /** Fills [resolverBaseUrlSnapshot] once, before the first image request. */
     open suspend fun refreshResolverBaseUrlSnapshot() {
@@ -406,7 +418,9 @@ open class SettingsDataStore(
      *
      * Interceptors run on their own threads and cannot wait for the suspending
      * data flow, so this reads the consent snapshot that startup and every
-     * consent change keep in sync.
+     * consent change keep in sync. If the origin is not found in the snapshot,
+     * it falls back to reading the persisted consent synchronously to avoid
+     * dropping requests in a startup race before the background refresh completes.
      */
     fun requireAllowedNetworkUrl(url: String): ServiceUrl {
         val serviceUrl = when (val validation = ServiceUrlPolicy.inspect(url, allowQuery = true)) {
@@ -414,7 +428,15 @@ open class SettingsDataStore(
             is ServiceUrlValidation.Invalid -> throw IllegalArgumentException(validation.reason)
         }
         if (serviceUrl.usesCleartext && serviceUrl.origin !in approvedCleartextOriginsSnapshot.get()) {
-            throw IllegalStateException("Confirm unencrypted HTTP for this private LAN host before connecting")
+            val approved = runCatching {
+                runBlocking {
+                    refreshApprovedCleartextOriginsSnapshot()
+                    serviceUrl.origin in approvedCleartextOriginsSnapshot.get()
+                }
+            }.getOrDefault(false)
+            if (!approved) {
+                throw IllegalStateException("Confirm unencrypted HTTP for this private LAN host before connecting")
+            }
         }
         return serviceUrl
     }

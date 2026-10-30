@@ -1,6 +1,6 @@
 package com.adulthub.tv.ui.settings
 
-import android.annotation.SuppressLint
+import android.app.Application
 import android.content.Context
 import android.content.ClipData
 import android.content.Intent
@@ -73,7 +73,6 @@ data class SettingsUiState(
     val resolverConnectionStatus: String = "",
 )
 
-@SuppressLint("StaticFieldLeak")
 class SettingsViewModel(
     private val authRepository: AuthRepository,
     private val libraryRepository: LibraryRepository,
@@ -83,7 +82,7 @@ class SettingsViewModel(
     private val telegramProgressStore: TelegramProgressStore? = null,
     private val searchHistoryStore: SearchHistoryStore? = null,
     private val userScopedDataMigration: UserScopedDataMigration? = null,
-    private val context: Context,
+    private val context: Application,
 ) : ViewModel() {
 
     private val _uiState = MutableStateFlow(

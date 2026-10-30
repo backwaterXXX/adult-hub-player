@@ -165,9 +165,10 @@ dependencies {
     implementation(libs.retrofit.converter.kotlinx.serialization)
     implementation(libs.okhttp)
 
-    // A no-op SLF4J 2 provider: release builds must not log SDK request URLs
-    // (the QuickConnect secret is part of the URL), debug builds use the Android
-    // logger through the kotlin-logging property.
+    // A no-op SLF4J 2 provider: Jellyfin SDK uses SLF4J for HTTP logging. Because
+    // request URLs can carry sensitive credentials (such as the QuickConnect secret in query parameters),
+    // slf4j-nop is bound across all configurations (including debug) to prevent accidental leaks to logcat.
+    // Application diagnostics use AppLog / android.util.Log instead.
     implementation(libs.slf4j.nop)
 
     debugImplementation("androidx.compose.ui:ui-tooling")

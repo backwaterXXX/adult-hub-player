@@ -290,7 +290,9 @@ internal fun resolverStreamUrl(origin: String, ref: String, variantId: String?):
  * say who issued it: a CDN may require its own Authorization or Cookie header.
  * Only a value that carries the signed-in access token belongs to Jellyfin, so
  * everything else is left untouched and an external source keeps the credentials
- * it requires.
+ * it requires. When the session access token is not known (null or blank), known
+ * authentication and credential headers (Authorization, Cookie, X-Emby-Token,
+ * X-MediaBrowser-Token) are stripped defensively to prevent credential leakage.
  */
 internal fun filterPlaybackHeaders(
     headers: Map<String, String>,
@@ -301,7 +303,15 @@ internal fun filterPlaybackHeaders(
     if (headers.isEmpty()) return emptyMap()
     val streamOrigin = originOf(streamUrl) ?: return emptyMap()
     if (streamOrigin == serverUrl?.let(::originOf)) return headers
-    val token = accessToken?.takeIf { it.isNotBlank() } ?: return headers
+    val token = accessToken?.takeIf { it.isNotBlank() }
+    if (token == null) {
+        return headers.filterKeys { key ->
+            !key.equals("Authorization", ignoreCase = true) &&
+            !key.equals("Cookie", ignoreCase = true) &&
+            !key.equals("X-Emby-Token", ignoreCase = true) &&
+            !key.equals("X-MediaBrowser-Token", ignoreCase = true)
+        }
+    }
     return headers.filterValues { value -> !value.contains(token) }
 }
 

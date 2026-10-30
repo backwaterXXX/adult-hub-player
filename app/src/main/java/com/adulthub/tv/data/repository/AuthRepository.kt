@@ -35,18 +35,17 @@ open class AuthRepository(
     private val clientManager: JellyfinClientManager,
     private val authDataStore: AuthDataStore,
     private val settingsDataStore: SettingsDataStore,
-) {
-    open val authState: Flow<AuthState> = authDataStore.authState
-
-    /** Jellyfin tokens that the server rejected while they were the active session. */
-    open val sessionRejections: Flow<String> = clientManager.sessionRejections
-
     /**
      * Serializes every change to the stored session together with the in-memory
      * client activation, so cleanup never observes a session that was saved but
      * not yet made active (or the reverse).
      */
-    private val sessionMutex = Mutex()
+    internal val sessionMutex: Mutex = Mutex(),
+) {
+    open val authState: Flow<AuthState> = authDataStore.authState
+
+    /** Jellyfin tokens that the server rejected while they were the active session. */
+    open val sessionRejections: Flow<String> = clientManager.sessionRejections
 
     suspend fun discoverServer(serverUrl: String): Result<ServerInfo> = withContext(Dispatchers.IO) {
         try {
@@ -308,6 +307,11 @@ open class AuthRepository(
                     return@withLock null
                 }
                 if (!clientManager.clearSessionIfTokenMatches(rejectedAccessToken)) {
+                    Log.w(
+                        TAG,
+                        "Stored session was cleared for rejected token, but client held a different token; resetting client defensively"
+                    )
+                    clientManager.clearSession()
                     return@withLock null
                 }
                 session
