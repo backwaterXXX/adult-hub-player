@@ -42,7 +42,7 @@ class ScreenRouteTest {
     fun `person detail route encodes id and name`() {
         assertEquals(
             "person_detail/abc%201/Jane%20Doe",
-            Screen.PersonDetail.createRoute("abc 1", "Jane Doe"),
+            Screen.PersonDetail.createRoute("abc 1", "Jane Doe")
         )
     }
 
@@ -68,6 +68,6 @@ class ScreenRouteTest {
     @Test
     fun `non ascii characters are encoded as utf-8`() {
         assertEquals("%C5%BC", RouteEncoder.encode("ż"))
-        assertTrue(RouteEncoder.encode("zażółć").all { it.isDigit() || it.isLetter() && it.code < 128 || it == '%' })
+        assertTrue(RouteEncoder.encode("zażółć").all { it.isDigit() || (it.isLetter() && it.code < 128) || it == '%' })
     }
 }

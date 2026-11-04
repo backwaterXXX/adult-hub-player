@@ -8,7 +8,7 @@ import android.os.Build
 data class CodecInfo(
     val name: String,
     val isSupported: Boolean,
-    val isHardware: Boolean,
+    val isHardware: Boolean
 )
 
 data class DeviceDiagnostics(
@@ -16,7 +16,7 @@ data class DeviceDiagnostics(
     val androidVersion: String,
     val totalRamMb: Long,
     val availableRamMb: Long,
-    val codecs: List<CodecInfo>,
+    val codecs: List<CodecInfo>
 )
 
 object DeviceDiagnosticsHelper {
@@ -33,7 +33,7 @@ object DeviceDiagnosticsHelper {
             "video/avc" to "AVC (H.264)",
             "video/hevc" to "HEVC (H.265)",
             "video/av01" to "AV1",
-            "video/x-vnd.on2.vp9" to "VP9",
+            "video/x-vnd.on2.vp9" to "VP9"
         )
 
         val codecList = runCatching { MediaCodecList(MediaCodecList.REGULAR_CODECS) }.getOrNull()
@@ -55,7 +55,7 @@ object DeviceDiagnosticsHelper {
             CodecInfo(
                 name = displayName,
                 isSupported = isSupported,
-                isHardware = isHardware,
+                isHardware = isHardware
             )
         }
 
@@ -64,7 +64,7 @@ object DeviceDiagnosticsHelper {
             androidVersion = "Android ${Build.VERSION.RELEASE} (API ${Build.VERSION.SDK_INT})",
             totalRamMb = totalRamMb,
             availableRamMb = availRamMb,
-            codecs = codecs,
+            codecs = codecs
         )
     }
 }

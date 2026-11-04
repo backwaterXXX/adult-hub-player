@@ -8,6 +8,7 @@ import io.mockk.coEvery
 import io.mockk.every
 import io.mockk.mockk
 import io.mockk.slot
+import java.util.UUID
 import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.test.runTest
 import org.jellyfin.sdk.api.client.ApiClient
@@ -25,7 +26,6 @@ import org.junit.Assert.assertEquals
 import org.junit.Assert.assertTrue
 import org.junit.Assert.fail
 import org.junit.Test
-import java.util.UUID
 
 class PersonRepositoryTest {
 
@@ -38,7 +38,7 @@ class PersonRepositoryTest {
     private val repository = PersonRepository(
         clientManager = clientManager,
         resolverApi = resolverApi,
-        settingsDataStore = settingsDataStore,
+        settingsDataStore = settingsDataStore
     )
 
     init {
@@ -74,7 +74,7 @@ class PersonRepositoryTest {
             startIndex = 20,
             limit = 60,
             searchTerm = "Jane",
-            nameStartsWith = "J",
+            nameStartsWith = "J"
         )
 
         assertTrue(result.isSuccess)
@@ -161,7 +161,7 @@ class PersonRepositoryTest {
             birth = "1990-01-01",
             nationality = "US",
             aliases = listOf("JD"),
-            photoUrl = "https://example.com/photo.jpg",
+            photoUrl = "https://example.com/photo.jpg"
         )
 
         val result = repository.getPersonDetails(personId = personId.toString(), personName = "Jane Doe")

@@ -34,7 +34,9 @@ internal class PlaybackPolicyInterceptor : Interceptor {
         val safeRequest = requestWithoutPolicy.build()
         return if (request.url.isHttps) {
             val redirectedOrigin = "${request.url.scheme}://${request.url.host}:${request.url.port}"
-            val originSafeRequest = if (redirectedOrigin == allowedOrigin) safeRequest else {
+            val originSafeRequest = if (redirectedOrigin == allowedOrigin) {
+                safeRequest
+            } else {
                 requestWithoutPolicy.apply {
                     forwardedHeaders.forEach(::removeHeader)
                     removeHeader("Authorization")
@@ -54,6 +56,7 @@ internal class PlaybackPolicyInterceptor : Interceptor {
                     }
                     chain.proceed(safeRequest)
                 }
+
                 is ServiceUrlValidation.Invalid -> throw IOException("Blocked an insecure stream redirect: ${validation.reason}")
             }
         }

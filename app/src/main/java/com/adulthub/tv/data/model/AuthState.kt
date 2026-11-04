@@ -12,6 +12,6 @@ sealed interface AuthState {
         val userId: String,
         val accessToken: String,
         val username: String,
-        val serverName: String = "",
+        val serverName: String = ""
     ) : AuthState
 }

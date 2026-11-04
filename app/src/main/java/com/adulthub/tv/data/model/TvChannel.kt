@@ -7,5 +7,5 @@ data class TvChannel(
     val id: String,
     val title: String,
     val slug: String,
-    val url: String,
+    val url: String
 )

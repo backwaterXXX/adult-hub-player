@@ -11,7 +11,6 @@ import com.adulthub.tv.data.model.ShuffleContextMode
 import com.adulthub.tv.data.model.TvItem
 import com.adulthub.tv.data.model.TvPersonRole
 import com.adulthub.tv.data.repository.LibraryRepository
-import org.jellyfin.sdk.model.api.ItemFilter
 import java.util.UUID
 import kotlinx.coroutines.flow.MutableSharedFlow
 import kotlinx.coroutines.flow.MutableStateFlow
@@ -21,6 +20,7 @@ import kotlinx.coroutines.flow.asSharedFlow
 import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.launch
+import org.jellyfin.sdk.model.api.ItemFilter
 
 data class ItemDetailUiState(
     val item: TvItem? = null,
@@ -28,7 +28,7 @@ data class ItemDetailUiState(
     val errorMessage: String? = null,
     val similarItems: List<TvItem> = emptyList(),
     val isLoadingSimilar: Boolean = false,
-    val isFavorite: Boolean = false,
+    val isFavorite: Boolean = false
 )
 
 sealed interface ItemDetailNavEvent {
@@ -43,7 +43,7 @@ class ItemDetailViewModel(
     private val libraryRepository: LibraryRepository,
     private val clientManager: JellyfinClientManager,
     private val settingsDataStore: SettingsDataStore? = null,
-    private val context: Context,
+    private val context: Context
 ) : ViewModel() {
 
     private val _uiState = MutableStateFlow(ItemDetailUiState())
@@ -69,13 +69,13 @@ class ItemDetailViewModel(
                         state.copy(
                             item = item,
                             isFavorite = item.isFavorite,
-                            isLoading = false,
+                            isLoading = false
                         )
                     },
                     onFailure = { error ->
                         state.copy(
                             isLoading = false,
-                            errorMessage = error.localizedMessage ?: context.getString(R.string.library_error_movie_details),
+                            errorMessage = error.localizedMessage ?: context.getString(R.string.library_error_movie_details)
                         )
                     }
                 )
@@ -97,7 +97,7 @@ class ItemDetailViewModel(
             _uiState.update { state ->
                 state.copy(
                     similarItems = similarResult.getOrDefault(emptyList()),
-                    isLoadingSimilar = false,
+                    isLoadingSimilar = false
                 )
             }
         }
@@ -183,10 +183,11 @@ class ItemDetailViewModel(
             try {
                 when (mode) {
                     ShuffleContextMode.DEFAULT -> navigateToRandom()
+
                     ShuffleContextMode.UNWATCHED -> {
                         val random = libraryRepository.getRandomItemFiltered(
                             excludeItemId = current?.id,
-                            filters = setOf(ItemFilter.IS_UNPLAYED),
+                            filters = setOf(ItemFilter.IS_UNPLAYED)
                         ).getOrNull()
                         if (random != null) {
                             _navEvents.emit(ItemDetailNavEvent.NavigateToItemDetail(random.id))
@@ -194,29 +195,35 @@ class ItemDetailViewModel(
                             navigateToRandom()
                         }
                     }
+
                     ShuffleContextMode.SAME_PERFORMER -> {
                         val actor = current?.people?.filter { it.type == "Actor" || it.type == null }?.shuffled()?.firstOrNull()
                         val actorUuid = actor?.let { runCatching { UUID.fromString(it.id) }.getOrNull() }
                         val random = if (actorUuid != null) {
                             libraryRepository.getRandomItemFiltered(
                                 excludeItemId = current.id,
-                                personIds = listOf(actorUuid),
+                                personIds = listOf(actorUuid)
                             ).getOrNull()
-                        } else null
+                        } else {
+                            null
+                        }
                         if (random != null) {
                             _navEvents.emit(ItemDetailNavEvent.NavigateToItemDetail(random.id))
                         } else {
                             navigateToRandom()
                         }
                     }
+
                     ShuffleContextMode.SAME_CATEGORY -> {
                         val genre = current?.genres?.shuffled()?.firstOrNull()
                         val random = if (!genre.isNullOrBlank()) {
                             libraryRepository.getRandomItemFiltered(
                                 excludeItemId = current.id,
-                                genres = listOf(genre),
+                                genres = listOf(genre)
                             ).getOrNull()
-                        } else null
+                        } else {
+                            null
+                        }
                         if (random != null) {
                             _navEvents.emit(ItemDetailNavEvent.NavigateToItemDetail(random.id))
                         } else {

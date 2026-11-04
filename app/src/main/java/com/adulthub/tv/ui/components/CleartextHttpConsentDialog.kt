@@ -27,7 +27,7 @@ import com.adulthub.tv.ui.theme.TextSecondary
 fun CleartextHttpConsentDialog(
     url: String,
     onApprove: () -> Unit,
-    onDismiss: () -> Unit,
+    onDismiss: () -> Unit
 ) {
     Dialog(onDismissRequest = onDismiss) {
         Column(
@@ -35,23 +35,23 @@ fun CleartextHttpConsentDialog(
                 .fillMaxWidth(0.85f)
                 .widthIn(max = 680.dp)
                 .background(SurfaceDark, RoundedCornerShape(18.dp))
-                .padding(32.dp),
+                .padding(32.dp)
         ) {
             Text(
                 text = stringResource(R.string.http_consent_title),
                 style = MaterialTheme.typography.headlineSmall,
-                color = NeonPink,
+                color = NeonPink
             )
             Spacer(Modifier.height(16.dp))
             Text(
                 text = stringResource(R.string.http_consent_message, url),
                 style = MaterialTheme.typography.bodyLarge,
-                color = TextSecondary,
+                color = TextSecondary
             )
             Spacer(Modifier.height(26.dp))
             Row(
                 modifier = Modifier.fillMaxWidth(),
-                horizontalArrangement = Arrangement.End,
+                horizontalArrangement = Arrangement.End
             ) {
                 TvSecondaryButton(onClick = onDismiss) {
                     Text(stringResource(R.string.action_cancel))

@@ -4,13 +4,13 @@ import android.content.Context
 import androidx.test.core.app.ApplicationProvider
 import androidx.test.ext.junit.runners.AndroidJUnit4
 import com.adulthub.tv.data.local.SettingsDataStore
+import java.io.File
 import kotlinx.coroutines.runBlocking
 import org.junit.Assert.assertNull
 import org.junit.Assert.assertTrue
 import org.junit.Before
 import org.junit.Test
 import org.junit.runner.RunWith
-import java.io.File
 
 @RunWith(AndroidJUnit4::class)
 class AppUpdateRepositoryInstrumentedTest {
@@ -22,7 +22,7 @@ class AppUpdateRepositoryInstrumentedTest {
     fun setUp() {
         repository = AppUpdateRepository(
             context = context,
-            settingsDataStore = SettingsDataStore(context),
+            settingsDataStore = SettingsDataStore(context)
         )
         File(context.filesDir, "updates").listFiles()?.forEach(File::delete)
     }
@@ -43,7 +43,7 @@ class AppUpdateRepositoryInstrumentedTest {
             minSdk = 28,
             apkAssetName = "AdultHubTV-0.0.1.apk",
             sizeBytes = 10L,
-            sha256 = "a".repeat(64),
+            sha256 = "a".repeat(64)
         )
         File(dir, "update-manifest.json").writeText(
             """
@@ -58,7 +58,7 @@ class AppUpdateRepositoryInstrumentedTest {
         assertNull("An outdated update must not be restored", restored)
         assertTrue(
             "The outdated update files have to be removed",
-            File(dir, "update-manifest.json").let { !it.exists() } || manifest.versionCode == 1L,
+            File(dir, "update-manifest.json").let { !it.exists() } || manifest.versionCode == 1L
         )
     }
 }

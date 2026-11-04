@@ -22,15 +22,15 @@ class PlayerControlCyclesTest {
     fun `aspect ratio cycles through fill and crop back to fit`() {
         assertEquals(
             AspectRatioFrameLayout.RESIZE_MODE_FILL,
-            nextResizeMode(AspectRatioFrameLayout.RESIZE_MODE_FIT),
+            nextResizeMode(AspectRatioFrameLayout.RESIZE_MODE_FIT)
         )
         assertEquals(
             AspectRatioFrameLayout.RESIZE_MODE_ZOOM,
-            nextResizeMode(AspectRatioFrameLayout.RESIZE_MODE_FILL),
+            nextResizeMode(AspectRatioFrameLayout.RESIZE_MODE_FILL)
         )
         assertEquals(
             AspectRatioFrameLayout.RESIZE_MODE_FIT,
-            nextResizeMode(AspectRatioFrameLayout.RESIZE_MODE_ZOOM),
+            nextResizeMode(AspectRatioFrameLayout.RESIZE_MODE_ZOOM)
         )
     }
 

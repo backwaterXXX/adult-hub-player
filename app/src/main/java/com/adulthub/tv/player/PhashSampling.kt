@@ -2,25 +2,25 @@ package com.adulthub.tv.player
 
 import android.content.Context
 import com.adulthub.tv.R
-import com.adulthub.tv.diagnostics.AppLog as Log
 import com.adulthub.tv.data.jellyfin.JellyfinClientManager
 import com.adulthub.tv.data.local.AccountScope
 import com.adulthub.tv.data.local.AuthDataStore
 import com.adulthub.tv.data.local.PhashJobStore
 import com.adulthub.tv.data.local.SessionOwner
-import com.adulthub.tv.data.local.StoredPhashJob
 import com.adulthub.tv.data.local.SettingsDataStore
+import com.adulthub.tv.data.local.StoredPhashJob
 import com.adulthub.tv.data.model.AuthState
 import com.adulthub.tv.data.model.TvItem
 import com.adulthub.tv.data.resolver.PhashGenerationRequest
 import com.adulthub.tv.data.resolver.ResolverApiClient
+import com.adulthub.tv.diagnostics.AppLog as Log
 import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.TimeoutCancellationException
 import kotlinx.coroutines.delay
-import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
+import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withTimeout
@@ -59,7 +59,7 @@ class PhashCoordinator(
     private val applicationScope: kotlinx.coroutines.CoroutineScope,
     private val accountScope: AccountScope? = null,
     private val budget: PhashBudget = PhashBudget(),
-    private val context: Context,
+    private val context: Context
 ) {
     private val inFlight = java.util.concurrent.ConcurrentHashMap.newKeySet<String>()
     private val _jobStatuses = MutableStateFlow<Map<String, PhashUiStatus>>(emptyMap())
@@ -102,7 +102,7 @@ class PhashCoordinator(
         item: TvItem? = null,
         observedDurationMs: Long? = null,
         durationOverrideUs: Long? = null,
-        startedAtMs: Long? = null,
+        startedAtMs: Long? = null
     ) {
         if (!inFlight.add(videoId)) return
         applicationScope.launch {
@@ -128,7 +128,7 @@ class PhashCoordinator(
         observedDurationMs: Long?,
         durationOverrideUs: Long?,
         owner: SessionOwner?,
-        startedAtMs: Long?,
+        startedAtMs: Long?
     ) {
         val accountKey = owner?.accountKey
         val stored = jobStore.get(videoId, accountKey)
@@ -178,9 +178,9 @@ class PhashCoordinator(
                 videoId = videoId,
                 state = "submitting",
                 durationUs = durationUs,
-                startedAt = startedAt,
+                startedAt = startedAt
             ),
-            accountKey,
+            accountKey
         )
         var lastHttpCode: Int? = null
         for (attempt in 0..2) {
@@ -212,7 +212,7 @@ class PhashCoordinator(
                     state = state.ifBlank { "queued" },
                     errorCode = response.errorCode,
                     durationUs = durationUs,
-                    startedAt = startedAt,
+                    startedAt = startedAt
                 )
                 jobStore.save(record, accountKey)
                 setStatus(videoId, statusFor(record))
@@ -235,12 +235,15 @@ class PhashCoordinator(
                 }
                 if (!isRetryable(error.code())) {
                     if (error.code() == 409) {
-                        jobStore.save(StoredPhashJob(
-                            videoId = videoId,
-                            state = "failed",
-                            errorCode = "terminal_job",
-                            durationUs = durationUs,
-                        ), accountKey)
+                        jobStore.save(
+                            StoredPhashJob(
+                                videoId = videoId,
+                                state = "failed",
+                                errorCode = "terminal_job",
+                                durationUs = durationUs
+                            ),
+                            accountKey
+                        )
                     } else {
                         jobStore.remove(videoId, accountKey)
                     }
@@ -265,10 +268,16 @@ class PhashCoordinator(
         }
         // Keep the submitting record: repeating POST is safe because the resolver returns the
         // existing queued/processing job for the same video and server profile.
-        setStatus(videoId, PhashUiStatus(
-            if (lastHttpCode == null) context.getString(R.string.phash_unavailable_retry)
-            else context.getString(R.string.phash_unavailable_http_retry, lastHttpCode),
-        ))
+        setStatus(
+            videoId,
+            PhashUiStatus(
+                if (lastHttpCode == null) {
+                    context.getString(R.string.phash_unavailable_retry)
+                } else {
+                    context.getString(R.string.phash_unavailable_http_retry, lastHttpCode)
+                }
+            )
+        )
     }
 
     /**
@@ -288,7 +297,7 @@ class PhashCoordinator(
         resolverUrl: String,
         token: String,
         startedAtMs: Long,
-        durationUs: Long?,
+        durationUs: Long?
     ) {
         var backoffMs = STATUS_POLL_INTERVAL_MS
         var polls = 0
@@ -335,7 +344,7 @@ class PhashCoordinator(
                     state = state,
                     errorCode = job.errorCode,
                     durationUs = durationUs,
-                    startedAt = startedAtMs,
+                    startedAt = startedAtMs
                 )
                 jobStore.save(record, accountKey)
                 when (state) {
@@ -343,19 +352,25 @@ class PhashCoordinator(
                         setStatus(videoId, PhashUiStatus(context.getString(R.string.phash_complete), terminal = true))
                         return
                     }
+
                     "failed", "cancelled" -> {
                         setStatus(videoId, statusFor(record))
                         return
                     }
+
                     in ACTIVE_STATES -> {
                         setStatus(videoId, statusFor(record))
                         backoffMs = STATUS_POLL_INTERVAL_MS
                     }
+
                     else -> {
-                        setStatus(videoId, PhashUiStatus(
-                            context.getString(R.string.phash_unsupported_state, state),
-                            terminal = true,
-                        ))
+                        setStatus(
+                            videoId,
+                            PhashUiStatus(
+                                context.getString(R.string.phash_unsupported_state, state),
+                                terminal = true
+                            )
+                        )
                         return
                     }
                 }
@@ -402,7 +417,7 @@ class PhashCoordinator(
         jobId: String?,
         accountKey: String?,
         startedAtMs: Long,
-        durationUs: Long?,
+        durationUs: Long?
     ) {
         jobStore.save(
             StoredPhashJob(
@@ -411,9 +426,9 @@ class PhashCoordinator(
                 state = "failed",
                 errorCode = TIMEOUT_ERROR_CODE,
                 durationUs = durationUs,
-                startedAt = startedAtMs,
+                startedAt = startedAtMs
             ),
-            accountKey,
+            accountKey
         )
         setStatus(videoId, PhashUiStatus(timeoutMessage, terminal = true))
         Log.i(PHASH_TAG, "the task used up its polling budget")
@@ -428,9 +443,13 @@ class PhashCoordinator(
 
     private fun statusFor(record: StoredPhashJob): PhashUiStatus = when (record.state.lowercase()) {
         "submitting" -> PhashUiStatus(context.getString(R.string.phash_sending))
+
         "queued" -> PhashUiStatus(context.getString(R.string.phash_queued))
+
         "processing" -> PhashUiStatus(context.getString(R.string.phash_processing))
+
         in SUCCESS_STATES -> PhashUiStatus(context.getString(R.string.phash_complete), terminal = true)
+
         "failed", "cancelled" -> PhashUiStatus(
             if (record.errorCode == TIMEOUT_ERROR_CODE) {
                 timeoutMessage
@@ -438,8 +457,9 @@ class PhashCoordinator(
                 record.errorCode?.let { context.getString(R.string.phash_failed_with_code, it) }
                     ?: context.getString(R.string.phash_failed)
             },
-            terminal = true,
+            terminal = true
         )
+
         else -> PhashUiStatus(context.getString(R.string.phash_state, record.state))
     }
 

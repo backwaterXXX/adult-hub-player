@@ -16,23 +16,21 @@ import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.runtime.Composable
-import androidx.compose.runtime.getValue
 import androidx.compose.runtime.LaunchedEffect
-import androidx.compose.runtime.remember
+import androidx.compose.runtime.getValue
 import androidx.compose.runtime.produceState
+import androidx.compose.runtime.remember
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.focus.FocusRequester
 import androidx.compose.ui.focus.focusRequester
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.font.FontFamily
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
-import kotlinx.coroutines.Dispatchers
-import kotlinx.coroutines.withContext
 import androidx.compose.ui.unit.sp
 import androidx.compose.ui.window.Dialog
 import androidx.tv.material3.MaterialTheme
@@ -43,11 +41,13 @@ import com.adulthub.tv.ui.theme.NeonPink
 import com.adulthub.tv.ui.theme.SurfaceDark
 import com.adulthub.tv.ui.theme.TextPrimary
 import com.adulthub.tv.ui.theme.TextSecondary
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.withContext
 
 @Composable
 fun LicensesDialog(
     onDismiss: () -> Unit,
-    modifier: Modifier = Modifier,
+    modifier: Modifier = Modifier
 ) {
     val context = LocalContext.current
     val unavailableText = stringResource(R.string.licenses_unavailable)
@@ -73,30 +73,30 @@ fun LicensesDialog(
                 .clip(RoundedCornerShape(18.dp))
                 .background(SurfaceDark)
                 .border(1.dp, NeonPink.copy(alpha = 0.6f), RoundedCornerShape(18.dp))
-                .padding(28.dp),
+                .padding(28.dp)
         ) {
             Row(
                 modifier = Modifier.fillMaxWidth(),
                 horizontalArrangement = Arrangement.SpaceBetween,
-                verticalAlignment = Alignment.CenterVertically,
+                verticalAlignment = Alignment.CenterVertically
             ) {
                 Column {
                     Text(
                         text = stringResource(R.string.licenses_title),
                         style = MaterialTheme.typography.headlineSmall.copy(fontWeight = FontWeight.Bold),
-                        color = NeonPink,
+                        color = NeonPink
                     )
                     Spacer(Modifier.height(4.dp))
                     Text(
                         text = stringResource(R.string.licenses_subtitle),
                         style = MaterialTheme.typography.bodySmall,
-                        color = TextSecondary,
+                        color = TextSecondary
                     )
                 }
 
                 TvSecondaryButton(
                     onClick = onDismiss,
-                    modifier = Modifier.focusRequester(closeFocusRequester),
+                    modifier = Modifier.focusRequester(closeFocusRequester)
                 ) {
                     Text(stringResource(R.string.action_close), fontWeight = FontWeight.SemiBold)
                 }
@@ -112,14 +112,14 @@ fun LicensesDialog(
                     .background(CardSurface)
                     .border(1.dp, Color.White.copy(alpha = 0.08f), RoundedCornerShape(12.dp))
                     .padding(16.dp)
-                    .verticalScroll(rememberScrollState()),
+                    .verticalScroll(rememberScrollState())
             ) {
                 Text(
                     text = licenseText,
                     color = TextPrimary,
                     fontSize = 13.sp,
                     lineHeight = 18.sp,
-                    fontFamily = FontFamily.Monospace,
+                    fontFamily = FontFamily.Monospace
                 )
             }
         }

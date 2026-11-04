@@ -3,6 +3,8 @@ package com.adulthub.tv.ui.detail
 import android.net.Uri
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
+import androidx.compose.foundation.interaction.MutableInteractionSource
+import androidx.compose.foundation.interaction.collectIsFocusedAsState
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
@@ -14,12 +16,11 @@ import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.width
+import androidx.compose.foundation.layout.widthIn
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.LazyRow
 import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.lazy.itemsIndexed
-import androidx.compose.foundation.interaction.MutableInteractionSource
-import androidx.compose.foundation.interaction.collectIsFocusedAsState
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
@@ -39,6 +40,7 @@ import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
@@ -49,8 +51,10 @@ import androidx.tv.material3.OutlinedButtonDefaults
 import androidx.tv.material3.Text
 import coil.compose.AsyncImage
 import coil.request.ImageRequest
+import com.adulthub.tv.R
 import com.adulthub.tv.data.jellyfin.JellyfinClientManager
 import com.adulthub.tv.data.local.SettingsDataStore
+import com.adulthub.tv.data.model.ShuffleContextMode
 import com.adulthub.tv.data.model.TvItem
 import com.adulthub.tv.data.model.TvPerson
 import com.adulthub.tv.data.model.TvPersonRole
@@ -64,10 +68,6 @@ import com.adulthub.tv.ui.components.formattedDurationLabel
 import com.adulthub.tv.ui.components.isPoorThumbnail
 import com.adulthub.tv.ui.theme.CardSurface
 import com.adulthub.tv.ui.theme.CardSurfaceFocused
-import androidx.compose.foundation.layout.widthIn
-import androidx.compose.ui.res.stringResource
-import com.adulthub.tv.R
-import com.adulthub.tv.data.model.ShuffleContextMode
 import com.adulthub.tv.ui.theme.NeonPink
 import com.adulthub.tv.ui.theme.OledBlack
 import com.adulthub.tv.ui.theme.SurfaceDark
@@ -88,7 +88,7 @@ fun ItemDetailScreen(
     modifier: Modifier = Modifier,
     onNavigateToSearch: (String) -> Unit = {},
     isCurrentDestination: Boolean = true,
-    viewModel: ItemDetailViewModel = koinViewModel(),
+    viewModel: ItemDetailViewModel = koinViewModel()
 ) {
     val state by viewModel.uiState.collectAsStateWithLifecycle()
     val contentFocusRequester = remember(itemId) { FocusRequester() }
@@ -122,14 +122,17 @@ fun ItemDetailScreen(
                     runCatching { contentFocusRequester.saveFocusedChild() }
                     onNavigateToPlayer(event.itemId, event.resume)
                 }
+
                 is ItemDetailNavEvent.NavigateToItemDetail -> {
                     runCatching { contentFocusRequester.saveFocusedChild() }
                     onNavigateToItemDetail(event.itemId)
                 }
+
                 is ItemDetailNavEvent.NavigateToPersonDetail -> {
                     runCatching { contentFocusRequester.saveFocusedChild() }
                     onNavigateToPersonDetail(event.personId, event.personName)
                 }
+
                 is ItemDetailNavEvent.NavigateBack -> onNavigateBack()
             }
         }
@@ -138,29 +141,31 @@ fun ItemDetailScreen(
     Box(
         modifier = modifier
             .fillMaxSize()
-            .background(OledBlack),
+            .background(OledBlack)
     ) {
         when {
             state.isLoading -> {
                 Box(
                     modifier = Modifier.fillMaxSize(),
-                    contentAlignment = Alignment.Center,
+                    contentAlignment = Alignment.Center
                 ) {
                     LoadingIndicator(message = stringResource(R.string.library_loading_movie_details))
                 }
             }
+
             state.errorMessage != null && state.item == null -> {
                 Box(
                     modifier = Modifier.fillMaxSize(),
-                    contentAlignment = Alignment.Center,
+                    contentAlignment = Alignment.Center
                 ) {
                     ErrorMessage(
                         message = state.errorMessage ?: stringResource(R.string.library_failed_to_load_movie),
                         onRetry = { viewModel.loadDetails(itemId) },
-                        modifier = Modifier.fillMaxWidth(0.5f),
+                        modifier = Modifier.fillMaxWidth(0.5f)
                     )
                 }
             }
+
             state.item != null -> {
                 val item = state.item!!
 
@@ -169,14 +174,14 @@ fun ItemDetailScreen(
                         .fillMaxSize()
                         .focusRequester(contentFocusRequester)
                         .focusRestorer(),
-                    contentPadding = PaddingValues(bottom = 64.dp),
+                    contentPadding = PaddingValues(bottom = 64.dp)
                 ) {
                     // Hero Backdrop with Gradient Overlay
                     item {
                         Box(
                             modifier = Modifier
                                 .fillMaxWidth()
-                                .height(380.dp),
+                                .height(380.dp)
                         ) {
                             val backdropUrl = viewModel.getBackdropImageUrl(item)
                             LaunchedEffect(item.id, item.providerVideoId) {
@@ -218,7 +223,7 @@ fun ItemDetailScreen(
                                     },
                                     onError = {
                                         if (phashThumbnailUrl != null) usePhashBackdrop = true
-                                    },
+                                    }
                                 )
                             }
 
@@ -231,23 +236,23 @@ fun ItemDetailScreen(
                                             colors = listOf(
                                                 Color.Black.copy(alpha = 0.3f),
                                                 Color.Black.copy(alpha = 0.6f),
-                                                OledBlack,
+                                                OledBlack
                                             ),
                                             startY = 0f,
-                                            endY = Float.POSITIVE_INFINITY,
+                                            endY = Float.POSITIVE_INFINITY
                                         )
-                                    ),
+                                    )
                             )
 
                             // Top Back Button
                             Row(
                                 modifier = Modifier
                                     .align(Alignment.TopStart)
-                                    .padding(start = 48.dp, top = 24.dp),
+                                    .padding(start = 48.dp, top = 24.dp)
                             ) {
                                 TvSecondaryButton(
                                     onClick = onNavigateBack,
-                                    modifier = Modifier.height(38.dp),
+                                    modifier = Modifier.height(38.dp)
                                 ) {
                                     Text(text = stringResource(R.string.action_back), fontSize = 13.sp)
                                 }
@@ -257,20 +262,20 @@ fun ItemDetailScreen(
                             Column(
                                 modifier = Modifier
                                     .align(Alignment.BottomStart)
-                                    .padding(horizontal = 48.dp, vertical = 16.dp),
+                                    .padding(horizontal = 48.dp, vertical = 16.dp)
                             ) {
                                 Text(
                                     text = item.title,
                                     style = MaterialTheme.typography.displaySmall,
                                     color = TextPrimary,
-                                    fontWeight = FontWeight.Bold,
+                                    fontWeight = FontWeight.Bold
                                 )
 
                                 Spacer(modifier = Modifier.height(6.dp))
 
                                 Row(
                                     verticalAlignment = Alignment.CenterVertically,
-                                    horizontalArrangement = Arrangement.spacedBy(8.dp),
+                                    horizontalArrangement = Arrangement.spacedBy(8.dp)
                                 ) {
                                     val durationText = formattedDurationLabel(item)
                                     val meta = buildString {
@@ -290,7 +295,7 @@ fun ItemDetailScreen(
                                         Text(
                                             text = meta,
                                             style = MaterialTheme.typography.bodyLarge,
-                                            color = TextSecondary,
+                                            color = TextSecondary
                                         )
                                     }
                                 }
@@ -305,11 +310,11 @@ fun ItemDetailScreen(
                                 .fillMaxWidth()
                                 .padding(horizontal = 48.dp, vertical = 12.dp),
                             horizontalArrangement = Arrangement.spacedBy(16.dp),
-                            verticalAlignment = Alignment.CenterVertically,
+                            verticalAlignment = Alignment.CenterVertically
                         ) {
                             TvPrimaryButton(
                                 onClick = viewModel::playMovie,
-                                modifier = Modifier.height(44.dp),
+                                modifier = Modifier.height(44.dp)
                             ) {
                                 Text(text = stringResource(R.string.library_action_play), fontWeight = FontWeight.Bold)
                             }
@@ -323,7 +328,7 @@ fun ItemDetailScreen(
                                 val pct = (item.progressFraction * 100).toInt()
                                 TvSecondaryButton(
                                     onClick = viewModel::resumeMovie,
-                                    modifier = Modifier.height(44.dp),
+                                    modifier = Modifier.height(44.dp)
                                 ) {
                                     Text(text = stringResource(R.string.library_resume_percent, pct))
                                 }
@@ -331,7 +336,7 @@ fun ItemDetailScreen(
 
                             TvSecondaryButton(
                                 onClick = viewModel::playRandom,
-                                modifier = Modifier.height(44.dp),
+                                modifier = Modifier.height(44.dp)
                             ) {
                                 Text(text = stringResource(R.string.library_random_movie))
                             }
@@ -340,7 +345,7 @@ fun ItemDetailScreen(
                             if (!item.isTelegram && hasActors) {
                                 TvSecondaryButton(
                                     onClick = { viewModel.playRandomContextual(ShuffleContextMode.SAME_PERFORMER) },
-                                    modifier = Modifier.height(44.dp),
+                                    modifier = Modifier.height(44.dp)
                                 ) {
                                     Text(text = stringResource(R.string.shuffle_same_performer))
                                 }
@@ -349,7 +354,7 @@ fun ItemDetailScreen(
                             if (!item.isTelegram && item.genres.isNotEmpty()) {
                                 TvSecondaryButton(
                                     onClick = { viewModel.playRandomContextual(ShuffleContextMode.SAME_CATEGORY) },
-                                    modifier = Modifier.height(44.dp),
+                                    modifier = Modifier.height(44.dp)
                                 ) {
                                     Text(text = stringResource(R.string.shuffle_same_category))
                                 }
@@ -363,7 +368,7 @@ fun ItemDetailScreen(
                                 }
                                 TvSecondaryButton(
                                     onClick = viewModel::toggleFavorite,
-                                    modifier = Modifier.height(44.dp),
+                                    modifier = Modifier.height(44.dp)
                                 ) {
                                     Text(text = favText)
                                 }
@@ -376,7 +381,7 @@ fun ItemDetailScreen(
                             }
                             TvSecondaryButton(
                                 onClick = viewModel::toggleWatched,
-                                modifier = Modifier.height(44.dp),
+                                modifier = Modifier.height(44.dp)
                             ) {
                                 Text(text = watchedText)
                             }
@@ -389,19 +394,19 @@ fun ItemDetailScreen(
                             Column(
                                 modifier = Modifier
                                     .fillMaxWidth()
-                                    .padding(horizontal = 48.dp, vertical = 8.dp),
+                                    .padding(horizontal = 48.dp, vertical = 8.dp)
                             ) {
                                 if (item.genres.isNotEmpty()) {
                                     LazyRow(
                                         modifier = Modifier.focusRestorer().padding(bottom = 8.dp),
                                         contentPadding = PaddingValues(horizontal = 12.dp),
-                                        horizontalArrangement = Arrangement.spacedBy(8.dp),
+                                        horizontalArrangement = Arrangement.spacedBy(8.dp)
                                     ) {
                                         itemsIndexed(item.genres, key = { index, genre -> "genre_${genre}_$index" }) { _, genre ->
                                             TvFilterChip(
                                                 text = genre,
                                                 borderColor = NeonPink,
-                                                onClick = { selectedTagForAction = genre },
+                                                onClick = { selectedTagForAction = genre }
                                             )
                                         }
                                     }
@@ -411,13 +416,13 @@ fun ItemDetailScreen(
                                     LazyRow(
                                         modifier = Modifier.focusRestorer(),
                                         contentPadding = PaddingValues(horizontal = 12.dp),
-                                        horizontalArrangement = Arrangement.spacedBy(8.dp),
+                                        horizontalArrangement = Arrangement.spacedBy(8.dp)
                                     ) {
                                         itemsIndexed(item.tags, key = { index, tag -> "tag_${tag}_$index" }) { _, tag ->
                                             TvFilterChip(
                                                 text = "#$tag",
                                                 borderColor = NeonPink,
-                                                onClick = { selectedTagForAction = tag },
+                                                onClick = { selectedTagForAction = tag }
                                             )
                                         }
                                     }
@@ -432,13 +437,13 @@ fun ItemDetailScreen(
                             Column(
                                 modifier = Modifier
                                     .fillMaxWidth()
-                                    .padding(horizontal = 48.dp, vertical = 12.dp),
+                                    .padding(horizontal = 48.dp, vertical = 12.dp)
                             ) {
                                 Text(
                                     text = stringResource(R.string.library_overview),
                                     style = MaterialTheme.typography.titleMedium,
                                     color = TextPrimary,
-                                    fontWeight = FontWeight.Bold,
+                                    fontWeight = FontWeight.Bold
                                 )
                                 Spacer(modifier = Modifier.height(6.dp))
                                 Text(
@@ -446,7 +451,7 @@ fun ItemDetailScreen(
                                     style = MaterialTheme.typography.bodyMedium,
                                     color = TextSecondary,
                                     lineHeight = 22.sp,
-                                    modifier = Modifier.fillMaxWidth(0.8f),
+                                    modifier = Modifier.fillMaxWidth(0.8f)
                                 )
                             }
                         }
@@ -459,30 +464,30 @@ fun ItemDetailScreen(
                             Column(
                                 modifier = Modifier
                                     .fillMaxWidth()
-                                    .padding(vertical = 12.dp),
+                                    .padding(vertical = 12.dp)
                             ) {
                                 Text(
                                     text = stringResource(R.string.library_cast),
                                     style = MaterialTheme.typography.titleLarge,
                                     fontWeight = FontWeight.Bold,
-                                    modifier = Modifier.padding(horizontal = 48.dp, vertical = 6.dp),
+                                    modifier = Modifier.padding(horizontal = 48.dp, vertical = 6.dp)
                                 )
 
                                 LazyRow(
                                     modifier = Modifier.focusRestorer(),
                                     contentPadding = PaddingValues(horizontal = 48.dp),
-                                    horizontalArrangement = Arrangement.spacedBy(16.dp),
+                                    horizontalArrangement = Arrangement.spacedBy(16.dp)
                                 ) {
                                     itemsIndexed(castActors, key = { index, role -> "person_${role.id}_$index" }) { _, role ->
                                         val person = TvPerson(
                                             id = role.id,
                                             name = role.name,
-                                            primaryImageTag = role.primaryImageTag,
+                                            primaryImageTag = role.primaryImageTag
                                         )
                                         PersonCard(
                                             person = person,
                                             imageUrl = viewModel.getPersonImageUrl(role.id, role.primaryImageTag),
-                                            onClick = { viewModel.onCastPersonClicked(role) },
+                                            onClick = { viewModel.onCastPersonClicked(role) }
                                         )
                                     }
                                 }
@@ -496,25 +501,25 @@ fun ItemDetailScreen(
                             Column(
                                 modifier = Modifier
                                     .fillMaxWidth()
-                                    .padding(vertical = 12.dp),
+                                    .padding(vertical = 12.dp)
                             ) {
                                 Text(
                                     text = stringResource(R.string.library_similar_scenes),
                                     style = MaterialTheme.typography.titleLarge,
                                     fontWeight = FontWeight.Bold,
-                                    modifier = Modifier.padding(horizontal = 48.dp, vertical = 6.dp),
+                                    modifier = Modifier.padding(horizontal = 48.dp, vertical = 6.dp)
                                 )
 
                                 LazyRow(
                                     modifier = Modifier.focusRestorer(),
                                     contentPadding = PaddingValues(horizontal = 48.dp),
-                                    horizontalArrangement = Arrangement.spacedBy(16.dp),
+                                    horizontalArrangement = Arrangement.spacedBy(16.dp)
                                 ) {
                                     items(state.similarItems, key = { it.id }) { similarItem ->
                                         MovieCard(
                                             item = similarItem,
                                             imageUrl = viewModel.getItemImageUrl(similarItem),
-                                            onClick = { viewModel.onSimilarMovieClicked(similarItem) },
+                                            onClick = { viewModel.onSimilarMovieClicked(similarItem) }
                                         )
                                     }
                                 }
@@ -533,28 +538,28 @@ fun ItemDetailScreen(
                     .fillMaxWidth(0.85f)
                     .widthIn(max = 560.dp)
                     .background(SurfaceDark, RoundedCornerShape(18.dp))
-                    .padding(28.dp),
+                    .padding(28.dp)
             ) {
                 Text(
                     text = stringResource(R.string.tag_options_title, tag),
                     style = MaterialTheme.typography.headlineSmall,
-                    color = NeonPink,
+                    color = NeonPink
                 )
                 Spacer(Modifier.height(14.dp))
                 Text(
                     text = stringResource(R.string.library_tag_action_prompt),
                     style = MaterialTheme.typography.bodyLarge,
-                    color = TextSecondary,
+                    color = TextSecondary
                 )
                 Spacer(Modifier.height(24.dp))
                 Row(
                     modifier = Modifier.fillMaxWidth(),
                     horizontalArrangement = Arrangement.spacedBy(12.dp, Alignment.End),
-                    verticalAlignment = Alignment.CenterVertically,
+                    verticalAlignment = Alignment.CenterVertically
                 ) {
                     TvSecondaryButton(
                         onClick = { selectedTagForAction = null },
-                        modifier = Modifier.height(40.dp),
+                        modifier = Modifier.height(40.dp)
                     ) {
                         Text(stringResource(R.string.action_cancel))
                     }
@@ -565,7 +570,7 @@ fun ItemDetailScreen(
                             runCatching { contentFocusRequester.saveFocusedChild() }
                             onNavigateToSearch(t)
                         },
-                        modifier = Modifier.height(40.dp),
+                        modifier = Modifier.height(40.dp)
                     ) {
                         Text(stringResource(R.string.action_search_tag))
                     }
@@ -577,10 +582,10 @@ fun ItemDetailScreen(
                             android.widget.Toast.makeText(
                                 context,
                                 tagExcludedMessage,
-                                android.widget.Toast.LENGTH_SHORT,
+                                android.widget.Toast.LENGTH_SHORT
                             ).show()
                         },
-                        modifier = Modifier.height(40.dp),
+                        modifier = Modifier.height(40.dp)
                     ) {
                         Text(stringResource(R.string.action_exclude_tag))
                     }
@@ -595,7 +600,7 @@ private fun TvFilterChip(
     text: String,
     borderColor: Color,
     onClick: () -> Unit,
-    modifier: Modifier = Modifier,
+    modifier: Modifier = Modifier
 ) {
     val interactionSource = remember { MutableInteractionSource() }
     val isFocused by interactionSource.collectIsFocusedAsState()
@@ -607,7 +612,7 @@ private fun TvFilterChip(
             containerColor = if (isFocused) SurfaceDark else Color.White.copy(alpha = 0.08f),
             focusedContainerColor = SurfaceDark,
             contentColor = Color.White,
-            focusedContentColor = Color.White,
+            focusedContentColor = Color.White
         ),
         border = OutlinedButtonDefaults.border(
             border = androidx.tv.material3.Border(
@@ -618,16 +623,16 @@ private fun TvFilterChip(
             ),
             focusedBorder = androidx.tv.material3.Border(
                 border = androidx.compose.foundation.BorderStroke(2.5.dp, borderColor)
-            ),
+            )
         ),
         shape = OutlinedButtonDefaults.shape(RoundedCornerShape(8.dp)),
-        modifier = modifier.height(34.dp),
+        modifier = modifier.height(34.dp)
     ) {
         Text(
             text = text,
             style = MaterialTheme.typography.bodySmall,
             fontWeight = if (isFocused) FontWeight.Bold else FontWeight.SemiBold,
-            color = if (isFocused) borderColor else Color.White,
+            color = if (isFocused) borderColor else Color.White
         )
     }
 }

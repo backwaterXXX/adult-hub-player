@@ -55,7 +55,7 @@ jobs:
         env:
           UPDATE_GITHUB_OWNER: ${{ github.repository_owner }}
           UPDATE_GITHUB_REPO: ${{ github.event.repository.name }}
-        run: ./gradlew testTvDebugUnitTest testMobileDebugUnitTest lintTvDebug lintMobileDebug lintTvRelease lintMobileRelease compileTvReleaseKotlin compileMobileReleaseKotlin minifyTvReleaseWithR8 minifyMobileReleaseWithR8 assembleTvDebug assembleMobileDebug assembleTvDebugAndroidTest assembleMobileDebugAndroidTest --no-daemon
+        run: ./gradlew ktlintCheck detektTvDebug detektMobileDebug detektTvRelease detektMobileRelease testTvDebugUnitTest testMobileDebugUnitTest lintTvDebug lintMobileDebug lintTvRelease lintMobileRelease compileTvReleaseKotlin compileMobileReleaseKotlin minifyTvReleaseWithR8 minifyMobileReleaseWithR8 assembleTvDebug assembleMobileDebug assembleTvDebugAndroidTest assembleMobileDebugAndroidTest --no-daemon
 
       - name: Check the pinned signing certificate
         run: |
@@ -74,6 +74,8 @@ jobs:
           path: |
             app/build/reports/lint-results-*.html
             app/build/reports/lint-results-*.sarif
+            app/build/reports/detekt/*.*
+            app/build/reports/ktlint/*/*.*
             app/build/test-results/*/*.xml
           if-no-files-found: warn
           retention-days: 14

@@ -35,7 +35,7 @@ class ResolverApiClientTest {
         assertNotSame(first, client.create("https://resolver-0.example.com"))
         assertSame(
             client.create("https://resolver-${ResolverApiClient.MAX_CACHED_CLIENTS + 3}.example.com"),
-            client.create("https://resolver-${ResolverApiClient.MAX_CACHED_CLIENTS + 3}.example.com"),
+            client.create("https://resolver-${ResolverApiClient.MAX_CACHED_CLIENTS + 3}.example.com")
         )
     }
 }

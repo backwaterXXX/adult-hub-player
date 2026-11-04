@@ -65,7 +65,7 @@ class AuthViewModelTest {
             userId = "user-123",
             accessToken = "rejected-token",
             username = "admin",
-            serverName = "Main Jellyfin",
+            serverName = "Main Jellyfin"
         )
         every { context.getString(R.string.auth_session_rejected) } returns "Session rejected"
 

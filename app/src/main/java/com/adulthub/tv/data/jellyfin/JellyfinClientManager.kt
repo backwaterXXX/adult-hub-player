@@ -5,6 +5,7 @@ import android.provider.Settings
 import com.adulthub.tv.BuildConfig
 import com.adulthub.tv.data.local.SettingsDataStore
 import com.adulthub.tv.data.network.CleartextOriginInterceptor
+import java.util.UUID
 import kotlinx.coroutines.channels.BufferOverflow
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.MutableSharedFlow
@@ -16,11 +17,10 @@ import org.jellyfin.sdk.api.okhttp.OkHttpFactory
 import org.jellyfin.sdk.createJellyfin
 import org.jellyfin.sdk.model.ClientInfo
 import org.jellyfin.sdk.model.DeviceInfo
-import java.util.UUID
 
 class JellyfinClientManager(
     private val context: Context,
-    settingsDataStore: SettingsDataStore,
+    settingsDataStore: SettingsDataStore
 ) {
     val deviceId: String by lazy {
         val identityPreferences = context.applicationContext
@@ -46,7 +46,7 @@ class JellyfinClientManager(
 
     private val sessionRejectionStream = MutableSharedFlow<String>(
         extraBufferCapacity = 1,
-        onBufferOverflow = BufferOverflow.DROP_OLDEST,
+        onBufferOverflow = BufferOverflow.DROP_OLDEST
     )
 
     /** A Jellyfin call carried this token and the server answered with HTTP 401. */
@@ -100,7 +100,7 @@ class JellyfinClientManager(
         val normalized = if (baseUrl.endsWith("/")) baseUrl.trimEnd('/') else baseUrl
         return jellyfin.createApi(
             baseUrl = normalized,
-            accessToken = accessToken,
+            accessToken = accessToken
         )
     }
 
@@ -132,9 +132,7 @@ class JellyfinClientManager(
         currentApi = null
     }
 
-    fun getApi(): ApiClient {
-        return currentApi ?: throw IllegalStateException("Jellyfin client is not authenticated")
-    }
+    fun getApi(): ApiClient = currentApi ?: throw IllegalStateException("Jellyfin client is not authenticated")
 
     fun getApiOrNull(): ApiClient? = currentApi
 
@@ -142,7 +140,7 @@ class JellyfinClientManager(
         itemId: String,
         imageType: String = "Primary",
         maxWidth: Int = 480,
-        tag: String? = null,
+        tag: String? = null
     ): String {
         val base = currentServerUrl?.trimEnd('/') ?: ""
         val tagParam = if (!tag.isNullOrBlank()) "&tag=$tag" else ""
@@ -166,7 +164,5 @@ class JellyfinClientManager(
         return getImageUrl(item.id, type, maxWidth, tag)
     }
 
-    fun getPersonImageUrl(personId: String, tag: String? = null, maxWidth: Int = 300): String {
-        return getImageUrl(personId, "Primary", maxWidth, tag)
-    }
+    fun getPersonImageUrl(personId: String, tag: String? = null, maxWidth: Int = 300): String = getImageUrl(personId, "Primary", maxWidth, tag)
 }

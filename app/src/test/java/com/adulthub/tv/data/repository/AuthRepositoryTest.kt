@@ -5,12 +5,16 @@ import com.adulthub.tv.data.local.AuthDataStore
 import com.adulthub.tv.data.local.PreferenceWriteException
 import com.adulthub.tv.data.local.SettingsDataStore
 import com.adulthub.tv.data.model.AuthState
+import com.adulthub.tv.data.network.ServiceUrlPolicy
+import com.adulthub.tv.data.network.ServiceUrlValidation
 import io.mockk.coEvery
 import io.mockk.coVerify
 import io.mockk.coVerifyOrder
 import io.mockk.every
 import io.mockk.mockk
 import io.mockk.verify
+import java.util.UUID
+import java.util.concurrent.atomic.AtomicReference
 import kotlinx.coroutines.CompletableDeferred
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.async
@@ -20,8 +24,8 @@ import kotlinx.coroutines.withContext
 import kotlinx.coroutines.withTimeoutOrNull
 import org.jellyfin.sdk.api.client.ApiClient
 import org.jellyfin.sdk.api.client.Response
-import org.jellyfin.sdk.api.operations.AuthenticationApi
 import org.jellyfin.sdk.api.client.extensions.authenticationApi
+import org.jellyfin.sdk.api.operations.AuthenticationApi
 import org.jellyfin.sdk.model.api.AuthenticationResult
 import org.jellyfin.sdk.model.api.QuickConnectResult
 import org.jellyfin.sdk.model.api.UserDto
@@ -31,10 +35,6 @@ import org.junit.Assert.assertNotNull
 import org.junit.Assert.assertNull
 import org.junit.Assert.assertTrue
 import org.junit.Test
-import java.util.UUID
-import java.util.concurrent.atomic.AtomicReference
-import com.adulthub.tv.data.network.ServiceUrlPolicy
-import com.adulthub.tv.data.network.ServiceUrlValidation
 
 class AuthRepositoryTest {
 
@@ -47,7 +47,7 @@ class AuthRepositoryTest {
     private val repository = AuthRepository(
         clientManager = clientManager,
         authDataStore = authDataStore,
-        settingsDataStore = settingsDataStore,
+        settingsDataStore = settingsDataStore
     )
 
     @Test
@@ -86,7 +86,7 @@ class AuthRepositoryTest {
         val result = repository.login(
             serverUrl = serverUrl,
             username = username,
-            password = password,
+            password = password
         )
 
         assertTrue("Expected login to succeed", result.isSuccess)
@@ -104,14 +104,14 @@ class AuthRepositoryTest {
                 userId = userId.toString(),
                 username = username,
                 accessToken = accessToken,
-                serverName = expectedServerName,
+                serverName = expectedServerName
             )
         }
         coVerify {
             clientManager.updateSession(
                 serverUrl = serverUrl,
                 accessToken = accessToken,
-                userId = userId.toString(),
+                userId = userId.toString()
             )
         }
     }
@@ -224,7 +224,7 @@ class AuthRepositoryTest {
             userId = "user-1",
             accessToken = "token-1",
             username = "user",
-            serverName = "jf.example.com",
+            serverName = "jf.example.com"
         )
         coEvery { authDataStore.getAuthState() } returns session
         every { clientManager.createApi(session.serverUrl, session.accessToken) } returns mockApi
@@ -246,12 +246,12 @@ class AuthRepositoryTest {
             userId = "user-1",
             accessToken = "token-1",
             username = "user",
-            serverName = "jf.example.com",
+            serverName = "jf.example.com"
         )
         coEvery { authDataStore.getAuthState() } returns session
         coEvery { authDataStore.clearSession() } throws PreferenceWriteException(
             "The session could not be cleared",
-            java.io.IOException("disk full"),
+            java.io.IOException("disk full")
         )
 
         val result = repository.logout()
@@ -268,7 +268,7 @@ class AuthRepositoryTest {
             userId = "user-1",
             accessToken = "current-token",
             username = "user",
-            serverName = "jf.example.com",
+            serverName = "jf.example.com"
         )
 
         val cleared = repository.handleRejectedSession("older-token")
@@ -286,7 +286,7 @@ class AuthRepositoryTest {
             userId = "user-1",
             accessToken = "current-token",
             username = "user",
-            serverName = "jf.example.com",
+            serverName = "jf.example.com"
         )
         coEvery { authDataStore.clearSessionIfAccessTokenMatches("current-token") } returns false
 
@@ -304,7 +304,7 @@ class AuthRepositoryTest {
             userId = "user-1",
             accessToken = "current-token",
             username = "user",
-            serverName = "jf.example.com",
+            serverName = "jf.example.com"
         )
         coEvery { authDataStore.getAuthState() } returns session
         coEvery { authDataStore.clearSessionIfAccessTokenMatches("current-token") } returns true
@@ -325,7 +325,7 @@ class AuthRepositoryTest {
             userId = "user-1",
             accessToken = "current-token",
             username = "user",
-            serverName = "jf.example.com",
+            serverName = "jf.example.com"
         )
         coEvery { authDataStore.clearSessionIfAccessTokenMatches("current-token") } returns true
         every { clientManager.clearSessionIfTokenMatches("current-token") } returns false
@@ -350,7 +350,7 @@ class AuthRepositoryTest {
                 userId = "user-1",
                 accessToken = oldToken,
                 username = "user",
-                serverName = "192.168.1.10:8096",
+                serverName = "192.168.1.10:8096"
             )
         )
         val loginSaving = CompletableDeferred<Unit>()
@@ -371,7 +371,7 @@ class AuthRepositoryTest {
             clientManager = clientManager,
             authDataStore = authDataStore,
             settingsDataStore = settingsDataStore,
-            sessionMutex = signalingMutex,
+            sessionMutex = signalingMutex
         )
 
         coEvery { settingsDataStore.requireAllowedServiceUrl(any(), any()) } coAnswers {
@@ -404,7 +404,7 @@ class AuthRepositoryTest {
                     userId = secondArg(),
                     username = thirdArg(),
                     accessToken = arg<String>(3),
-                    serverName = arg<String>(4),
+                    serverName = arg<String>(4)
                 )
             )
         }
@@ -455,7 +455,7 @@ class AuthRepositoryTest {
             userId = "user-1",
             accessToken = "token",
             username = "user",
-            serverName = "192.168.1.10:8096",
+            serverName = "192.168.1.10:8096"
         )
         coEvery { authDataStore.getAuthState() } returns savedSession
         coEvery { settingsDataStore.isCleartextOriginApproved(savedSession.serverUrl) } returns false

@@ -15,7 +15,7 @@ import com.adulthub.tv.data.local.StoredPhashJob
  */
 data class PhashBudget(
     val totalLifetimeMs: Long = DEFAULT_TOTAL_LIFETIME_MS,
-    val maxPolls: Int = DEFAULT_MAX_POLLS,
+    val maxPolls: Int = DEFAULT_MAX_POLLS
 ) {
     init {
         require(totalLifetimeMs > 0L) { "totalLifetimeMs must be positive" }
@@ -30,8 +30,7 @@ data class PhashBudget(
      *
      * [polls] is the number of status requests that were already sent for the task.
      */
-    fun isExhausted(startedAtMs: Long, nowMs: Long, polls: Int): Boolean =
-        isExpired(startedAtMs, nowMs) || polls >= maxPolls
+    fun isExhausted(startedAtMs: Long, nowMs: Long, polls: Int): Boolean = isExpired(startedAtMs, nowMs) || polls >= maxPolls
 
     /** True when a stored task may be continued when the app starts. */
     fun mayResume(record: StoredPhashJob, nowMs: Long): Boolean = !isExpired(record.startedAt, nowMs)

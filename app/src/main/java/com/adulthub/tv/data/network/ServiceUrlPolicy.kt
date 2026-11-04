@@ -8,7 +8,7 @@ import java.util.Locale
 data class ServiceUrl(
     val normalized: String,
     val origin: String,
-    val usesCleartext: Boolean,
+    val usesCleartext: Boolean
 )
 
 sealed interface ServiceUrlValidation {
@@ -48,7 +48,7 @@ object ServiceUrlPolicy {
             usesCleartext -> 80
             else -> 443
         }
-        val origin = "${scheme}://${hostForUri(host)}:$effectivePort"
+        val origin = "$scheme://${hostForUri(host)}:$effectivePort"
         return ServiceUrlValidation.Valid(ServiceUrl(normalized, origin, usesCleartext))
     }
 

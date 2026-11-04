@@ -9,12 +9,12 @@ import androidx.datastore.preferences.core.stringPreferencesKey
 import androidx.datastore.preferences.core.stringSetPreferencesKey
 import io.mockk.coEvery
 import io.mockk.mockk
+import kotlin.time.Duration.Companion.seconds
 import kotlinx.coroutines.ExperimentalCoroutinesApi
 import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.test.TestScope
 import kotlinx.coroutines.test.UnconfinedTestDispatcher
 import kotlinx.coroutines.test.runTest
-import kotlin.time.Duration.Companion.seconds
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertFalse
 import org.junit.Assert.assertNull
@@ -52,12 +52,12 @@ class SettingsDataStoreTest {
         val testFile = tmpFolder.newFile("test_settings.preferences_pb")
         dataStore = PreferenceDataStoreFactory.create(
             scope = testScope,
-            produceFile = { testFile },
+            produceFile = { testFile }
         )
         settingsDataStore = SettingsDataStore(
             context = context,
             crypto = crypto,
-            dataStore = dataStore,
+            dataStore = dataStore
         )
     }
 
@@ -102,14 +102,14 @@ class SettingsDataStoreTest {
     fun `the resolver address source tells a configured address from an unset one`() = runTest(timeout = 120.seconds) {
         assertEquals(
             ResolverUrlSource.DEFAULT,
-            settingsDataStore.resolverBaseUrlSource.first(),
+            settingsDataStore.resolverBaseUrlSource.first()
         )
 
         settingsDataStore.setResolverBaseUrl("https://resolver.example.com")
 
         assertEquals(
             ResolverUrlSource.CONFIGURED,
-            settingsDataStore.resolverBaseUrlSource.first(),
+            settingsDataStore.resolverBaseUrlSource.first()
         )
         assertEquals("https://resolver.example.com", settingsDataStore.getResolverBaseUrl())
     }
@@ -159,11 +159,11 @@ class SettingsDataStoreTest {
         val prefsAfter = dataStore.data.first()
         assertEquals(
             "enc:v1:enc_plaintext-lib-id",
-            prefsAfter[stringPreferencesKey("selected_library_id__$accountKey")],
+            prefsAfter[stringPreferencesKey("selected_library_id__$accountKey")]
         )
         assertEquals(
             "enc:v1:enc_Plain Library",
-            prefsAfter[stringPreferencesKey("selected_library_name__$accountKey")],
+            prefsAfter[stringPreferencesKey("selected_library_name__$accountKey")]
         )
         assertNull(prefsAfter[stringPreferencesKey("selected_library_id")])
         assertNull(prefsAfter[stringPreferencesKey("selected_library_name")])
@@ -203,7 +203,7 @@ class SettingsDataStoreTest {
         assertEquals(afterFirstRun, afterSecondRun)
         assertEquals(
             setOf("http://192.168.1.50:8000", "https://example.org"),
-            settingsDataStore.approvedCleartextOrigins.first(),
+            settingsDataStore.approvedCleartextOrigins.first()
         )
     }
 
@@ -226,12 +226,12 @@ class SettingsDataStoreTest {
         val newFile = tmpFolder.newFile("new_settings.preferences_pb")
         val newDataStore = PreferenceDataStoreFactory.create(
             scope = testScope,
-            produceFile = { newFile },
+            produceFile = { newFile }
         )
         val newSettingsDataStore = SettingsDataStore(
             context = context,
             crypto = crypto,
-            dataStore = newDataStore,
+            dataStore = newDataStore
         )
 
         // Import the config
@@ -266,7 +266,7 @@ class SettingsDataStoreTest {
         val newFile = tmpFolder.newFile("low_ram_test.preferences_pb")
         val newDataStore = PreferenceDataStoreFactory.create(
             scope = testScope,
-            produceFile = { newFile },
+            produceFile = { newFile }
         )
         val newSettings = SettingsDataStore(context, crypto, newDataStore)
         assertFalse(newSettings.lowRamMode.first())
@@ -292,7 +292,7 @@ class SettingsDataStoreTest {
         val newFile = tmpFolder.newFile("playback_ctrl_test.preferences_pb")
         val newDataStore = PreferenceDataStoreFactory.create(
             scope = testScope,
-            produceFile = { newFile },
+            produceFile = { newFile }
         )
         val newSettings = SettingsDataStore(context, crypto, newDataStore)
         newSettings.importNonSecretConfig(exported)

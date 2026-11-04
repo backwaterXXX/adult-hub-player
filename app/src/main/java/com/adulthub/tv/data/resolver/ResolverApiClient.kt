@@ -1,16 +1,16 @@
 package com.adulthub.tv.data.resolver
 
+import java.util.concurrent.TimeUnit
 import kotlinx.serialization.json.Json
 import okhttp3.Interceptor
 import okhttp3.MediaType.Companion.toMediaType
 import okhttp3.OkHttpClient
 import retrofit2.Retrofit
 import retrofit2.converter.kotlinx.serialization.asConverterFactory
-import java.util.concurrent.TimeUnit
 
 class ResolverApiClient(
     okHttpClient: OkHttpClient? = null,
-    cleartextInterceptor: Interceptor? = null,
+    cleartextInterceptor: Interceptor? = null
 ) {
     companion object {
         /**
@@ -27,10 +27,12 @@ class ResolverApiClient(
         encodeDefaults = true
     }
 
-    private val client = (okHttpClient ?: OkHttpClient.Builder()
-        .connectTimeout(15, TimeUnit.SECONDS)
-        .readTimeout(30, TimeUnit.SECONDS)
-        .build())
+    private val client = (
+        okHttpClient ?: OkHttpClient.Builder()
+            .connectTimeout(15, TimeUnit.SECONDS)
+            .readTimeout(30, TimeUnit.SECONDS)
+            .build()
+        )
         // Resolver endpoints return JSON. Do not forward X-Emby-Token to redirect targets.
         .newBuilder()
         .followRedirects(false)
@@ -50,7 +52,7 @@ class ResolverApiClient(
     private fun create(
         baseUrl: String,
         httpClient: OkHttpClient,
-        cache: ResolverApiCache,
+        cache: ResolverApiCache
     ): ResolverApi {
         val normalizedUrl = baseUrl.trim().trimEnd('/') + "/"
         cache.get(normalizedUrl)?.let { return it }

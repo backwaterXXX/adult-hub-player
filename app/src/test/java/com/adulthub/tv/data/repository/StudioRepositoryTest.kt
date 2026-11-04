@@ -5,6 +5,7 @@ import com.adulthub.tv.data.local.SettingsDataStore
 import io.mockk.coEvery
 import io.mockk.every
 import io.mockk.mockk
+import java.util.UUID
 import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.test.runTest
 import org.jellyfin.sdk.api.client.ApiClient
@@ -23,7 +24,6 @@ import org.junit.Assert.assertNull
 import org.junit.Assert.assertTrue
 import org.junit.Assert.fail
 import org.junit.Test
-import java.util.UUID
 
 class StudioRepositoryTest {
 
@@ -35,7 +35,7 @@ class StudioRepositoryTest {
 
     private val repository = StudioRepository(
         clientManager = clientManager,
-        settingsDataStore = settingsDataStore,
+        settingsDataStore = settingsDataStore
     )
 
     init {

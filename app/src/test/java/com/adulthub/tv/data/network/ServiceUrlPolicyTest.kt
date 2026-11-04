@@ -40,13 +40,13 @@ class ServiceUrlPolicyTest {
     fun `HTTP request query can be preserved when validating playback URLs`() {
         val result = ServiceUrlPolicy.inspect(
             "http://192.168.1.20:8099/admin/play/video/stream?mode=proxy",
-            allowQuery = true,
+            allowQuery = true
         )
 
         assertTrue(result is ServiceUrlValidation.Valid)
         assertEquals(
             "http://192.168.1.20:8099/admin/play/video/stream?mode=proxy",
-            (result as ServiceUrlValidation.Valid).value.normalized,
+            (result as ServiceUrlValidation.Valid).value.normalized
         )
     }
 }

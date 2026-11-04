@@ -4,19 +4,19 @@ import androidx.compose.foundation.BorderStroke
 import androidx.compose.foundation.interaction.MutableInteractionSource
 import androidx.compose.foundation.interaction.collectIsFocusedAsState
 import androidx.compose.foundation.layout.height
+import androidx.compose.foundation.shape.RoundedCornerShape
+import androidx.compose.material3.ButtonDefaults as TouchOutlinedButtonDefaults
+import androidx.compose.material3.OutlinedButton as TouchOutlinedButton
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.remember
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.semantics.selected
+import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.TextUnit
 import androidx.compose.ui.unit.dp
-import androidx.compose.foundation.shape.RoundedCornerShape
-import androidx.compose.material3.OutlinedButton as TouchOutlinedButton
-import androidx.compose.material3.ButtonDefaults as TouchOutlinedButtonDefaults
 import androidx.tv.material3.Border
 import androidx.tv.material3.OutlinedButton
 import androidx.tv.material3.OutlinedButtonDefaults
@@ -33,7 +33,7 @@ fun TvChoiceChip(
     modifier: Modifier = Modifier,
     height: Dp = 40.dp,
     fontSize: TextUnit = TextUnit.Unspecified,
-    cornerRadius: Dp = 10.dp,
+    cornerRadius: Dp = 10.dp
 ) {
     if (LocalTouchUi.current) {
         TouchOutlinedButton(
@@ -42,10 +42,10 @@ fun TvChoiceChip(
             shape = RoundedCornerShape(cornerRadius),
             colors = TouchOutlinedButtonDefaults.outlinedButtonColors(
                 containerColor = if (isSelected) NeonPink else androidx.compose.ui.graphics.Color.Transparent,
-                contentColor = if (isSelected) androidx.compose.ui.graphics.Color.White else TextPrimary,
+                contentColor = if (isSelected) androidx.compose.ui.graphics.Color.White else TextPrimary
             ),
             border = BorderStroke(1.dp, if (isSelected) NeonPink else CardSurfaceFocused),
-            contentPadding = androidx.compose.foundation.layout.PaddingValues(horizontal = 12.dp, vertical = 6.dp),
+            contentPadding = androidx.compose.foundation.layout.PaddingValues(horizontal = 12.dp, vertical = 6.dp)
         ) {
             androidx.compose.material3.Text(label, fontSize = fontSize)
         }
@@ -62,24 +62,24 @@ fun TvChoiceChip(
             containerColor = if (isSelected) NeonPink.copy(alpha = 0.2f) else androidx.compose.ui.graphics.Color.Transparent,
             focusedContainerColor = CardSurfaceFocused,
             contentColor = if (isSelected) NeonPink else TextPrimary,
-            focusedContentColor = androidx.compose.ui.graphics.Color.White,
+            focusedContentColor = androidx.compose.ui.graphics.Color.White
         ),
         border = OutlinedButtonDefaults.border(
             border = Border(
                 border = BorderStroke(
                     width = if (isSelected) 1.5.dp else 1.dp,
-                    color = if (isSelected) NeonPink else androidx.compose.ui.graphics.Color.White.copy(alpha = 0.25f),
-                ),
+                    color = if (isSelected) NeonPink else androidx.compose.ui.graphics.Color.White.copy(alpha = 0.25f)
+                )
             ),
-            focusedBorder = Border(border = BorderStroke(2.dp, NeonPink)),
+            focusedBorder = Border(border = BorderStroke(2.dp, NeonPink))
         ),
         shape = OutlinedButtonDefaults.shape(RoundedCornerShape(cornerRadius)),
-        modifier = modifier.height(height).semantics { selected = isSelected },
+        modifier = modifier.height(height).semantics { selected = isSelected }
     ) {
         Text(
             text = label,
             fontWeight = if (isSelected || isFocused) FontWeight.Bold else FontWeight.Medium,
-            fontSize = fontSize,
+            fontSize = fontSize
         )
     }
 }

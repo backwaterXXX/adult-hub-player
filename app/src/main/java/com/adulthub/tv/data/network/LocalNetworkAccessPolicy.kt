@@ -41,6 +41,5 @@ object LocalNetworkAccessPolicy {
         return hostOfUri(trimmed) ?: hostOfUri("http://$trimmed")
     }
 
-    private fun hostOfUri(rawUrl: String): String? =
-        runCatching { URI(rawUrl).host }.getOrNull().orEmpty().takeIf { it.isNotEmpty() }
+    private fun hostOfUri(rawUrl: String): String? = runCatching { URI(rawUrl).host }.getOrNull().orEmpty().takeIf { it.isNotEmpty() }
 }

@@ -28,17 +28,17 @@ fun TvPageHeader(
     modifier: Modifier = Modifier,
     subtitle: String? = null,
     isMobile: Boolean = false,
-    actions: (@Composable RowScope.() -> Unit)? = null,
+    actions: (@Composable RowScope.() -> Unit)? = null
 ) {
     Row(
         modifier = modifier
             .fillMaxWidth()
             .padding(horizontal = if (isMobile) 16.dp else 48.dp, vertical = if (isMobile) 8.dp else 20.dp),
-        verticalAlignment = Alignment.CenterVertically,
+        verticalAlignment = Alignment.CenterVertically
     ) {
         TvSecondaryButton(
             onClick = onBack,
-            modifier = Modifier.height(40.dp),
+            modifier = Modifier.height(40.dp)
         ) {
             Text(text = stringResource(R.string.action_back), fontWeight = FontWeight.SemiBold)
         }
@@ -50,14 +50,14 @@ fun TvPageHeader(
                 text = title,
                 style = MaterialTheme.typography.headlineMedium,
                 color = NeonPink,
-                fontWeight = FontWeight.Bold,
+                fontWeight = FontWeight.Bold
             )
             if (!subtitle.isNullOrBlank()) {
                 Spacer(modifier = Modifier.height(2.dp))
                 Text(
                     text = subtitle,
                     style = MaterialTheme.typography.bodyMedium,
-                    color = TextSecondary,
+                    color = TextSecondary
                 )
             }
         }
@@ -67,7 +67,7 @@ fun TvPageHeader(
             Row(
                 horizontalArrangement = Arrangement.spacedBy(10.dp),
                 verticalAlignment = Alignment.CenterVertically,
-                content = actions,
+                content = actions
             )
         }
     }

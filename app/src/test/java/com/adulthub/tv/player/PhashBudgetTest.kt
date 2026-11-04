@@ -58,14 +58,14 @@ class PhashBudgetTest {
             jobId = "job-1",
             state = "processing",
             updatedAt = 1_000L,
-            startedAt = 1_000L,
+            startedAt = 1_000L
         )
         val fresh = StoredPhashJob(
             videoId = "video-2",
             jobId = "job-2",
             state = "processing",
             updatedAt = 90_000L,
-            startedAt = 90_000L,
+            startedAt = 90_000L
         )
 
         assertFalse(budget.mayResume(expired, nowMs = 90_000L))

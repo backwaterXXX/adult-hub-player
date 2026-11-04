@@ -25,13 +25,13 @@ import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.runtime.setValue
-import androidx.compose.ui.ExperimentalComposeUiApi
 import androidx.compose.ui.Alignment
+import androidx.compose.ui.ExperimentalComposeUiApi
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.draw.clip
 import androidx.compose.ui.focus.FocusRequester
 import androidx.compose.ui.focus.focusRequester
 import androidx.compose.ui.focus.focusRestorer
-import androidx.compose.ui.draw.clip
 import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.res.pluralStringResource
 import androidx.compose.ui.res.stringResource
@@ -41,7 +41,6 @@ import androidx.compose.ui.unit.sp
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import androidx.tv.material3.MaterialTheme
 import androidx.tv.material3.Text
-import kotlinx.coroutines.delay
 import coil.compose.AsyncImage
 import com.adulthub.tv.R
 import com.adulthub.tv.ui.components.ErrorMessage
@@ -55,6 +54,7 @@ import com.adulthub.tv.ui.theme.NeonPink
 import com.adulthub.tv.ui.theme.OledBlack
 import com.adulthub.tv.ui.theme.TextPrimary
 import com.adulthub.tv.ui.theme.TextSecondary
+import kotlinx.coroutines.delay
 import org.koin.androidx.compose.koinViewModel
 
 @Composable
@@ -66,7 +66,7 @@ fun PersonDetailScreen(
     onNavigateToItemDetail: (String) -> Unit,
     modifier: Modifier = Modifier,
     isCurrentDestination: Boolean = true,
-    viewModel: PersonDetailViewModel = koinViewModel(),
+    viewModel: PersonDetailViewModel = koinViewModel()
 ) {
     val state by viewModel.uiState.collectAsStateWithLifecycle()
     val contentFocusRequester = remember(personId) { FocusRequester() }
@@ -93,6 +93,7 @@ fun PersonDetailScreen(
                     runCatching { contentFocusRequester.saveFocusedChild() }
                     onNavigateToItemDetail(event.itemId)
                 }
+
                 is PersonDetailNavEvent.NavigateBack -> onNavigateBack()
             }
         }
@@ -101,29 +102,31 @@ fun PersonDetailScreen(
     Box(
         modifier = modifier
             .fillMaxSize()
-            .background(OledBlack),
+            .background(OledBlack)
     ) {
         when {
             state.isLoading -> {
                 Box(
                     modifier = Modifier.fillMaxSize(),
-                    contentAlignment = Alignment.Center,
+                    contentAlignment = Alignment.Center
                 ) {
                     LoadingIndicator(message = stringResource(R.string.library_loading_performer_details))
                 }
             }
+
             state.errorMessage != null && state.person == null -> {
                 Box(
                     modifier = Modifier.fillMaxSize(),
-                    contentAlignment = Alignment.Center,
+                    contentAlignment = Alignment.Center
                 ) {
                     ErrorMessage(
                         message = state.errorMessage ?: stringResource(R.string.library_failed_to_load_performer),
                         onRetry = { viewModel.loadPerson(personId, personName) },
-                        modifier = Modifier.fillMaxWidth(0.5f),
+                        modifier = Modifier.fillMaxWidth(0.5f)
                     )
                 }
             }
+
             state.person != null -> {
                 val person = state.person!!
 
@@ -132,7 +135,7 @@ fun PersonDetailScreen(
                         .fillMaxSize()
                         .focusRequester(contentFocusRequester)
                         .focusRestorer(),
-                    contentPadding = PaddingValues(bottom = 48.dp),
+                    contentPadding = PaddingValues(bottom = 48.dp)
                 ) {
                     // Shared page header
                     item {
@@ -144,7 +147,7 @@ fun PersonDetailScreen(
                         Row(
                             modifier = Modifier
                                 .fillMaxWidth()
-                                .padding(horizontal = 48.dp, vertical = 12.dp),
+                                .padding(horizontal = 48.dp, vertical = 12.dp)
                         ) {
                             // 2:3 Photo
                             Box(
@@ -153,13 +156,13 @@ fun PersonDetailScreen(
                                     .aspectRatio(2f / 3f)
                                     .clip(RoundedCornerShape(12.dp))
                                     .background(CardSurface)
-                                    .border(1.dp, CardSurfaceFocused, RoundedCornerShape(12.dp)),
+                                    .border(1.dp, CardSurfaceFocused, RoundedCornerShape(12.dp))
                             ) {
                                 AsyncImage(
                                     model = viewModel.getPersonImageUrl(person),
                                     contentDescription = person.name,
                                     contentScale = ContentScale.Crop,
-                                    modifier = Modifier.fillMaxSize(),
+                                    modifier = Modifier.fillMaxSize()
                                 )
                             }
 
@@ -207,14 +210,14 @@ fun PersonDetailScreen(
                                         text = stringResource(R.string.library_bio),
                                         style = MaterialTheme.typography.titleMedium,
                                         color = TextPrimary,
-                                        fontWeight = FontWeight.SemiBold,
+                                        fontWeight = FontWeight.SemiBold
                                     )
                                     Spacer(modifier = Modifier.height(4.dp))
                                     Text(
                                         text = person.bio ?: "",
                                         style = MaterialTheme.typography.bodyMedium,
                                         color = TextSecondary,
-                                        lineHeight = 22.sp,
+                                        lineHeight = 22.sp
                                     )
                                 }
                             }
@@ -227,25 +230,25 @@ fun PersonDetailScreen(
                             Column(
                                 modifier = Modifier
                                     .fillMaxWidth()
-                                    .padding(vertical = 16.dp),
+                                    .padding(vertical = 16.dp)
                             ) {
                                 Text(
                                     text = stringResource(R.string.library_filmography_section, state.movies.size),
                                     style = MaterialTheme.typography.titleLarge,
                                     fontWeight = FontWeight.Bold,
-                                    modifier = Modifier.padding(horizontal = 48.dp, vertical = 8.dp),
+                                    modifier = Modifier.padding(horizontal = 48.dp, vertical = 8.dp)
                                 )
 
                                 LazyRow(
                                     modifier = Modifier.focusRestorer(),
                                     contentPadding = PaddingValues(horizontal = 48.dp),
-                                    horizontalArrangement = Arrangement.spacedBy(16.dp),
+                                    horizontalArrangement = Arrangement.spacedBy(16.dp)
                                 ) {
                                     items(state.movies, key = { it.id }) { movie ->
                                         MovieCard(
                                             item = movie,
                                             imageUrl = viewModel.getItemImageUrl(movie),
-                                            onClick = { viewModel.onMovieClicked(movie) },
+                                            onClick = { viewModel.onMovieClicked(movie) }
                                         )
                                     }
                                 }
@@ -256,12 +259,12 @@ fun PersonDetailScreen(
                             Column(
                                 modifier = Modifier
                                     .fillMaxWidth()
-                                    .padding(horizontal = 48.dp, vertical = 16.dp),
+                                    .padding(horizontal = 48.dp, vertical = 16.dp)
                             ) {
                                 Text(
                                     text = stringResource(R.string.library_failed_to_load_filmography),
                                     style = MaterialTheme.typography.bodyMedium,
-                                    color = TextSecondary,
+                                    color = TextSecondary
                                 )
                                 Spacer(modifier = Modifier.height(8.dp))
                                 TvSecondaryButton(onClick = { viewModel.reloadMovies() }) {

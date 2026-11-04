@@ -36,12 +36,12 @@ class PersonDetailViewModelTest {
         bio = "Russian performer",
         birthDate = "1997-05-27",
         nationality = "Russian",
-        movieCount = 12,
+        movieCount = 12
     )
 
     private val sampleMovie = TvItem(
         id = "movie-1",
-        title = "Eva Scene 1",
+        title = "Eva Scene 1"
     )
 
     @Before
@@ -61,7 +61,7 @@ class PersonDetailViewModelTest {
         val viewModel = PersonDetailViewModel(
             personRepository = fakePersonRepository,
             clientManager = clientManager,
-            context = context,
+            context = context
         )
 
         viewModel.loadPerson("person-1", "Eva Elfie")
@@ -83,7 +83,7 @@ class PersonDetailViewModelTest {
         val viewModel = PersonDetailViewModel(
             personRepository = fakePersonRepository,
             clientManager = clientManager,
-            context = context,
+            context = context
         )
 
         viewModel.loadPerson("person-1", "Eva Elfie")

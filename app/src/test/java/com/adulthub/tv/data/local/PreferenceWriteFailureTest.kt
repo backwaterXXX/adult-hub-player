@@ -11,6 +11,9 @@ import io.mockk.coEvery
 import io.mockk.coVerify
 import io.mockk.every
 import io.mockk.mockk
+import java.io.File
+import java.io.IOException
+import kotlin.time.Duration.Companion.seconds
 import kotlinx.coroutines.ExperimentalCoroutinesApi
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.first
@@ -26,9 +29,6 @@ import org.junit.Before
 import org.junit.Rule
 import org.junit.Test
 import org.junit.rules.TemporaryFolder
-import java.io.File
-import java.io.IOException
-import kotlin.time.Duration.Companion.seconds
 
 /**
  * A failed write has to be visible at the boundary of the store.
@@ -54,7 +54,7 @@ class PreferenceWriteFailureTest {
         val unwritable = tmpFolder.newFolder("history.preferences_pb")
         failingDataStore = PreferenceDataStoreFactory.create(
             scope = testScope,
-            produceFile = { unwritable },
+            produceFile = { unwritable }
         )
     }
 
@@ -63,7 +63,7 @@ class PreferenceWriteFailureTest {
         val store = WatchHistoryStore(
             context = context,
             accountKeyProvider = AccountKeyProvider.ANONYMOUS,
-            dataStore = SafePreferencesDataStore(failingDataStore),
+            dataStore = SafePreferencesDataStore(failingDataStore)
         )
 
         val failure = runCatching { store.recordWatch(TvItem(id = "movie-1", title = "Movie")) }.exceptionOrNull()
@@ -77,7 +77,7 @@ class PreferenceWriteFailureTest {
         val store = TelegramProgressStore(
             context = context,
             accountKeyProvider = AccountKeyProvider.ANONYMOUS,
-            dataStore = SafePreferencesDataStore(failingDataStore),
+            dataStore = SafePreferencesDataStore(failingDataStore)
         )
 
         val failure = runCatching {
@@ -93,12 +93,12 @@ class PreferenceWriteFailureTest {
         val clientManager = mockk<JellyfinClientManager>(relaxed = true)
         val settingsDataStore = mockk<SettingsDataStore>(relaxed = true)
         every { authDataStore.authState } returns kotlinx.coroutines.flow.flowOf(
-            com.adulthub.tv.data.model.AuthState.NotAuthenticated,
+            com.adulthub.tv.data.model.AuthState.NotAuthenticated
         )
         coEvery { authDataStore.getAuthState() } returns com.adulthub.tv.data.model.AuthState.NotAuthenticated
         coEvery { authDataStore.clearSession() } throws PreferenceWriteException(
             "The preference could not be stored",
-            IOException("disk full"),
+            IOException("disk full")
         )
         val repository = AuthRepository(clientManager, authDataStore, settingsDataStore)
 
@@ -116,7 +116,7 @@ class PreferenceWriteFailureTest {
         val clientManager = mockk<JellyfinClientManager>(relaxed = true)
         val settingsDataStore = mockk<SettingsDataStore>(relaxed = true)
         every { authDataStore.authState } returns kotlinx.coroutines.flow.flowOf(
-            com.adulthub.tv.data.model.AuthState.NotAuthenticated,
+            com.adulthub.tv.data.model.AuthState.NotAuthenticated
         )
         coEvery { authDataStore.getAuthState() } returns com.adulthub.tv.data.model.AuthState.NotAuthenticated
         coEvery { authDataStore.clearSession() } throws IOException("disk full")
@@ -135,14 +135,14 @@ class PreferenceWriteFailureTest {
         coEvery { watchHistoryStore.hasLegacyData() } returns true
         coEvery { watchHistoryStore.importLegacyData(any()) } throws PreferenceWriteException(
             "The preference could not be stored",
-            IOException("disk full"),
+            IOException("disk full")
         )
         val migration = UserScopedDataMigration(
             watchHistoryStore = watchHistoryStore,
             searchHistoryStore = mockk(relaxed = true),
             telegramProgressStore = mockk(relaxed = true),
             phashJobStore = mockk(relaxed = true),
-            accountKeys = AccountKeyProvider.ANONYMOUS,
+            accountKeys = AccountKeyProvider.ANONYMOUS
         )
 
         val failure = runCatching { migration.importIntoCurrentAccount() }.exceptionOrNull()
@@ -155,7 +155,7 @@ class PreferenceWriteFailureTest {
         val store = WatchHistoryStore(
             context = context,
             accountKeyProvider = AccountKeyProvider.ANONYMOUS,
-            dataStore = SafePreferencesDataStore(failingDataStore),
+            dataStore = SafePreferencesDataStore(failingDataStore)
         )
 
         val failure = runCatching {
@@ -179,7 +179,7 @@ class PreferenceWriteFailureTest {
             searchHistoryStore = mockk(relaxed = true),
             telegramProgressStore = mockk(relaxed = true),
             phashJobStore = mockk(relaxed = true),
-            accountKeys = AccountKeyProvider.ANONYMOUS,
+            accountKeys = AccountKeyProvider.ANONYMOUS
         )
 
         assertTrue(migration.hasPendingImport())

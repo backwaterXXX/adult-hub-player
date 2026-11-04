@@ -89,8 +89,8 @@ class VideoVariantsTest {
             status = "original_only",
             hasAlternatives = false,
             variants = listOf(
-                VideoVariantDto(id = "original", isOriginal = true, height = 720),
-            ),
+                VideoVariantDto(id = "original", isOriginal = true, height = 720)
+            )
         )
 
         assertEquals(VideoVariantsResult.OriginalOnly, classifyVariantsResponse(dto))
@@ -104,8 +104,8 @@ class VideoVariantsTest {
             videoProcessingPending = true,
             hasAlternatives = false,
             variants = listOf(
-                VideoVariantDto(id = "original", isOriginal = true, height = 720),
-            ),
+                VideoVariantDto(id = "original", isOriginal = true, height = 720)
+            )
         )
 
         val result = classifyVariantsResponse(dto)
@@ -117,7 +117,7 @@ class VideoVariantsTest {
         val dto = VideoVariantsDto(
             status = "ready",
             hasAlternatives = true,
-            variants = listOf(VideoVariantDto(id = "original", isOriginal = true)),
+            variants = listOf(VideoVariantDto(id = "original", isOriginal = true))
         )
 
         assertEquals(VideoVariantsResult.OriginalOnly, classifyVariantsResponse(dto))
@@ -126,7 +126,7 @@ class VideoVariantsTest {
     @Test
     fun `missing variants route is treated as unsupported not as failure`() {
         val notFound = retrofit2.HttpException(
-            Response.error<Any?>(404, "Not Found".toResponseBody(null)),
+            Response.error<Any?>(404, "Not Found".toResponseBody(null))
         )
 
         assertEquals(VideoVariantsResult.Unsupported, classifyVariantsError(notFound))
@@ -142,10 +142,10 @@ class VideoVariantsTest {
     @Test
     fun `server and auth failures are real fetch errors`() {
         val badGateway = retrofit2.HttpException(
-            Response.error<Any?>(502, "Bad Gateway".toResponseBody(null)),
+            Response.error<Any?>(502, "Bad Gateway".toResponseBody(null))
         )
         val forbidden = retrofit2.HttpException(
-            Response.error<Any?>(403, "Forbidden".toResponseBody(null)),
+            Response.error<Any?>(403, "Forbidden".toResponseBody(null))
         )
 
         assertTrue(classifyVariantsError(badGateway) is VideoVariantsResult.Failed)
@@ -154,8 +154,10 @@ class VideoVariantsTest {
 
     @Test
     fun `labels name the original and every selectable variant carries codec and size`() {
-        val variants = (classifyVariantsResponse(json.decodeFromString<VideoVariantsDto>(contractExample))
-            as VideoVariantsResult.Available).variants
+        val variants = (
+            classifyVariantsResponse(json.decodeFromString<VideoVariantsDto>(contractExample))
+                as VideoVariantsResult.Available
+            ).variants
 
         val labels = buildQualityLabels(variants)
 
@@ -176,7 +178,7 @@ class VideoVariantsTest {
             fileSizeBytes = 5892214,
             durationSec = 30.0,
             bitrate = null,
-            estimatedAverageBitrate = null,
+            estimatedAverageBitrate = null
         )
 
         assertEquals(listOf("1280p (Original)"), buildQualityLabels(listOf(variant)))
@@ -195,7 +197,7 @@ class VideoVariantsTest {
                 fileSizeBytes = null,
                 durationSec = null,
                 bitrate = null,
-                estimatedAverageBitrate = null,
+                estimatedAverageBitrate = null
             )
         }
 
@@ -216,7 +218,7 @@ class VideoVariantsTest {
             fileSizeBytes = 1511665,
             durationSec = null,
             bitrate = null,
-            estimatedAverageBitrate = 397362,
+            estimatedAverageBitrate = 397362
         )
 
         assertEquals("480×852 · av01 · 1.4 MB", formatQualityDescriptor(variant))

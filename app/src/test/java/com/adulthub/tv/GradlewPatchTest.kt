@@ -1,8 +1,8 @@
 package com.adulthub.tv
 
+import java.io.File
 import org.junit.Assert.assertTrue
 import org.junit.Test
-import java.io.File
 
 class GradlewPatchTest {
     @Test
@@ -21,15 +21,15 @@ class GradlewPatchTest {
 
         assertTrue(
             "gradlew must contain JAVA_HOME auto-discovery",
-            gradlewText.contains("""export JAVA_HOME="${'$'}_candidate""""),
+            gradlewText.contains("""export JAVA_HOME="${'$'}_candidate"""")
         )
         assertTrue(
             "gradlew must enforce UTF-8 file encoding",
-            gradlewText.contains("-Dfile.encoding=UTF-8"),
+            gradlewText.contains("-Dfile.encoding=UTF-8")
         )
         assertTrue(
             "gradlew.bat must enforce UTF-8 file encoding",
-            gradlewBatText.contains("-Dfile.encoding=UTF-8"),
+            gradlewBatText.contains("-Dfile.encoding=UTF-8")
         )
     }
 }

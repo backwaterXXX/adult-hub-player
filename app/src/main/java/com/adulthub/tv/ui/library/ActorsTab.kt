@@ -53,7 +53,7 @@ fun ActorsTab(
     onLoadMore: () -> Unit,
     getImageUrl: (TvPerson) -> String,
     onSearchQueryChange: (String) -> Unit,
-    modifier: Modifier = Modifier,
+    modifier: Modifier = Modifier
 ) {
     val alphabet = ('A'..'Z').toList()
     val gridState = rememberLazyGridState()
@@ -95,7 +95,7 @@ fun ActorsTab(
     Column(
         modifier = modifier
             .fillMaxSize()
-            .padding(horizontal = 48.dp),
+            .padding(horizontal = 48.dp)
     ) {
         TvTextField(
             value = state.searchQuery,
@@ -104,33 +104,33 @@ fun ActorsTab(
             hint = stringResource(R.string.library_performer_name_hint),
             modifier = Modifier
                 .fillMaxWidth()
-                .padding(top = 12.dp),
+                .padding(top = 12.dp)
         )
         // Controls: Alphabet & Photo filter (Photo only placed BEFORE "ALL")
         Row(
             modifier = Modifier
                 .fillMaxWidth()
                 .padding(vertical = 12.dp),
-            verticalAlignment = Alignment.CenterVertically,
+            verticalAlignment = Alignment.CenterVertically
         ) {
             LazyRow(
                 horizontalArrangement = Arrangement.spacedBy(6.dp),
                 verticalAlignment = Alignment.CenterVertically,
-                modifier = Modifier.fillMaxWidth(),
+                modifier = Modifier.fillMaxWidth()
             ) {
                 // 1. Photo only button at the beginning before ALL
                 item {
                     if (state.onlyWithPhoto) {
                         TvPrimaryButton(
                             onClick = onToggleOnlyWithPhoto,
-                            modifier = Modifier.height(34.dp),
+                            modifier = Modifier.height(34.dp)
                         ) {
                             Text(text = stringResource(R.string.library_photo_only), fontSize = 12.sp)
                         }
                     } else {
                         TvSecondaryButton(
                             onClick = onToggleOnlyWithPhoto,
-                            modifier = Modifier.height(34.dp),
+                            modifier = Modifier.height(34.dp)
                         ) {
                             Text(text = stringResource(R.string.library_photo_only), fontSize = 12.sp)
                         }
@@ -142,14 +142,14 @@ fun ActorsTab(
                     if (state.selectedLetter == null) {
                         TvPrimaryButton(
                             onClick = { onSelectLetter(null) },
-                            modifier = Modifier.height(34.dp),
+                            modifier = Modifier.height(34.dp)
                         ) {
                             Text(text = stringResource(R.string.library_letter_all), fontSize = 12.sp)
                         }
                     } else {
                         TvSecondaryButton(
                             onClick = { onSelectLetter(null) },
-                            modifier = Modifier.height(34.dp),
+                            modifier = Modifier.height(34.dp)
                         ) {
                             Text(text = stringResource(R.string.library_letter_all), fontSize = 12.sp)
                         }
@@ -162,14 +162,14 @@ fun ActorsTab(
                     if (isSelected) {
                         TvPrimaryButton(
                             onClick = { onSelectLetter(letter) },
-                            modifier = Modifier.height(34.dp),
+                            modifier = Modifier.height(34.dp)
                         ) {
                             Text(text = letter.toString(), fontSize = 12.sp)
                         }
                     } else {
                         TvSecondaryButton(
                             onClick = { onSelectLetter(letter) },
-                            modifier = Modifier.height(34.dp),
+                            modifier = Modifier.height(34.dp)
                         ) {
                             Text(text = letter.toString(), fontSize = 12.sp)
                         }
@@ -184,46 +184,49 @@ fun ActorsTab(
                 R.plurals.library_showing_performers,
                 state.totalCount,
                 state.filteredPersons.size,
-                state.totalCount,
+                state.totalCount
             ),
             style = MaterialTheme.typography.bodySmall,
             color = TextSecondary,
-            modifier = Modifier.padding(bottom = 8.dp),
+            modifier = Modifier.padding(bottom = 8.dp)
         )
 
         when {
             state.isLoading -> {
                 Box(
                     modifier = Modifier.fillMaxSize(),
-                    contentAlignment = Alignment.Center,
+                    contentAlignment = Alignment.Center
                 ) {
                     LoadingIndicator(message = stringResource(R.string.library_loading_actors))
                 }
             }
+
             state.errorMessage != null && state.allPersons.isEmpty() -> {
                 Box(
                     modifier = Modifier.fillMaxSize(),
-                    contentAlignment = Alignment.Center,
+                    contentAlignment = Alignment.Center
                 ) {
                     ErrorMessage(
                         message = state.errorMessage,
                         onRetry = onRetry,
-                        modifier = Modifier.fillMaxWidth(0.5f),
+                        modifier = Modifier.fillMaxWidth(0.5f)
                     )
                 }
             }
+
             state.isEmpty -> {
                 Box(
                     modifier = Modifier.fillMaxSize(),
-                    contentAlignment = Alignment.Center,
+                    contentAlignment = Alignment.Center
                 ) {
                     Text(
                         text = stringResource(R.string.library_no_performers_matching_filter),
                         style = MaterialTheme.typography.bodyLarge,
-                        color = TextSecondary,
+                        color = TextSecondary
                     )
                 }
             }
+
             else -> {
                 LazyVerticalGrid(
                     columns = GridCells.Fixed(6),
@@ -231,11 +234,11 @@ fun ActorsTab(
                     contentPadding = PaddingValues(top = 8.dp, bottom = 48.dp),
                     horizontalArrangement = Arrangement.spacedBy(16.dp),
                     verticalArrangement = Arrangement.spacedBy(16.dp),
-                    modifier = Modifier.fillMaxSize(),
+                    modifier = Modifier.fillMaxSize()
                 ) {
                     items(
                         items = state.filteredPersons,
-                        key = { it.id },
+                        key = { it.id }
                     ) { person ->
                         val requester = remember(person.id) {
                             focusRequesterMap.getOrPut(person.id) { FocusRequester() }
@@ -246,7 +249,7 @@ fun ActorsTab(
                             onClick = { onPersonClick(person) },
                             modifier = Modifier
                                 .fillMaxWidth()
-                                .focusRequester(requester),
+                                .focusRequester(requester)
                         )
                     }
                     if (state.isLoadingMore) {
@@ -255,7 +258,7 @@ fun ActorsTab(
                                 modifier = Modifier
                                     .fillMaxWidth()
                                     .padding(vertical = 12.dp),
-                                contentAlignment = Alignment.Center,
+                                contentAlignment = Alignment.Center
                             ) {
                                 LoadingIndicator(message = stringResource(R.string.library_loading_more_actors))
                             }
@@ -267,11 +270,11 @@ fun ActorsTab(
                                 modifier = Modifier
                                     .fillMaxWidth()
                                     .padding(vertical = 12.dp),
-                                horizontalAlignment = Alignment.CenterHorizontally,
+                                horizontalAlignment = Alignment.CenterHorizontally
                             ) {
                                 Text(
                                     text = state.errorMessage,
-                                    color = TextSecondary,
+                                    color = TextSecondary
                                 )
                                 TvSecondaryButton(onClick = onLoadMore) {
                                     Text(text = stringResource(R.string.action_retry))

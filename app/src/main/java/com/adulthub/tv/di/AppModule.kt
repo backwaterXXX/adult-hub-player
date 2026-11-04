@@ -3,28 +3,28 @@ package com.adulthub.tv.di
 import com.adulthub.tv.data.jellyfin.JellyfinClientManager
 import com.adulthub.tv.data.local.AccountKeyProvider
 import com.adulthub.tv.data.local.AccountScope
-import com.adulthub.tv.data.local.SessionOwnerProvider
 import com.adulthub.tv.data.local.AuthDataStore
 import com.adulthub.tv.data.local.KeyStoreCrypto
-import com.adulthub.tv.data.local.SettingsDataStore
-import com.adulthub.tv.data.local.SearchHistoryStore
-import com.adulthub.tv.data.local.TelegramProgressStore
 import com.adulthub.tv.data.local.PhashJobStore
+import com.adulthub.tv.data.local.SearchHistoryStore
+import com.adulthub.tv.data.local.SessionOwnerProvider
+import com.adulthub.tv.data.local.SettingsDataStore
+import com.adulthub.tv.data.local.TelegramProgressStore
 import com.adulthub.tv.data.local.UserScopedDataMigration
 import com.adulthub.tv.data.local.WatchHistoryStore
 import com.adulthub.tv.data.network.CleartextOriginInterceptor
-import com.adulthub.tv.data.resolver.ResolverApiClient
 import com.adulthub.tv.data.resolver.DynamicResolverApi
 import com.adulthub.tv.data.resolver.ResolverApi
+import com.adulthub.tv.data.resolver.ResolverApiClient
 import com.adulthub.tv.data.update.AppUpdateManager
 import com.adulthub.tv.data.update.AppUpdateRepository
 import com.adulthub.tv.player.PlaybackPolicyInterceptor
+import java.util.concurrent.TimeUnit
 import okhttp3.OkHttpClient
 import org.koin.android.ext.koin.androidContext
 import org.koin.core.qualifier.named
 import org.koin.dsl.binds
 import org.koin.dsl.module
-import java.util.concurrent.TimeUnit
 
 const val PLAYBACK_HTTP_CLIENT = "playback_http_client"
 
@@ -36,7 +36,7 @@ val appModule = module {
     // session owner and for the concrete scope.
     single { AccountScope(get()) } binds arrayOf(
         AccountKeyProvider::class,
-        SessionOwnerProvider::class,
+        SessionOwnerProvider::class
     )
     single { SettingsDataStore(androidContext(), get(), authDataStore = get(), accountKeyProvider = get()) }
     single { TelegramProgressStore(androidContext(), accountKeyProvider = get()) }
@@ -52,7 +52,7 @@ val appModule = module {
         AppUpdateRepository(
             androidContext(),
             get(),
-            cleartextInterceptor = get<CleartextOriginInterceptor>(),
+            cleartextInterceptor = get<CleartextOriginInterceptor>()
         )
     }
     // One client for every player instance: each visit to the screen used to create
@@ -68,10 +68,14 @@ val appModule = module {
     single { AppUpdateManager(get(), get(), get(), androidContext()) }
     single {
         com.adulthub.tv.player.PhashCoordinator(
-            authDataStore = get(), jellyfinClientManager = get(), settingsDataStore = get(), apiClient = get(), applicationScope = get(),
+            authDataStore = get(),
+            jellyfinClientManager = get(),
+            settingsDataStore = get(),
+            apiClient = get(),
+            applicationScope = get(),
             jobStore = get(),
             accountScope = get(),
-            context = androidContext(),
+            context = androidContext()
         )
     }
     single<ResolverApi> { DynamicResolverApi(get(), get()) }
@@ -80,7 +84,7 @@ val appModule = module {
             playbackRepository = get(),
             coroutineScope = kotlinx.coroutines.CoroutineScope(
                 kotlinx.coroutines.SupervisorJob() + kotlinx.coroutines.Dispatchers.IO
-            ),
+            )
         )
     }
 }

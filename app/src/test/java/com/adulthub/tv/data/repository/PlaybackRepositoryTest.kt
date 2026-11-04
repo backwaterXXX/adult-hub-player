@@ -8,20 +8,20 @@ import io.mockk.coVerify
 import io.mockk.every
 import io.mockk.mockk
 import io.mockk.slot
+import java.util.UUID
 import kotlinx.coroutines.test.runTest
 import org.jellyfin.sdk.api.client.ApiClient
 import org.jellyfin.sdk.api.client.Response
 import org.jellyfin.sdk.api.client.extensions.sessionApi
 import org.jellyfin.sdk.api.operations.SessionApi
+import org.jellyfin.sdk.model.api.PlayMethod
 import org.jellyfin.sdk.model.api.PlaybackProgressInfo
 import org.jellyfin.sdk.model.api.PlaybackStartInfo
 import org.jellyfin.sdk.model.api.PlaybackStopInfo
-import org.jellyfin.sdk.model.api.PlayMethod
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertNull
 import org.junit.Assert.assertTrue
 import org.junit.Test
-import java.util.UUID
 
 class PlaybackRepositoryTest {
     @Test
@@ -30,12 +30,12 @@ class PlaybackRepositoryTest {
 
         val result = rewriteResolverMediaSourceUrl(
             mediaSourcePath = original,
-            resolverOrigin = "http://192.168.1.100:8099/",
+            resolverOrigin = "http://192.168.1.100:8099/"
         )
 
         assertEquals(
             "http://192.168.1.100:8099/admin/play/telegram:channel:42:0/stream?mode=proxy",
-            result,
+            result
         )
     }
 
@@ -45,7 +45,7 @@ class PlaybackRepositoryTest {
 
         val result = rewriteResolverMediaSourceUrl(
             mediaSourcePath = original,
-            resolverOrigin = "http://192.168.1.100:8099",
+            resolverOrigin = "http://192.168.1.100:8099"
         )
 
         assertEquals(original, result)
@@ -55,15 +55,15 @@ class PlaybackRepositoryTest {
     fun `provider video id is normalized to a telegram resolver reference`() {
         assertEquals(
             "telegram:-100:21406:5393323",
-            telegramResolverRef(TvItem(id = "jellyfin-uuid", title = "t", providerVideoId = "-100:21406:5393323")),
+            telegramResolverRef(TvItem(id = "jellyfin-uuid", title = "t", providerVideoId = "-100:21406:5393323"))
         )
         assertEquals(
             "telegram:-100:21406:5393323",
-            telegramResolverRef(TvItem(id = "x", title = "t", providerVideoId = "telegram:-100:21406:5393323")),
+            telegramResolverRef(TvItem(id = "x", title = "t", providerVideoId = "telegram:-100:21406:5393323"))
         )
         assertEquals(
             "telegram:-100:1:2",
-            telegramResolverRef(TvItem(id = "telegram:-100:1:2", title = "t")),
+            telegramResolverRef(TvItem(id = "telegram:-100:1:2", title = "t"))
         )
         assertNull(telegramResolverRef(TvItem(id = "plain-id", title = "t")))
     }
@@ -83,7 +83,7 @@ class PlaybackRepositoryTest {
 
         assertEquals(
             "$url&variant=alt_5393558434975097219",
-            appendVariantQuery(url, "alt_5393558434975097219"),
+            appendVariantQuery(url, "alt_5393558434975097219")
         )
     }
 
@@ -93,7 +93,7 @@ class PlaybackRepositoryTest {
 
         assertEquals(
             "$url?variant=alt_7",
-            appendVariantQuery(url, "alt_7"),
+            appendVariantQuery(url, "alt_7")
         )
     }
 
@@ -103,7 +103,7 @@ class PlaybackRepositoryTest {
 
         assertEquals(
             "$url&variant=a%26b",
-            appendVariantQuery(url, "a&b"),
+            appendVariantQuery(url, "a&b")
         )
     }
 
@@ -113,7 +113,7 @@ class PlaybackRepositoryTest {
 
         assertEquals(
             "$url&variant=%C5%BC%C3%B3%C5%82w",
-            appendVariantQuery(url, "żółw"),
+            appendVariantQuery(url, "żółw")
         )
     }
 
@@ -123,7 +123,7 @@ class PlaybackRepositoryTest {
 
         assertEquals(
             "http://resolver/stream?mode=proxy&variant=new_2",
-            appendVariantQuery(url, "new_2"),
+            appendVariantQuery(url, "new_2")
         )
     }
 
@@ -133,7 +133,7 @@ class PlaybackRepositoryTest {
 
         assertEquals(
             "http://resolver/stream?mode=proxy",
-            appendVariantQuery(url, "original"),
+            appendVariantQuery(url, "original")
         )
     }
 
@@ -152,14 +152,14 @@ class PlaybackRepositoryTest {
         val headers = mapOf(
             "Authorization" to "MediaBrowser Token=\"token\"",
             "X-Emby-Token" to "token",
-            "Referer" to "https://media.example.test",
+            "Referer" to "https://media.example.test"
         )
 
         val result = filterPlaybackHeaders(
             headers = headers,
             streamUrl = "https://media.example.test/videos/42/stream.mp4",
             serverUrl = "https://media.example.test/",
-            accessToken = "token",
+            accessToken = "token"
         )
 
         assertEquals(headers, result)
@@ -174,11 +174,11 @@ class PlaybackRepositoryTest {
                 "X-Emby-Token" to "token",
                 "X-MediaBrowser-Token" to "token",
                 "X-Playback-Referer" to "https://media.example.test/?token",
-                "Referer" to "https://media.example.test",
+                "Referer" to "https://media.example.test"
             ),
             streamUrl = "http://192.168.1.100:8099/admin/play/telegram:1/stream?mode=proxy",
             serverUrl = "http://192.168.1.50:8096",
-            accessToken = "token",
+            accessToken = "token"
         )
 
         assertEquals(mapOf("Referer" to "https://media.example.test"), result)
@@ -192,14 +192,14 @@ class PlaybackRepositoryTest {
             "Authorization" to "Basic dXNlcjpwYXNz",
             "Cookie" to "cdn_session=abc123",
             "Proxy-Authorization" to "Basic cHJveHk=",
-            "X-Emby-Token" to "issued-by-the-source",
+            "X-Emby-Token" to "issued-by-the-source"
         )
 
         val result = filterPlaybackHeaders(
             headers = headers,
             streamUrl = "https://cdn.example.test/video.mp4",
             serverUrl = "http://192.168.1.50:8096",
-            accessToken = "token",
+            accessToken = "token"
         )
 
         assertEquals(headers, result)
@@ -211,7 +211,7 @@ class PlaybackRepositoryTest {
             headers = mapOf("Authorization" to "Bearer token", "Accept" to "video/*"),
             streamUrl = "https://cdn.example.test/video.mp4",
             serverUrl = null,
-            accessToken = "token",
+            accessToken = "token"
         )
 
         assertEquals(mapOf("Accept" to "video/*"), result)
@@ -223,7 +223,7 @@ class PlaybackRepositoryTest {
             headers = mapOf("Authorization" to "Bearer token"),
             streamUrl = "not a url",
             serverUrl = "https://media.example.test",
-            accessToken = "token",
+            accessToken = "token"
         )
 
         assertEquals(emptyMap<String, String>(), result)
@@ -237,31 +237,31 @@ class PlaybackRepositoryTest {
             "X-Emby-Token" to "secret",
             "X-MediaBrowser-Token" to "secret",
             "Accept" to "video/mp4",
-            "User-Agent" to "AdultHubTV/1.0",
+            "User-Agent" to "AdultHubTV/1.0"
         )
 
         val nullTokenResult = filterPlaybackHeaders(
             headers = headers,
             streamUrl = "http://192.168.1.100:8099/stream.mp4",
             serverUrl = "http://192.168.1.50:8096",
-            accessToken = null,
+            accessToken = null
         )
 
         assertEquals(
             mapOf("Accept" to "video/mp4", "User-Agent" to "AdultHubTV/1.0"),
-            nullTokenResult,
+            nullTokenResult
         )
 
         val blankTokenResult = filterPlaybackHeaders(
             headers = headers,
             streamUrl = "http://192.168.1.100:8099/stream.mp4",
             serverUrl = "http://192.168.1.50:8096",
-            accessToken = "   ",
+            accessToken = "   "
         )
 
         assertEquals(
             mapOf("Accept" to "video/mp4", "User-Agent" to "AdultHubTV/1.0"),
-            blankTokenResult,
+            blankTokenResult
         )
     }
 
@@ -270,14 +270,14 @@ class PlaybackRepositoryTest {
         val headers = mapOf(
             "Authorization" to "MediaBrowser Token=\"secret\"",
             "X-Emby-Token" to "secret",
-            "Accept" to "video/mp4",
+            "Accept" to "video/mp4"
         )
 
         val result = filterPlaybackHeaders(
             headers = headers,
             streamUrl = "http://192.168.1.50:8096/stream.mp4",
             serverUrl = "http://192.168.1.50:8096",
-            accessToken = null,
+            accessToken = null
         )
 
         assertEquals(headers, result)
@@ -304,7 +304,7 @@ class PlaybackRepositoryTest {
 
         val repository = PlaybackRepository(
             clientManager = clientManager,
-            settingsDataStore = settingsDataStore,
+            settingsDataStore = settingsDataStore
         )
 
         val itemUuid = UUID.randomUUID()
@@ -314,7 +314,7 @@ class PlaybackRepositoryTest {
             positionTicks = 50000L,
             playSessionId = "sess-1",
             canSeek = true,
-            playMethod = PlayMethod.DIRECT_PLAY,
+            playMethod = PlayMethod.DIRECT_PLAY
         )
         assertTrue(startResult.isSuccess)
         assertEquals(itemUuid, startSlot.captured.itemId)
@@ -329,7 +329,7 @@ class PlaybackRepositoryTest {
             playSessionId = "sess-1",
             isPaused = false,
             canSeek = true,
-            playMethod = PlayMethod.DIRECT_PLAY,
+            playMethod = PlayMethod.DIRECT_PLAY
         )
         assertTrue(progressResult.isSuccess)
         assertEquals(itemUuid, progressSlot.captured.itemId)
@@ -339,7 +339,7 @@ class PlaybackRepositoryTest {
             itemId = itemUuid.toString(),
             mediaSourceId = "ms-1",
             positionTicks = 200000L,
-            playSessionId = "sess-1",
+            playSessionId = "sess-1"
         )
         assertTrue(stopResult.isSuccess)
         assertEquals(itemUuid, stopSlot.captured.itemId)
@@ -353,14 +353,14 @@ class PlaybackRepositoryTest {
 
         val repository = PlaybackRepository(
             clientManager = clientManager,
-            settingsDataStore = settingsDataStore,
+            settingsDataStore = settingsDataStore
         )
 
         val startResult = repository.reportPlaybackStart(
             itemId = "telegram:-100:1:2",
             mediaSourceId = null,
             canSeek = false,
-            playMethod = PlayMethod.DIRECT_PLAY,
+            playMethod = PlayMethod.DIRECT_PLAY
         )
         assertTrue(startResult.isSuccess)
         coVerify(exactly = 0) { clientManager.getApi() }

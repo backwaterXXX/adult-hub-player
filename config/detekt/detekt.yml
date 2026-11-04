@@ -1,0 +1,45 @@
+# Detekt configuration for adult-hub-player
+# Focused on code quality, complexity limits, and prohibiting accidental prints.
+# Formatting and style rules are delegated to Ktlint.
+
+style:
+  ForbiddenMethodCall:
+    active: true
+    methods:
+      - 'kotlin.io.print'
+      - 'kotlin.io.println'
+  MaxLineLength:
+    active: false
+
+complexity:
+  active: true
+  ComplexCondition:
+    active: true
+    allowedConditions: 4
+  CyclomaticComplexMethod:
+    active: true
+    allowedComplexity: 20
+    ignoreSingleWhenExpression: true
+  CognitiveComplexMethod:
+    active: true
+    allowedComplexity: 20
+  LongMethod:
+    active: true
+    allowedLines: 100
+  LongParameterList:
+    active: true
+    allowedFunctionParameters: 12
+    allowedConstructorParameters: 12
+    ignoreDefaultParameters: true
+    ignoreDataClasses: true
+  LargeClass:
+    active: true
+    allowedLines: 600
+  NestedBlockDepth:
+    active: true
+    allowedDepth: 6
+  TooManyFunctions:
+    active: true
+    allowedFunctionsPerFile: 30
+    allowedFunctionsPerClass: 30
+    allowedFunctionsPerInterface: 30

@@ -23,7 +23,7 @@ data class PersonDetailUiState(
     val movies: List<TvItem> = emptyList(),
     val isLoading: Boolean = true,
     val errorMessage: String? = null,
-    val moviesErrorMessage: String? = null,
+    val moviesErrorMessage: String? = null
 )
 
 sealed interface PersonDetailNavEvent {
@@ -35,7 +35,7 @@ sealed interface PersonDetailNavEvent {
 class PersonDetailViewModel(
     private val personRepository: PersonRepository,
     private val clientManager: JellyfinClientManager,
-    private val context: Context,
+    private val context: Context
 ) : ViewModel() {
 
     private val _uiState = MutableStateFlow(PersonDetailUiState())
@@ -62,13 +62,13 @@ class PersonDetailViewModel(
                     onSuccess = { person ->
                         state.copy(
                             person = person,
-                            isLoading = false,
+                            isLoading = false
                         )
                     },
                     onFailure = { error ->
                         state.copy(
                             isLoading = false,
-                            errorMessage = error.localizedMessage ?: context.getString(R.string.library_error_performer_details),
+                            errorMessage = error.localizedMessage ?: context.getString(R.string.library_error_performer_details)
                         )
                     }
                 )
@@ -99,9 +99,9 @@ class PersonDetailViewModel(
                     // The profile loaded, so a filmography failure is reported next to
                     // the section it belongs to instead of replacing the whole screen.
                     state.copy(
-                        moviesErrorMessage = error.localizedMessage ?: context.getString(R.string.library_failed_to_load_filmography),
+                        moviesErrorMessage = error.localizedMessage ?: context.getString(R.string.library_failed_to_load_filmography)
                     )
-                },
+                }
             )
         }
     }
@@ -112,14 +112,13 @@ class PersonDetailViewModel(
         }
     }
 
-    fun getPersonImageUrl(person: TvPerson): String =
-        if (!person.primaryImageTag.isNullOrBlank()) {
-            clientManager.getPersonImageUrl(person.id, person.primaryImageTag, maxWidth = 400)
-        } else if (!person.photoUrl.isNullOrBlank()) {
-            person.photoUrl
-        } else {
-            clientManager.getPersonImageUrl(person.id, null, maxWidth = 400)
-        }
+    fun getPersonImageUrl(person: TvPerson): String = if (!person.primaryImageTag.isNullOrBlank()) {
+        clientManager.getPersonImageUrl(person.id, person.primaryImageTag, maxWidth = 400)
+    } else if (!person.photoUrl.isNullOrBlank()) {
+        person.photoUrl
+    } else {
+        clientManager.getPersonImageUrl(person.id, null, maxWidth = 400)
+    }
 
     fun getItemImageUrl(item: TvItem): String = clientManager.getItemImageUrl(item)
 }

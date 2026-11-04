@@ -7,6 +7,7 @@ import androidx.datastore.preferences.core.edit
 import androidx.datastore.preferences.core.emptyPreferences
 import androidx.datastore.preferences.core.stringPreferencesKey
 import androidx.datastore.preferences.preferencesDataStore
+import java.io.IOException
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.catch
 import kotlinx.coroutines.flow.combine
@@ -14,14 +15,13 @@ import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.flow.map
 import kotlinx.serialization.encodeToString
 import kotlinx.serialization.json.Json
-import java.io.IOException
 
 private val Context.searchHistoryDataStore: DataStore<Preferences> by preferencesDataStore(name = "search_history_prefs")
 
 open class SearchHistoryStore(
     private val context: Context,
     accountKeyProvider: AccountKeyProvider = AccountKeyProvider.ANONYMOUS,
-    private val dataStore: DataStore<Preferences> = SafePreferencesDataStore(context.searchHistoryDataStore),
+    private val dataStore: DataStore<Preferences> = SafePreferencesDataStore(context.searchHistoryDataStore)
 ) {
     companion object {
         /** Unscoped key written by versions that did not isolate accounts yet. */
@@ -92,7 +92,7 @@ open class SearchHistoryStore(
             val target = queriesKey(accountKey)
             val merged = mergeQueries(
                 parseList(prefs[target]),
-                parseList(legacy),
+                parseList(legacy)
             )
             prefs[target] = json.encodeToString(merged)
             prefs.remove(stringPreferencesKey(LEGACY_KEY_SEARCH_QUERIES))
@@ -110,8 +110,7 @@ open class SearchHistoryStore(
         return merged.values.take(MAX_SEARCH_QUERIES)
     }
 
-    private fun queriesKey(accountKey: String) =
-        stringPreferencesKey("${LEGACY_KEY_SEARCH_QUERIES}__$accountKey")
+    private fun queriesKey(accountKey: String) = stringPreferencesKey("${LEGACY_KEY_SEARCH_QUERIES}__$accountKey")
 
     private fun parseList(raw: String?): List<String> {
         if (raw.isNullOrBlank()) return emptyList()

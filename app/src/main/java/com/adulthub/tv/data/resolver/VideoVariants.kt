@@ -18,7 +18,7 @@ data class VideoVariant(
     /** Reliably known upstream bitrate in bps. Null when the server does not know it. */
     val bitrate: Long?,
     /** Average bitrate derived from file size and duration, in bps. Null when not computable. */
-    val estimatedAverageBitrate: Long?,
+    val estimatedAverageBitrate: Long?
 )
 
 /** Outcome of a variants request. A missing feature never blocks playback. */
@@ -49,7 +49,7 @@ fun VideoVariantDto.toDomain(): VideoVariant = VideoVariant(
     fileSizeBytes = fileSize?.takeIf { it > 0 },
     durationSec = duration?.takeIf { it > 0.0 },
     bitrate = bitrate?.takeIf { it > 0 },
-    estimatedAverageBitrate = estimatedAverageBitrate?.takeIf { it > 0 },
+    estimatedAverageBitrate = estimatedAverageBitrate?.takeIf { it > 0 }
 )
 
 fun classifyVariantsResponse(dto: VideoVariantsDto): VideoVariantsResult {
@@ -144,5 +144,5 @@ fun formatQualityDescriptor(variant: VideoVariant): String = listOfNotNull(
     },
     variant.codec,
     formatVariantSize(variant.fileSizeBytes),
-    "Original".takeIf { variant.isOriginal },
+    "Original".takeIf { variant.isOriginal }
 ).joinToString(" · ").ifBlank { "Unknown" }

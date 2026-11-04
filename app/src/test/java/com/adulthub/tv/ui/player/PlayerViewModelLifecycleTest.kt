@@ -44,7 +44,7 @@ class PlayerViewModelLifecycleTest {
         id = "telegram:-1001234567890",
         title = "Telegram Scene",
         providerVideoId = "provider-video-1",
-        runtimeTicks = 20L * 60 * 10_000_000L,
+        runtimeTicks = 20L * 60 * 10_000_000L
     )
 
     @Before
@@ -58,7 +58,7 @@ class PlayerViewModelLifecycleTest {
                 itemId = telegramItem.id,
                 streamUrl = "https://resolver.example.com/stream.mp4",
                 playMethod = PlayMethod.DIRECT_PLAY,
-                title = telegramItem.title,
+                title = telegramItem.title
             )
         )
     }
@@ -79,7 +79,7 @@ class PlayerViewModelLifecycleTest {
             playbackReporter = playbackReporter,
             telegramProgressStore = telegramProgressStore,
             persistenceScope = persistenceScope,
-            context = context,
+            context = context
         )
 
         viewModel.loadItem(telegramItem.id)
@@ -101,7 +101,7 @@ class PlayerViewModelLifecycleTest {
                 title = "Telegram Scene",
                 thumbnailUrl = any(),
                 channelId = any(),
-                isPlayed = false,
+                isPlayed = false
             )
         }
     }
@@ -116,14 +116,12 @@ private class LifecycleFakeLibraryRepository : LibraryRepository(mockk(relaxed =
 private class LifecycleFakePlaybackRepository : PlaybackRepository(mockk(relaxed = true), mockk(relaxed = true)) {
     var playbackInfoResult: Result<PlaybackInfo>? = null
 
-    override suspend fun resolvePlaybackInfo(item: TvItem, variantId: String?): Result<PlaybackInfo> {
-        return playbackInfoResult ?: Result.success(
-            PlaybackInfo(
-                itemId = item.id,
-                streamUrl = "https://resolver.example.com/stream.mp4",
-                playMethod = PlayMethod.DIRECT_PLAY,
-                title = item.title,
-            )
+    override suspend fun resolvePlaybackInfo(item: TvItem, variantId: String?): Result<PlaybackInfo> = playbackInfoResult ?: Result.success(
+        PlaybackInfo(
+            itemId = item.id,
+            streamUrl = "https://resolver.example.com/stream.mp4",
+            playMethod = PlayMethod.DIRECT_PLAY,
+            title = item.title
         )
-    }
+    )
 }

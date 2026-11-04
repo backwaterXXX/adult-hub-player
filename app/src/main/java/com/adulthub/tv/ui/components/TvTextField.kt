@@ -11,6 +11,7 @@ import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.text.BasicTextField
 import androidx.compose.foundation.text.KeyboardActions
 import androidx.compose.foundation.text.KeyboardOptions
+import androidx.compose.material3.OutlinedTextField as TouchOutlinedTextField
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
@@ -29,7 +30,6 @@ import androidx.compose.ui.text.TextStyle
 import androidx.compose.ui.text.input.VisualTransformation
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
-import androidx.compose.material3.OutlinedTextField as TouchOutlinedTextField
 import androidx.tv.material3.MaterialTheme
 import androidx.tv.material3.Text
 import com.adulthub.tv.ui.theme.CardSurface
@@ -49,7 +49,7 @@ fun TvTextField(
     visualTransformation: VisualTransformation = VisualTransformation.None,
     keyboardOptions: KeyboardOptions = KeyboardOptions.Default,
     keyboardActions: KeyboardActions = KeyboardActions.Default,
-    singleLine: Boolean = true,
+    singleLine: Boolean = true
 ) {
     if (LocalTouchUi.current) {
         TouchOutlinedTextField(
@@ -61,7 +61,7 @@ fun TvTextField(
             visualTransformation = visualTransformation,
             keyboardOptions = keyboardOptions,
             keyboardActions = keyboardActions,
-            singleLine = singleLine,
+            singleLine = singleLine
         )
         return
     }
@@ -79,21 +79,21 @@ fun TvTextField(
             text = label,
             style = MaterialTheme.typography.labelMedium,
             color = if (isFocused || isEditing) FocusBorder else TextSecondary,
-            modifier = Modifier.padding(bottom = 6.dp),
+            modifier = Modifier.padding(bottom = 6.dp)
         )
         Box(
             modifier = Modifier
                 .fillMaxWidth()
                 .background(
                     color = if (isFocused) CardSurfaceFocused else CardSurface,
-                    shape = RoundedCornerShape(8.dp),
+                    shape = RoundedCornerShape(8.dp)
                 )
                 .border(
                     width = if (isFocused) 2.dp else 1.dp,
                     color = if (isFocused) FocusBorder else Color(0xFF333333),
-                    shape = RoundedCornerShape(8.dp),
+                    shape = RoundedCornerShape(8.dp)
                 )
-                .padding(horizontal = 16.dp, vertical = 14.dp),
+                .padding(horizontal = 16.dp, vertical = 14.dp)
         ) {
             if (isEditing) {
                 BasicTextField(
@@ -122,12 +122,12 @@ fun TvTextField(
                             if (value.isEmpty() && hint.isNotEmpty()) {
                                 Text(
                                     text = hint,
-                                    style = TextStyle(color = TextMuted, fontSize = 16.sp),
+                                    style = TextStyle(color = TextMuted, fontSize = 16.sp)
                                 )
                             }
                             innerTextField()
                         }
-                    },
+                    }
                 )
             } else {
                 Box(
@@ -137,7 +137,7 @@ fun TvTextField(
                             editorHadFocus = false
                             isEditing = true
                         }
-                        .onFocusChanged { isFocused = it.isFocused },
+                        .onFocusChanged { isFocused = it.isFocused }
                 ) {
                     val displayValue = visualTransformation
                         .filter(AnnotatedString(value))
@@ -147,8 +147,8 @@ fun TvTextField(
                         text = displayValue.ifEmpty { hint },
                         style = TextStyle(
                             color = if (displayValue.isEmpty()) TextMuted else TextPrimary,
-                            fontSize = 16.sp,
-                        ),
+                            fontSize = 16.sp
+                        )
                     )
                 }
             }

@@ -14,14 +14,13 @@ class UserScopedDataMigration(
     private val searchHistoryStore: SearchHistoryStore,
     private val telegramProgressStore: TelegramProgressStore,
     private val phashJobStore: PhashJobStore,
-    private val accountKeys: AccountKeyProvider,
+    private val accountKeys: AccountKeyProvider
 ) {
     /** True when unisolated data of an older install waits for an explicit import. */
-    suspend fun hasPendingImport(): Boolean =
-        watchHistoryStore.hasLegacyData() ||
-            searchHistoryStore.hasLegacyData() ||
-            telegramProgressStore.hasLegacyData() ||
-            phashJobStore.hasLegacyData()
+    suspend fun hasPendingImport(): Boolean = watchHistoryStore.hasLegacyData() ||
+        searchHistoryStore.hasLegacyData() ||
+        telegramProgressStore.hasLegacyData() ||
+        phashJobStore.hasLegacyData()
 
     /**
      * Imports the unisolated data into the account that is signed in now.

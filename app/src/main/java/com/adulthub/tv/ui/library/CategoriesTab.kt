@@ -26,8 +26,6 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.focus.FocusRequester
 import androidx.compose.ui.focus.focusRequester
 import androidx.compose.ui.graphics.Color
-import kotlinx.coroutines.delay
-import kotlinx.coroutines.flow.distinctUntilChanged
 import androidx.compose.ui.graphics.graphicsLayer
 import androidx.compose.ui.res.pluralStringResource
 import androidx.compose.ui.res.stringResource
@@ -53,6 +51,8 @@ import com.adulthub.tv.ui.theme.CardSurfaceFocused
 import com.adulthub.tv.ui.theme.NeonPink
 import com.adulthub.tv.ui.theme.TextPrimary
 import com.adulthub.tv.ui.theme.TextSecondary
+import kotlinx.coroutines.delay
+import kotlinx.coroutines.flow.distinctUntilChanged
 
 @Composable
 fun CategoriesTab(
@@ -64,7 +64,7 @@ fun CategoriesTab(
     getImageUrl: (TvItem) -> String,
     modifier: Modifier = Modifier,
     onLoadMore: () -> Unit = {},
-    onRetryCategoryMovies: () -> Unit = {},
+    onRetryCategoryMovies: () -> Unit = {}
 ) {
     val categoriesGridState = rememberLazyGridState()
     val categoryFocusRequesterMap = remember { mutableMapOf<String, FocusRequester>() }
@@ -120,7 +120,7 @@ fun CategoriesTab(
     Column(
         modifier = modifier
             .fillMaxSize()
-            .padding(horizontal = 48.dp),
+            .padding(horizontal = 48.dp)
     ) {
         if (state.selectedCategory != null) {
             // Selected Category Header
@@ -129,13 +129,13 @@ fun CategoriesTab(
                     .fillMaxWidth()
                     .padding(vertical = 12.dp),
                 horizontalArrangement = Arrangement.SpaceBetween,
-                verticalAlignment = Alignment.CenterVertically,
+                verticalAlignment = Alignment.CenterVertically
             ) {
                 Column {
                     Text(
                         text = state.selectedCategory.name,
                         style = MaterialTheme.typography.headlineMedium,
-                        color = NeonPink,
+                        color = NeonPink
                     )
                     val countText = if (state.totalCount > 0) {
                         if (state.hasMoreCategoryMovies) {
@@ -143,32 +143,32 @@ fun CategoriesTab(
                                 R.plurals.library_movies_of_total,
                                 state.totalCount,
                                 state.categoryMovies.size,
-                                state.totalCount,
+                                state.totalCount
                             )
                         } else {
                             pluralStringResource(
                                 R.plurals.library_movies_count,
                                 state.categoryMovies.size,
-                                state.categoryMovies.size,
+                                state.categoryMovies.size
                             )
                         }
                     } else if (state.hasMoreCategoryMovies) {
                         pluralStringResource(
                             R.plurals.library_movies_count_plus,
                             state.categoryMovies.size,
-                            state.categoryMovies.size,
+                            state.categoryMovies.size
                         )
                     } else {
                         pluralStringResource(
                             R.plurals.library_movies_count,
                             state.categoryMovies.size,
-                            state.categoryMovies.size,
+                            state.categoryMovies.size
                         )
                     }
                     Text(
                         text = countText,
                         style = MaterialTheme.typography.bodyMedium,
-                        color = TextSecondary,
+                        color = TextSecondary
                     )
                 }
 
@@ -180,30 +180,30 @@ fun CategoriesTab(
             if (state.isLoadingCategoryMovies) {
                 Box(
                     modifier = Modifier.fillMaxSize(),
-                    contentAlignment = Alignment.Center,
+                    contentAlignment = Alignment.Center
                 ) {
                     LoadingIndicator(message = stringResource(R.string.library_loading_category_movies))
                 }
             } else if (state.categoryMoviesError != null && state.categoryMovies.isEmpty()) {
                 Box(
                     modifier = Modifier.fillMaxSize(),
-                    contentAlignment = Alignment.Center,
+                    contentAlignment = Alignment.Center
                 ) {
                     ErrorMessage(
                         message = state.categoryMoviesError,
                         onRetry = onRetryCategoryMovies,
-                        modifier = Modifier.fillMaxWidth(0.5f),
+                        modifier = Modifier.fillMaxWidth(0.5f)
                     )
                 }
             } else if (state.categoryMovies.isEmpty()) {
                 Box(
                     modifier = Modifier.fillMaxSize(),
-                    contentAlignment = Alignment.Center,
+                    contentAlignment = Alignment.Center
                 ) {
                     Text(
                         text = stringResource(R.string.library_no_movies_in_category, state.selectedCategory.name),
                         style = MaterialTheme.typography.bodyLarge,
-                        color = TextSecondary,
+                        color = TextSecondary
                     )
                 }
             } else {
@@ -213,11 +213,11 @@ fun CategoriesTab(
                     contentPadding = PaddingValues(top = 8.dp, bottom = 48.dp),
                     horizontalArrangement = Arrangement.spacedBy(16.dp),
                     verticalArrangement = Arrangement.spacedBy(16.dp),
-                    modifier = Modifier.fillMaxSize(),
+                    modifier = Modifier.fillMaxSize()
                 ) {
                     items(
                         items = state.categoryMovies,
-                        key = { it.id },
+                        key = { it.id }
                     ) { item ->
                         val requester = remember(item.id) {
                             movieFocusRequesterMap.getOrPut(item.id) { FocusRequester() }
@@ -228,7 +228,7 @@ fun CategoriesTab(
                             onClick = { onMovieClick(item) },
                             modifier = Modifier
                                 .fillMaxWidth()
-                                .focusRequester(requester),
+                                .focusRequester(requester)
                         )
                     }
 
@@ -238,7 +238,7 @@ fun CategoriesTab(
                                 modifier = Modifier
                                     .fillMaxWidth()
                                     .padding(vertical = 16.dp),
-                                contentAlignment = Alignment.Center,
+                                contentAlignment = Alignment.Center
                             ) {
                                 LoadingIndicator(message = stringResource(R.string.library_loading_more_category_movies))
                             }
@@ -251,11 +251,11 @@ fun CategoriesTab(
                                 modifier = Modifier
                                     .fillMaxWidth()
                                     .padding(vertical = 16.dp),
-                                contentAlignment = Alignment.Center,
+                                contentAlignment = Alignment.Center
                             ) {
                                 TvSecondaryButton(
                                     onClick = onLoadMore,
-                                    modifier = Modifier.height(44.dp),
+                                    modifier = Modifier.height(44.dp)
                                 ) {
                                     Text(text = stringResource(R.string.library_load_more_movies))
                                 }
@@ -269,11 +269,11 @@ fun CategoriesTab(
                                 modifier = Modifier
                                     .fillMaxWidth()
                                     .padding(vertical = 16.dp),
-                                contentAlignment = Alignment.Center,
+                                contentAlignment = Alignment.Center
                             ) {
                                 TvSecondaryButton(
                                     onClick = onLoadMore,
-                                    modifier = Modifier.height(44.dp),
+                                    modifier = Modifier.height(44.dp)
                                 ) {
                                     Text(text = stringResource(R.string.library_retry_loading_more_movies))
                                 }
@@ -288,16 +288,16 @@ fun CategoriesTab(
                 modifier = Modifier
                     .fillMaxWidth()
                     .padding(vertical = 12.dp),
-                verticalAlignment = Alignment.CenterVertically,
+                verticalAlignment = Alignment.CenterVertically
             ) {
                 Text(
                     text = pluralStringResource(
                         R.plurals.library_categories_count,
                         state.categories.size,
-                        state.categories.size,
+                        state.categories.size
                     ),
                     style = MaterialTheme.typography.bodyMedium,
-                    color = TextSecondary,
+                    color = TextSecondary
                 )
             }
 
@@ -305,35 +305,38 @@ fun CategoriesTab(
                 state.isLoading -> {
                     Box(
                         modifier = Modifier.fillMaxSize(),
-                        contentAlignment = Alignment.Center,
+                        contentAlignment = Alignment.Center
                     ) {
                         LoadingIndicator(message = stringResource(R.string.library_loading_categories))
                     }
                 }
+
                 state.errorMessage != null && state.categories.isEmpty() -> {
                     Box(
                         modifier = Modifier.fillMaxSize(),
-                        contentAlignment = Alignment.Center,
+                        contentAlignment = Alignment.Center
                     ) {
                         ErrorMessage(
                             message = state.errorMessage,
                             onRetry = onRetry,
-                            modifier = Modifier.fillMaxWidth(0.5f),
+                            modifier = Modifier.fillMaxWidth(0.5f)
                         )
                     }
                 }
+
                 state.isEmpty -> {
                     Box(
                         modifier = Modifier.fillMaxSize(),
-                        contentAlignment = Alignment.Center,
+                        contentAlignment = Alignment.Center
                     ) {
                         Text(
                             text = stringResource(R.string.library_no_categories_available),
                             style = MaterialTheme.typography.bodyLarge,
-                            color = TextSecondary,
+                            color = TextSecondary
                         )
                     }
                 }
+
                 else -> {
                     LazyVerticalGrid(
                         columns = GridCells.Fixed(4),
@@ -341,11 +344,11 @@ fun CategoriesTab(
                         contentPadding = PaddingValues(top = 8.dp, bottom = 48.dp),
                         horizontalArrangement = Arrangement.spacedBy(16.dp),
                         verticalArrangement = Arrangement.spacedBy(16.dp),
-                        modifier = Modifier.fillMaxSize(),
+                        modifier = Modifier.fillMaxSize()
                     ) {
                         items(
                             items = state.categories,
-                            key = { it.id },
+                            key = { it.id }
                         ) { category ->
                             val requester = remember(category.id) {
                                 categoryFocusRequesterMap.getOrPut(category.id) { FocusRequester() }
@@ -353,7 +356,7 @@ fun CategoriesTab(
                             CategoryCard(
                                 category = category,
                                 onClick = { onCategoryClick(category) },
-                                modifier = Modifier.focusRequester(requester),
+                                modifier = Modifier.focusRequester(requester)
                             )
                         }
                     }
@@ -367,7 +370,7 @@ fun CategoriesTab(
 private fun CategoryCard(
     category: TvCategory,
     onClick: () -> Unit,
-    modifier: Modifier = Modifier,
+    modifier: Modifier = Modifier
 ) {
     Card(
         onClick = onClick,
@@ -379,18 +382,18 @@ private fun CategoryCard(
         scale = CardDefaults.scale(scale = 1f, focusedScale = 1.05f),
         border = CardDefaults.border(
             border = Border(BorderStroke(1.dp, Color.White.copy(alpha = 0.12f))),
-            focusedBorder = Border(BorderStroke(3.5.dp, NeonPink)),
+            focusedBorder = Border(BorderStroke(3.5.dp, NeonPink))
         ),
         colors = CardDefaults.colors(
             containerColor = CardSurface,
-            focusedContainerColor = CardSurfaceFocused,
-        ),
+            focusedContainerColor = CardSurfaceFocused
+        )
     ) {
         Column(
             modifier = Modifier
                 .fillMaxSize()
                 .padding(16.dp),
-            verticalArrangement = Arrangement.Center,
+            verticalArrangement = Arrangement.Center
         ) {
             Text(
                 text = category.name,
@@ -398,7 +401,7 @@ private fun CategoryCard(
                 color = TextPrimary,
                 maxLines = 1,
                 overflow = TextOverflow.Ellipsis,
-                fontWeight = FontWeight.Bold,
+                fontWeight = FontWeight.Bold
             )
             if (category.movieCount > 0) {
                 Spacer(modifier = Modifier.height(4.dp))
@@ -406,10 +409,10 @@ private fun CategoryCard(
                     text = pluralStringResource(
                         R.plurals.library_movies_count,
                         category.movieCount,
-                        category.movieCount,
+                        category.movieCount
                     ),
                     style = MaterialTheme.typography.bodySmall,
-                    color = TextSecondary,
+                    color = TextSecondary
                 )
             }
         }

@@ -8,7 +8,7 @@ internal enum class PlayerBackAction {
     CLOSE_INFO_DIALOG,
     DISMISS_RESUME_DIALOG,
     HIDE_OSD,
-    EXIT_PLAYER,
+    EXIT_PLAYER
 }
 
 /**
@@ -21,7 +21,7 @@ internal fun resolvePlayerBackAction(
     autoplayCountdownSec: Int?,
     showInfoDialog: Boolean,
     hasPendingResumeDialog: Boolean,
-    isOsdVisible: Boolean,
+    isOsdVisible: Boolean
 ): PlayerBackAction = when {
     autoplayCountdownSec != null -> PlayerBackAction.CANCEL_AUTOPLAY
     showInfoDialog -> PlayerBackAction.CLOSE_INFO_DIALOG

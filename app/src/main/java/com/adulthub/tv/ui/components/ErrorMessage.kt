@@ -24,25 +24,25 @@ fun ErrorMessage(
     message: String,
     modifier: Modifier = Modifier,
     onRetry: (() -> Unit)? = null,
-    onBack: (() -> Unit)? = null,
+    onBack: (() -> Unit)? = null
 ) {
     Column(
         modifier = modifier.padding(16.dp),
         horizontalAlignment = Alignment.CenterHorizontally,
-        verticalArrangement = Arrangement.Center,
+        verticalArrangement = Arrangement.Center
     ) {
         Text(
             text = message,
             style = MaterialTheme.typography.bodyLarge,
             color = ErrorRed,
-            textAlign = TextAlign.Center,
+            textAlign = TextAlign.Center
         )
 
         if (onRetry != null || onBack != null) {
             Spacer(modifier = Modifier.height(24.dp))
             Row(
                 horizontalArrangement = Arrangement.Center,
-                verticalAlignment = Alignment.CenterVertically,
+                verticalAlignment = Alignment.CenterVertically
             ) {
                 if (onRetry != null) {
                     TvPrimaryButton(onClick = onRetry) {

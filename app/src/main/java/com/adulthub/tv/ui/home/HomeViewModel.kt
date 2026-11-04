@@ -2,7 +2,7 @@ package com.adulthub.tv.ui.home
 
 import android.annotation.SuppressLint
 import android.content.Context
-import com.adulthub.tv.diagnostics.AppLog as Log
+import androidx.compose.runtime.Immutable
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import com.adulthub.tv.R
@@ -14,6 +14,10 @@ import com.adulthub.tv.data.model.TvItem
 import com.adulthub.tv.data.model.TvPerson
 import com.adulthub.tv.data.repository.LibraryRepository
 import com.adulthub.tv.data.repository.PersonRepository
+import com.adulthub.tv.diagnostics.AppLog as Log
+import kotlinx.coroutines.async
+import kotlinx.coroutines.awaitAll
+import kotlinx.coroutines.coroutineScope
 import kotlinx.coroutines.flow.MutableSharedFlow
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.SharedFlow
@@ -22,24 +26,19 @@ import kotlinx.coroutines.flow.asSharedFlow
 import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.flow.collectLatest
 import kotlinx.coroutines.flow.distinctUntilChanged
-import kotlinx.coroutines.flow.firstOrNull
 import kotlinx.coroutines.flow.drop
+import kotlinx.coroutines.flow.firstOrNull
 import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.launch
-import kotlinx.coroutines.async
-import kotlinx.coroutines.awaitAll
-import kotlinx.coroutines.coroutineScope
 import kotlinx.coroutines.sync.Semaphore
 import kotlinx.coroutines.sync.withPermit
-
-import androidx.compose.runtime.Immutable
 import org.jellyfin.sdk.model.api.ItemFilter
 
 @Immutable
 data class SectionState<T>(
     val items: List<T> = emptyList(),
     val isLoading: Boolean = false,
-    val errorMessage: String? = null,
+    val errorMessage: String? = null
 ) {
     val isEmpty: Boolean get() = !isLoading && errorMessage == null && items.isEmpty()
 }
@@ -48,7 +47,7 @@ data class SectionState<T>(
 data class HomeCategoryRow(
     val categoryId: String,
     val categoryName: String,
-    val items: List<TvItem>,
+    val items: List<TvItem>
 )
 
 @Immutable
@@ -63,7 +62,7 @@ data class HomeUiState(
     val categoryRows: List<HomeCategoryRow> = emptyList(),
     val categoryRowsLoading: Boolean = true,
     val categoryRowsErrorMessage: String? = null,
-    val excludedTags: Set<String> = emptySet(),
+    val excludedTags: Set<String> = emptySet()
 )
 
 sealed interface HomeNavEvent {
@@ -84,7 +83,7 @@ class HomeViewModel(
     private val clientManager: JellyfinClientManager,
     private val telegramProgressStore: TelegramProgressStore? = null,
     private val watchHistoryStore: WatchHistoryStore? = null,
-    private val context: Context,
+    private val context: Context
 ) : ViewModel() {
 
     companion object {
@@ -118,7 +117,7 @@ class HomeViewModel(
                         categoryRows = state.categoryRows.mapNotNull { row ->
                             val items = filterExcluded(row.items, excluded)
                             if (items.isEmpty()) null else row.copy(items = items)
-                        },
+                        }
                     )
                 }
             }
@@ -180,7 +179,7 @@ class HomeViewModel(
                         runtimeTicks = record.durationMs * 10_000L,
                         providerVideoId = record.providerVideoId,
                         channelId = record.channelId,
-                        isPlayed = false,
+                        isPlayed = false
                     )
                 }
 
@@ -279,7 +278,7 @@ class HomeViewModel(
             _uiState.update {
                 it.copy(
                     categoryRowsLoading = false,
-                    categoryRowsErrorMessage = error.localizedMessage ?: context.getString(R.string.home_error_categories),
+                    categoryRowsErrorMessage = error.localizedMessage ?: context.getString(R.string.home_error_categories)
                 )
             }
             return
@@ -310,7 +309,7 @@ class HomeViewModel(
             it.copy(
                 categoryRows = rows,
                 categoryRowsLoading = false,
-                categoryRowsErrorMessage = firstFailure?.localizedMessage,
+                categoryRowsErrorMessage = firstFailure?.localizedMessage
             )
         }
     }

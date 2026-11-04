@@ -14,19 +14,21 @@ import com.adulthub.tv.data.update.AppUpdateManager
 import com.adulthub.tv.di.appModule
 import com.adulthub.tv.di.repositoryModule
 import com.adulthub.tv.di.viewModelModule
-import org.koin.android.ext.koin.androidContext
-import org.koin.core.context.startKoin
-import org.koin.core.context.GlobalContext
-import kotlinx.coroutines.CoroutineScope
-import kotlinx.coroutines.flow.first
-import kotlinx.coroutines.Dispatchers
-import kotlinx.coroutines.SupervisorJob
-import kotlinx.coroutines.launch
-import okhttp3.OkHttpClient
 import java.io.IOException
 import java.util.concurrent.atomic.AtomicInteger
+import kotlinx.coroutines.CoroutineScope
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.SupervisorJob
+import kotlinx.coroutines.flow.first
+import kotlinx.coroutines.launch
+import okhttp3.OkHttpClient
+import org.koin.android.ext.koin.androidContext
+import org.koin.core.context.GlobalContext
+import org.koin.core.context.startKoin
 
-class AdultHubTvApp : Application(), ImageLoaderFactory {
+class AdultHubTvApp :
+    Application(),
+    ImageLoaderFactory {
     private val applicationScope = CoroutineScope(SupervisorJob() + Dispatchers.IO)
     private val imageCacheLimitMb = AtomicInteger(SettingsDataStore.DEFAULT_CACHE_LIMIT_MB)
     private val settingsDataStore: SettingsDataStore by lazy { GlobalContext.get().get() }
@@ -45,7 +47,7 @@ class AdultHubTvApp : Application(), ImageLoaderFactory {
             modules(
                 appModule,
                 repositoryModule,
-                viewModelModule,
+                viewModelModule
             )
         }
 
@@ -97,7 +99,7 @@ class AdultHubTvApp : Application(), ImageLoaderFactory {
                 // for them itself, so the header is decided here for every request.
                 val mayCarryToken = ImageTokenOriginPolicy.allows(
                     urlString,
-                    listOf(clientManager.currentServerUrl, settingsDataStore.resolverBaseUrlSnapshot()),
+                    listOf(clientManager.currentServerUrl, settingsDataStore.resolverBaseUrlSnapshot())
                 )
                 val authenticatedRequest = if (mayCarryToken && !token.isNullOrBlank()) {
                     request.newBuilder().header("X-Emby-Token", token).build()
@@ -110,7 +112,7 @@ class AdultHubTvApp : Application(), ImageLoaderFactory {
 
         com.adulthub.tv.diagnostics.AppLog.i(
             "AdultHubTvApp",
-            "Coil ImageLoader initialized: memoryCache=15% RAM, diskCache=${cacheLimitMb}MB, RGB_565",
+            "Coil ImageLoader initialized: memoryCache=15% RAM, diskCache=${cacheLimitMb}MB, RGB_565"
         )
 
         return ImageLoader.Builder(this)

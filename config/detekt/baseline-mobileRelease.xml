@@ -1,0 +1,114 @@
+<?xml version="1.0" ?>
+<SmellBaseline>
+  <ManuallySuppressedIssues/>
+  <CurrentIssues>
+    <ID>CognitiveComplexMethod:ActorsTab.kt:@Composable fun ActorsTab</ID>
+    <ID>CognitiveComplexMethod:AllItemsTab.kt:@Composable @OptIn(ExperimentalComposeUiApi::class) fun AllItemsTab</ID>
+    <ID>CognitiveComplexMethod:AllItemsTab.kt:@Composable private fun CatalogFilterDialog</ID>
+    <ID>CognitiveComplexMethod:CategoriesTab.kt:@Composable fun CategoriesTab</ID>
+    <ID>CognitiveComplexMethod:ChannelRepository.kt:ChannelRepository$fun cacheVideos</ID>
+    <ID>CognitiveComplexMethod:ChannelsTab.kt:@Composable fun ChannelsTab</ID>
+    <ID>CognitiveComplexMethod:ChannelsTab.kt:@Composable private fun ChannelVideoCard</ID>
+    <ID>CognitiveComplexMethod:HomeScreen.kt:@Composable @OptIn(ExperimentalComposeUiApi::class) fun HomeScreen</ID>
+    <ID>CognitiveComplexMethod:ItemDetailScreen.kt:@Composable @OptIn(ExperimentalComposeUiApi::class) fun ItemDetailScreen</ID>
+    <ID>CognitiveComplexMethod:ItemDetailViewModel.kt:ItemDetailViewModel$fun playRandomContextual</ID>
+    <ID>CognitiveComplexMethod:LibraryScreen.kt:@Composable @OptIn(ExperimentalComposeUiApi::class) fun LibraryScreen</ID>
+    <ID>CognitiveComplexMethod:LibrarySelectScreen.kt:@Composable fun LibrarySelectScreen</ID>
+    <ID>CognitiveComplexMethod:LibraryViewModel.kt:LibraryViewModel$fun loadActors</ID>
+    <ID>CognitiveComplexMethod:LibraryViewModel.kt:LibraryViewModel$fun loadAllItems</ID>
+    <ID>CognitiveComplexMethod:LibraryViewModel.kt:LibraryViewModel$private fun loadCategoryMovies</ID>
+    <ID>CognitiveComplexMethod:LibraryViewModel.kt:LibraryViewModel$private fun loadChannelVideos</ID>
+    <ID>CognitiveComplexMethod:LibraryViewModel.kt:LibraryViewModel$private fun loadStudioMovies</ID>
+    <ID>CognitiveComplexMethod:MobilePlayerOverlay.kt:@Composable fun MobilePlayerOverlay</ID>
+    <ID>CognitiveComplexMethod:MobileScreens.kt:@Composable fun MobileHomeScreen</ID>
+    <ID>CognitiveComplexMethod:MobileScreens.kt:@Composable fun MobileItemDetailScreen</ID>
+    <ID>CognitiveComplexMethod:MobileScreens.kt:@Composable fun MobileLibraryScreen</ID>
+    <ID>CognitiveComplexMethod:MobileScreens.kt:@Composable fun MobileSearchScreen</ID>
+    <ID>CognitiveComplexMethod:MovieCard.kt:@Composable fun MovieCard</ID>
+    <ID>CognitiveComplexMethod:PersonDetailScreen.kt:@Composable @OptIn(ExperimentalComposeUiApi::class) fun PersonDetailScreen</ID>
+    <ID>CognitiveComplexMethod:PhashSampling.kt:PhashCoordinator$private suspend fun poll</ID>
+    <ID>CognitiveComplexMethod:PhashSampling.kt:PhashCoordinator$private suspend fun process</ID>
+    <ID>CognitiveComplexMethod:PlaybackRepository.kt:PlaybackRepository$open suspend fun resolvePlaybackInfo: Result&lt;PlaybackInfo&gt;</ID>
+    <ID>CognitiveComplexMethod:PlayerDialogs.kt:@Composable fun EndOfMovieDialog</ID>
+    <ID>CognitiveComplexMethod:PlayerDialogs.kt:@Composable fun PlaybackInfoOverlay</ID>
+    <ID>CognitiveComplexMethod:PlayerManager.kt:PlayerManager$fun getTechnicalInfo: PlaybackTechnicalInfo</ID>
+    <ID>CognitiveComplexMethod:PlayerOverlay.kt:@Composable fun PlayerOverlay</ID>
+    <ID>CognitiveComplexMethod:PlayerScreen.kt:@OptIn(UnstableApi::class) @Composable fun PlayerScreen</ID>
+    <ID>CognitiveComplexMethod:PlayerViewModel.kt:PlayerViewModel$fun loadItem</ID>
+    <ID>CognitiveComplexMethod:PlayerViewModel.kt:PlayerViewModel$fun playRandomMovie</ID>
+    <ID>CognitiveComplexMethod:SearchScreen.kt:@Composable @OptIn(ExperimentalComposeUiApi::class) fun SearchScreen</ID>
+    <ID>CognitiveComplexMethod:SearchViewModel.kt:SearchViewModel$private suspend fun performSearch</ID>
+    <ID>CognitiveComplexMethod:SettingsDataStore.kt:SettingsDataStore$open suspend fun migrateSensitiveValues</ID>
+    <ID>CognitiveComplexMethod:SettingsScreen.kt:@Composable fun SettingsScreen</ID>
+    <ID>CognitiveComplexMethod:StudiosTab.kt:@Composable fun StudiosTab</ID>
+    <ID>CognitiveComplexMethod:TvChoiceChip.kt:@Composable fun TvChoiceChip</ID>
+    <ID>CognitiveComplexMethod:TvTextField.kt:@Composable fun TvTextField</ID>
+    <ID>ComplexCondition:ActorsTab.kt:lastVisibleIndex != null &amp;&amp; state.filteredPersons.isNotEmpty() &amp;&amp; lastVisibleIndex &gt;= state.filteredPersons.lastIndex - 8 &amp;&amp; state.hasMore &amp;&amp; state.errorMessage == null &amp;&amp; !state.isLoadingMore</ID>
+    <ID>ComplexCondition:AuthDataStore.kt:AuthDataStore$preferences[KEY_SERVER_URL] == snapshot.serverUrl &amp;&amp; preferences[KEY_USER_ID] == snapshot.userId &amp;&amp; preferences[KEY_USERNAME] == snapshot.username &amp;&amp; preferences[KEY_SERVER_NAME] == snapshot.serverName &amp;&amp; preferences[KEY_ENCRYPTED_TOKEN] == snapshot.encryptedToken</ID>
+    <ID>ComplexCondition:CategoriesTab.kt:lastVisibleIndex != null &amp;&amp; state.categoryMovies.isNotEmpty() &amp;&amp; lastVisibleIndex &gt;= state.categoryMovies.lastIndex - 4 &amp;&amp; state.hasMoreCategoryMovies &amp;&amp; state.categoryMoviesError == null &amp;&amp; !state.isLoadingMoreCategoryMovies &amp;&amp; !state.isLoadingCategoryMovies</ID>
+    <ID>ComplexCondition:ChannelsTab.kt:lastVisibleIndex != null &amp;&amp; state.channelVideos.isNotEmpty() &amp;&amp; lastVisibleIndex &gt;= state.channelVideos.lastIndex - 6 &amp;&amp; state.hasMoreVideos &amp;&amp; state.channelVideosError == null &amp;&amp; !state.isLoadingMoreVideos &amp;&amp; !state.isLoadingVideos</ID>
+    <ID>ComplexCondition:MobileScreens.kt:state.hasSearched &amp;&amp; !state.isSearching &amp;&amp; state.movies.isEmpty() &amp;&amp; state.actors.isEmpty() &amp;&amp; state.channelVideos.isEmpty()</ID>
+    <ID>ComplexCondition:PlayerScreen.kt:isOsdVisible &amp;&amp; isPlaying &amp;&amp; !isPlaybackEnded &amp;&amp; playerError == null &amp;&amp; !showInfoDialog</ID>
+    <ID>ComplexCondition:SettingsDataStore.kt:SettingsDataStore$replacements.isEmpty() &amp;&amp; !originsNeedUpdate &amp;&amp; !versionNeedsUpdate &amp;&amp; !hasLegacyUpdateSource &amp;&amp; !hasLegacyLibrary</ID>
+    <ID>ComplexCondition:StudiosTab.kt:lastVisibleIndex != null &amp;&amp; state.studioMovies.isNotEmpty() &amp;&amp; lastVisibleIndex &gt;= state.studioMovies.lastIndex - 4 &amp;&amp; state.hasMoreStudioMovies &amp;&amp; state.studioMoviesError == null &amp;&amp; !state.isLoadingMoreStudioMovies &amp;&amp; !state.isLoadingStudioMovies</ID>
+    <ID>CyclomaticComplexMethod:AllItemsTab.kt:@Composable @OptIn(ExperimentalComposeUiApi::class) fun AllItemsTab</ID>
+    <ID>CyclomaticComplexMethod:CategoriesTab.kt:@Composable fun CategoriesTab</ID>
+    <ID>CyclomaticComplexMethod:ChannelsTab.kt:@Composable fun ChannelsTab</ID>
+    <ID>CyclomaticComplexMethod:ItemDetailScreen.kt:@Composable @OptIn(ExperimentalComposeUiApi::class) fun ItemDetailScreen</ID>
+    <ID>CyclomaticComplexMethod:LibraryViewModel.kt:LibraryViewModel$private fun loadChannelVideos</ID>
+    <ID>CyclomaticComplexMethod:MobilePlayerOverlay.kt:@Composable fun MobilePlayerOverlay</ID>
+    <ID>CyclomaticComplexMethod:MobileScreens.kt:@Composable fun MobileHomeScreen</ID>
+    <ID>CyclomaticComplexMethod:MobileScreens.kt:@Composable fun MobileLibraryScreen</ID>
+    <ID>CyclomaticComplexMethod:MovieCard.kt:@Composable fun MovieCard</ID>
+    <ID>CyclomaticComplexMethod:PersonDetailScreen.kt:@Composable @OptIn(ExperimentalComposeUiApi::class) fun PersonDetailScreen</ID>
+    <ID>CyclomaticComplexMethod:PhashSampling.kt:PhashCoordinator$private suspend fun poll</ID>
+    <ID>CyclomaticComplexMethod:PhashSampling.kt:PhashCoordinator$private suspend fun process</ID>
+    <ID>CyclomaticComplexMethod:PlaybackRepository.kt:PlaybackRepository$open suspend fun resolvePlaybackInfo: Result&lt;PlaybackInfo&gt;</ID>
+    <ID>CyclomaticComplexMethod:PlayerManager.kt:PlayerManager$fun getTechnicalInfo: PlaybackTechnicalInfo</ID>
+    <ID>CyclomaticComplexMethod:PlayerOverlay.kt:@Composable fun PlayerOverlay</ID>
+    <ID>CyclomaticComplexMethod:PlayerScreen.kt:@OptIn(UnstableApi::class) @Composable fun PlayerScreen</ID>
+    <ID>CyclomaticComplexMethod:PlayerViewModel.kt:PlayerViewModel$fun loadItem</ID>
+    <ID>CyclomaticComplexMethod:PlayerViewModel.kt:PlayerViewModel$fun playRandomMovie</ID>
+    <ID>CyclomaticComplexMethod:ServiceUrlPolicy.kt:ServiceUrlPolicy$internal fun isLocalNetworkHost: Boolean</ID>
+    <ID>CyclomaticComplexMethod:SettingsDataStore.kt:SettingsDataStore$open suspend fun migrateSensitiveValues</ID>
+    <ID>CyclomaticComplexMethod:SettingsScreen.kt:@Composable fun SettingsScreen</ID>
+    <ID>CyclomaticComplexMethod:StudiosTab.kt:@Composable fun StudiosTab</ID>
+    <ID>LargeClass:LibraryViewModel.kt:LibraryViewModel : ViewModel</ID>
+    <ID>LongMethod:ActorsTab.kt:@Composable fun ActorsTab</ID>
+    <ID>LongMethod:AllItemsTab.kt:@Composable @OptIn(ExperimentalComposeUiApi::class) fun AllItemsTab</ID>
+    <ID>LongMethod:AllItemsTab.kt:@Composable private fun CatalogFilterDialog</ID>
+    <ID>LongMethod:AppNavigation.kt:@Composable fun AppNavigation</ID>
+    <ID>LongMethod:CategoriesTab.kt:@Composable fun CategoriesTab</ID>
+    <ID>LongMethod:ChannelsTab.kt:@Composable fun ChannelsTab</ID>
+    <ID>LongMethod:ChannelsTab.kt:@Composable private fun ChannelVideoCard</ID>
+    <ID>LongMethod:HomeScreen.kt:@Composable @OptIn(ExperimentalComposeUiApi::class) fun HomeScreen</ID>
+    <ID>LongMethod:ItemDetailScreen.kt:@Composable @OptIn(ExperimentalComposeUiApi::class) fun ItemDetailScreen</ID>
+    <ID>LongMethod:LibraryScreen.kt:@Composable @OptIn(ExperimentalComposeUiApi::class) fun LibraryScreen</ID>
+    <ID>LongMethod:LibraryViewModel.kt:LibraryViewModel$private fun loadChannelVideos</ID>
+    <ID>LongMethod:LoginScreen.kt:@Composable fun LoginScreen</ID>
+    <ID>LongMethod:MobileAppNavigation.kt:@Composable fun MobileAppNavigation</ID>
+    <ID>LongMethod:MobilePlayerOverlay.kt:@Composable fun MobilePlayerOverlay</ID>
+    <ID>LongMethod:MobileScreens.kt:@Composable fun MobileLibraryScreen</ID>
+    <ID>LongMethod:MovieCard.kt:@Composable fun MovieCard</ID>
+    <ID>LongMethod:PersonDetailScreen.kt:@Composable @OptIn(ExperimentalComposeUiApi::class) fun PersonDetailScreen</ID>
+    <ID>LongMethod:PhashSampling.kt:PhashCoordinator$private suspend fun process</ID>
+    <ID>LongMethod:PlaybackRepository.kt:PlaybackRepository$open suspend fun resolvePlaybackInfo: Result&lt;PlaybackInfo&gt;</ID>
+    <ID>LongMethod:PlayerDialogs.kt:@Composable fun EndOfMovieDialog</ID>
+    <ID>LongMethod:PlayerDialogs.kt:@Composable fun PlaybackErrorDialog</ID>
+    <ID>LongMethod:PlayerDialogs.kt:@Composable fun PlaybackInfoOverlay</ID>
+    <ID>LongMethod:PlayerDialogs.kt:@Composable fun ResumePlaybackDialog</ID>
+    <ID>LongMethod:PlayerOverlay.kt:@Composable fun PlayerOverlay</ID>
+    <ID>LongMethod:PlayerScreen.kt:@OptIn(UnstableApi::class) @Composable fun PlayerScreen</ID>
+    <ID>LongMethod:SearchScreen.kt:@Composable @OptIn(ExperimentalComposeUiApi::class) fun SearchScreen</ID>
+    <ID>LongMethod:ServerScreen.kt:@Composable fun ServerScreen</ID>
+    <ID>LongMethod:SettingsScreen.kt:@Composable fun SettingsScreen</ID>
+    <ID>LongMethod:StudiosTab.kt:@Composable fun StudiosTab</ID>
+    <ID>LongMethod:TvTextField.kt:@Composable fun TvTextField</ID>
+    <ID>LongParameterList:AllItemsTab.kt:@Composable @OptIn(ExperimentalComposeUiApi::class) fun AllItemsTab</ID>
+    <ID>LongParameterList:MobilePlayerOverlay.kt:@Composable fun MobilePlayerOverlay</ID>
+    <ID>LongParameterList:PlayerOverlay.kt:@Composable fun PlayerOverlay</ID>
+    <ID>TooManyFunctions:LibraryViewModel.kt:LibraryViewModel : ViewModel</ID>
+    <ID>TooManyFunctions:SettingsDataStore.kt:SettingsDataStore</ID>
+    <ID>TooManyFunctions:SettingsViewModel.kt:SettingsViewModel : ViewModel</ID>
+  </CurrentIssues>
+</SmellBaseline>

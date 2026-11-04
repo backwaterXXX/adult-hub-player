@@ -5,12 +5,12 @@ import androidx.datastore.core.DataStore
 import androidx.datastore.preferences.core.PreferenceDataStoreFactory
 import androidx.datastore.preferences.core.Preferences
 import io.mockk.mockk
+import kotlin.time.Duration.Companion.seconds
 import kotlinx.coroutines.ExperimentalCoroutinesApi
 import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.test.TestScope
 import kotlinx.coroutines.test.UnconfinedTestDispatcher
 import kotlinx.coroutines.test.runTest
-import kotlin.time.Duration.Companion.seconds
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertTrue
 import org.junit.Before
@@ -36,11 +36,11 @@ class SearchHistoryStoreTest {
         val testFile = tmpFolder.newFile("test_search_history.preferences_pb")
         dataStore = PreferenceDataStoreFactory.create(
             scope = testScope,
-            produceFile = { testFile },
+            produceFile = { testFile }
         )
         store = SearchHistoryStore(
             context = context,
-            dataStore = dataStore,
+            dataStore = dataStore
         )
     }
 

@@ -1,5 +1,6 @@
 package com.adulthub.tv.player
 
+import kotlin.time.Duration.Companion.seconds
 import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.test.runTest
 import org.junit.Assert.assertEquals
@@ -8,7 +9,6 @@ import org.junit.Assert.assertNotNull
 import org.junit.Assert.assertNull
 import org.junit.Assert.assertTrue
 import org.junit.Test
-import kotlin.time.Duration.Companion.seconds
 
 /**
  * The automatic retry budget covers consecutive failures.
@@ -165,7 +165,7 @@ class RetryPolicyTest {
             },
             itemId = "movie-1",
             positionMs = 42_000L,
-            fallbackUrl = "https://resolver.example.com/expired.mp4",
+            fallbackUrl = "https://resolver.example.com/expired.mp4"
         )
 
         assertEquals("https://resolver.example.com/fresh.mp4", url)
@@ -179,37 +179,35 @@ class RetryPolicyTest {
             provider = null,
             itemId = "movie-1",
             positionMs = 42_000L,
-            fallbackUrl = "https://resolver.example.com/expired.mp4",
+            fallbackUrl = "https://resolver.example.com/expired.mp4"
         )
 
         assertEquals("https://resolver.example.com/expired.mp4", url)
     }
 
     @Test
-    fun `a provider that cannot refresh fails the retry instead of using the expired address`() =
-        runTest(timeout = 120.seconds) {
-            val url = resolveRetryStreamUrl(
-                provider = { _, _ -> null },
-                itemId = "movie-1",
-                positionMs = 42_000L,
-                fallbackUrl = "https://resolver.example.com/expired.mp4",
-            )
+    fun `a provider that cannot refresh fails the retry instead of using the expired address`() = runTest(timeout = 120.seconds) {
+        val url = resolveRetryStreamUrl(
+            provider = { _, _ -> null },
+            itemId = "movie-1",
+            positionMs = 42_000L,
+            fallbackUrl = "https://resolver.example.com/expired.mp4"
+        )
 
-            assertNull(url)
-        }
+        assertNull(url)
+    }
 
     @Test
-    fun `a provider that throws fails the retry instead of using the expired address`() =
-        runTest(timeout = 120.seconds) {
-            val url = resolveRetryStreamUrl(
-                provider = { _, _ -> throw IllegalStateException("resolver offline") },
-                itemId = "movie-1",
-                positionMs = 42_000L,
-                fallbackUrl = "https://resolver.example.com/expired.mp4",
-            )
+    fun `a provider that throws fails the retry instead of using the expired address`() = runTest(timeout = 120.seconds) {
+        val url = resolveRetryStreamUrl(
+            provider = { _, _ -> throw IllegalStateException("resolver offline") },
+            itemId = "movie-1",
+            positionMs = 42_000L,
+            fallbackUrl = "https://resolver.example.com/expired.mp4"
+        )
 
-            assertNull(url)
-        }
+        assertNull(url)
+    }
 
     @Test
     fun `cancelling the retry propagates instead of failing it`() = runTest(timeout = 120.seconds) {
@@ -219,7 +217,7 @@ class RetryPolicyTest {
                 provider = { _, _ -> throw CancellationException("playback stopped") },
                 itemId = "movie-1",
                 positionMs = 42_000L,
-                fallbackUrl = "https://resolver.example.com/expired.mp4",
+                fallbackUrl = "https://resolver.example.com/expired.mp4"
             )
         } catch (error: CancellationException) {
             thrown = error

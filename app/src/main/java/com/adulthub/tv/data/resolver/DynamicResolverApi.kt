@@ -5,7 +5,7 @@ import com.adulthub.tv.data.local.SettingsDataStore
 /** Resolves the configured origin for each call while reusing Retrofit clients per origin. */
 class DynamicResolverApi(
     private val client: ResolverApiClient,
-    private val settingsDataStore: SettingsDataStore,
+    private val settingsDataStore: SettingsDataStore
 ) : ResolverApi {
     private suspend fun api(): ResolverApi {
         val configuredUrl = settingsDataStore.getResolverBaseUrl()
@@ -20,26 +20,22 @@ class DynamicResolverApi(
         channelId: String,
         page: Int,
         sort: String,
-        minDuration: Int?,
+        minDuration: Int?
     ): List<VideoDto> = api().getCategoryVideos(channelId, page, sort, minDuration)
 
     override suspend fun getChannelHistory(
         channelId: String,
         limit: Int,
-        offsetId: Long?,
+        offsetId: Long?
     ): TelegramHistoryResponseDto = api().getChannelHistory(channelId, limit, offsetId)
 
-    override suspend fun search(query: String, provider: String): List<VideoDto> =
-        api().search(query, provider)
+    override suspend fun search(query: String, provider: String): List<VideoDto> = api().search(query, provider)
 
     override suspend fun getPerformerBio(name: String): PerformerBioDto = api().getPerformerBio(name)
 
-    override suspend fun generatePhash(token: String, body: PhashGenerationRequest): PhashGenerationDto =
-        api().generatePhash(token, body)
+    override suspend fun generatePhash(token: String, body: PhashGenerationRequest): PhashGenerationDto = api().generatePhash(token, body)
 
-    override suspend fun getPhashJob(token: String, jobId: String): PhashJobStatusDto =
-        api().getPhashJob(token, jobId)
+    override suspend fun getPhashJob(token: String, jobId: String): PhashJobStatusDto = api().getPhashJob(token, jobId)
 
-    override suspend fun getVideoVariants(videoId: String): VideoVariantsDto =
-        api().getVideoVariants(videoId)
+    override suspend fun getVideoVariants(videoId: String): VideoVariantsDto = api().getVideoVariants(videoId)
 }

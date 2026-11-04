@@ -9,7 +9,7 @@ import com.adulthub.tv.data.resolver.buildQualityLabels
 data class QualityOption(
     val variantId: String,
     val label: String,
-    val isSelected: Boolean,
+    val isSelected: Boolean
 )
 
 /**
@@ -23,7 +23,7 @@ data class PlayerQualityState(
     val options: List<QualityOption> = emptyList(),
     val isFetching: Boolean = false,
     val isSwitching: Boolean = false,
-    val qualityUnavailableMessage: String? = null,
+    val qualityUnavailableMessage: String? = null
 )
 
 fun buildQualityOptions(variants: List<VideoVariant>, selectedVariantId: String?): List<QualityOption> {
@@ -34,7 +34,7 @@ fun buildQualityOptions(variants: List<VideoVariant>, selectedVariantId: String?
         QualityOption(
             variantId = variant.id,
             label = labels[index],
-            isSelected = variant.id == effectiveSelected,
+            isSelected = variant.id == effectiveSelected
         )
     }
 }

@@ -22,12 +22,18 @@ class PhashSamplingTest {
 
     @Test
     fun `only valid Telegram video identifiers are queued`() {
-        assertEquals("telegram:-100123:42:99", adultHubVideoId(
-            com.adulthub.tv.data.model.TvItem(id = "x", title = "Video", providerVideoId = "-100123:42:99")
-        ))
-        assertEquals(null, adultHubVideoId(
-            com.adulthub.tv.data.model.TvItem(id = "x", title = "Video", providerVideoId = "not-telegram")
-        ))
+        assertEquals(
+            "telegram:-100123:42:99",
+            adultHubVideoId(
+                com.adulthub.tv.data.model.TvItem(id = "x", title = "Video", providerVideoId = "-100123:42:99")
+            )
+        )
+        assertEquals(
+            null,
+            adultHubVideoId(
+                com.adulthub.tv.data.model.TvItem(id = "x", title = "Video", providerVideoId = "not-telegram")
+            )
+        )
     }
 
     @Test

@@ -13,26 +13,26 @@ import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.getValue
+import androidx.compose.runtime.remember
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.res.pluralStringResource
-import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.graphicsLayer
 import androidx.compose.ui.layout.ContentScale
+import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.res.pluralStringResource
+import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.dp
+import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import androidx.tv.material3.Border
 import androidx.tv.material3.Card
 import androidx.tv.material3.CardDefaults
 import androidx.tv.material3.MaterialTheme
-import androidx.compose.runtime.getValue
-import androidx.compose.runtime.remember
-import androidx.compose.ui.platform.LocalContext
-import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import androidx.tv.material3.Text
 import coil.compose.AsyncImage
 import coil.request.ImageRequest
@@ -53,7 +53,7 @@ fun PersonCard(
     imageUrl: String,
     onClick: () -> Unit,
     modifier: Modifier = Modifier,
-    cardWidth: Dp = 140.dp,
+    cardWidth: Dp = 140.dp
 ) {
     val context = LocalContext.current
     val settingsDataStore: SettingsDataStore = koinInject()
@@ -78,16 +78,16 @@ fun PersonCard(
         scale = CardDefaults.scale(scale = 1f, focusedScale = if (lowRamMode) 1f else 1.08f),
         border = CardDefaults.border(
             border = Border(BorderStroke(1.dp, androidx.compose.ui.graphics.Color.White.copy(alpha = 0.12f))),
-            focusedBorder = Border(BorderStroke(3.5.dp, NeonPink)),
+            focusedBorder = Border(BorderStroke(3.5.dp, NeonPink))
         ),
         colors = CardDefaults.colors(
             containerColor = CardSurface,
-            focusedContainerColor = CardSurfaceFocused,
-        ),
+            focusedContainerColor = CardSurfaceFocused
+        )
     ) {
         Column(
             modifier = Modifier.fillMaxWidth(),
-            horizontalAlignment = Alignment.CenterHorizontally,
+            horizontalAlignment = Alignment.CenterHorizontally
         ) {
             Box(
                 modifier = Modifier
@@ -95,13 +95,13 @@ fun PersonCard(
                     .aspectRatio(2f / 3f)
                     .clip(RoundedCornerShape(topStart = 8.dp, topEnd = 8.dp))
                     .background(SurfaceDark),
-                contentAlignment = Alignment.Center,
+                contentAlignment = Alignment.Center
             ) {
                 AsyncImage(
                     model = imageModel,
                     contentDescription = person.name,
                     contentScale = ContentScale.Crop,
-                    modifier = Modifier.fillMaxSize(),
+                    modifier = Modifier.fillMaxSize()
                 )
             }
 
@@ -109,7 +109,7 @@ fun PersonCard(
                 modifier = Modifier
                     .fillMaxWidth()
                     .padding(horizontal = 8.dp, vertical = 8.dp),
-                horizontalAlignment = Alignment.CenterHorizontally,
+                horizontalAlignment = Alignment.CenterHorizontally
             ) {
                 Text(
                     text = person.name,
@@ -118,7 +118,7 @@ fun PersonCard(
                     maxLines = 1,
                     overflow = TextOverflow.Ellipsis,
                     textAlign = TextAlign.Center,
-                    fontWeight = FontWeight.SemiBold,
+                    fontWeight = FontWeight.SemiBold
                 )
 
                 if (person.movieCount > 0) {
@@ -127,13 +127,13 @@ fun PersonCard(
                         text = pluralStringResource(
                             R.plurals.card_movies_count,
                             person.movieCount,
-                            person.movieCount,
+                            person.movieCount
                         ),
                         style = MaterialTheme.typography.bodySmall,
                         color = TextSecondary,
                         maxLines = 1,
                         overflow = TextOverflow.Ellipsis,
-                        textAlign = TextAlign.Center,
+                        textAlign = TextAlign.Center
                     )
                 }
             }

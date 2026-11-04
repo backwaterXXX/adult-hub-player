@@ -22,8 +22,8 @@ import androidx.compose.foundation.layout.widthIn
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
-import androidx.compose.runtime.Stable
 import androidx.compose.runtime.SideEffect
+import androidx.compose.runtime.Stable
 import androidx.compose.runtime.compositionLocalOf
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
@@ -53,7 +53,7 @@ import com.adulthub.tv.ui.theme.TextSecondary
 @Stable
 class LocalNetworkPermissionController(
     isRequired: Boolean = false,
-    isGranted: Boolean = true,
+    isGranted: Boolean = true
 ) {
     var isRequired by mutableStateOf(isRequired)
         internal set
@@ -110,8 +110,8 @@ class LocalNetworkPermissionController(
             context.startActivity(
                 Intent(
                     Settings.ACTION_APPLICATION_DETAILS_SETTINGS,
-                    Uri.fromParts("package", context.packageName, null),
-                ).addFlags(Intent.FLAG_ACTIVITY_NEW_TASK),
+                    Uri.fromParts("package", context.packageName, null)
+                ).addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)
             )
         }
     }
@@ -131,18 +131,18 @@ val LocalNetworkPermission = compositionLocalOf { LocalNetworkPermissionControll
 fun LocalNetworkPermissionHost(
     autoPrompt: Boolean = true,
     touchUi: Boolean = false,
-    content: @Composable () -> Unit,
+    content: @Composable () -> Unit
 ) {
     val context = LocalContext.current
     val activity = context as? Activity
     val controller = remember {
         LocalNetworkPermissionController(
             isRequired = LocalNetworkAccessPolicy.isEnforced(Build.VERSION.SDK_INT),
-            isGranted = isPermissionGranted(context),
+            isGranted = isPermissionGranted(context)
         )
     }
     val launcher = rememberLauncherForActivityResult(
-        ActivityResultContracts.RequestPermission(),
+        ActivityResultContracts.RequestPermission()
     ) { granted -> controller.onRequestResult(granted, activity) }
 
     SideEffect {
@@ -158,7 +158,7 @@ fun LocalNetworkPermissionHost(
 
     androidx.compose.runtime.CompositionLocalProvider(
         LocalNetworkPermission provides controller,
-        LocalTouchUi provides touchUi,
+        LocalTouchUi provides touchUi
     ) {
         content()
 
@@ -167,22 +167,21 @@ fun LocalNetworkPermissionHost(
                 isPermanentlyDenied = controller.isPermanentlyDenied,
                 onAllow = { controller.allow(context) },
                 onOpenSettings = { controller.openAppSettings(context) },
-                onDismiss = { controller.dismiss() },
+                onDismiss = { controller.dismiss() }
             )
         }
     }
 }
 
-private fun isPermissionGranted(context: Context): Boolean =
-    ContextCompat.checkSelfPermission(context, LocalNetworkAccessPolicy.PERMISSION) ==
-        PackageManager.PERMISSION_GRANTED
+private fun isPermissionGranted(context: Context): Boolean = ContextCompat.checkSelfPermission(context, LocalNetworkAccessPolicy.PERMISSION) ==
+    PackageManager.PERMISSION_GRANTED
 
 @Composable
 private fun LocalNetworkPermissionDialog(
     isPermanentlyDenied: Boolean,
     onAllow: () -> Unit,
     onOpenSettings: () -> Unit,
-    onDismiss: () -> Unit,
+    onDismiss: () -> Unit
 ) {
     Dialog(onDismissRequest = onDismiss) {
         Column(
@@ -190,26 +189,29 @@ private fun LocalNetworkPermissionDialog(
                 .fillMaxWidth(0.85f)
                 .widthIn(max = 680.dp)
                 .background(SurfaceDark, RoundedCornerShape(18.dp))
-                .padding(32.dp),
+                .padding(32.dp)
         ) {
             Text(
                 text = stringResource(R.string.local_network_permission_title),
                 style = MaterialTheme.typography.headlineSmall,
-                color = NeonPink,
+                color = NeonPink
             )
             Spacer(Modifier.height(16.dp))
             Text(
                 text = stringResource(
-                    if (isPermanentlyDenied) R.string.local_network_permission_blocked
-                    else R.string.local_network_permission_message,
+                    if (isPermanentlyDenied) {
+                        R.string.local_network_permission_blocked
+                    } else {
+                        R.string.local_network_permission_message
+                    }
                 ),
                 style = MaterialTheme.typography.bodyLarge,
-                color = TextSecondary,
+                color = TextSecondary
             )
             Spacer(Modifier.height(26.dp))
             Row(
                 modifier = Modifier.fillMaxWidth(),
-                horizontalArrangement = Arrangement.End,
+                horizontalArrangement = Arrangement.End
             ) {
                 TvSecondaryButton(onClick = onDismiss) {
                     Text(stringResource(R.string.local_network_permission_later))

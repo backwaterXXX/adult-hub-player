@@ -15,5 +15,5 @@ enum class ResolverUrlSource {
     SERVER_FALLBACK,
 
     /** No address is known yet. */
-    DEFAULT,
+    DEFAULT
 }

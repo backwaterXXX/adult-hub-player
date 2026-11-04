@@ -6,25 +6,24 @@ import androidx.compose.foundation.clickable
 import androidx.compose.foundation.interaction.MutableInteractionSource
 import androidx.compose.foundation.interaction.collectIsFocusedAsState
 import androidx.compose.foundation.layout.Arrangement
-import androidx.compose.foundation.layout.aspectRatio
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
+import androidx.compose.foundation.layout.aspectRatio
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.width
-import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.lazy.grid.GridCells
 import androidx.compose.foundation.lazy.grid.GridItemSpan
 import androidx.compose.foundation.lazy.grid.LazyVerticalGrid
 import androidx.compose.foundation.lazy.grid.items
 import androidx.compose.foundation.lazy.grid.rememberLazyGridState
+import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.shape.RoundedCornerShape
-import kotlinx.coroutines.delay
 import androidx.compose.foundation.text.BasicTextField
 import androidx.compose.foundation.text.KeyboardActions
 import androidx.compose.foundation.text.KeyboardOptions
@@ -58,6 +57,7 @@ import androidx.tv.material3.Card
 import androidx.tv.material3.CardDefaults
 import androidx.tv.material3.MaterialTheme
 import androidx.tv.material3.Text
+import coil.compose.AsyncImage
 import com.adulthub.tv.R
 import com.adulthub.tv.data.jellyfin.JellyfinClientManager
 import com.adulthub.tv.data.model.TvItem
@@ -76,7 +76,7 @@ import com.adulthub.tv.ui.theme.OledBlack
 import com.adulthub.tv.ui.theme.SurfaceDark
 import com.adulthub.tv.ui.theme.TextPrimary
 import com.adulthub.tv.ui.theme.TextSecondary
-import coil.compose.AsyncImage
+import kotlinx.coroutines.delay
 import org.koin.androidx.compose.koinViewModel
 import org.koin.compose.koinInject
 
@@ -90,7 +90,7 @@ fun SearchScreen(
     initialQuery: String? = null,
     onNavigateToPlayer: (itemId: String) -> Unit = {},
     isCurrentDestination: Boolean = true,
-    viewModel: SearchViewModel = koinViewModel(),
+    viewModel: SearchViewModel = koinViewModel()
 ) {
     val uiState by viewModel.uiState.collectAsStateWithLifecycle()
     val searchInputFocusRequester = remember { FocusRequester() }
@@ -121,21 +121,21 @@ fun SearchScreen(
         modifier = modifier
             .fillMaxSize()
             .background(OledBlack)
-            .padding(top = 28.dp),
+            .padding(top = 28.dp)
     ) {
         // Search Header Bar
         Row(
             modifier = Modifier
                 .fillMaxWidth()
                 .padding(horizontal = 48.dp),
-            verticalAlignment = Alignment.CenterVertically,
+            verticalAlignment = Alignment.CenterVertically
         ) {
             // Search Input Box
             SearchInputField(
                 value = uiState.query,
                 onValueChange = { viewModel.onQueryChanged(it) },
                 focusRequester = searchInputFocusRequester,
-                modifier = Modifier.weight(1f),
+                modifier = Modifier.weight(1f)
             )
 
             Spacer(modifier = Modifier.width(16.dp))
@@ -144,7 +144,7 @@ fun SearchScreen(
             if (uiState.query.isNotBlank()) {
                 TvSecondaryButton(
                     onClick = { viewModel.clearQuery() },
-                    modifier = Modifier.height(48.dp),
+                    modifier = Modifier.height(48.dp)
                 ) {
                     Text(stringResource(R.string.action_confirm_clear), fontWeight = FontWeight.SemiBold)
                 }
@@ -155,7 +155,7 @@ fun SearchScreen(
             // Back Button
             TvSecondaryButton(
                 onClick = onNavigateBack,
-                modifier = Modifier.height(48.dp),
+                modifier = Modifier.height(48.dp)
             ) {
                 Text(stringResource(R.string.action_back), fontWeight = FontWeight.SemiBold)
             }
@@ -170,7 +170,7 @@ fun SearchScreen(
                     modifier = Modifier
                         .fillMaxWidth()
                         .weight(1f),
-                    contentAlignment = Alignment.Center,
+                    contentAlignment = Alignment.Center
                 ) {
                     LoadingIndicator(message = stringResource(R.string.library_searching_for, uiState.query))
                 }
@@ -181,12 +181,12 @@ fun SearchScreen(
                     modifier = Modifier
                         .fillMaxWidth()
                         .weight(1f),
-                    contentAlignment = Alignment.Center,
+                    contentAlignment = Alignment.Center
                 ) {
                     ErrorMessage(
                         message = uiState.errorMessage ?: stringResource(R.string.library_search_failed),
                         onRetry = { viewModel.retry() },
-                        modifier = Modifier.fillMaxWidth(0.5f),
+                        modifier = Modifier.fillMaxWidth(0.5f)
                     )
                 }
             }
@@ -196,25 +196,25 @@ fun SearchScreen(
                     modifier = Modifier
                         .fillMaxWidth()
                         .weight(1f),
-                    contentAlignment = Alignment.Center,
+                    contentAlignment = Alignment.Center
                 ) {
                     Column(
                         horizontalAlignment = Alignment.CenterHorizontally,
-                        modifier = Modifier.padding(horizontal = 48.dp),
+                        modifier = Modifier.padding(horizontal = 48.dp)
                     ) {
                         Text(
                             text = stringResource(R.string.library_search_title),
                             style = MaterialTheme.typography.headlineMedium.copy(
                                 fontWeight = FontWeight.Bold,
-                                color = TextPrimary,
-                            ),
+                                color = TextPrimary
+                            )
                         )
                         Spacer(modifier = Modifier.height(8.dp))
                         Text(
                             text = stringResource(R.string.library_search_subtitle),
                             style = MaterialTheme.typography.bodyMedium.copy(
-                                color = TextSecondary,
-                            ),
+                                color = TextSecondary
+                            )
                         )
                         if (uiState.recentQueries.isNotEmpty()) {
                             Spacer(modifier = Modifier.height(24.dp))
@@ -222,17 +222,17 @@ fun SearchScreen(
                                 text = stringResource(R.string.library_recent_searches),
                                 style = MaterialTheme.typography.titleMedium.copy(
                                     fontWeight = FontWeight.SemiBold,
-                                    color = NeonPink,
-                                ),
+                                    color = NeonPink
+                                )
                             )
                             Spacer(modifier = Modifier.height(12.dp))
                             androidx.compose.foundation.lazy.LazyRow(
-                                horizontalArrangement = Arrangement.spacedBy(8.dp),
+                                horizontalArrangement = Arrangement.spacedBy(8.dp)
                             ) {
                                 items(items = uiState.recentQueries, key = { it }) { recentQuery ->
                                     TvSecondaryButton(
                                         onClick = { viewModel.onQueryChanged(recentQuery) },
-                                        modifier = Modifier.height(36.dp),
+                                        modifier = Modifier.height(36.dp)
                                     ) {
                                         Text(recentQuery, fontSize = 13.sp)
                                     }
@@ -248,7 +248,7 @@ fun SearchScreen(
                     modifier = Modifier
                         .fillMaxWidth()
                         .weight(1f),
-                    contentAlignment = Alignment.Center,
+                    contentAlignment = Alignment.Center
                 ) {
                     Column(horizontalAlignment = Alignment.CenterHorizontally) {
                         Spacer(modifier = Modifier.height(12.dp))
@@ -256,15 +256,15 @@ fun SearchScreen(
                             text = stringResource(R.string.library_no_results_found),
                             style = MaterialTheme.typography.headlineMedium.copy(
                                 fontWeight = FontWeight.Bold,
-                                color = TextPrimary,
-                            ),
+                                color = TextPrimary
+                            )
                         )
                         Spacer(modifier = Modifier.height(8.dp))
                         Text(
                             text = stringResource(R.string.library_no_results_for_query, uiState.query),
                             style = MaterialTheme.typography.bodyMedium.copy(
-                                color = TextSecondary,
-                            ),
+                                color = TextSecondary
+                            )
                         )
                     }
                 }
@@ -292,7 +292,7 @@ fun SearchScreen(
                     },
                     modifier = Modifier
                         .fillMaxWidth()
-                        .weight(1f),
+                        .weight(1f)
                 )
             }
         }
@@ -304,7 +304,7 @@ private fun SearchInputField(
     value: String,
     onValueChange: (String) -> Unit,
     focusRequester: FocusRequester,
-    modifier: Modifier = Modifier,
+    modifier: Modifier = Modifier
 ) {
     val interactionSource = remember { MutableInteractionSource() }
     val searchInputHint = stringResource(R.string.library_search_input_hint)
@@ -325,21 +325,25 @@ private fun SearchInputField(
             .border(
                 width = if (isFocused) 2.dp else 1.dp,
                 color = if (isFocused) NeonPink else Color.White.copy(alpha = 0.2f),
-                shape = RoundedCornerShape(14.dp),
+                shape = RoundedCornerShape(14.dp)
             )
             .focusRequester(focusRequester)
             .padding(horizontal = 20.dp)
             .then(
-                if (isEditing) Modifier else Modifier.clickable(
-                    interactionSource = interactionSource,
-                    indication = null,
-                    onClick = {
-                        editorHadFocus = false
-                        isEditing = true
-                    },
-                ),
+                if (isEditing) {
+                    Modifier
+                } else {
+                    Modifier.clickable(
+                        interactionSource = interactionSource,
+                        indication = null,
+                        onClick = {
+                            editorHadFocus = false
+                            isEditing = true
+                        }
+                    )
+                }
             ),
-        contentAlignment = Alignment.CenterStart,
+        contentAlignment = Alignment.CenterStart
     ) {
         if (isEditing) {
             BasicTextField(
@@ -348,7 +352,7 @@ private fun SearchInputField(
                 textStyle = TextStyle(
                     color = Color.White,
                     fontSize = 16.sp,
-                    fontWeight = FontWeight.Medium,
+                    fontWeight = FontWeight.Medium
                 ),
                 singleLine = true,
                 cursorBrush = SolidColor(NeonPink),
@@ -365,7 +369,7 @@ private fun SearchInputField(
                             editorHadFocus = false
                             isEditing = false
                         }
-                    },
+                    }
             )
         } else {
             Text(
@@ -373,8 +377,8 @@ private fun SearchInputField(
                 style = TextStyle(
                     color = if (value.isEmpty()) Color.White.copy(alpha = 0.45f) else Color.White,
                     fontSize = 16.sp,
-                    fontWeight = FontWeight.Medium,
-                ),
+                    fontWeight = FontWeight.Medium
+                )
             )
         }
     }
@@ -393,7 +397,7 @@ private fun SearchResultsList(
     onNavigateToPersonDetail: (personId: String, personName: String) -> Unit,
     onNavigateToPlayer: (itemId: String) -> Unit,
     modifier: Modifier = Modifier,
-    clientManager: JellyfinClientManager = koinInject(),
+    clientManager: JellyfinClientManager = koinInject()
 ) {
     val gridState = rememberLazyGridState()
 
@@ -405,7 +409,7 @@ private fun SearchResultsList(
             .focusRestorer(),
         contentPadding = PaddingValues(horizontal = 48.dp, vertical = 12.dp),
         horizontalArrangement = Arrangement.spacedBy(16.dp),
-        verticalArrangement = Arrangement.spacedBy(20.dp),
+        verticalArrangement = Arrangement.spacedBy(20.dp)
     ) {
         // Movies Section
         if (movies.isNotEmpty()) {
@@ -414,9 +418,9 @@ private fun SearchResultsList(
                     text = stringResource(R.string.library_section_movies, movies.size),
                     style = MaterialTheme.typography.titleLarge.copy(
                         fontWeight = FontWeight.Bold,
-                        color = TextPrimary,
+                        color = TextPrimary
                     ),
-                    modifier = Modifier.padding(vertical = 4.dp),
+                    modifier = Modifier.padding(vertical = 4.dp)
                 )
             }
 
@@ -426,7 +430,7 @@ private fun SearchResultsList(
                     item = item,
                     imageUrl = imageUrl,
                     onClick = { onNavigateToItemDetail(item.id) },
-                    cardWidth = null,
+                    cardWidth = null
                 )
             }
 
@@ -442,9 +446,9 @@ private fun SearchResultsList(
                     text = stringResource(R.string.library_section_performers, actors.size),
                     style = MaterialTheme.typography.titleLarge.copy(
                         fontWeight = FontWeight.Bold,
-                        color = TextPrimary,
+                        color = TextPrimary
                     ),
-                    modifier = Modifier.padding(vertical = 4.dp),
+                    modifier = Modifier.padding(vertical = 4.dp)
                 )
             }
 
@@ -454,7 +458,7 @@ private fun SearchResultsList(
                     PersonCard(
                         person = person,
                         imageUrl = imageUrl,
-                        onClick = { onNavigateToPersonDetail(person.id, person.name) },
+                        onClick = { onNavigateToPersonDetail(person.id, person.name) }
                     )
                 }
             }
@@ -466,9 +470,9 @@ private fun SearchResultsList(
                     text = stringResource(R.string.library_section_channel_videos, channelVideos.size),
                     style = MaterialTheme.typography.titleLarge.copy(
                         fontWeight = FontWeight.Bold,
-                        color = TextPrimary,
+                        color = TextPrimary
                     ),
-                    modifier = Modifier.padding(vertical = 4.dp),
+                    modifier = Modifier.padding(vertical = 4.dp)
                 )
             }
 
@@ -478,7 +482,7 @@ private fun SearchResultsList(
                     imageUrl = resolveResolverUrl(video.thumbnail, resolverBaseUrl),
                     onClick = {
                         onNavigateToPlayer(video.providerVideoId.ifBlank { video.id })
-                    },
+                    }
                 )
             }
         }
@@ -487,7 +491,7 @@ private fun SearchResultsList(
             item(key = "search_in_progress", span = { GridItemSpan(maxLineSpan) }) {
                 LoadingIndicator(
                     message = stringResource(R.string.library_searching_remaining_sources),
-                    modifier = Modifier.fillMaxWidth().padding(vertical = 24.dp),
+                    modifier = Modifier.fillMaxWidth().padding(vertical = 24.dp)
                 )
             }
         }
@@ -499,7 +503,7 @@ private fun ResolverVideoCard(
     video: VideoDto,
     imageUrl: String,
     onClick: () -> Unit,
-    modifier: Modifier = Modifier,
+    modifier: Modifier = Modifier
 ) {
     Card(
         onClick = onClick,
@@ -508,12 +512,12 @@ private fun ResolverVideoCard(
         scale = CardDefaults.scale(scale = 1f, focusedScale = 1.06f),
         border = CardDefaults.border(
             border = Border(androidx.compose.foundation.BorderStroke(1.dp, Color.White.copy(alpha = 0.12f))),
-            focusedBorder = Border(androidx.compose.foundation.BorderStroke(3.5.dp, NeonPink)),
+            focusedBorder = Border(androidx.compose.foundation.BorderStroke(3.5.dp, NeonPink))
         ),
         colors = CardDefaults.colors(
             containerColor = CardSurface,
-            focusedContainerColor = CardSurfaceFocused,
-        ),
+            focusedContainerColor = CardSurfaceFocused
+        )
     ) {
         Column {
             Box(
@@ -521,14 +525,14 @@ private fun ResolverVideoCard(
                     .fillMaxWidth()
                     .aspectRatio(16f / 9f)
                     .clip(RoundedCornerShape(topStart = 8.dp, topEnd = 8.dp))
-                    .background(SurfaceDark),
+                    .background(SurfaceDark)
             ) {
                 if (imageUrl.isNotBlank()) {
                     AsyncImage(
                         model = imageUrl,
                         contentDescription = video.title,
                         contentScale = ContentScale.Crop,
-                        modifier = Modifier.fillMaxSize(),
+                        modifier = Modifier.fillMaxSize()
                     )
                 }
             }
@@ -538,7 +542,7 @@ private fun ResolverVideoCard(
                     style = MaterialTheme.typography.titleMedium,
                     color = TextPrimary,
                     maxLines = 1,
-                    fontWeight = FontWeight.SemiBold,
+                    fontWeight = FontWeight.SemiBold
                 )
                 val metadata = (video.performers.firstOrNull() ?: video.categories.firstOrNull()).orEmpty()
                 if (metadata.isNotBlank()) {
@@ -546,7 +550,7 @@ private fun ResolverVideoCard(
                         text = metadata,
                         style = MaterialTheme.typography.bodySmall,
                         color = TextSecondary,
-                        maxLines = 1,
+                        maxLines = 1
                     )
                 }
             }

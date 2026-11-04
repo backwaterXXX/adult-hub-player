@@ -1,12 +1,12 @@
 package com.adulthub.tv.data.local
 
 import com.adulthub.tv.data.model.AuthState
+import java.security.MessageDigest
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.distinctUntilChanged
 import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.flow.flowOf
 import kotlinx.coroutines.flow.map
-import java.security.MessageDigest
 
 /**
  * Supplies the key that namespaces user-scoped data.
@@ -45,7 +45,7 @@ data class SessionOwner(
     /** Namespace of the account the operation belongs to. */
     val accountKey: String,
     /** Changes with every sign-in, also for a new session of the same account. */
-    val sessionMarker: String,
+    val sessionMarker: String
 )
 
 /**
@@ -67,8 +67,9 @@ interface SessionOwnerProvider {
  * no personally identifiable information in the preferences file.
  */
 class AccountScope(
-    private val authDataStore: AuthDataStore,
-) : AccountKeyProvider, SessionOwnerProvider {
+    private val authDataStore: AuthDataStore
+) : AccountKeyProvider,
+    SessionOwnerProvider {
     override val accountKey: Flow<String> = authDataStore.authState
         .map { state -> keyOf(state) }
         .distinctUntilChanged()
@@ -87,8 +88,7 @@ class AccountScope(
 
     override suspend fun currentOwner(): SessionOwner = ownerOf(authDataStore.authState.first())
 
-    override suspend fun isCurrent(owner: SessionOwner): Boolean =
-        ownerOf(authDataStore.authState.first()) == owner
+    override suspend fun isCurrent(owner: SessionOwner): Boolean = ownerOf(authDataStore.authState.first()) == owner
 
     companion object {
         /** Namespace used while no account is signed in. */
@@ -100,7 +100,7 @@ class AccountScope(
          */
         private fun ownerOf(state: AuthState): SessionOwner = SessionOwner(
             accountKey = keyOf(state),
-            sessionMarker = markerOf(state),
+            sessionMarker = markerOf(state)
         )
 
         fun keyOf(state: AuthState): String = when (state) {

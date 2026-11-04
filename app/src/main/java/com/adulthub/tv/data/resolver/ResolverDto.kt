@@ -10,7 +10,7 @@ data class CategoryDto(
     @SerialName("id") val id: String,
     @SerialName("title") val title: String,
     @SerialName("slug") val slug: String,
-    @SerialName("url") val url: String = "",
+    @SerialName("url") val url: String = ""
 )
 
 @OptIn(ExperimentalSerializationApi::class)
@@ -31,7 +31,7 @@ data class VideoDto(
     @SerialName("description") val description: String? = null,
     @SerialName("file_size")
     @JsonNames("size", "file_size_bytes", "fileSize", "fileSizeBytes")
-    val fileSizeBytes: Long? = null,
+    val fileSizeBytes: Long? = null
 )
 
 @Serializable
@@ -42,13 +42,13 @@ data class PerformerBioDto(
     @SerialName("nationality") val nationality: String? = null,
     @SerialName("aliases") val aliases: List<String> = emptyList(),
     @SerialName("photo_url") val photoUrl: String? = null,
-    @SerialName("updated_at") val updatedAt: String? = null,
+    @SerialName("updated_at") val updatedAt: String? = null
 )
 
 @Serializable
 data class PhashGenerationRequest(
     @SerialName("video_id") val videoId: String,
-    @SerialName("duration_us") val durationUs: Long,
+    @SerialName("duration_us") val durationUs: Long
 )
 
 @Serializable
@@ -58,13 +58,13 @@ data class PhashGenerationDto(
     @SerialName("state") val state: String? = null,
     @SerialName("already_computed") val alreadyComputed: Boolean = false,
     @SerialName("thumbnail_ready") val thumbnailReady: Boolean = false,
-    @SerialName("error_code") val errorCode: String? = null,
+    @SerialName("error_code") val errorCode: String? = null
 )
 
 @Serializable
 data class PhashJobStatusDto(
     @SerialName("ok") val ok: Boolean = false,
-    @SerialName("job") val job: PhashJobDto? = null,
+    @SerialName("job") val job: PhashJobDto? = null
 )
 
 @Serializable
@@ -74,7 +74,7 @@ data class PhashJobDto(
     @SerialName("state") val state: String,
     @SerialName("decoder_profile") val decoderProfile: String? = null,
     @SerialName("error_code") val errorCode: String? = null,
-    @SerialName("thumbnail_ready") val thumbnailReady: Boolean = false,
+    @SerialName("thumbnail_ready") val thumbnailReady: Boolean = false
 )
 
 @Serializable
@@ -82,7 +82,7 @@ data class TelegramHistoryResponseDto(
     @SerialName("videos") val videos: List<VideoDto> = emptyList(),
     @SerialName("next_offset_id") val nextOffsetId: Long? = null,
     @SerialName("message_count") val messageCount: Int = 0,
-    @SerialName("has_more") val hasMore: Boolean = false,
+    @SerialName("has_more") val hasMore: Boolean = false
 )
 
 @Serializable
@@ -91,7 +91,7 @@ data class VideoVariantsDto(
     @SerialName("status") val status: String = "",
     @SerialName("video_processing_pending") val videoProcessingPending: Boolean = false,
     @SerialName("has_alternatives") val hasAlternatives: Boolean = false,
-    @SerialName("variants") val variants: List<VideoVariantDto> = emptyList(),
+    @SerialName("variants") val variants: List<VideoVariantDto> = emptyList()
 )
 
 @Serializable
@@ -105,5 +105,5 @@ data class VideoVariantDto(
     @SerialName("file_size") val fileSize: Long? = null,
     @SerialName("duration") val duration: Double? = null,
     @SerialName("bitrate") val bitrate: Long? = null,
-    @SerialName("estimated_average_bitrate") val estimatedAverageBitrate: Long? = null,
+    @SerialName("estimated_average_bitrate") val estimatedAverageBitrate: Long? = null
 )

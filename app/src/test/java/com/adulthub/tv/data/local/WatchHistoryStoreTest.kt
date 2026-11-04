@@ -6,12 +6,12 @@ import androidx.datastore.preferences.core.PreferenceDataStoreFactory
 import androidx.datastore.preferences.core.Preferences
 import com.adulthub.tv.data.model.TvItem
 import io.mockk.mockk
+import kotlin.time.Duration.Companion.seconds
 import kotlinx.coroutines.ExperimentalCoroutinesApi
 import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.test.TestScope
 import kotlinx.coroutines.test.UnconfinedTestDispatcher
 import kotlinx.coroutines.test.runTest
-import kotlin.time.Duration.Companion.seconds
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertFalse
 import org.junit.Assert.assertTrue
@@ -38,11 +38,11 @@ class WatchHistoryStoreTest {
         val testFile = tmpFolder.newFile("test_watch_history.preferences_pb")
         dataStore = PreferenceDataStoreFactory.create(
             scope = testScope,
-            produceFile = { testFile },
+            produceFile = { testFile }
         )
         store = WatchHistoryStore(
             context = context,
-            dataStore = dataStore,
+            dataStore = dataStore
         )
     }
 
@@ -58,7 +58,7 @@ class WatchHistoryStoreTest {
             runtimeTicks = 54_000_000_000L,
             isPlayed = false,
             playbackPositionTicks = 27_000_000_000L,
-            genres = listOf("Action", "Romance"),
+            genres = listOf("Action", "Romance")
         )
 
         store.recordWatch(item, watchedAt = 1000L)

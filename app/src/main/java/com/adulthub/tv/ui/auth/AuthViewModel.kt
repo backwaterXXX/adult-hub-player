@@ -13,17 +13,17 @@ import com.adulthub.tv.data.network.ServiceUrlValidation
 import com.adulthub.tv.data.repository.AuthRepository
 import com.adulthub.tv.data.repository.LibraryRepository
 import com.adulthub.tv.data.repository.TvLibrary
-import kotlinx.coroutines.Job
 import kotlinx.coroutines.CancellationException
-import kotlinx.coroutines.delay
+import kotlinx.coroutines.Job
 import kotlinx.coroutines.channels.Channel
+import kotlinx.coroutines.delay
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.flow.catch
-import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.flow.receiveAsFlow
+import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.launch
 
 data class ServerUiState(
@@ -35,7 +35,7 @@ data class ServerUiState(
     val pendingHttpConsentUrl: String? = null,
     val pendingHttpConsentRestoresSession: Boolean = false,
     /** The error belongs to the saved session, so a retry must restore it instead of a manual connect. */
-    val sessionRestoreFailed: Boolean = false,
+    val sessionRestoreFailed: Boolean = false
 )
 
 data class LoginUiState(
@@ -43,7 +43,7 @@ data class LoginUiState(
     val username: String = "",
     val password: String = "",
     val isSigningIn: Boolean = false,
-    val errorMessage: String? = null,
+    val errorMessage: String? = null
 )
 
 data class QuickConnectUiState(
@@ -53,13 +53,13 @@ data class QuickConnectUiState(
     val isPolling: Boolean = false,
     val isAuthorized: Boolean = false,
     val isExpired: Boolean = false,
-    val errorMessage: String? = null,
+    val errorMessage: String? = null
 )
 
 data class LibrarySelectUiState(
     val libraries: List<TvLibrary> = emptyList(),
     val isLoading: Boolean = false,
-    val errorMessage: String? = null,
+    val errorMessage: String? = null
 )
 
 sealed interface AuthNavEvent {
@@ -76,7 +76,7 @@ class AuthViewModel(
     private val libraryRepository: LibraryRepository,
     private val settingsDataStore: SettingsDataStore,
     private val sessionRestoreRetry: SessionRestoreRetryPolicy = SessionRestoreRetryPolicy(),
-    private val context: Context,
+    private val context: Context
 ) : ViewModel() {
 
     private val _serverState = MutableStateFlow(ServerUiState())
@@ -120,14 +120,14 @@ class AuthViewModel(
                     it.copy(
                         serverUrl = rejectedSession.serverUrl,
                         sessionRestoreFailed = false,
-                        errorMessage = context.getString(R.string.auth_session_rejected),
+                        errorMessage = context.getString(R.string.auth_session_rejected)
                     )
                 }
                 _loginState.update {
                     it.copy(
                         serverUrl = rejectedSession.serverUrl,
                         username = rejectedSession.username,
-                        errorMessage = null,
+                        errorMessage = null
                     )
                 }
                 _navEvents.send(AuthNavEvent.NavigateToServer)
@@ -147,8 +147,8 @@ class AuthViewModel(
                     it.copy(
                         errorMessage = context.getString(
                             R.string.auth_error_restore_settings,
-                            error.localizedMessage ?: context.getString(R.string.error_storage),
-                        ),
+                            error.localizedMessage ?: context.getString(R.string.error_storage)
+                        )
                     )
                 }
                 _navEvents.send(AuthNavEvent.NavigateToServer)
@@ -172,28 +172,31 @@ class AuthViewModel(
                         _serverState.update {
                             it.copy(
                                 errorMessage = context.getString(R.string.auth_saved_server_unavailable),
-                                sessionRestoreFailed = true,
+                                sessionRestoreFailed = true
                             )
                         }
                         _navEvents.send(AuthNavEvent.NavigateToServer)
                     }
                 }
+
                 is AuthState.HttpConsentRequired -> {
                     _serverState.update {
                         it.copy(
                             serverUrl = session.serverUrl,
                             pendingHttpConsentUrl = session.serverUrl,
-                            pendingHttpConsentRestoresSession = true,
+                            pendingHttpConsentRestoresSession = true
                         )
                     }
                     _navEvents.send(AuthNavEvent.NavigateToServer)
                 }
+
                 is AuthState.HttpBlocked -> {
                     _serverState.update {
                         it.copy(serverUrl = session.serverUrl, errorMessage = session.reason)
                     }
                     _navEvents.send(AuthNavEvent.NavigateToServer)
                 }
+
                 AuthState.NotAuthenticated -> _navEvents.send(AuthNavEvent.NavigateToServer)
             }
         }
@@ -213,8 +216,7 @@ class AuthViewModel(
      * Discovers the saved server with the retries of [sessionRestoreRetry], so that a
      * network which is still coming up does not cost the user the saved session.
      */
-    private suspend fun discoverSavedServer(serverUrl: String): Result<ServerInfo> =
-        discoverWithRetry(sessionRestoreRetry) { authRepository.discoverServer(serverUrl) }
+    private suspend fun discoverSavedServer(serverUrl: String): Result<ServerInfo> = discoverWithRetry(sessionRestoreRetry) { authRepository.discoverServer(serverUrl) }
 
     fun onServerUrlChanged(url: String) {
         _serverState.update { it.copy(serverUrl = url, errorMessage = null, sessionRestoreFailed = false) }
@@ -232,7 +234,7 @@ class AuthViewModel(
                         if (current.none { it.id == server.id || it.url == server.url }) {
                             state.copy(
                                 discoveredServers = current + server,
-                                isDiscovering = false,
+                                isDiscovering = false
                             )
                         } else {
                             state.copy(isDiscovering = false)
@@ -263,7 +265,7 @@ class AuthViewModel(
                     it.copy(
                         pendingHttpConsentUrl = serviceUrl.normalized,
                         pendingHttpConsentRestoresSession = false,
-                        errorMessage = null,
+                        errorMessage = null
                     )
                 }
                 return@launch
@@ -285,8 +287,8 @@ class AuthViewModel(
                     it.copy(
                         errorMessage = context.getString(
                             R.string.auth_error_save_http_consent,
-                            error.localizedMessage ?: context.getString(R.string.error_storage),
-                        ),
+                            error.localizedMessage ?: context.getString(R.string.error_storage)
+                        )
                     )
                 }
                 return@launch
@@ -294,7 +296,7 @@ class AuthViewModel(
             _serverState.update {
                 it.copy(
                     pendingHttpConsentUrl = null,
-                    pendingHttpConsentRestoresSession = false,
+                    pendingHttpConsentRestoresSession = false
                 )
             }
             if (restoresSession) checkSession() else connectServer(pendingUrl)
@@ -305,7 +307,7 @@ class AuthViewModel(
         _serverState.update {
             it.copy(
                 pendingHttpConsentUrl = null,
-                pendingHttpConsentRestoresSession = false,
+                pendingHttpConsentRestoresSession = false
             )
         }
     }
@@ -324,8 +326,8 @@ class AuthViewModel(
                 it.copy(
                     errorMessage = context.getString(
                         R.string.auth_error_connect,
-                        error.localizedMessage ?: context.getString(R.string.error_unknown),
-                    ),
+                        error.localizedMessage ?: context.getString(R.string.error_unknown)
+                    )
                 )
             }
         }
@@ -351,7 +353,7 @@ class AuthViewModel(
             val result = authRepository.login(
                 serverUrl = state.serverUrl,
                 username = state.username,
-                password = state.password,
+                password = state.password
             )
             _loginState.update { it.copy(isSigningIn = false) }
 
@@ -362,8 +364,8 @@ class AuthViewModel(
                     it.copy(
                         errorMessage = context.getString(
                             R.string.auth_error_sign_in,
-                            error.localizedMessage ?: context.getString(R.string.auth_error_invalid_credentials),
-                        ),
+                            error.localizedMessage ?: context.getString(R.string.auth_error_invalid_credentials)
+                        )
                     )
                 }
             }
@@ -383,7 +385,7 @@ class AuthViewModel(
                     isPolling = false,
                     isAuthorized = false,
                     isExpired = false,
-                    errorMessage = null,
+                    errorMessage = null
                 )
             }
             _navEvents.send(AuthNavEvent.NavigateToQuickConnect)
@@ -396,7 +398,7 @@ class AuthViewModel(
                     it.copy(
                         code = init.code,
                         secret = init.secret,
-                        isPolling = true,
+                        isPolling = true
                     )
                 }
                 startQuickConnectPolling(serverUrl, init.secret, generation)
@@ -406,8 +408,8 @@ class AuthViewModel(
                     it.copy(
                         errorMessage = context.getString(
                             R.string.auth_error_quick_connect,
-                            error.localizedMessage ?: context.getString(R.string.auth_error_generic),
-                        ),
+                            error.localizedMessage ?: context.getString(R.string.auth_error_generic)
+                        )
                     )
                 }
             }
@@ -438,8 +440,8 @@ class AuthViewModel(
                             it.copy(
                                 errorMessage = context.getString(
                                     R.string.auth_error_quick_connect_exchange,
-                                    error.localizedMessage.orEmpty(),
-                                ),
+                                    error.localizedMessage.orEmpty()
+                                )
                             )
                         }
                     }
@@ -453,7 +455,7 @@ class AuthViewModel(
                 it.copy(
                     isPolling = false,
                     isExpired = true,
-                    errorMessage = context.getString(R.string.auth_error_code_expired),
+                    errorMessage = context.getString(R.string.auth_error_code_expired)
                 )
             }
         }
@@ -500,8 +502,8 @@ class AuthViewModel(
                     it.copy(
                         errorMessage = context.getString(
                             R.string.auth_error_load_libraries,
-                            error.localizedMessage.orEmpty(),
-                        ),
+                            error.localizedMessage.orEmpty()
+                        )
                     )
                 }
             }
@@ -528,8 +530,8 @@ class AuthViewModel(
                     it.copy(
                         errorMessage = context.getString(
                             R.string.auth_error_sign_out,
-                            error.localizedMessage ?: context.getString(R.string.error_storage),
-                        ),
+                            error.localizedMessage ?: context.getString(R.string.error_storage)
+                        )
                     )
                 }
                 return@launch

@@ -4,6 +4,7 @@ import com.adulthub.tv.data.local.SettingsDataStore
 import io.mockk.every
 import io.mockk.mockk
 import io.mockk.verify
+import java.io.IOException
 import okhttp3.Interceptor
 import okhttp3.Protocol
 import okhttp3.Request
@@ -11,7 +12,6 @@ import okhttp3.Response
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertThrows
 import org.junit.Test
-import java.io.IOException
 
 class CleartextOriginInterceptorTest {
 

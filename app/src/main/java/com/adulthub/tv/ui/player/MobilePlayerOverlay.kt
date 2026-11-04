@@ -19,10 +19,10 @@ import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.rounded.ArrowBack
 import androidx.compose.material.icons.rounded.AspectRatio
-import androidx.compose.material.icons.rounded.Favorite
-import androidx.compose.material.icons.rounded.FavoriteBorder
 import androidx.compose.material.icons.rounded.FastForward
 import androidx.compose.material.icons.rounded.FastRewind
+import androidx.compose.material.icons.rounded.Favorite
+import androidx.compose.material.icons.rounded.FavoriteBorder
 import androidx.compose.material.icons.rounded.HighQuality
 import androidx.compose.material.icons.rounded.Info
 import androidx.compose.material.icons.rounded.MoreHoriz
@@ -35,8 +35,8 @@ import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Slider
-import androidx.compose.material3.TextButton
 import androidx.compose.material3.Text
+import androidx.compose.material3.TextButton
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
@@ -47,9 +47,9 @@ import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
-import androidx.compose.ui.graphics.graphicsLayer
 import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.graphics.graphicsLayer
 import androidx.compose.ui.res.pluralStringResource
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.font.FontWeight
@@ -92,7 +92,7 @@ fun MobilePlayerOverlay(
     isQualitySwitching: Boolean = false,
     qualityLoadFailed: Boolean = false,
     onQualitySelected: (String) -> Unit = {},
-    onQualityRetry: () -> Unit = {},
+    onQualityRetry: () -> Unit = {}
 ) {
     // Collected inside the overlay so the 1 Hz position updates do not recompose the whole screen.
     val currentPositionMs by positionFlow.collectAsStateWithLifecycle()
@@ -119,8 +119,8 @@ fun MobilePlayerOverlay(
             .clickable(
                 interactionSource = remember { MutableInteractionSource() },
                 indication = null,
-                onClick = onShowOsd,
-            ),
+                onClick = onShowOsd
+            )
     ) {
         if (!seekFeedback.isNullOrBlank()) {
             Text(
@@ -129,7 +129,7 @@ fun MobilePlayerOverlay(
                     .background(Color.Black.copy(alpha = .78f)).padding(horizontal = 20.dp, vertical = 12.dp),
                 color = Color.White,
                 style = MaterialTheme.typography.titleLarge,
-                fontWeight = FontWeight.Bold,
+                fontWeight = FontWeight.Bold
             )
         }
 
@@ -143,14 +143,14 @@ fun MobilePlayerOverlay(
             visible = isOsdVisible,
             enter = fadeIn(),
             exit = fadeOut(),
-            modifier = Modifier.fillMaxSize(),
+            modifier = Modifier.fillMaxSize()
         ) {
             Column(Modifier.fillMaxSize(), verticalArrangement = Arrangement.SpaceBetween) {
                 Row(
                     Modifier.fillMaxWidth()
                         .background(Brush.verticalGradient(listOf(Color.Black.copy(alpha = .88f), Color.Transparent)))
                         .padding(start = 8.dp, end = 8.dp, top = 8.dp, bottom = 28.dp),
-                    verticalAlignment = Alignment.CenterVertically,
+                    verticalAlignment = Alignment.CenterVertically
                 ) {
                     IconButton(onClick = onBackClick) { Icon(Icons.Rounded.ArrowBack, stringResource(R.string.player_back), tint = Color.White) }
                     Text(
@@ -159,24 +159,30 @@ fun MobilePlayerOverlay(
                         color = Color.White,
                         style = MaterialTheme.typography.titleMedium,
                         maxLines = 1,
-                        overflow = TextOverflow.Ellipsis,
+                        overflow = TextOverflow.Ellipsis
                     )
-                    IconButton(onClick = { onToggleFavorite(); onInteraction() }) {
+                    IconButton(onClick = {
+                        onToggleFavorite()
+                        onInteraction()
+                    }) {
                         Icon(if (isFavorite) Icons.Rounded.Favorite else Icons.Rounded.FavoriteBorder, stringResource(R.string.player_cd_favorite), tint = if (isFavorite) NeonPink else Color.White)
                     }
-                    IconButton(onClick = { onInfoClick(); onInteraction() }) { Icon(Icons.Rounded.Info, stringResource(R.string.player_cd_info), tint = Color.White) }
+                    IconButton(onClick = {
+                        onInfoClick()
+                        onInteraction()
+                    }) { Icon(Icons.Rounded.Info, stringResource(R.string.player_cd_info), tint = Color.White) }
                 }
 
                 Column(
                     Modifier.fillMaxWidth()
                         .background(Brush.verticalGradient(listOf(Color.Transparent, Color.Black.copy(alpha = .74f), Color.Black.copy(alpha = .94f))))
                         .padding(horizontal = 16.dp, vertical = 12.dp),
-                    horizontalAlignment = Alignment.CenterHorizontally,
+                    horizontalAlignment = Alignment.CenterHorizontally
                 ) {
                     if (expanded) {
                         Column(
                             Modifier.fillMaxWidth(),
-                            horizontalAlignment = Alignment.End,
+                            horizontalAlignment = Alignment.End
                         ) {
                             Row(verticalAlignment = Alignment.CenterVertically) {
                                 IconButton(onClick = {
@@ -196,7 +202,7 @@ fun MobilePlayerOverlay(
                                         onClick = {
                                             onQualityRetry()
                                             onInteraction()
-                                        },
+                                        }
                                     ) {
                                         Text(stringResource(R.string.player_quality_retry), color = NeonPink, style = MaterialTheme.typography.labelLarge)
                                     }
@@ -209,7 +215,7 @@ fun MobilePlayerOverlay(
                     if (showQualityPicker && qualityOptions.size > 1) {
                         Column(
                             Modifier.fillMaxWidth(),
-                            horizontalAlignment = Alignment.End,
+                            horizontalAlignment = Alignment.End
                         ) {
                             qualityOptions.forEach { option ->
                                 TextButton(
@@ -219,12 +225,12 @@ fun MobilePlayerOverlay(
                                             showQualityPicker = false
                                         }
                                         onInteraction()
-                                    },
+                                    }
                                 ) {
                                     Text(
                                         text = (if (option.isSelected) stringResource(R.string.player_quality_selected_prefix) else "") + option.label,
                                         color = if (option.isSelected) NeonPink else Color.White,
-                                        style = MaterialTheme.typography.labelLarge,
+                                        style = MaterialTheme.typography.labelLarge
                                     )
                                 }
                             }
@@ -247,22 +253,34 @@ fun MobilePlayerOverlay(
                                 onInteraction()
                             },
                             valueRange = 0f..duration.coerceAtLeast(1L).toFloat(),
-                            modifier = Modifier.weight(1f).padding(horizontal = 8.dp).graphicsLayer { scaleY = 0.6f },
+                            modifier = Modifier.weight(1f).padding(horizontal = 8.dp).graphicsLayer { scaleY = 0.6f }
                         )
                         Text(if (duration > 0L) formatTime(duration) else stringResource(R.string.player_time_unknown), color = Color.White.copy(alpha = .75f), fontSize = 12.sp)
                     }
 
                     Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceEvenly, verticalAlignment = Alignment.CenterVertically) {
-                        IconButton(onClick = { onSeekRelative(-seekStepSec * 1_000L); onInteraction() }) { Icon(Icons.Rounded.FastRewind, pluralStringResource(R.plurals.player_cd_rewind, seekStepSec, seekStepSec), tint = Color.White, modifier = Modifier.size(30.dp)) }
+                        IconButton(onClick = {
+                            onSeekRelative(-seekStepSec * 1_000L)
+                            onInteraction()
+                        }) { Icon(Icons.Rounded.FastRewind, pluralStringResource(R.plurals.player_cd_rewind, seekStepSec, seekStepSec), tint = Color.White, modifier = Modifier.size(30.dp)) }
                         IconButton(
-                            onClick = { onPlayPauseClick(); onInteraction() },
+                            onClick = {
+                                onPlayPauseClick()
+                                onInteraction()
+                            },
                             enabled = !isBuffering,
-                            modifier = Modifier.size(64.dp).clip(CircleShape).background(NeonPink),
+                            modifier = Modifier.size(64.dp).clip(CircleShape).background(NeonPink)
                         ) {
                             Icon(if (isPlaying) Icons.Rounded.Pause else Icons.Rounded.PlayArrow, stringResource(if (isPlaying) R.string.player_cd_pause else R.string.player_cd_play), tint = Color.White, modifier = Modifier.size(36.dp))
                         }
-                        IconButton(onClick = { onSeekRelative(seekStepSec * 1_000L); onInteraction() }) { Icon(Icons.Rounded.FastForward, pluralStringResource(R.plurals.player_cd_forward, seekStepSec, seekStepSec), tint = Color.White, modifier = Modifier.size(30.dp)) }
-                        IconButton(onClick = { onRandomClick(); onInteraction() }) { Icon(Icons.Rounded.Shuffle, stringResource(R.string.player_cd_random_mobile), tint = Color.White) }
+                        IconButton(onClick = {
+                            onSeekRelative(seekStepSec * 1_000L)
+                            onInteraction()
+                        }) { Icon(Icons.Rounded.FastForward, pluralStringResource(R.plurals.player_cd_forward, seekStepSec, seekStepSec), tint = Color.White, modifier = Modifier.size(30.dp)) }
+                        IconButton(onClick = {
+                            onRandomClick()
+                            onInteraction()
+                        }) { Icon(Icons.Rounded.Shuffle, stringResource(R.string.player_cd_random_mobile), tint = Color.White) }
                         // The quality button joins the bar only while another file version
                         // is actually selectable.
                         if (qualityOptions.size > 1) {
@@ -273,23 +291,30 @@ fun MobilePlayerOverlay(
                                 onClick = {
                                     if (!isQualitySwitching) showQualityPicker = !showQualityPicker
                                     onInteraction()
-                                },
+                                }
                             ) {
                                 Icon(
                                     Icons.Rounded.HighQuality,
                                     contentDescription = when {
                                         isQualitySwitching -> stringResource(R.string.player_cd_quality_changing)
+
                                         else -> stringResource(
                                             R.string.player_cd_quality,
-                                            selectedOption?.label ?: stringResource(R.string.player_quality_original),
+                                            selectedOption?.label ?: stringResource(R.string.player_quality_original)
                                         )
                                     },
-                                    tint = if (qualityActive) NeonPink else Color.White,
+                                    tint = if (qualityActive) NeonPink else Color.White
                                 )
                             }
                         }
-                        IconButton(onClick = { onMuteClick(); onInteraction() }) { Icon(if (isMuted) Icons.Rounded.VolumeOff else Icons.Rounded.VolumeUp, stringResource(if (isMuted) R.string.player_cd_unmute else R.string.player_cd_mute), tint = Color.White) }
-                        IconButton(onClick = { expanded = !expanded; onInteraction() }) { Icon(Icons.Rounded.MoreHoriz, stringResource(R.string.player_cd_more), tint = Color.White) }
+                        IconButton(onClick = {
+                            onMuteClick()
+                            onInteraction()
+                        }) { Icon(if (isMuted) Icons.Rounded.VolumeOff else Icons.Rounded.VolumeUp, stringResource(if (isMuted) R.string.player_cd_unmute else R.string.player_cd_mute), tint = Color.White) }
+                        IconButton(onClick = {
+                            expanded = !expanded
+                            onInteraction()
+                        }) { Icon(Icons.Rounded.MoreHoriz, stringResource(R.string.player_cd_more), tint = Color.White) }
                     }
                 }
             }

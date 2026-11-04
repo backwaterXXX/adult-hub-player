@@ -23,6 +23,7 @@ import io.mockk.coEvery
 import io.mockk.coVerify
 import io.mockk.every
 import io.mockk.mockk
+import kotlin.time.Duration.Companion.seconds
 import kotlinx.coroutines.ExperimentalCoroutinesApi
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.flowOf
@@ -42,7 +43,6 @@ import org.junit.Before
 import org.junit.Rule
 import org.junit.Test
 import org.junit.rules.TemporaryFolder
-import kotlin.time.Duration.Companion.seconds
 
 /**
  * A resolver task belongs to the session that started it.
@@ -67,7 +67,7 @@ class PhashSessionTest {
         userId = "user-1",
         accessToken = "token-one",
         username = "user",
-        serverName = "Jellyfin",
+        serverName = "Jellyfin"
     )
 
     @Before
@@ -81,7 +81,7 @@ class PhashSessionTest {
         val testFile = tmpFolder.newFile("phash_jobs.preferences_pb")
         dataStore = PreferenceDataStoreFactory.create(
             scope = scope,
-            produceFile = { testFile },
+            produceFile = { testFile }
         )
         jobStore = PhashJobStore(context, accountScope, dataStore)
         return jobStore
@@ -123,7 +123,7 @@ class PhashSessionTest {
         coEvery { settingsDataStore.requireAllowedServiceUrl(any()) } returns ServiceUrl(
             normalized = "https://resolver.example.org",
             origin = "https://resolver.example.org",
-            usesCleartext = false,
+            usesCleartext = false
         )
 
         val jobStore = createJobStore(backgroundScope)
@@ -135,14 +135,14 @@ class PhashSessionTest {
             jobStore = jobStore,
             applicationScope = backgroundScope,
             accountScope = accountScope,
-            context = context,
+            context = context
         )
 
         val item = TvItem(
             id = "telegram:-100:1:1",
             title = "Video",
             providerVideoId = "-100:1:1",
-            runtimeTicks = 600_000_000L,
+            runtimeTicks = 600_000_000L
         )
 
         coordinator.enqueueGeneration(item, observedDurationMs = 600_000L)
@@ -158,7 +158,7 @@ class PhashSessionTest {
             userId = "user-2",
             accessToken = "token-two",
             username = "other",
-            serverName = "Jellyfin",
+            serverName = "Jellyfin"
         )
         authState.value = secondSession
         advanceTimeBy(6_000L)
@@ -179,15 +179,15 @@ class PhashSessionTest {
         coEvery { api.generatePhash(any(), any()) } returns PhashGenerationDto(
             ok = true,
             jobId = "job-1",
-            state = "queued",
+            state = "queued"
         )
         coEvery { api.getPhashJob(any(), any()) } returns PhashJobStatusDto(
             ok = true,
             job = PhashJobDto(
                 id = "job-1",
                 videoId = "telegram:-100:1:1",
-                state = "processing",
-            ),
+                state = "processing"
+            )
         )
         val apiClient = mockk<ResolverApiClient>()
         every { apiClient.create(any()) } returns api
@@ -204,7 +204,7 @@ class PhashSessionTest {
         coEvery { settingsDataStore.requireAllowedServiceUrl(any()) } returns ServiceUrl(
             normalized = "https://resolver.example.org",
             origin = "https://resolver.example.org",
-            usesCleartext = false,
+            usesCleartext = false
         )
 
         val jobStore = createJobStore(backgroundScope)
@@ -218,14 +218,14 @@ class PhashSessionTest {
             accountScope = accountScope,
             // One status request is allowed, so the budget is used up with it.
             budget = PhashBudget(totalLifetimeMs = 600_000L, maxPolls = 1),
-            context = context,
+            context = context
         )
 
         val item = TvItem(
             id = "telegram:-100:1:1",
             title = "Video",
             providerVideoId = "-100:1:1",
-            runtimeTicks = 600_000_000L,
+            runtimeTicks = 600_000_000L
         )
 
         coordinator.enqueueGeneration(item, observedDurationMs = 600_000L)
@@ -255,7 +255,7 @@ class PhashSessionTest {
             userId = "user-2",
             accessToken = "token-two",
             username = "other",
-            serverName = "Jellyfin",
+            serverName = "Jellyfin"
         )
 
         assertTrue(AccountScope.keyOf(firstSession) != AccountScope.keyOf(secondSession))
@@ -270,7 +270,7 @@ class PhashSessionTest {
 
         assertNull(anonymousStore.get("video-1"))
         anonymousStore.save(
-            com.adulthub.tv.data.local.StoredPhashJob(videoId = "video-1", state = "queued"),
+            com.adulthub.tv.data.local.StoredPhashJob(videoId = "video-1", state = "queued")
         )
 
         assertNotNull(anonymousStore.get("video-1"))

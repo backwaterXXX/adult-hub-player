@@ -1,10 +1,14 @@
-import java.util.Properties
+import dev.detekt.gradle.Detekt
 import java.io.FileInputStream
+import java.util.Properties
+import org.jlleitschuh.gradle.ktlint.reporter.ReporterType
 
 plugins {
     alias(libs.plugins.android.application)
     alias(libs.plugins.kotlin.compose)
     alias(libs.plugins.kotlin.serialization)
+    alias(libs.plugins.detekt)
+    alias(libs.plugins.ktlint)
 }
 
 android {
@@ -76,7 +80,7 @@ android {
             isShrinkResources = true
             proguardFiles(
                 getDefaultProguardFile("proguard-android-optimize.txt"),
-                "proguard-rules.pro",
+                "proguard-rules.pro"
             )
             val keystorePropertiesFile = rootProject.file("keystore.properties")
             if (keystorePropertiesFile.exists()) {
@@ -183,4 +187,30 @@ dependencies {
     androidTestImplementation(libs.androidx.test.runner)
     androidTestImplementation(libs.androidx.test.core)
     androidTestImplementation(libs.androidx.compose.ui.test.junit4)
+}
+
+detekt {
+    toolVersion.set(libs.versions.detekt)
+    config.setFrom(files("$rootDir/config/detekt/detekt.yml"))
+    baseline = file("$rootDir/config/detekt/baseline.xml")
+    buildUponDefaultConfig = false
+}
+
+tasks.withType<Detekt>().configureEach {
+    reports {
+        html.required.set(true)
+        sarif.required.set(true)
+    }
+}
+
+ktlint {
+    version.set(libs.versions.ktlintEngine)
+    android.set(true)
+    outputToConsole.set(true)
+    ignoreFailures.set(false)
+    reporters {
+        reporter(ReporterType.PLAIN)
+        reporter(ReporterType.HTML)
+        reporter(ReporterType.SARIF)
+    }
 }

@@ -2,8 +2,8 @@ package com.adulthub.tv.data.local
 
 import androidx.datastore.core.DataStore
 import androidx.datastore.preferences.core.Preferences
-import kotlinx.coroutines.flow.Flow
 import java.io.IOException
+import kotlinx.coroutines.flow.Flow
 
 /**
  * Reports that a preference write failed.
@@ -23,12 +23,12 @@ class PreferenceWriteException(message: String, cause: Throwable) : RuntimeExcep
  * failure is passed to the caller as a [PreferenceWriteException].
  */
 internal class SafePreferencesDataStore(
-    private val delegate: DataStore<Preferences>,
+    private val delegate: DataStore<Preferences>
 ) : DataStore<Preferences> {
     override val data: Flow<Preferences> = delegate.data
 
     override suspend fun updateData(
-        transform: suspend (t: Preferences) -> Preferences,
+        transform: suspend (t: Preferences) -> Preferences
     ): Preferences = try {
         delegate.updateData(transform)
     } catch (error: IOException) {

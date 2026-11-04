@@ -32,7 +32,7 @@ class JellyfinSessionRejectionInterceptorTest {
             .url("https://jf.example.com/Users")
             .header(
                 "Authorization",
-                "MediaBrowser Client=\"app\", Device=\"tv\", DeviceId=\"id\", Version=\"1\", Token=\"tok-1\"",
+                "MediaBrowser Client=\"app\", Device=\"tv\", DeviceId=\"id\", Version=\"1\", Token=\"tok-1\""
             )
             .build()
 
@@ -60,7 +60,7 @@ class JellyfinSessionRejectionInterceptorTest {
             .url("https://jf.example.com/Users/AuthenticateByName")
             .header(
                 "Authorization",
-                "MediaBrowser Client=\"app\", Device=\"tv\", DeviceId=\"id\", Version=\"1\"",
+                "MediaBrowser Client=\"app\", Device=\"tv\", DeviceId=\"id\", Version=\"1\""
             )
             .build()
 
@@ -75,7 +75,7 @@ class JellyfinSessionRejectionInterceptorTest {
             .url("https://jf.example.com/Users")
             .header(
                 "Authorization",
-                "MediaBrowser Client=\"app\", Device=\"tv\", DeviceId=\"id\", Version=\"1\", Token=\"tok-3\"",
+                "MediaBrowser Client=\"app\", Device=\"tv\", DeviceId=\"id\", Version=\"1\", Token=\"tok-3\""
             )
             .build()
 

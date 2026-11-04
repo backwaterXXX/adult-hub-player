@@ -32,7 +32,7 @@ import com.adulthub.tv.ui.theme.TextSecondary
 @Composable
 fun LibrarySelectScreen(
     viewModel: AuthViewModel,
-    modifier: Modifier = Modifier,
+    modifier: Modifier = Modifier
 ) {
     val state by viewModel.libraryState.collectAsStateWithLifecycle()
 
@@ -41,25 +41,25 @@ fun LibrarySelectScreen(
             .fillMaxSize()
             .background(OledBlack)
             .padding(horizontal = 48.dp, vertical = 32.dp),
-        contentAlignment = Alignment.Center,
+        contentAlignment = Alignment.Center
     ) {
         if (state.isLoading) {
             LoadingIndicator(message = stringResource(R.string.library_loading))
         } else {
             Column(
                 horizontalAlignment = Alignment.CenterHorizontally,
-                verticalArrangement = Arrangement.Center,
+                verticalArrangement = Arrangement.Center
             ) {
                 Text(
                     text = stringResource(R.string.library_select_title),
                     style = MaterialTheme.typography.headlineLarge,
-                    color = NeonPink,
+                    color = NeonPink
                 )
                 Spacer(modifier = Modifier.height(8.dp))
                 Text(
                     text = stringResource(R.string.library_select_subtitle),
                     style = MaterialTheme.typography.bodyMedium,
-                    color = TextSecondary,
+                    color = TextSecondary
                 )
                 Spacer(modifier = Modifier.height(32.dp))
 
@@ -67,33 +67,33 @@ fun LibrarySelectScreen(
                     Text(
                         text = stringResource(R.string.library_empty),
                         style = MaterialTheme.typography.bodyLarge,
-                        color = TextSecondary,
+                        color = TextSecondary
                     )
                 } else {
                     LazyRow(
                         horizontalArrangement = Arrangement.spacedBy(20.dp),
-                        verticalAlignment = Alignment.CenterVertically,
+                        verticalAlignment = Alignment.CenterVertically
                     ) {
                         items(state.libraries, key = { it.id }) { library ->
                             TvPrimaryButton(
                                 onClick = { viewModel.selectLibrary(library) },
                                 modifier = Modifier
                                     .width(220.dp)
-                                    .height(100.dp),
+                                    .height(100.dp)
                             ) {
                                 Column(
                                     modifier = Modifier.fillMaxWidth(),
-                                    horizontalAlignment = Alignment.CenterHorizontally,
+                                    horizontalAlignment = Alignment.CenterHorizontally
                                 ) {
                                     Text(
                                         text = library.name,
-                                        style = MaterialTheme.typography.titleLarge,
+                                        style = MaterialTheme.typography.titleLarge
                                     )
                                     if (!library.collectionType.isNullOrBlank()) {
                                         Text(
                                             text = library.collectionType.orEmpty(),
                                             style = MaterialTheme.typography.bodyMedium,
-                                            color = TextSecondary,
+                                            color = TextSecondary
                                         )
                                     }
                                 }
@@ -106,7 +106,7 @@ fun LibrarySelectScreen(
                     Spacer(modifier = Modifier.height(24.dp))
                     ErrorMessage(
                         message = state.errorMessage ?: "",
-                        onRetry = { viewModel.loadLibraries() },
+                        onRetry = { viewModel.loadLibraries() }
                     )
                 }
             }

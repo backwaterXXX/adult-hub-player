@@ -13,5 +13,5 @@ data class TvStudio(
      * `null` means "not counted": the count needs one extra request per studio,
      * so it is only read for the studios the user actually sees.
      */
-    val movieCount: Int? = null,
+    val movieCount: Int? = null
 )

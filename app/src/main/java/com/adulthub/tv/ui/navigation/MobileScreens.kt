@@ -1,51 +1,50 @@
 package com.adulthub.tv.ui.navigation
 
 import androidx.annotation.StringRes
-import androidx.compose.foundation.clickable
 import androidx.compose.foundation.background
+import androidx.compose.foundation.clickable
 import androidx.compose.foundation.horizontalScroll
-import androidx.compose.foundation.verticalScroll
-import androidx.compose.foundation.rememberScrollState
-import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.layout.*
-import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.LazyRow
-import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.lazy.grid.GridCells
 import androidx.compose.foundation.lazy.grid.LazyVerticalGrid
 import androidx.compose.foundation.lazy.grid.items
+import androidx.compose.foundation.lazy.items
+import androidx.compose.foundation.rememberScrollState
+import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.text.KeyboardOptions
+import androidx.compose.foundation.verticalScroll
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.runtime.saveable.rememberSaveable
-import androidx.compose.ui.Modifier
 import androidx.compose.ui.Alignment
-import androidx.compose.ui.res.pluralStringResource
-import androidx.compose.ui.res.stringResource
-import androidx.compose.ui.text.input.KeyboardType
-import androidx.compose.ui.text.input.PasswordVisualTransformation
-import androidx.compose.ui.unit.dp
+import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.layout.ContentScale
+import androidx.compose.ui.res.pluralStringResource
+import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.ui.text.input.KeyboardType
+import androidx.compose.ui.text.input.PasswordVisualTransformation
 import androidx.compose.ui.text.style.TextOverflow
+import androidx.compose.ui.unit.dp
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import coil.compose.AsyncImage
 import com.adulthub.tv.R
-import com.adulthub.tv.data.model.*
 import com.adulthub.tv.data.jellyfin.JellyfinClientManager
+import com.adulthub.tv.data.model.*
 import com.adulthub.tv.data.resolver.resolveResolverUrl
 import com.adulthub.tv.ui.auth.AuthViewModel
 import com.adulthub.tv.ui.components.LocalNetworkPermission
 import com.adulthub.tv.ui.components.formattedDurationLabel
+import com.adulthub.tv.ui.detail.ItemDetailViewModel
 import com.adulthub.tv.ui.home.HomeViewModel
 import com.adulthub.tv.ui.home.SectionState
-import com.adulthub.tv.ui.detail.ItemDetailViewModel
 import com.adulthub.tv.ui.library.*
-import com.adulthub.tv.ui.search.SearchViewModel
 import com.adulthub.tv.ui.person.PersonDetailViewModel
+import com.adulthub.tv.ui.search.SearchViewModel
 import com.adulthub.tv.ui.theme.NeonPink
 import com.adulthub.tv.ui.theme.OledBlack
 import kotlinx.coroutines.delay
@@ -58,7 +57,7 @@ fun MobilePage(
     horizontalPadding: androidx.compose.ui.unit.Dp = 18.dp,
     verticalPadding: androidx.compose.ui.unit.Dp = 12.dp,
     contentGap: androidx.compose.ui.unit.Dp = 12.dp,
-    content: @Composable ColumnScope.() -> Unit = {},
+    content: @Composable ColumnScope.() -> Unit = {}
 ) {
     Column(Modifier.fillMaxSize().padding(horizontal = horizontalPadding, vertical = verticalPadding)) {
         Text(title, style = MaterialTheme.typography.headlineMedium, color = NeonPink)
@@ -69,7 +68,9 @@ fun MobilePage(
 }
 
 @Composable
-private fun MobileError(text: String?) { if (text != null) Text(text, color = MaterialTheme.colorScheme.error) }
+private fun MobileError(text: String?) {
+    if (text != null) Text(text, color = MaterialTheme.colorScheme.error)
+}
 
 @Composable
 fun MobileServerScreen(vm: AuthViewModel) {
@@ -77,7 +78,10 @@ fun MobileServerScreen(vm: AuthViewModel) {
     var url by remember(state.serverUrl) { mutableStateOf(state.serverUrl) }
     val localNetwork = LocalNetworkPermission.current
     MobilePage(stringResource(R.string.server_title), stringResource(R.string.mobile_server_subtitle)) {
-        OutlinedTextField(url, { url = it; vm.onServerUrlChanged(it) }, Modifier.fillMaxWidth(), label = { Text(stringResource(R.string.mobile_server_url_label)) }, keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Uri, autoCorrectEnabled = false, imeAction = androidx.compose.ui.text.input.ImeAction.Go), singleLine = true)
+        OutlinedTextField(url, {
+            url = it
+            vm.onServerUrlChanged(it)
+        }, Modifier.fillMaxWidth(), label = { Text(stringResource(R.string.mobile_server_url_label)) }, keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Uri, autoCorrectEnabled = false, imeAction = androidx.compose.ui.text.input.ImeAction.Go), singleLine = true)
         Spacer(Modifier.height(12.dp))
         Button(onClick = { localNetwork.ensureGranted(url) { vm.connectServer(url) } }, enabled = !state.isConnecting, modifier = Modifier.fillMaxWidth().heightIn(min = 48.dp)) { Text(if (state.isConnecting) stringResource(R.string.mobile_connecting) else stringResource(R.string.action_connect)) }
         if (state.isDiscovering) LinearProgressIndicator(Modifier.fillMaxWidth())
@@ -92,7 +96,7 @@ fun MobileServerScreen(vm: AuthViewModel) {
                         localNetwork.ensureGranted(url) { vm.connectServer(url) }
                     }
                 },
-                modifier = Modifier.heightIn(min = 48.dp),
+                modifier = Modifier.heightIn(min = 48.dp)
             ) { Text(if (state.sessionRestoreFailed) stringResource(R.string.mobile_retry_saved_session) else stringResource(R.string.action_retry)) }
         }
         state.pendingHttpConsentUrl?.let { host ->
@@ -126,7 +130,10 @@ fun MobileQuickConnectScreen(vm: AuthViewModel, onBack: () -> Unit) {
         if (state.isPolling) LinearProgressIndicator(Modifier.fillMaxWidth())
         MobileError(state.errorMessage)
         if (state.isExpired) Text(stringResource(R.string.mobile_code_expired))
-        OutlinedButton(onClick = { vm.stopQuickConnect(); onBack() }, modifier = Modifier.fillMaxWidth().heightIn(min = 48.dp)) { Text(stringResource(R.string.action_cancel)) }
+        OutlinedButton(onClick = {
+            vm.stopQuickConnect()
+            onBack()
+        }, modifier = Modifier.fillMaxWidth().heightIn(min = 48.dp)) { Text(stringResource(R.string.action_cancel)) }
     }
 }
 
@@ -255,16 +262,18 @@ fun MobileHomeScreen(vm: HomeViewModel, isCurrentDestination: Boolean = true, on
 private fun MobileMediaPosterCard(title: String, imageUrl: String?, onClick: () -> Unit) {
     Card(Modifier.width(142.dp).height(196.dp).clickable(onClick = onClick), shape = RoundedCornerShape(14.dp)) {
         Box(Modifier.fillMaxSize().background(Color(0xFF202027))) {
-            if (imageUrl != null) AsyncImage(
-                model = imageUrl,
-                contentDescription = title,
-                contentScale = ContentScale.Crop,
-                modifier = Modifier.fillMaxSize(),
-            )
+            if (imageUrl != null) {
+                AsyncImage(
+                    model = imageUrl,
+                    contentDescription = title,
+                    contentScale = ContentScale.Crop,
+                    modifier = Modifier.fillMaxSize()
+                )
+            }
             Box(
                 Modifier.align(Alignment.BottomCenter).fillMaxWidth()
                     .background(Brush.verticalGradient(listOf(Color.Transparent, Color.Black.copy(alpha = .92f))))
-                    .padding(horizontal = 10.dp, vertical = 10.dp),
+                    .padding(horizontal = 10.dp, vertical = 10.dp)
             ) {
                 Text(title, color = Color.White, style = MaterialTheme.typography.labelLarge, maxLines = 2, overflow = TextOverflow.Ellipsis)
             }
@@ -277,7 +286,7 @@ private fun MobileCatalogTile(title: String, subtitle: String?, onClick: () -> U
     Card(
         Modifier.fillMaxWidth().height(112.dp).clickable(onClick = onClick),
         shape = RoundedCornerShape(14.dp),
-        colors = CardDefaults.cardColors(containerColor = Color(0xFF24242D)),
+        colors = CardDefaults.cardColors(containerColor = Color(0xFF24242D))
     ) {
         Column(Modifier.fillMaxSize().padding(14.dp), verticalArrangement = Arrangement.Center) {
             Text(title, style = MaterialTheme.typography.titleSmall, color = Color.White, maxLines = 2, overflow = TextOverflow.Ellipsis)
@@ -313,10 +322,13 @@ fun MobileLibraryScreen(vm: LibraryViewModel, initialCategoryId: String?, onItem
             Row(
                 modifier = Modifier.widthIn(min = maxWidth).horizontalScroll(rememberScrollState()),
                 horizontalArrangement = Arrangement.End,
-                verticalAlignment = Alignment.CenterVertically,
+                verticalAlignment = Alignment.CenterVertically
             ) {
                 LibraryTab.entries.forEach { option ->
-                    TextButton(onClick = { tab = option; vm.selectTab(option) }) {
+                    TextButton(onClick = {
+                        tab = option
+                        vm.selectTab(option)
+                    }) {
                         Text(stringResource(option.titleRes), color = if (option == tab) NeonPink else MaterialTheme.colorScheme.onSurface)
                     }
                 }
@@ -336,29 +348,65 @@ fun MobileLibraryScreen(vm: LibraryViewModel, initialCategoryId: String?, onItem
                         TextButton(onClick = { sortMenu = true }) { Text(stringResource(R.string.mobile_sort)) }
                         DropdownMenu(expanded = sortMenu, onDismissRequest = { sortMenu = false }) {
                             listOf("DateCreated" to R.string.mobile_sort_newest, "SortName" to R.string.mobile_sort_title, "CommunityRating" to R.string.mobile_sort_rating).forEach { (key, label) ->
-                                DropdownMenuItem(text = { Text(stringResource(label)) }, onClick = { vm.setSort(key, org.jellyfin.sdk.model.api.SortOrder.DESCENDING); sortMenu = false })
+                                DropdownMenuItem(text = { Text(stringResource(label)) }, onClick = {
+                                    vm.setSort(key, org.jellyfin.sdk.model.api.SortOrder.DESCENDING)
+                                    sortMenu = false
+                                })
                             }
                         }
                     }
                     Box {
-                        TextButton(onClick = { vm.loadGenresForFilter(); genreMenu = true }) { Text(state.allState.selectedGenre?.name ?: stringResource(R.string.mobile_genre)) }
+                        TextButton(onClick = {
+                            vm.loadGenresForFilter()
+                            genreMenu = true
+                        }) { Text(state.allState.selectedGenre?.name ?: stringResource(R.string.mobile_genre)) }
                         DropdownMenu(expanded = genreMenu, onDismissRequest = { genreMenu = false }) {
-                            DropdownMenuItem(text = { Text(stringResource(R.string.mobile_all_genres)) }, onClick = { vm.selectGenre(null); genreMenu = false })
-                            state.allState.genres.forEach { genre -> DropdownMenuItem(text = { Text(genre.name) }, onClick = { vm.selectGenre(genre); genreMenu = false }) }
+                            DropdownMenuItem(text = { Text(stringResource(R.string.mobile_all_genres)) }, onClick = {
+                                vm.selectGenre(null)
+                                genreMenu = false
+                            })
+                            state.allState.genres.forEach { genre ->
+                                DropdownMenuItem(text = { Text(genre.name) }, onClick = {
+                                    vm.selectGenre(genre)
+                                    genreMenu = false
+                                })
+                            }
                         }
                     }
                     Box {
-                        TextButton(onClick = { vm.loadStudiosForFilter(); studioMenu = true }) { Text(state.allState.selectedStudio?.name ?: stringResource(R.string.mobile_studio)) }
+                        TextButton(onClick = {
+                            vm.loadStudiosForFilter()
+                            studioMenu = true
+                        }) { Text(state.allState.selectedStudio?.name ?: stringResource(R.string.mobile_studio)) }
                         DropdownMenu(expanded = studioMenu, onDismissRequest = { studioMenu = false }) {
-                            DropdownMenuItem(text = { Text(stringResource(R.string.mobile_all_studios)) }, onClick = { vm.selectCatalogStudio(null); studioMenu = false })
-                            state.allState.studios.forEach { studio -> DropdownMenuItem(text = { Text(studio.name) }, onClick = { vm.selectCatalogStudio(studio); studioMenu = false }) }
+                            DropdownMenuItem(text = { Text(stringResource(R.string.mobile_all_studios)) }, onClick = {
+                                vm.selectCatalogStudio(null)
+                                studioMenu = false
+                            })
+                            state.allState.studios.forEach { studio ->
+                                DropdownMenuItem(text = { Text(studio.name) }, onClick = {
+                                    vm.selectCatalogStudio(studio)
+                                    studioMenu = false
+                                })
+                            }
                         }
                     }
                     Box {
-                        TextButton(onClick = { vm.loadPerformersForFilter(); performerMenu = true }) { Text(state.allState.selectedPerformer?.name ?: stringResource(R.string.mobile_performer)) }
+                        TextButton(onClick = {
+                            vm.loadPerformersForFilter()
+                            performerMenu = true
+                        }) { Text(state.allState.selectedPerformer?.name ?: stringResource(R.string.mobile_performer)) }
                         DropdownMenu(expanded = performerMenu, onDismissRequest = { performerMenu = false }) {
-                            DropdownMenuItem(text = { Text(stringResource(R.string.mobile_all_performers)) }, onClick = { vm.selectPerformer(null); performerMenu = false })
-                            state.allState.performers.forEach { performer -> DropdownMenuItem(text = { Text(performer.name) }, onClick = { vm.selectPerformer(performer); performerMenu = false }) }
+                            DropdownMenuItem(text = { Text(stringResource(R.string.mobile_all_performers)) }, onClick = {
+                                vm.selectPerformer(null)
+                                performerMenu = false
+                            })
+                            state.allState.performers.forEach { performer ->
+                                DropdownMenuItem(text = { Text(performer.name) }, onClick = {
+                                    vm.selectPerformer(performer)
+                                    performerMenu = false
+                                })
+                            }
                         }
                     }
                 }
@@ -371,6 +419,7 @@ fun MobileLibraryScreen(vm: LibraryViewModel, initialCategoryId: String?, onItem
                     item { if (state.allState.hasMore) TextButton(onClick = { vm.loadAllItems() }) { Text(stringResource(R.string.mobile_load_more)) } }
                 }
             }
+
             LibraryTab.CATEGORIES -> {
                 val selected = state.categoriesState.selectedCategory
                 if (selected != null) {
@@ -392,12 +441,13 @@ fun MobileLibraryScreen(vm: LibraryViewModel, initialCategoryId: String?, onItem
                     }
                 }
             }
+
             LibraryTab.ACTORS -> Column {
                 OutlinedTextField(state.actorsState.searchQuery, vm::setActorSearchQuery, Modifier.fillMaxWidth(), label = { Text(stringResource(R.string.mobile_find_performer)) }, singleLine = true)
                 LazyRow {
                     item {
-                    FilterChip(selected = state.actorsState.onlyWithPhoto, onClick = vm::toggleOnlyWithPhoto, label = { Text(stringResource(R.string.mobile_photo_only)) })
-                    FilterChip(selected = state.actorsState.selectedLetter == null, onClick = { vm.selectAlphabetLetter(null) }, label = { Text(stringResource(R.string.mobile_all)) })
+                        FilterChip(selected = state.actorsState.onlyWithPhoto, onClick = vm::toggleOnlyWithPhoto, label = { Text(stringResource(R.string.mobile_photo_only)) })
+                        FilterChip(selected = state.actorsState.selectedLetter == null, onClick = { vm.selectAlphabetLetter(null) }, label = { Text(stringResource(R.string.mobile_all)) })
                     }
                     items(('A'..'Z').toList()) { letter -> FilterChip(selected = state.actorsState.selectedLetter == letter, onClick = { vm.selectAlphabetLetter(letter) }, label = { Text(letter.toString()) }) }
                 }
@@ -409,6 +459,7 @@ fun MobileLibraryScreen(vm: LibraryViewModel, initialCategoryId: String?, onItem
                     item { if (state.actorsState.hasMore) TextButton(onClick = vm::loadMoreActors) { Text(stringResource(R.string.mobile_load_more)) } }
                 }
             }
+
             LibraryTab.STUDIOS -> {
                 val selected = state.studiosState.selectedStudio
                 if (selected != null) {
@@ -431,6 +482,7 @@ fun MobileLibraryScreen(vm: LibraryViewModel, initialCategoryId: String?, onItem
                     }
                 }
             }
+
             LibraryTab.CHANNELS -> {
                 val selected = state.channelsState.selectedChannel
                 if (selected == null) {
@@ -492,7 +544,7 @@ fun MobileSearchScreen(vm: SearchViewModel, initialQuery: String?, onItem: (Stri
                 }
             },
             keyboardOptions = KeyboardOptions(imeAction = androidx.compose.ui.text.input.ImeAction.Search),
-            singleLine = true,
+            singleLine = true
         )
         if (state.query.isBlank() && state.recentQueries.isNotEmpty()) {
             Text(stringResource(R.string.mobile_recent_searches), style = MaterialTheme.typography.labelLarge, color = NeonPink, modifier = Modifier.padding(top = 8.dp))
@@ -507,7 +559,7 @@ fun MobileSearchScreen(vm: SearchViewModel, initialQuery: String?, onItem: (Stri
         LazyColumn(
             modifier = Modifier.fillMaxWidth().weight(1f).imePadding(),
             verticalArrangement = Arrangement.spacedBy(6.dp),
-            contentPadding = PaddingValues(bottom = 16.dp),
+            contentPadding = PaddingValues(bottom = 16.dp)
         ) {
             if (state.movies.isNotEmpty()) {
                 item(key = "h_movies") { MobileSearchSectionHeader(stringResource(R.string.mobile_movies)) }
@@ -530,7 +582,7 @@ fun MobileSearchScreen(vm: SearchViewModel, initialQuery: String?, onItem: (Stri
                 items(state.channelVideos, key = { "c${it.id}" }) { video ->
                     MobileMediaCard(
                         video.title,
-                        resolveResolverUrl(video.thumbnail, state.resolverBaseUrl),
+                        resolveResolverUrl(video.thumbnail, state.resolverBaseUrl)
                     ) { onPlay(video.providerVideoId.ifBlank { video.id }) }
                 }
             }
@@ -543,7 +595,7 @@ fun MobileSearchScreen(vm: SearchViewModel, initialQuery: String?, onItem: (Stri
                         style = MaterialTheme.typography.bodyMedium,
                         color = MaterialTheme.colorScheme.onSurfaceVariant,
                         modifier = Modifier.padding(vertical = 18.dp).fillMaxWidth(),
-                        textAlign = androidx.compose.ui.text.style.TextAlign.Center,
+                        textAlign = androidx.compose.ui.text.style.TextAlign.Center
                     )
                 }
             }
@@ -557,7 +609,7 @@ private fun MobileSearchSectionHeader(text: String) {
         text,
         style = MaterialTheme.typography.titleSmall,
         color = NeonPink,
-        modifier = Modifier.padding(top = 10.dp, bottom = 2.dp),
+        modifier = Modifier.padding(top = 10.dp, bottom = 2.dp)
     )
 }
 
@@ -579,7 +631,7 @@ fun MobileItemDetailScreen(
     onPlay: (String, Boolean?) -> Unit,
     onItem: (String) -> Unit,
     onPerson: (String, String) -> Unit,
-    onSearch: (String) -> Unit,
+    onSearch: (String) -> Unit
 ) {
     val state by vm.uiState.collectAsStateWithLifecycle()
     LaunchedEffect(itemId) { vm.loadDetails(itemId) }
@@ -596,7 +648,7 @@ fun MobileItemDetailScreen(
     MobilePage(state.item?.title ?: stringResource(R.string.mobile_details), state.errorMessage) {
         Column(
             Modifier.fillMaxWidth().weight(1f).verticalScroll(rememberScrollState()),
-            verticalArrangement = Arrangement.spacedBy(10.dp),
+            verticalArrangement = Arrangement.spacedBy(10.dp)
         ) {
             if (state.isLoading) LinearProgressIndicator(Modifier.fillMaxWidth())
             state.item?.let { media ->

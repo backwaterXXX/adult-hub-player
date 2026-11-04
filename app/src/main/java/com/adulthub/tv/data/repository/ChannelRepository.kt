@@ -13,7 +13,7 @@ data class ChannelHistoryPage(
     val videos: List<VideoDto>,
     val nextOffsetId: Long?,
     val hasMore: Boolean,
-    val messageCount: Int,
+    val messageCount: Int
 )
 
 /**
@@ -25,7 +25,7 @@ class StaleSessionException : RuntimeException("The session changed while the re
 
 open class ChannelRepository(
     private val resolverApi: ResolverApi,
-    private val accountScope: SessionOwnerProvider? = null,
+    private val accountScope: SessionOwnerProvider? = null
 ) {
     private val videoCacheLock = Any()
     private val videoCache = LinkedHashMap<String, VideoDto>(CACHE_MAX_VIDEOS * 4, 0.75f, true)
@@ -117,7 +117,7 @@ open class ChannelRepository(
                     id = it.id,
                     title = it.title,
                     slug = it.slug,
-                    url = it.url,
+                    url = it.url
                 )
             }
             Result.success(channels)
@@ -131,7 +131,7 @@ open class ChannelRepository(
     open suspend fun getChannelHistory(
         channelId: String,
         offsetId: Long? = null,
-        limit: Int = 100,
+        limit: Int = 100
     ): Result<ChannelHistoryPage> = withContext(Dispatchers.IO) {
         // The owner is captured before the request runs. A response of a session that
         // ended meanwhile must not fill the cache of the new session.
@@ -140,7 +140,7 @@ open class ChannelRepository(
             val response = resolverApi.getChannelHistory(
                 channelId = channelId,
                 offsetId = offsetId,
-                limit = limit,
+                limit = limit
             )
             if (!isCurrent(owner)) return@withContext Result.failure(StaleSessionException())
             val deduped = response.videos.distinctBy { it.providerVideoId.ifBlank { it.id } }
@@ -149,7 +149,7 @@ open class ChannelRepository(
                 videos = deduped,
                 nextOffsetId = response.nextOffsetId,
                 hasMore = response.hasMore,
-                messageCount = response.messageCount,
+                messageCount = response.messageCount
             )
             Result.success(page)
         } catch (e: CancellationException) {
@@ -163,7 +163,7 @@ open class ChannelRepository(
         channelId: String,
         page: Int = 1,
         sort: String = "latest",
-        minDuration: Int? = null,
+        minDuration: Int? = null
     ): Result<List<VideoDto>> = withContext(Dispatchers.IO) {
         val owner = accountScope?.currentOwner()
         try {
@@ -171,7 +171,7 @@ open class ChannelRepository(
                 channelId = channelId,
                 page = page,
                 sort = sort,
-                minDuration = minDuration,
+                minDuration = minDuration
             )
             if (!isCurrent(owner)) return@withContext Result.failure(StaleSessionException())
             val deduped = videos.distinctBy { it.providerVideoId.ifBlank { it.id } }
@@ -200,8 +200,7 @@ open class ChannelRepository(
     }
 
     /** True when the owner of a request is still the active session. */
-    private suspend fun isCurrent(owner: SessionOwner?): Boolean =
-        owner == null || accountScope?.isCurrent(owner) != false
+    private suspend fun isCurrent(owner: SessionOwner?): Boolean = owner == null || accountScope?.isCurrent(owner) != false
 }
 
 private const val CACHE_MAX_VIDEOS = 500

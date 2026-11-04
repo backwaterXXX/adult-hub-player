@@ -8,18 +8,18 @@ import androidx.datastore.preferences.core.emptyPreferences
 import androidx.datastore.preferences.core.stringPreferencesKey
 import androidx.datastore.preferences.preferencesDataStore
 import com.adulthub.tv.data.model.AuthState
+import java.io.IOException
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.catch
 import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.flow.map
-import java.io.IOException
 
 private val Context.authDataStore: DataStore<Preferences> by preferencesDataStore(name = "auth_prefs")
 
 class AuthDataStore(
     context: Context,
     private val crypto: KeyStoreCrypto,
-    private val dataStore: DataStore<Preferences> = context.authDataStore,
+    private val dataStore: DataStore<Preferences> = context.authDataStore
 ) {
     private val encryptedValue = EncryptedPreferenceValue(crypto)
 
@@ -62,11 +62,14 @@ class AuthDataStore(
             KEY_SERVER_URL to snapshot[KEY_SERVER_URL],
             KEY_USER_ID to snapshot[KEY_USER_ID],
             KEY_USERNAME to snapshot[KEY_USERNAME],
-            KEY_SERVER_NAME to snapshot[KEY_SERVER_NAME],
+            KEY_SERVER_NAME to snapshot[KEY_SERVER_NAME]
         )
         val replacements = sensitiveValues.mapNotNull { (key, oldValue) ->
-            if (oldValue.isNullOrBlank() || encryptedValue.isEncrypted(oldValue)) null
-            else Triple(key, oldValue, encryptedValue.encode(oldValue))
+            if (oldValue.isNullOrBlank() || encryptedValue.isEncrypted(oldValue)) {
+                null
+            } else {
+                Triple(key, oldValue, encryptedValue.encode(oldValue))
+            }
         }
         if (replacements.isEmpty()) return
 
@@ -95,7 +98,7 @@ class AuthDataStore(
             rawServerUrl to serverUrl,
             rawUserId to userId,
             rawUsername to decodedUsername,
-            rawServerName to decodedServerName,
+            rawServerName to decodedServerName
         ).any { (stored, decoded) -> encryptedValue.isEncrypted(stored) && decoded == null }
         if (metadataFailedToDecrypt) {
             return DecodedAuthState(
@@ -105,8 +108,8 @@ class AuthDataStore(
                     userId = rawUserId,
                     username = rawUsername,
                     serverName = rawServerName,
-                    encryptedToken = encryptedToken,
-                ),
+                    encryptedToken = encryptedToken
+                )
             )
         }
 
@@ -124,7 +127,7 @@ class AuthDataStore(
                 userId = userId,
                 accessToken = decryptedToken,
                 username = username,
-                serverName = serverName,
+                serverName = serverName
             )
         )
     }
@@ -134,7 +137,7 @@ class AuthDataStore(
         userId: String,
         username: String,
         accessToken: String,
-        serverName: String = "",
+        serverName: String = ""
     ) {
         val encryptedToken = crypto.encrypt(accessToken)
         val encryptedServerUrl = encryptedValue.encode(serverUrl)
@@ -205,7 +208,7 @@ class AuthDataStore(
      * preference store, so a caller never has to handle a raw [IOException].
      */
     private suspend fun editSession(
-        transform: (androidx.datastore.preferences.core.MutablePreferences) -> Unit,
+        transform: (androidx.datastore.preferences.core.MutablePreferences) -> Unit
     ) {
         try {
             dataStore.edit { preferences -> transform(preferences) }
@@ -225,7 +228,7 @@ class AuthDataStore(
     private data class DecodedAuthState(
         val state: AuthState,
         val unreadableToken: String? = null,
-        val corruptMetadata: AuthSessionSnapshot? = null,
+        val corruptMetadata: AuthSessionSnapshot? = null
     )
 
     private data class AuthSessionSnapshot(
@@ -233,6 +236,6 @@ class AuthDataStore(
         val userId: String?,
         val username: String?,
         val serverName: String?,
-        val encryptedToken: String?,
+        val encryptedToken: String?
     )
 }

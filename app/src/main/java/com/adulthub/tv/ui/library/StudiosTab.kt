@@ -26,8 +26,6 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.focus.FocusRequester
 import androidx.compose.ui.focus.focusRequester
 import androidx.compose.ui.graphics.Color
-import kotlinx.coroutines.delay
-import kotlinx.coroutines.flow.distinctUntilChanged
 import androidx.compose.ui.graphics.graphicsLayer
 import androidx.compose.ui.res.pluralStringResource
 import androidx.compose.ui.res.stringResource
@@ -53,6 +51,8 @@ import com.adulthub.tv.ui.theme.CardSurfaceFocused
 import com.adulthub.tv.ui.theme.NeonPink
 import com.adulthub.tv.ui.theme.TextPrimary
 import com.adulthub.tv.ui.theme.TextSecondary
+import kotlinx.coroutines.delay
+import kotlinx.coroutines.flow.distinctUntilChanged
 
 @Composable
 fun StudiosTab(
@@ -64,7 +64,7 @@ fun StudiosTab(
     getImageUrl: (TvItem) -> String,
     modifier: Modifier = Modifier,
     onLoadMore: () -> Unit = {},
-    onRetryStudioMovies: () -> Unit = {},
+    onRetryStudioMovies: () -> Unit = {}
 ) {
     val studiosGridState = rememberLazyGridState()
     val studioFocusRequesterMap = remember { mutableMapOf<String, FocusRequester>() }
@@ -120,7 +120,7 @@ fun StudiosTab(
     Column(
         modifier = modifier
             .fillMaxSize()
-            .padding(horizontal = 48.dp),
+            .padding(horizontal = 48.dp)
     ) {
         if (state.selectedStudio != null) {
             // Selected Studio Header
@@ -129,13 +129,13 @@ fun StudiosTab(
                     .fillMaxWidth()
                     .padding(vertical = 12.dp),
                 horizontalArrangement = Arrangement.SpaceBetween,
-                verticalAlignment = Alignment.CenterVertically,
+                verticalAlignment = Alignment.CenterVertically
             ) {
                 Column {
                     Text(
                         text = state.selectedStudio.name,
                         style = MaterialTheme.typography.headlineMedium,
-                        color = NeonPink,
+                        color = NeonPink
                     )
                     val countText = if (state.totalCount > 0) {
                         if (state.hasMoreStudioMovies) {
@@ -143,32 +143,32 @@ fun StudiosTab(
                                 R.plurals.library_movies_of_total,
                                 state.totalCount,
                                 state.studioMovies.size,
-                                state.totalCount,
+                                state.totalCount
                             )
                         } else {
                             pluralStringResource(
                                 R.plurals.library_movies_count,
                                 state.studioMovies.size,
-                                state.studioMovies.size,
+                                state.studioMovies.size
                             )
                         }
                     } else if (state.hasMoreStudioMovies) {
                         pluralStringResource(
                             R.plurals.library_movies_count_plus,
                             state.studioMovies.size,
-                            state.studioMovies.size,
+                            state.studioMovies.size
                         )
                     } else {
                         pluralStringResource(
                             R.plurals.library_movies_count,
                             state.studioMovies.size,
-                            state.studioMovies.size,
+                            state.studioMovies.size
                         )
                     }
                     Text(
                         text = countText,
                         style = MaterialTheme.typography.bodyMedium,
-                        color = TextSecondary,
+                        color = TextSecondary
                     )
                 }
 
@@ -180,30 +180,30 @@ fun StudiosTab(
             if (state.isLoadingStudioMovies) {
                 Box(
                     modifier = Modifier.fillMaxSize(),
-                    contentAlignment = Alignment.Center,
+                    contentAlignment = Alignment.Center
                 ) {
                     LoadingIndicator(message = stringResource(R.string.library_loading_studio_movies))
                 }
             } else if (state.studioMoviesError != null && state.studioMovies.isEmpty()) {
                 Box(
                     modifier = Modifier.fillMaxSize(),
-                    contentAlignment = Alignment.Center,
+                    contentAlignment = Alignment.Center
                 ) {
                     ErrorMessage(
                         message = state.studioMoviesError,
                         onRetry = onRetryStudioMovies,
-                        modifier = Modifier.fillMaxWidth(0.5f),
+                        modifier = Modifier.fillMaxWidth(0.5f)
                     )
                 }
             } else if (state.studioMovies.isEmpty()) {
                 Box(
                     modifier = Modifier.fillMaxSize(),
-                    contentAlignment = Alignment.Center,
+                    contentAlignment = Alignment.Center
                 ) {
                     Text(
                         text = stringResource(R.string.library_no_movies_for_studio, state.selectedStudio.name),
                         style = MaterialTheme.typography.bodyLarge,
-                        color = TextSecondary,
+                        color = TextSecondary
                     )
                 }
             } else {
@@ -213,11 +213,11 @@ fun StudiosTab(
                     contentPadding = PaddingValues(top = 8.dp, bottom = 48.dp),
                     horizontalArrangement = Arrangement.spacedBy(16.dp),
                     verticalArrangement = Arrangement.spacedBy(16.dp),
-                    modifier = Modifier.fillMaxSize(),
+                    modifier = Modifier.fillMaxSize()
                 ) {
                     items(
                         items = state.studioMovies,
-                        key = { it.id },
+                        key = { it.id }
                     ) { item ->
                         val requester = remember(item.id) {
                             movieFocusRequesterMap.getOrPut(item.id) { FocusRequester() }
@@ -228,7 +228,7 @@ fun StudiosTab(
                             onClick = { onMovieClick(item) },
                             modifier = Modifier
                                 .fillMaxWidth()
-                                .focusRequester(requester),
+                                .focusRequester(requester)
                         )
                     }
 
@@ -238,7 +238,7 @@ fun StudiosTab(
                                 modifier = Modifier
                                     .fillMaxWidth()
                                     .padding(vertical = 16.dp),
-                                contentAlignment = Alignment.Center,
+                                contentAlignment = Alignment.Center
                             ) {
                                 LoadingIndicator(message = stringResource(R.string.library_loading_more_studio_movies))
                             }
@@ -251,11 +251,11 @@ fun StudiosTab(
                                 modifier = Modifier
                                     .fillMaxWidth()
                                     .padding(vertical = 16.dp),
-                                contentAlignment = Alignment.Center,
+                                contentAlignment = Alignment.Center
                             ) {
                                 TvSecondaryButton(
                                     onClick = onLoadMore,
-                                    modifier = Modifier.height(44.dp),
+                                    modifier = Modifier.height(44.dp)
                                 ) {
                                     Text(text = stringResource(R.string.library_load_more_movies))
                                 }
@@ -269,11 +269,11 @@ fun StudiosTab(
                                 modifier = Modifier
                                     .fillMaxWidth()
                                     .padding(vertical = 16.dp),
-                                contentAlignment = Alignment.Center,
+                                contentAlignment = Alignment.Center
                             ) {
                                 TvSecondaryButton(
                                     onClick = onLoadMore,
-                                    modifier = Modifier.height(44.dp),
+                                    modifier = Modifier.height(44.dp)
                                 ) {
                                     Text(text = stringResource(R.string.library_retry_loading_more_movies))
                                 }
@@ -288,16 +288,16 @@ fun StudiosTab(
                 modifier = Modifier
                     .fillMaxWidth()
                     .padding(vertical = 12.dp),
-                verticalAlignment = Alignment.CenterVertically,
+                verticalAlignment = Alignment.CenterVertically
             ) {
                 Text(
                     text = pluralStringResource(
                         R.plurals.library_studios_count,
                         state.studios.size,
-                        state.studios.size,
+                        state.studios.size
                     ),
                     style = MaterialTheme.typography.bodyMedium,
-                    color = TextSecondary,
+                    color = TextSecondary
                 )
             }
 
@@ -305,35 +305,38 @@ fun StudiosTab(
                 state.isLoading -> {
                     Box(
                         modifier = Modifier.fillMaxSize(),
-                        contentAlignment = Alignment.Center,
+                        contentAlignment = Alignment.Center
                     ) {
                         LoadingIndicator(message = stringResource(R.string.library_loading_studios))
                     }
                 }
+
                 state.errorMessage != null && state.studios.isEmpty() -> {
                     Box(
                         modifier = Modifier.fillMaxSize(),
-                        contentAlignment = Alignment.Center,
+                        contentAlignment = Alignment.Center
                     ) {
                         ErrorMessage(
                             message = state.errorMessage,
                             onRetry = onRetry,
-                            modifier = Modifier.fillMaxWidth(0.5f),
+                            modifier = Modifier.fillMaxWidth(0.5f)
                         )
                     }
                 }
+
                 state.isEmpty -> {
                     Box(
                         modifier = Modifier.fillMaxSize(),
-                        contentAlignment = Alignment.Center,
+                        contentAlignment = Alignment.Center
                     ) {
                         Text(
                             text = stringResource(R.string.library_no_studios_in_library),
                             style = MaterialTheme.typography.bodyLarge,
-                            color = TextSecondary,
+                            color = TextSecondary
                         )
                     }
                 }
+
                 else -> {
                     LazyVerticalGrid(
                         columns = GridCells.Fixed(4),
@@ -341,11 +344,11 @@ fun StudiosTab(
                         contentPadding = PaddingValues(top = 8.dp, bottom = 48.dp),
                         horizontalArrangement = Arrangement.spacedBy(16.dp),
                         verticalArrangement = Arrangement.spacedBy(16.dp),
-                        modifier = Modifier.fillMaxSize(),
+                        modifier = Modifier.fillMaxSize()
                     ) {
                         items(
                             items = state.studios,
-                            key = { it.id },
+                            key = { it.id }
                         ) { studio ->
                             val requester = remember(studio.id) {
                                 studioFocusRequesterMap.getOrPut(studio.id) { FocusRequester() }
@@ -353,7 +356,7 @@ fun StudiosTab(
                             StudioCard(
                                 studio = studio,
                                 onClick = { onStudioClick(studio) },
-                                modifier = Modifier.focusRequester(requester),
+                                modifier = Modifier.focusRequester(requester)
                             )
                         }
                     }
@@ -367,7 +370,7 @@ fun StudiosTab(
 private fun StudioCard(
     studio: TvStudio,
     onClick: () -> Unit,
-    modifier: Modifier = Modifier,
+    modifier: Modifier = Modifier
 ) {
     Card(
         onClick = onClick,
@@ -379,19 +382,19 @@ private fun StudioCard(
         scale = CardDefaults.scale(scale = 1f, focusedScale = 1.05f),
         border = CardDefaults.border(
             border = Border(BorderStroke(1.dp, Color.White.copy(alpha = 0.12f))),
-            focusedBorder = Border(BorderStroke(3.5.dp, NeonPink)),
+            focusedBorder = Border(BorderStroke(3.5.dp, NeonPink))
         ),
         colors = CardDefaults.colors(
             containerColor = CardSurface,
-            focusedContainerColor = CardSurfaceFocused,
-        ),
+            focusedContainerColor = CardSurfaceFocused
+        )
     ) {
         Column(
             modifier = Modifier
                 .fillMaxSize()
                 .padding(16.dp),
             verticalArrangement = Arrangement.Center,
-            horizontalAlignment = Alignment.CenterHorizontally,
+            horizontalAlignment = Alignment.CenterHorizontally
         ) {
             Text(
                 text = studio.name,
@@ -400,7 +403,7 @@ private fun StudioCard(
                 maxLines = 1,
                 overflow = TextOverflow.Ellipsis,
                 fontWeight = FontWeight.Bold,
-                textAlign = TextAlign.Center,
+                textAlign = TextAlign.Center
             )
 
             studio.movieCount?.takeIf { it > 0 }?.let { movieCount ->
@@ -409,11 +412,11 @@ private fun StudioCard(
                     text = pluralStringResource(
                         R.plurals.library_movies_count,
                         movieCount,
-                        movieCount,
+                        movieCount
                     ),
                     style = MaterialTheme.typography.bodySmall,
                     color = TextSecondary,
-                    fontSize = 12.sp,
+                    fontSize = 12.sp
                 )
             }
         }

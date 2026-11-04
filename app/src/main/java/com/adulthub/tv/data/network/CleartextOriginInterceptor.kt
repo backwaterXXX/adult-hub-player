@@ -12,7 +12,7 @@ import okhttp3.Response
  * covers every redirect hop and cannot be bypassed by a new call path.
  */
 class CleartextOriginInterceptor(
-    private val settingsDataStore: SettingsDataStore,
+    private val settingsDataStore: SettingsDataStore
 ) : Interceptor {
     override fun intercept(chain: Interceptor.Chain): Response {
         val request = chain.request()

@@ -41,7 +41,7 @@ import com.adulthub.tv.ui.theme.TextSecondary
 fun LoginScreen(
     viewModel: AuthViewModel,
     onBackToServer: () -> Unit,
-    modifier: Modifier = Modifier,
+    modifier: Modifier = Modifier
 ) {
     val state by viewModel.loginState.collectAsStateWithLifecycle()
     val localNetwork = LocalNetworkPermission.current
@@ -51,7 +51,7 @@ fun LoginScreen(
             .fillMaxSize()
             .background(OledBlack)
             .padding(horizontal = 48.dp, vertical = 32.dp),
-        contentAlignment = Alignment.Center,
+        contentAlignment = Alignment.Center
     ) {
         if (state.isSigningIn) {
             LoadingIndicator(message = stringResource(R.string.login_signing_in))
@@ -59,19 +59,19 @@ fun LoginScreen(
             LazyColumn(
                 modifier = Modifier.fillMaxWidth(0.55f),
                 horizontalAlignment = Alignment.CenterHorizontally,
-                verticalArrangement = Arrangement.Center,
+                verticalArrangement = Arrangement.Center
             ) {
                 item {
                     Text(
                         text = stringResource(R.string.login_title),
                         style = MaterialTheme.typography.headlineLarge,
-                        color = NeonPink,
+                        color = NeonPink
                     )
                     Spacer(modifier = Modifier.height(6.dp))
                     Text(
                         text = state.serverUrl,
                         style = MaterialTheme.typography.bodyMedium,
-                        color = TextSecondary,
+                        color = TextSecondary
                     )
                     Spacer(modifier = Modifier.height(24.dp))
                 }
@@ -84,9 +84,9 @@ fun LoginScreen(
                         hint = stringResource(R.string.login_username_hint),
                         keyboardOptions = KeyboardOptions(
                             keyboardType = KeyboardType.Text,
-                            imeAction = ImeAction.Next,
+                            imeAction = ImeAction.Next
                         ),
-                        modifier = Modifier.fillMaxWidth(),
+                        modifier = Modifier.fillMaxWidth()
                     )
                     Spacer(modifier = Modifier.height(16.dp))
                 }
@@ -100,14 +100,14 @@ fun LoginScreen(
                         visualTransformation = PasswordVisualTransformation(),
                         keyboardOptions = KeyboardOptions(
                             keyboardType = KeyboardType.Password,
-                            imeAction = ImeAction.Done,
+                            imeAction = ImeAction.Done
                         ),
                         keyboardActions = KeyboardActions(
                             onDone = {
                                 localNetwork.ensureGranted(state.serverUrl) { viewModel.signIn() }
-                            },
+                            }
                         ),
-                        modifier = Modifier.fillMaxWidth(),
+                        modifier = Modifier.fillMaxWidth()
                     )
                     Spacer(modifier = Modifier.height(24.dp))
                 }
@@ -115,13 +115,13 @@ fun LoginScreen(
                 item {
                     Row(
                         modifier = Modifier.fillMaxWidth(),
-                        horizontalArrangement = Arrangement.Center,
+                        horizontalArrangement = Arrangement.Center
                     ) {
                         TvPrimaryButton(
                             onClick = {
                                 localNetwork.ensureGranted(state.serverUrl) { viewModel.signIn() }
                             },
-                            modifier = Modifier.weight(1f),
+                            modifier = Modifier.weight(1f)
                         ) {
                             Text(text = stringResource(R.string.action_sign_in))
                         }
@@ -130,7 +130,7 @@ fun LoginScreen(
                             onClick = {
                                 localNetwork.ensureGranted(state.serverUrl) { viewModel.startQuickConnect() }
                             },
-                            modifier = Modifier.weight(1f),
+                            modifier = Modifier.weight(1f)
                         ) {
                             Text(text = stringResource(R.string.action_quick_connect))
                         }
@@ -141,7 +141,7 @@ fun LoginScreen(
                 item {
                     TvSecondaryButton(
                         onClick = onBackToServer,
-                        modifier = Modifier.fillMaxWidth(0.5f),
+                        modifier = Modifier.fillMaxWidth(0.5f)
                     ) {
                         Text(text = stringResource(R.string.action_back))
                     }
@@ -154,7 +154,7 @@ fun LoginScreen(
                             message = state.errorMessage ?: "",
                             onRetry = {
                                 localNetwork.ensureGranted(state.serverUrl) { viewModel.signIn() }
-                            },
+                            }
                         )
                     }
                 }

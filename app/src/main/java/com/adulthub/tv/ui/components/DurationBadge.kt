@@ -16,7 +16,7 @@ import com.adulthub.tv.ui.theme.TextPrimary
 @Composable
 fun DurationBadge(
     durationText: String,
-    modifier: Modifier = Modifier,
+    modifier: Modifier = Modifier
 ) {
     if (durationText.isBlank()) return
 
@@ -28,6 +28,6 @@ fun DurationBadge(
         modifier = modifier
             .clip(RoundedCornerShape(4.dp))
             .background(DurationBadge)
-            .padding(horizontal = 6.dp, vertical = 3.dp),
+            .padding(horizontal = 6.dp, vertical = 3.dp)
     )
 }

@@ -3,7 +3,6 @@ package com.adulthub.tv.player
 import com.adulthub.tv.data.model.PlaybackInfo
 import com.adulthub.tv.data.model.TvItem
 import com.adulthub.tv.data.repository.PlaybackRepository
-import org.jellyfin.sdk.model.api.PlayMethod
 import io.mockk.mockk
 import kotlinx.coroutines.CompletableDeferred
 import kotlinx.coroutines.CoroutineScope
@@ -16,6 +15,7 @@ import kotlinx.coroutines.test.resetMain
 import kotlinx.coroutines.test.runCurrent
 import kotlinx.coroutines.test.runTest
 import kotlinx.coroutines.test.setMain
+import org.jellyfin.sdk.model.api.PlayMethod
 import org.junit.After
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertNotNull
@@ -48,7 +48,7 @@ class PlaybackReporterTest {
             playSessionId = "ps-1",
             playMethod = PlayMethod.DIRECT_PLAY,
             getCurrentPositionMs = { 5000L },
-            getIsPaused = { false },
+            getIsPaused = { false }
         )
 
         reporter.reportStart(5000L, canSeek = true)
@@ -77,7 +77,7 @@ class PlaybackReporterTest {
             playSessionId = "ps-1",
             playMethod = PlayMethod.DIRECT_PLAY,
             getCurrentPositionMs = { 10_000L },
-            getIsPaused = { false },
+            getIsPaused = { false }
         )
 
         reporter.stopSession(10_000L)
@@ -97,7 +97,7 @@ class PlaybackReporterTest {
             playSessionId = "ps-1",
             playMethod = PlayMethod.DIRECT_PLAY,
             getCurrentPositionMs = { currentPos },
-            getIsPaused = { false },
+            getIsPaused = { false }
         )
         reporter.reportStart(0L, canSeek = true)
 
@@ -131,7 +131,7 @@ class PlaybackReporterTest {
             playSessionId = "ps-1",
             playMethod = PlayMethod.DIRECT_PLAY,
             getCurrentPositionMs = { 0L },
-            getIsPaused = { false },
+            getIsPaused = { false }
         )
         reporter.reportStart(0L, canSeek = true)
         runCurrent()
@@ -171,7 +171,7 @@ private class FakePlaybackReporterRepo : PlaybackRepository(mockk(relaxed = true
         positionTicks: Long,
         playSessionId: String?,
         canSeek: Boolean,
-        playMethod: PlayMethod,
+        playMethod: PlayMethod
     ): Result<Unit> {
         lastReportedItemId = itemId
         lastReportedStartTicks = positionTicks
@@ -185,7 +185,7 @@ private class FakePlaybackReporterRepo : PlaybackRepository(mockk(relaxed = true
         playSessionId: String?,
         isPaused: Boolean,
         canSeek: Boolean,
-        playMethod: PlayMethod,
+        playMethod: PlayMethod
     ): Result<Unit> {
         progressGate?.await()
         progressReportCount += 1
@@ -198,7 +198,7 @@ private class FakePlaybackReporterRepo : PlaybackRepository(mockk(relaxed = true
         itemId: String,
         mediaSourceId: String?,
         positionTicks: Long,
-        playSessionId: String?,
+        playSessionId: String?
     ): Result<Unit> {
         lastReportedItemId = itemId
         lastReportedStoppedTicks = positionTicks

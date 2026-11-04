@@ -3,9 +3,6 @@ package com.adulthub.tv.player
 import android.content.Context
 import android.net.Uri
 import android.os.SystemClock
-import com.adulthub.tv.diagnostics.AppLog as Log
-import com.adulthub.tv.BuildConfig
-import com.adulthub.tv.R
 import androidx.media3.common.AudioAttributes
 import androidx.media3.common.C
 import androidx.media3.common.MediaItem
@@ -23,9 +20,18 @@ import androidx.media3.exoplayer.ExoPlayer
 import androidx.media3.exoplayer.analytics.AnalyticsListener
 import androidx.media3.exoplayer.source.DefaultMediaSourceFactory
 import androidx.media3.session.MediaSession
+import com.adulthub.tv.BuildConfig
+import com.adulthub.tv.R
+import com.adulthub.tv.data.local.BufferProfile
+import com.adulthub.tv.data.resolver.VideoVariant
+import com.adulthub.tv.data.resolver.formatBitrate
+import com.adulthub.tv.data.resolver.formatQualityDescriptor
+import com.adulthub.tv.diagnostics.AppLog as Log
+import java.util.concurrent.atomic.AtomicLong
+import kotlin.coroutines.resume
+import kotlinx.coroutines.CancellableContinuation
 import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.CoroutineScope
-import kotlinx.coroutines.CancellableContinuation
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.Job
 import kotlinx.coroutines.delay
@@ -35,15 +41,8 @@ import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.isActive
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.suspendCancellableCoroutine
-
-import com.adulthub.tv.data.local.BufferProfile
-import com.adulthub.tv.data.resolver.VideoVariant
-import com.adulthub.tv.data.resolver.formatBitrate
-import com.adulthub.tv.data.resolver.formatQualityDescriptor
-import okhttp3.OkHttpClient
 import okhttp3.HttpUrl.Companion.toHttpUrlOrNull
-import java.util.concurrent.atomic.AtomicLong
-import kotlin.coroutines.resume
+import okhttp3.OkHttpClient
 
 private const val TAG = "PlayerManager"
 private const val SEEK_INCREMENT_MS = 10_000L
@@ -57,7 +56,7 @@ private data class PlaybackRequest(
     val itemId: String,
     val streamUrl: String,
     val title: String?,
-    val headers: Map<String, String>,
+    val headers: Map<String, String>
 )
 
 private enum class QualitySwitchPhase { CANDIDATE, RESTORING }
@@ -68,7 +67,7 @@ private data class PendingQualitySwitch(
     val positionMs: Long,
     val resumePlayback: Boolean,
     val continuation: CancellableContinuation<Boolean>,
-    var phase: QualitySwitchPhase = QualitySwitchPhase.CANDIDATE,
+    var phase: QualitySwitchPhase = QualitySwitchPhase.CANDIDATE
 )
 
 @UnstableApi
@@ -76,7 +75,7 @@ class PlayerManager(
     private val context: Context,
     private val coroutineScope: CoroutineScope,
     private val bufferProfile: BufferProfile = BufferProfile.STANDARD,
-    sharedHttpClient: OkHttpClient? = null,
+    sharedHttpClient: OkHttpClient? = null
 ) {
     // A manager without an injected client owns it and releases its threads.
     private val ownsHttpClient = sharedHttpClient == null
@@ -115,9 +114,12 @@ class PlayerManager(
     private var pendingSeekAtMs: Long? = null
     private var seekBufferingStartedAtMs: Long? = null
     private var lastSeekBufferDurationMs: Long? = null
+
     @Volatile private var streamFileSizeBytes: Long? = null
+
     @Volatile private var streamContentType: String? = null
     val currentStreamFileSizeBytes: Long? get() = streamFileSizeBytes
+
     // Written from the ExoPlayer loader thread and read on the main thread, so a plain
     // volatile += would lose increments between the read and the write-back.
     private val totalBytesTransferred = AtomicLong()
@@ -133,7 +135,7 @@ class PlayerManager(
             eventTime: AnalyticsListener.EventTime,
             decoderName: String,
             initializedTimestampMs: Long,
-            initializationDurationMs: Long,
+            initializationDurationMs: Long
         ) {
             videoDecoderName = decoderName
             Log.i(TAG, "Video decoder initialized: $decoderName")
@@ -143,7 +145,7 @@ class PlayerManager(
             eventTime: AnalyticsListener.EventTime,
             decoderName: String,
             initializedTimestampMs: Long,
-            initializationDurationMs: Long,
+            initializationDurationMs: Long
         ) {
             audioDecoderName = decoderName
             Log.i(TAG, "Audio decoder initialized: $decoderName")
@@ -152,7 +154,7 @@ class PlayerManager(
         override fun onDroppedVideoFrames(
             eventTime: AnalyticsListener.EventTime,
             droppedFrames: Int,
-            elapsedMs: Long,
+            elapsedMs: Long
         ) {
             totalDroppedFrames += droppedFrames
         }
@@ -217,6 +219,7 @@ class PlayerManager(
                         pendingSeekAtMs = null
                     }
                 }
+
                 Player.STATE_READY -> {
                     finishBufferingMeasurement()
                     // The retry budget is not reset here: a stream that reaches READY for a
@@ -239,6 +242,7 @@ class PlayerManager(
                         finishQualitySwitch(pending.phase == QualitySwitchPhase.CANDIDATE)
                     }
                 }
+
                 Player.STATE_ENDED -> {
                     finishBufferingMeasurement()
                     // An ended stream is a finished switch: without this the switch would hang
@@ -248,6 +252,7 @@ class PlayerManager(
                     }
                     onPlaybackEnded?.invoke()
                 }
+
                 Player.STATE_IDLE -> finishBufferingMeasurement()
             }
         }
@@ -255,7 +260,7 @@ class PlayerManager(
         override fun onPositionDiscontinuity(
             oldPosition: Player.PositionInfo,
             newPosition: Player.PositionInfo,
-            reason: Int,
+            reason: Int
         ) {
             if (reason == Player.DISCONTINUITY_REASON_SEEK && hasRenderedFirstFrame) {
                 pendingSeekAtMs = SystemClock.elapsedRealtime()
@@ -301,31 +306,40 @@ class PlayerManager(
                 PlaybackException.ERROR_CODE_IO_NETWORK_CONNECTION_FAILED,
                 PlaybackException.ERROR_CODE_IO_NETWORK_CONNECTION_TIMEOUT ->
                     context.getString(R.string.player_error_network)
+
                 PlaybackException.ERROR_CODE_IO_BAD_HTTP_STATUS ->
                     context.getString(R.string.player_error_server)
+
                 PlaybackException.ERROR_CODE_DECODER_INIT_FAILED,
                 PlaybackException.ERROR_CODE_DECODING_FAILED,
                 PlaybackException.ERROR_CODE_DECODER_QUERY_FAILED ->
                     context.getString(R.string.player_error_decoder)
+
                 PlaybackException.ERROR_CODE_AUDIO_TRACK_INIT_FAILED,
                 PlaybackException.ERROR_CODE_AUDIO_TRACK_WRITE_FAILED ->
                     context.getString(R.string.player_error_audio_output)
+
                 else -> error.localizedMessage ?: context.getString(R.string.player_error_unknown)
             }
             val failureStage = when {
                 error.errorCode == PlaybackException.ERROR_CODE_IO_BAD_HTTP_STATUS ->
                     context.getString(R.string.player_stage_server_response)
+
                 error.errorCodeName.startsWith("ERROR_CODE_IO_") -> context.getString(R.string.player_stage_network)
+
                 error.errorCodeName.startsWith("ERROR_CODE_PARSING_") -> context.getString(R.string.player_stage_media_format)
+
                 error.errorCodeName.contains("DECOD", ignoreCase = true) -> context.getString(R.string.player_stage_video_decoder)
+
                 error.errorCodeName.startsWith("ERROR_CODE_AUDIO_TRACK_") -> context.getString(R.string.player_stage_audio_output)
+
                 else -> context.getString(R.string.player_stage_playback)
             }
             val diagnosticMessage = context.getString(
                 R.string.player_error_diagnostic,
                 friendlyMessage,
                 failureStage,
-                error.errorCodeName,
+                error.errorCodeName
             )
             _errorMessage.value = diagnosticMessage
             onPlaybackError?.invoke(diagnosticMessage)
@@ -347,7 +361,7 @@ class PlayerManager(
                 bufferProfile.minBufferMs,
                 bufferProfile.maxBufferMs,
                 bufferProfile.playbackStartMs,
-                bufferProfile.rebufferMs,
+                bufferProfile.rebufferMs
             )
             .setPrioritizeTimeOverSizeThresholds(true)
             .build()
@@ -378,7 +392,7 @@ class PlayerManager(
         startPositionMs: Long = 0L,
         title: String? = null,
         headers: Map<String, String> = emptyMap(),
-        itemId: String = "",
+        itemId: String = ""
     ) {
         finishQualitySwitch(false)
         playbackGeneration += 1
@@ -417,7 +431,7 @@ class PlayerManager(
                 previousQuality = activeQuality,
                 positionMs = positionMs,
                 resumePlayback = resumePlayback,
-                continuation = continuation,
+                continuation = continuation
             )
             pendingQualitySwitch = pending
             scheduleQualitySwitchTimeout(pending)
@@ -460,7 +474,7 @@ class PlayerManager(
                 title = pending.previousRequest.title,
                 headers = pending.previousRequest.headers,
                 resetPlaybackSpeed = false,
-                resumePlayback = pending.resumePlayback,
+                resumePlayback = pending.resumePlayback
             )
             return true
         } catch (error: Exception) {
@@ -521,7 +535,7 @@ class PlayerManager(
         title: String?,
         headers: Map<String, String>,
         resetPlaybackSpeed: Boolean,
-        resumePlayback: Boolean,
+        resumePlayback: Boolean
     ) {
         check(!released) { "Cannot start playback after PlayerManager.release()" }
         _errorMessage.value = null
@@ -561,8 +575,8 @@ class PlayerManager(
             .setDefaultRequestProperties(
                 headers + mapOf(
                     PLAYBACK_POLICY_ORIGIN_HEADER to initialOrigin,
-                    PLAYBACK_POLICY_HEADERS_HEADER to headers.keys.joinToString(","),
-                ),
+                    PLAYBACK_POLICY_HEADERS_HEADER to headers.keys.joinToString(",")
+                )
             )
 
         val trackingDataSourceFactory = androidx.media3.datasource.DataSource.Factory {
@@ -570,7 +584,7 @@ class PlayerManager(
                 upstream = httpDataSourceFactory.createDataSource(),
                 onFileSize = { size -> if (size > 0L) streamFileSizeBytes = size },
                 onContentType = { contentType -> streamContentType = contentType },
-                onBytesTransferred = { count -> totalBytesTransferred.addAndGet(count.toLong()) },
+                onBytesTransferred = { count -> totalBytesTransferred.addAndGet(count.toLong()) }
             )
         }
         val mediaSourceFactory = DefaultMediaSourceFactory(trackingDataSourceFactory)
@@ -624,7 +638,7 @@ class PlayerManager(
                     title = request.title,
                     headers = request.headers,
                     resetPlaybackSpeed = false,
-                    resumePlayback = resumePlayback,
+                    resumePlayback = resumePlayback
                 )
             } catch (cancelled: CancellationException) {
                 // A stopped or replaced playback cancels the retry; the new state must not
@@ -646,13 +660,14 @@ class PlayerManager(
      * Without a provider the previous address is used again, because some streams
      * stay valid and the retry only has to restart the transfer.
      */
-    private suspend fun resolveStreamUrlForRetry(request: PlaybackRequest, positionMs: Long): String? =
-        resolveRetryStreamUrl(streamUrlProvider, request.itemId, positionMs, request.streamUrl)
+    private suspend fun resolveStreamUrlForRetry(request: PlaybackRequest, positionMs: Long): String? = resolveRetryStreamUrl(streamUrlProvider, request.itemId, positionMs, request.streamUrl)
 
     private fun isTransient(error: PlaybackException): Boolean {
         if (error.errorCode == PlaybackException.ERROR_CODE_IO_NETWORK_CONNECTION_FAILED ||
             error.errorCode == PlaybackException.ERROR_CODE_IO_NETWORK_CONNECTION_TIMEOUT
-        ) return true
+        ) {
+            return true
+        }
         if (error.errorCode != PlaybackException.ERROR_CODE_IO_BAD_HTTP_STATUS) return false
         var cause: Throwable? = error
         while (cause != null) {
@@ -743,7 +758,7 @@ class PlayerManager(
                     }
                     retryBudget.track(
                         SystemClock.elapsedRealtime(),
-                        _playbackState.value == Player.STATE_READY && _isPlaying.value,
+                        _playbackState.value == Player.STATE_READY && _isPlaying.value
                     )
                     delay(POSITION_POLL_INTERVAL_MS)
                 }
@@ -796,7 +811,7 @@ class PlayerManager(
     fun getTechnicalInfo(
         playbackInfo: com.adulthub.tv.data.model.PlaybackInfo,
         resolverLatencyMs: Long? = null,
-        reportedVariant: VideoVariant? = null,
+        reportedVariant: VideoVariant? = null
     ): PlaybackTechnicalInfo {
         val videoFormat = exoPlayer.videoFormat
         val audioFormat = exoPlayer.audioFormat
@@ -806,20 +821,29 @@ class PlayerManager(
 
         val res = if (videoFormat != null && videoFormat.width > 0 && videoFormat.height > 0) {
             "${videoFormat.width}x${videoFormat.height}"
-        } else "Unknown"
+        } else {
+            "Unknown"
+        }
 
         val fps = if (videoFormat != null && videoFormat.frameRate > 0) {
             String.format(java.util.Locale.US, "%.1f fps", videoFormat.frameRate)
-        } else "Unknown"
+        } else {
+            "Unknown"
+        }
 
         val vCodec = when {
             videoFormat?.sampleMimeType?.contains("avc", ignoreCase = true) == true ||
-            videoFormat?.codecs?.contains("avc", ignoreCase = true) == true -> "H.264 (AVC)"
+                videoFormat?.codecs?.contains("avc", ignoreCase = true) == true -> "H.264 (AVC)"
+
             videoFormat?.sampleMimeType?.contains("hevc", ignoreCase = true) == true ||
-            videoFormat?.codecs?.contains("hevc", ignoreCase = true) == true -> "H.265 (HEVC)"
+                videoFormat?.codecs?.contains("hevc", ignoreCase = true) == true -> "H.265 (HEVC)"
+
             videoFormat?.sampleMimeType?.contains("vp9", ignoreCase = true) == true -> "VP9"
+
             videoFormat?.sampleMimeType?.contains("av01", ignoreCase = true) == true -> "AV1"
+
             !videoFormat?.sampleMimeType.isNullOrBlank() -> videoFormat.sampleMimeType.orEmpty()
+
             else -> "Unknown"
         }
 
@@ -837,17 +861,24 @@ class PlayerManager(
         val vBitrate = contentBitrate?.let {
             val text = if (it >= 1_000_000L) {
                 String.format(java.util.Locale.US, "%.1f Mbps", it / 1_000_000.0)
-            } else "${it / 1000} kbps"
+            } else {
+                "${it / 1000} kbps"
+            }
             if (videoFormat?.bitrate?.let { value -> value > 0 } == true) text else "~$text"
         } ?: "Unknown"
 
         val aCodec = when {
             audioFormat?.sampleMimeType?.contains("mp4a", ignoreCase = true) == true ||
-            audioFormat?.sampleMimeType?.contains("aac", ignoreCase = true) == true -> "AAC"
+                audioFormat?.sampleMimeType?.contains("aac", ignoreCase = true) == true -> "AAC"
+
             audioFormat?.sampleMimeType?.contains("ac3", ignoreCase = true) == true -> "AC-3"
+
             audioFormat?.sampleMimeType?.contains("eac3", ignoreCase = true) == true -> "E-AC-3"
+
             audioFormat?.sampleMimeType?.contains("opus", ignoreCase = true) == true -> "Opus"
+
             !audioFormat?.sampleMimeType.isNullOrBlank() -> audioFormat.sampleMimeType.orEmpty()
+
             else -> "Unknown"
         }
 
@@ -861,7 +892,9 @@ class PlayerManager(
 
         val sampleRate = if (audioFormat != null && audioFormat.sampleRate > 0) {
             "${audioFormat.sampleRate} Hz"
-        } else "Unknown"
+        } else {
+            "Unknown"
+        }
 
         val path = runCatching { Uri.parse(playbackInfo.streamUrl).path.orEmpty() }.getOrDefault("")
         val container = listOfNotNull(playbackInfo.container, streamContentType, path.substringAfterLast('.', ""))
@@ -894,7 +927,7 @@ class PlayerManager(
                 (bufferingStartedAtMs?.let { (SystemClock.elapsedRealtime() - it).coerceAtLeast(0L) } ?: 0L),
             lastSeekBufferDurationMs = lastSeekBufferDurationMs,
             qualityLabel = variant?.let(::formatQualityDescriptor) ?: "Unknown",
-            downloadRate = formatBitrate(sampleDownloadRateBps()) ?: "Unknown",
+            downloadRate = formatBitrate(sampleDownloadRateBps()) ?: "Unknown"
         )
     }
 
@@ -988,7 +1021,7 @@ data class PlaybackTechnicalInfo(
     val rebufferDurationMs: Long = 0L,
     val lastSeekBufferDurationMs: Long? = null,
     val qualityLabel: String = "Unknown",
-    val downloadRate: String = "Unknown",
+    val downloadRate: String = "Unknown"
 )
 
 private const val SEEK_BUFFER_CORRELATION_WINDOW_MS = 3_000L

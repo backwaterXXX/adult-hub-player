@@ -8,6 +8,7 @@ import io.mockk.coVerify
 import io.mockk.every
 import io.mockk.mockk
 import io.mockk.slot
+import java.util.UUID
 import kotlinx.coroutines.test.runTest
 import org.jellyfin.sdk.api.client.ApiClient
 import org.jellyfin.sdk.api.client.Response
@@ -36,7 +37,6 @@ import org.jellyfin.sdk.model.api.request.GetSimilarItemsRequest
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertTrue
 import org.junit.Test
-import java.util.UUID
 
 class LibraryRepositoryTest {
 
@@ -55,7 +55,7 @@ class LibraryRepositoryTest {
     private val repository = LibraryRepository(
         clientManager = clientManager,
         settingsDataStore = settingsDataStore,
-        telegramProgressStore = progressStore,
+        telegramProgressStore = progressStore
     )
 
     init {
@@ -112,7 +112,7 @@ class LibraryRepositoryTest {
             sortBy = "DateCreated",
             sortOrder = SortOrder.DESCENDING,
             filters = setOf(ItemFilter.IS_FAVORITE, ItemFilter.IS_UNPLAYED),
-            searchTerm = "query",
+            searchTerm = "query"
         )
 
         assertTrue(result.isSuccess)

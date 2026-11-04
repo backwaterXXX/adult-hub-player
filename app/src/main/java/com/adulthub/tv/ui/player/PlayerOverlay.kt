@@ -1,5 +1,6 @@
 package com.adulthub.tv.ui.player
 
+import android.os.SystemClock
 import androidx.compose.animation.AnimatedVisibility
 import androidx.compose.animation.fadeIn
 import androidx.compose.animation.fadeOut
@@ -71,6 +72,7 @@ import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
+import androidx.media3.ui.AspectRatioFrameLayout
 import androidx.tv.material3.Border
 import androidx.tv.material3.Icon
 import androidx.tv.material3.MaterialTheme
@@ -79,15 +81,13 @@ import androidx.tv.material3.OutlinedButtonDefaults
 import androidx.tv.material3.OutlinedIconButton
 import androidx.tv.material3.OutlinedIconButtonDefaults
 import androidx.tv.material3.Text
-import androidx.media3.ui.AspectRatioFrameLayout
-import android.os.SystemClock
-import kotlinx.coroutines.delay
-import kotlinx.coroutines.flow.StateFlow
 import com.adulthub.tv.R
 import com.adulthub.tv.data.resolver.ORIGINAL_VARIANT_ID
 import com.adulthub.tv.ui.theme.NeonPink
 import com.adulthub.tv.ui.theme.SurfaceDark
 import java.util.Locale
+import kotlinx.coroutines.delay
+import kotlinx.coroutines.flow.StateFlow
 
 private const val SEEK_REPEAT_WINDOW_MS = 1_000L
 private const val MAX_SEEK_STEP_SECONDS = 60
@@ -123,7 +123,7 @@ fun PlayerOverlay(
     isQualitySwitching: Boolean = false,
     qualityLoadFailed: Boolean = false,
     onQualitySelected: (String) -> Unit = {},
-    onQualityRetry: () -> Unit = {},
+    onQualityRetry: () -> Unit = {}
 ) {
     // The position flow is collected here (and not in the parent screen) so that the 1 Hz
     // position updates only recompose the overlay instead of the whole player screen.
@@ -192,24 +192,24 @@ fun PlayerOverlay(
                     .background(Color.Black.copy(alpha = 0.8f))
                     .border(1.5.dp, NeonPink, RoundedCornerShape(14.dp))
                     .padding(horizontal = 24.dp, vertical = 12.dp),
-                contentAlignment = Alignment.Center,
+                contentAlignment = Alignment.Center
             ) {
                 Row(
                     verticalAlignment = Alignment.CenterVertically,
-                    horizontalArrangement = Arrangement.spacedBy(10.dp),
+                    horizontalArrangement = Arrangement.spacedBy(10.dp)
                 ) {
                     val isForward = seekFeedback.startsWith("+")
                     Icon(
                         imageVector = if (isForward) Icons.Rounded.FastForward else Icons.Rounded.FastRewind,
                         contentDescription = null,
                         tint = NeonPink,
-                        modifier = Modifier.size(28.dp),
+                        modifier = Modifier.size(28.dp)
                     )
                     Text(
                         text = seekFeedback,
                         color = Color.White,
                         fontSize = 26.sp,
-                        fontWeight = FontWeight.Bold,
+                        fontWeight = FontWeight.Bold
                     )
                 }
             }
@@ -223,7 +223,7 @@ fun PlayerOverlay(
                     .clip(CircleShape)
                     .background(Color.Black.copy(alpha = 0.6f))
                     .padding(16.dp),
-                contentAlignment = Alignment.Center,
+                contentAlignment = Alignment.Center
             ) {
                 com.adulthub.tv.ui.components.LoadingIndicator()
             }
@@ -234,7 +234,7 @@ fun PlayerOverlay(
             visible = isOsdVisible,
             enter = fadeIn(),
             exit = fadeOut(),
-            modifier = Modifier.fillMaxSize(),
+            modifier = Modifier.fillMaxSize()
         ) {
             Box(modifier = Modifier.fillMaxSize()) {
                 // Top Bar with gradient
@@ -247,26 +247,26 @@ fun PlayerOverlay(
                                 listOf(
                                     Color.Black.copy(alpha = 0.9f),
                                     Color.Black.copy(alpha = 0.5f),
-                                    Color.Transparent,
+                                    Color.Transparent
                                 )
                             )
                         )
-                        .padding(horizontal = 48.dp, vertical = 28.dp),
+                        .padding(horizontal = 48.dp, vertical = 28.dp)
                 ) {
                     Row(
                         modifier = Modifier.fillMaxWidth(),
                         horizontalArrangement = Arrangement.SpaceBetween,
-                        verticalAlignment = Alignment.CenterVertically,
+                        verticalAlignment = Alignment.CenterVertically
                     ) {
                         Text(
                             text = title,
                             style = MaterialTheme.typography.headlineMedium.copy(
                                 fontWeight = FontWeight.Bold,
-                                color = Color.White,
+                                color = Color.White
                             ),
                             maxLines = 1,
                             overflow = TextOverflow.Ellipsis,
-                            modifier = Modifier.weight(1f, fill = false),
+                            modifier = Modifier.weight(1f, fill = false)
                         )
 
                         Text(
@@ -274,7 +274,7 @@ fun PlayerOverlay(
                             color = NeonPink,
                             fontSize = 14.sp,
                             fontWeight = FontWeight.SemiBold,
-                            modifier = Modifier.padding(start = 16.dp),
+                            modifier = Modifier.padding(start = 16.dp)
                         )
                     }
                 }
@@ -289,22 +289,22 @@ fun PlayerOverlay(
                                 listOf(
                                     Color.Transparent,
                                     Color.Black.copy(alpha = 0.7f),
-                                    Color.Black.copy(alpha = 0.95f),
+                                    Color.Black.copy(alpha = 0.95f)
                                 )
                             )
                         )
-                        .padding(horizontal = 48.dp, vertical = 32.dp),
+                        .padding(horizontal = 48.dp, vertical = 32.dp)
                 ) {
                     // Time and Progress Bar
                     Row(
                         modifier = Modifier.fillMaxWidth(),
-                        verticalAlignment = Alignment.CenterVertically,
+                        verticalAlignment = Alignment.CenterVertically
                     ) {
                         Text(
                             text = formatTime(position),
                             color = Color.White,
                             fontSize = 14.sp,
-                            fontWeight = FontWeight.Medium,
+                            fontWeight = FontWeight.Medium
                         )
 
                         Spacer(modifier = Modifier.width(16.dp))
@@ -318,7 +318,7 @@ fun PlayerOverlay(
                             onSeekRight = {
                                 seekWithAcceleration(1)
                             },
-                            modifier = Modifier.weight(1f),
+                            modifier = Modifier.weight(1f)
                         )
 
                         Spacer(modifier = Modifier.width(16.dp))
@@ -327,7 +327,7 @@ fun PlayerOverlay(
                             text = if (duration > 0L) formatTime(duration) else stringResource(R.string.player_time_unknown),
                             color = Color.White.copy(alpha = 0.7f),
                             fontSize = 14.sp,
-                            fontWeight = FontWeight.Medium,
+                            fontWeight = FontWeight.Medium
                         )
                     }
 
@@ -339,7 +339,7 @@ fun PlayerOverlay(
                                 .fillMaxWidth()
                                 .padding(bottom = 16.dp),
                             horizontalAlignment = Alignment.End,
-                            verticalArrangement = Arrangement.spacedBy(8.dp),
+                            verticalArrangement = Arrangement.spacedBy(8.dp)
                         ) {
                             Row(
                                 modifier = Modifier
@@ -347,7 +347,7 @@ fun PlayerOverlay(
                                     .background(Color.Black.copy(alpha = 0.85f))
                                     .border(1.dp, Color.White.copy(alpha = 0.2f), RoundedCornerShape(16.dp))
                                     .padding(6.dp),
-                                horizontalArrangement = Arrangement.spacedBy(8.dp),
+                                horizontalArrangement = Arrangement.spacedBy(8.dp)
                             ) {
                                 val speedText = stringResource(R.string.player_speed, playbackSpeed)
                                 OsdActionChip(
@@ -357,7 +357,7 @@ fun PlayerOverlay(
                                     onClick = {
                                         onPlaybackSpeedChange(nextPlaybackSpeed(playbackSpeed))
                                         onResetOsdTimer()
-                                    },
+                                    }
                                 )
                                 val zoomText = resizeModeLabel(resizeMode)
                                 OsdActionChip(
@@ -367,7 +367,7 @@ fun PlayerOverlay(
                                     onClick = {
                                         onResizeModeChange(nextResizeMode(resizeMode))
                                         onResetOsdTimer()
-                                    },
+                                    }
                                 )
                                 // Without any option the only useful entry left is a retry
                                 // after the variants request failed.
@@ -378,7 +378,7 @@ fun PlayerOverlay(
                                         onClick = {
                                             onQualityRetry()
                                             onResetOsdTimer()
-                                        },
+                                        }
                                     )
                                 }
                             }
@@ -395,7 +395,7 @@ fun PlayerOverlay(
                                 .background(Color.Black.copy(alpha = 0.85f))
                                 .border(1.dp, Color.White.copy(alpha = 0.2f), RoundedCornerShape(16.dp))
                                 .padding(6.dp),
-                            horizontalArrangement = Arrangement.spacedBy(8.dp),
+                            horizontalArrangement = Arrangement.spacedBy(8.dp)
                         ) {
                             qualityOptions.forEachIndexed { index, option ->
                                 OsdActionChip(
@@ -413,7 +413,7 @@ fun PlayerOverlay(
                                         Modifier.focusRequester(qualityPickerFocusRequester)
                                     } else {
                                         Modifier
-                                    },
+                                    }
                                 )
                             }
                         }
@@ -422,16 +422,16 @@ fun PlayerOverlay(
                     Row(
                         modifier = Modifier.fillMaxWidth(),
                         horizontalArrangement = Arrangement.Center,
-                        verticalAlignment = Alignment.CenterVertically,
+                        verticalAlignment = Alignment.CenterVertically
                     ) {
                         OsdIconButton(
                             icon = Icons.Rounded.FastRewind,
                             contentDescription = pluralStringResource(
                                 R.plurals.player_cd_rewind,
                                 nextSeekStepSeconds,
-                                nextSeekStepSeconds,
+                                nextSeekStepSeconds
                             ),
-                            onClick = { seekWithAcceleration(-1) },
+                            onClick = { seekWithAcceleration(-1) }
                         )
                         Spacer(modifier = Modifier.width(16.dp))
                         OsdIconButton(
@@ -443,7 +443,7 @@ fun PlayerOverlay(
                                 onPlayPauseClick()
                                 onResetOsdTimer()
                             },
-                            modifier = Modifier.focusRequester(playPauseFocusRequester),
+                            modifier = Modifier.focusRequester(playPauseFocusRequester)
                         )
                         Spacer(modifier = Modifier.width(16.dp))
                         OsdIconButton(
@@ -451,9 +451,9 @@ fun PlayerOverlay(
                             contentDescription = pluralStringResource(
                                 R.plurals.player_cd_forward,
                                 nextSeekStepSeconds,
-                                nextSeekStepSeconds,
+                                nextSeekStepSeconds
                             ),
-                            onClick = { seekWithAcceleration(1) },
+                            onClick = { seekWithAcceleration(1) }
                         )
                         Spacer(modifier = Modifier.width(16.dp))
                         OsdIconButton(
@@ -463,7 +463,7 @@ fun PlayerOverlay(
                             onClick = {
                                 onMuteClick()
                                 onResetOsdTimer()
-                            },
+                            }
                         )
                         Spacer(modifier = Modifier.width(28.dp))
                         OsdIconButton(
@@ -473,7 +473,7 @@ fun PlayerOverlay(
                             onClick = {
                                 onToggleFavorite()
                                 onResetOsdTimer()
-                            },
+                            }
                         )
                         Spacer(modifier = Modifier.width(14.dp))
                         OsdIconButton(
@@ -482,7 +482,7 @@ fun PlayerOverlay(
                             onClick = {
                                 onRandomClick()
                                 onResetOsdTimer()
-                            },
+                            }
                         )
                         Spacer(modifier = Modifier.width(14.dp))
                         OsdIconButton(
@@ -491,7 +491,7 @@ fun PlayerOverlay(
                             onClick = {
                                 onInfoClick()
                                 onResetOsdTimer()
-                            },
+                            }
                         )
                         // The quality button joins the bar only while another file version
                         // is actually selectable.
@@ -502,9 +502,10 @@ fun PlayerOverlay(
                                 icon = Icons.Rounded.HighQuality,
                                 contentDescription = when {
                                     isQualitySwitching -> stringResource(R.string.player_cd_quality_changing)
+
                                     else -> stringResource(
                                         R.string.player_cd_quality,
-                                        selectedOption?.label ?: stringResource(R.string.player_quality_original),
+                                        selectedOption?.label ?: stringResource(R.string.player_quality_original)
                                     )
                                 },
                                 isActive = isQualityPickerVisible ||
@@ -514,7 +515,7 @@ fun PlayerOverlay(
                                         isQualityPickerVisible = !isQualityPickerVisible
                                     }
                                     onResetOsdTimer()
-                                },
+                                }
                             )
                         }
                         Spacer(modifier = Modifier.width(14.dp))
@@ -525,13 +526,13 @@ fun PlayerOverlay(
                             onClick = {
                                 isMoreMenuVisible = !isMoreMenuVisible
                                 onResetOsdTimer()
-                            },
+                            }
                         )
                         Spacer(modifier = Modifier.width(14.dp))
                         OsdIconButton(
                             icon = Icons.Rounded.Close,
                             contentDescription = stringResource(R.string.player_cd_close),
-                            onClick = onBackClick,
+                            onClick = onBackClick
                         )
                     }
                 }
@@ -549,7 +550,7 @@ private fun OsdIconButton(
     isPrimary: Boolean = false,
     isActive: Boolean = false,
     activeColor: Color = NeonPink,
-    enabled: Boolean = true,
+    enabled: Boolean = true
 ) {
     val buttonSize = if (isPrimary) 56.dp else 46.dp
     val iconSize = if (isPrimary) 30.dp else 22.dp
@@ -560,36 +561,36 @@ private fun OsdIconButton(
         shape = OutlinedIconButtonDefaults.shape(CircleShape),
         scale = OutlinedIconButtonDefaults.scale(
             scale = 1.0f,
-            focusedScale = if (isPrimary) 1.15f else 1.1f,
+            focusedScale = if (isPrimary) 1.15f else 1.1f
         ),
         colors = OutlinedIconButtonDefaults.colors(
             containerColor = if (isPrimary) Color.White.copy(alpha = 0.12f) else Color.Black.copy(alpha = 0.55f),
             focusedContainerColor = SurfaceDark,
             contentColor = if (isActive) activeColor else Color.White.copy(alpha = 0.9f),
-            focusedContentColor = if (isActive) activeColor else Color.White,
+            focusedContentColor = if (isActive) activeColor else Color.White
         ),
         border = OutlinedIconButtonDefaults.border(
             border = Border(
                 border = BorderStroke(
                     width = 1.dp,
-                    color = if (isActive) activeColor.copy(alpha = 0.6f) else Color.White.copy(alpha = 0.25f),
+                    color = if (isActive) activeColor.copy(alpha = 0.6f) else Color.White.copy(alpha = 0.25f)
                 )
             ),
             focusedBorder = Border(
                 border = BorderStroke(
                     width = 2.5.dp,
-                    color = NeonPink,
+                    color = NeonPink
                 )
-            ),
+            )
         ),
         modifier = modifier
             .size(buttonSize)
-            .semantics { this.contentDescription = contentDescription },
+            .semantics { this.contentDescription = contentDescription }
     ) {
         Icon(
             imageVector = icon,
             contentDescription = null,
-            modifier = Modifier.size(iconSize),
+            modifier = Modifier.size(iconSize)
         )
     }
 }
@@ -600,7 +601,7 @@ private fun OsdActionChip(
     text: String,
     onClick: () -> Unit,
     modifier: Modifier = Modifier,
-    isActive: Boolean = false,
+    isActive: Boolean = false
 ) {
     OutlinedButton(
         onClick = onClick,
@@ -609,38 +610,38 @@ private fun OsdActionChip(
             containerColor = Color.Black.copy(alpha = 0.65f),
             focusedContainerColor = SurfaceDark,
             contentColor = if (isActive) NeonPink else Color.White,
-            focusedContentColor = if (isActive) NeonPink else Color.White,
+            focusedContentColor = if (isActive) NeonPink else Color.White
         ),
         border = OutlinedButtonDefaults.border(
             border = Border(
                 border = BorderStroke(
                     width = 1.dp,
-                    color = if (isActive) NeonPink.copy(alpha = 0.5f) else Color.White.copy(alpha = 0.2f),
+                    color = if (isActive) NeonPink.copy(alpha = 0.5f) else Color.White.copy(alpha = 0.2f)
                 )
             ),
             focusedBorder = Border(
                 border = BorderStroke(
                     width = 2.dp,
-                    color = NeonPink,
+                    color = NeonPink
                 )
-            ),
+            )
         ),
-        modifier = modifier.height(42.dp),
+        modifier = modifier.height(42.dp)
     ) {
         Row(
             verticalAlignment = Alignment.CenterVertically,
-            horizontalArrangement = Arrangement.spacedBy(8.dp),
+            horizontalArrangement = Arrangement.spacedBy(8.dp)
         ) {
             Icon(
                 imageVector = icon,
                 contentDescription = null,
                 modifier = Modifier.size(18.dp),
-                tint = if (isActive) NeonPink else Color.White,
+                tint = if (isActive) NeonPink else Color.White
             )
             Text(
                 text = text,
                 fontSize = 13.sp,
-                fontWeight = FontWeight.SemiBold,
+                fontWeight = FontWeight.SemiBold
             )
         }
     }
@@ -651,7 +652,7 @@ private fun FocusableProgressBar(
     progress: Float,
     onSeekLeft: () -> Unit,
     onSeekRight: () -> Unit,
-    modifier: Modifier = Modifier,
+    modifier: Modifier = Modifier
 ) {
     val interactionSource = remember { MutableInteractionSource() }
     val isFocused by interactionSource.collectIsFocusedAsState()
@@ -665,7 +666,7 @@ private fun FocusableProgressBar(
             .border(
                 width = if (isFocused) 2.dp else 0.dp,
                 color = if (isFocused) NeonPink else Color.Transparent,
-                shape = RoundedCornerShape(14.dp),
+                shape = RoundedCornerShape(14.dp)
             )
             .focusable(interactionSource = interactionSource)
             .semantics {
@@ -679,16 +680,20 @@ private fun FocusableProgressBar(
                             onSeekLeft()
                             true
                         }
+
                         Key.DirectionRight -> {
                             onSeekRight()
                             true
                         }
+
                         else -> false
                     }
-                } else false
+                } else {
+                    false
+                }
             }
             .padding(horizontal = 4.dp),
-        contentAlignment = Alignment.CenterStart,
+        contentAlignment = Alignment.CenterStart
     ) {
         // Track background
         Box(
@@ -696,7 +701,7 @@ private fun FocusableProgressBar(
                 .fillMaxWidth()
                 .height(if (isFocused) 8.dp else 5.dp)
                 .clip(RoundedCornerShape(4.dp))
-                .background(Color.White.copy(alpha = 0.25f)),
+                .background(Color.White.copy(alpha = 0.25f))
         )
         // Progress fill
         Box(
@@ -704,7 +709,7 @@ private fun FocusableProgressBar(
                 .fillMaxWidth(progress.coerceIn(0f, 1f))
                 .height(if (isFocused) 8.dp else 5.dp)
                 .clip(RoundedCornerShape(4.dp))
-                .background(NeonPink),
+                .background(NeonPink)
         )
     }
 }

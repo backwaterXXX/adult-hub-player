@@ -37,7 +37,7 @@ class PlayerViewModelQualityTest {
         id = "telegram:-1001618765010:21406:5393323762257014475",
         title = "Scene",
         providerVideoId = "-1001618765010:21406:5393323762257014475",
-        runtimeTicks = 30L * 10_000_000L,
+        runtimeTicks = 30L * 10_000_000L
     )
 
     private val originalVariant = VideoVariant(
@@ -50,7 +50,7 @@ class PlayerViewModelQualityTest {
         fileSizeBytes = 5_892_214L,
         durationSec = 30.5,
         bitrate = null,
-        estimatedAverageBitrate = 1_542_717L,
+        estimatedAverageBitrate = 1_542_717L
     )
 
     private val lightVariant = VideoVariant(
@@ -63,7 +63,7 @@ class PlayerViewModelQualityTest {
         fileSizeBytes = 1_511_665L,
         durationSec = 30.4,
         bitrate = null,
-        estimatedAverageBitrate = 397_362L,
+        estimatedAverageBitrate = 397_362L
     )
 
     private val fakePlaybackRepo = QualityFakePlaybackRepository()
@@ -86,7 +86,7 @@ class PlayerViewModelQualityTest {
         playbackRepository = fakePlaybackRepo,
         settingsDataStore = settingsDataStore,
         playbackReporter = PlaybackReporter(fakePlaybackRepo, CoroutineScope(testDispatcher)),
-        context = context,
+        context = context
     )
 
     @Test
@@ -245,7 +245,7 @@ class PlayerViewModelQualityTest {
     fun `a video still being transcoded is asked again and then offers the alternatives`() = runTest(testDispatcher) {
         fakePlaybackRepo.variantsResults = listOf(
             VideoVariantsResult.Processing,
-            VideoVariantsResult.Available(listOf(originalVariant, lightVariant)),
+            VideoVariantsResult.Available(listOf(originalVariant, lightVariant))
         )
         val viewModel = buildViewModel()
 
@@ -270,8 +270,7 @@ class PlayerViewModelQualityTest {
     }
 }
 
-private class QualityFakeLibraryRepository(private val item: TvItem) :
-    LibraryRepository(mockk(relaxed = true), mockk(relaxed = true)) {
+private class QualityFakeLibraryRepository(private val item: TvItem) : LibraryRepository(mockk(relaxed = true), mockk(relaxed = true)) {
     override suspend fun getItemDetails(itemId: String): Result<TvItem> = Result.success(item)
 }
 
@@ -292,8 +291,8 @@ private class QualityFakePlaybackRepository : PlaybackRepository(mockk(relaxed =
                 streamUrl = "http://resolver:8090/admin/play/${item.id}/stream?mode=proxy$variantQuery",
                 playMethod = PlayMethod.DIRECT_PLAY,
                 resolverVideoId = "telegram:-1001618765010:21406:5393323762257014475",
-                variantId = variantId,
-            ),
+                variantId = variantId
+            )
         )
     }
 

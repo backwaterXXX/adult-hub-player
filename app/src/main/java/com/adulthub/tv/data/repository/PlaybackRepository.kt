@@ -1,54 +1,53 @@
 package com.adulthub.tv.data.repository
 
 import android.net.Uri
-import com.adulthub.tv.diagnostics.AppLog as Log
 import com.adulthub.tv.data.jellyfin.JellyfinClientManager
 import com.adulthub.tv.data.local.SettingsDataStore
 import com.adulthub.tv.data.model.PlaybackInfo
 import com.adulthub.tv.data.model.TvItem
 import com.adulthub.tv.data.resolver.ORIGINAL_VARIANT_ID
-import com.adulthub.tv.data.resolver.VideoVariantsResult
 import com.adulthub.tv.data.resolver.ResolverApi
+import com.adulthub.tv.data.resolver.VideoVariantsResult
 import com.adulthub.tv.data.resolver.classifyVariantsError
 import com.adulthub.tv.data.resolver.classifyVariantsResponse
 import com.adulthub.tv.data.resolver.resolveResolverUrl
+import com.adulthub.tv.diagnostics.AppLog as Log
+import java.net.URI
+import java.util.Locale
+import java.util.UUID
 import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.withContext
+import okhttp3.HttpUrl.Companion.toHttpUrlOrNull
 import org.jellyfin.sdk.api.client.extensions.mediaInfoApi
 import org.jellyfin.sdk.api.client.extensions.sessionApi
+import org.jellyfin.sdk.model.api.MediaSourceInfo
+import org.jellyfin.sdk.model.api.PlayMethod
 import org.jellyfin.sdk.model.api.PlaybackOrder
 import org.jellyfin.sdk.model.api.PlaybackProgressInfo
 import org.jellyfin.sdk.model.api.PlaybackStartInfo
 import org.jellyfin.sdk.model.api.PlaybackStopInfo
-import org.jellyfin.sdk.model.api.PlayMethod
-import org.jellyfin.sdk.model.api.MediaSourceInfo
 import org.jellyfin.sdk.model.api.RepeatMode
-import java.util.UUID
-import java.util.Locale
-import java.net.URI
-import okhttp3.HttpUrl.Companion.toHttpUrlOrNull
 
 private const val PLAYBACK_TAG = "PlaybackRepository"
 private const val VARIANT_QUERY_PARAMETER = "variant"
 
-private suspend inline fun <T> capturePlaybackResult(crossinline block: suspend () -> T): Result<T> =
-    try {
-        Result.success(block())
-    } catch (cancelled: CancellationException) {
-        throw cancelled
-    } catch (error: Exception) {
-        Result.failure(error)
-    }
+private suspend inline fun <T> capturePlaybackResult(crossinline block: suspend () -> T): Result<T> = try {
+    Result.success(block())
+} catch (cancelled: CancellationException) {
+    throw cancelled
+} catch (error: Exception) {
+    Result.failure(error)
+}
 
 open class PlaybackRepository(
     private val clientManager: JellyfinClientManager,
     private val settingsDataStore: SettingsDataStore,
-    private val resolverApi: ResolverApi? = null,
+    private val resolverApi: ResolverApi? = null
 ) {
     open suspend fun resolvePlaybackInfo(
         item: TvItem,
-        variantId: String? = null,
+        variantId: String? = null
     ): Result<PlaybackInfo> = withContext(Dispatchers.IO) {
         try {
             val uuid = runCatching { UUID.fromString(item.id) }.getOrNull()
@@ -56,14 +55,16 @@ open class PlaybackRepository(
 
             val playbackInfoResponse = if (uuid != null) {
                 val authenticatedUserId = userId ?: return@withContext Result.failure(
-                    IllegalStateException("Authenticated Jellyfin user ID is unavailable"),
+                    IllegalStateException("Authenticated Jellyfin user ID is unavailable")
                 )
                 val api = clientManager.getApi()
                 api.mediaInfoApi.getPlaybackInfo(
                     itemId = uuid,
-                    userId = authenticatedUserId,
+                    userId = authenticatedUserId
                 ).content
-            } else null
+            } else {
+                null
+            }
 
             val mediaSource = selectPlayableMediaSource(playbackInfoResponse?.mediaSources.orEmpty())
             mediaSource?.let { selected ->
@@ -71,7 +72,7 @@ open class PlaybackRepository(
                     PLAYBACK_TAG,
                     "Selected playback source: container=${selected.container ?: "unknown"}, " +
                         "directPlay=${selected.supportsDirectPlay}, " +
-                        "directStream=${selected.supportsDirectStream}, bitrate=${selected.bitrate ?: 0}",
+                        "directStream=${selected.supportsDirectStream}, bitrate=${selected.bitrate ?: 0}"
                 )
             }
             val mediaSourcePath = mediaSource?.path
@@ -89,7 +90,9 @@ open class PlaybackRepository(
             val streamUrl = when {
                 hasHttpMediaSource -> {
                     val configuredResolver = settingsDataStore.getResolverBaseUrl()
-                    val allowedResolver = if (configuredResolver.isBlank()) "" else {
+                    val allowedResolver = if (configuredResolver.isBlank()) {
+                        ""
+                    } else {
                         settingsDataStore.requireAllowedServiceUrl(configuredResolver).normalized
                     }
                     // An unset variant must not touch the address at all; only an explicit
@@ -97,11 +100,12 @@ open class PlaybackRepository(
                     appendVariantQuery(
                         rewriteResolverMediaSourceUrl(
                             mediaSourcePath = mediaSourcePath,
-                            resolverOrigin = allowedResolver,
+                            resolverOrigin = allowedResolver
                         ),
-                        explicitVariantId.takeIf { resolverServedSource },
+                        explicitVariantId.takeIf { resolverServedSource }
                     )
                 }
+
                 resolverRef != null -> {
                     val resolverUrl = settingsDataStore.getResolverBaseUrl()
                     if (resolverUrl.isBlank()) {
@@ -110,6 +114,7 @@ open class PlaybackRepository(
                     val resolverOrigin = settingsDataStore.requireAllowedServiceUrl(resolverUrl).normalized
                     resolverStreamUrl(resolverOrigin, resolverRef, selectedVariantId)
                 }
+
                 else -> {
                     return@withContext Result.failure(
                         IllegalStateException("No valid HTTP stream URL found for item ${item.title}")
@@ -125,7 +130,7 @@ open class PlaybackRepository(
                 }.toMap(),
                 streamUrl = streamUrl,
                 serverUrl = clientManager.currentServerUrl,
-                accessToken = clientManager.getApiOrNull()?.accessToken,
+                accessToken = clientManager.getApiOrNull()?.accessToken
             )
             val playbackInfo = PlaybackInfo(
                 itemId = item.id,
@@ -144,7 +149,7 @@ open class PlaybackRepository(
                 container = mediaSource?.container ?: item.container,
                 durationMs = item.runtimeTicks?.div(10_000L),
                 resolverVideoId = resolverVideoId,
-                variantId = selectedVariantId,
+                variantId = selectedVariantId
             )
             Result.success(playbackInfo)
         } catch (e: CancellationException) {
@@ -179,7 +184,7 @@ open class PlaybackRepository(
         positionTicks: Long = 0L,
         playSessionId: String? = null,
         canSeek: Boolean,
-        playMethod: PlayMethod,
+        playMethod: PlayMethod
     ): Result<Unit> = withContext(Dispatchers.IO) {
         val uuid = runCatching { UUID.fromString(itemId) }.getOrNull() ?: return@withContext Result.success(Unit)
         capturePlaybackResult {
@@ -195,7 +200,7 @@ open class PlaybackRepository(
                     isPaused = false,
                     repeatMode = RepeatMode.REPEAT_NONE,
                     playbackOrder = PlaybackOrder.DEFAULT,
-                    playMethod = playMethod,
+                    playMethod = playMethod
                 )
             )
             Unit
@@ -209,7 +214,7 @@ open class PlaybackRepository(
         playSessionId: String? = null,
         isPaused: Boolean = false,
         canSeek: Boolean,
-        playMethod: PlayMethod,
+        playMethod: PlayMethod
     ): Result<Unit> = withContext(Dispatchers.IO) {
         val uuid = runCatching { UUID.fromString(itemId) }.getOrNull() ?: return@withContext Result.success(Unit)
         capturePlaybackResult {
@@ -225,7 +230,7 @@ open class PlaybackRepository(
                     isPaused = isPaused,
                     repeatMode = RepeatMode.REPEAT_NONE,
                     playbackOrder = PlaybackOrder.DEFAULT,
-                    playMethod = playMethod,
+                    playMethod = playMethod
                 )
             )
             Unit
@@ -236,7 +241,7 @@ open class PlaybackRepository(
         itemId: String,
         mediaSourceId: String?,
         positionTicks: Long,
-        playSessionId: String? = null,
+        playSessionId: String? = null
     ): Result<Unit> = withContext(Dispatchers.IO) {
         val uuid = runCatching { UUID.fromString(itemId) }.getOrNull() ?: return@withContext Result.success(Unit)
         capturePlaybackResult {
@@ -247,7 +252,7 @@ open class PlaybackRepository(
                     mediaSourceId = mediaSourceId,
                     positionTicks = positionTicks,
                     playSessionId = playSessionId,
-                    failed = false,
+                    failed = false
                 )
             )
             Unit
@@ -255,14 +260,13 @@ open class PlaybackRepository(
     }
 }
 
-private fun selectPlayableMediaSource(sources: List<MediaSourceInfo>): MediaSourceInfo? =
-    sources
-        .filter { source -> source.path?.startsWith("http", ignoreCase = true) == true }
-        .maxWithOrNull(
-            compareBy<MediaSourceInfo> { it.supportsDirectPlay }
-                .thenBy { it.supportsDirectStream }
-                .thenBy { it.bitrate ?: 0 },
-        )
+private fun selectPlayableMediaSource(sources: List<MediaSourceInfo>): MediaSourceInfo? = sources
+    .filter { source -> source.path?.startsWith("http", ignoreCase = true) == true }
+    .maxWithOrNull(
+        compareBy<MediaSourceInfo> { it.supportsDirectPlay }
+            .thenBy { it.supportsDirectStream }
+            .thenBy { it.bitrate ?: 0 }
+    )
 
 internal fun rewriteResolverMediaSourceUrl(mediaSourcePath: String, resolverOrigin: String): String {
     val uri = runCatching { URI(mediaSourcePath) }.getOrNull() ?: return mediaSourcePath
@@ -273,14 +277,18 @@ internal fun rewriteResolverMediaSourceUrl(mediaSourcePath: String, resolverOrig
 /** The identifier the resolver variants and stream endpoints expect for this item. */
 internal fun telegramResolverRef(item: TvItem): String? = when {
     !item.providerVideoId.isNullOrBlank() ->
-        if (item.providerVideoId.startsWith("telegram:")) item.providerVideoId
-        else "telegram:${item.providerVideoId}"
+        if (item.providerVideoId.startsWith("telegram:")) {
+            item.providerVideoId
+        } else {
+            "telegram:${item.providerVideoId}"
+        }
+
     item.id.startsWith("telegram:") -> item.id
+
     else -> null
 }
 
-internal fun resolverStreamUrl(origin: String, ref: String, variantId: String?): String =
-    appendVariantQuery("$origin/admin/play/${Uri.encode(ref)}/stream?mode=proxy", variantId)
+internal fun resolverStreamUrl(origin: String, ref: String, variantId: String?): String = appendVariantQuery("$origin/admin/play/${Uri.encode(ref)}/stream?mode=proxy", variantId)
 
 /**
  * Drops Jellyfin session credentials from a media source when the stream is
@@ -298,7 +306,7 @@ internal fun filterPlaybackHeaders(
     headers: Map<String, String>,
     streamUrl: String,
     serverUrl: String?,
-    accessToken: String?,
+    accessToken: String?
 ): Map<String, String> {
     if (headers.isEmpty()) return emptyMap()
     val streamOrigin = originOf(streamUrl) ?: return emptyMap()
@@ -307,16 +315,15 @@ internal fun filterPlaybackHeaders(
     if (token == null) {
         return headers.filterKeys { key ->
             !key.equals("Authorization", ignoreCase = true) &&
-            !key.equals("Cookie", ignoreCase = true) &&
-            !key.equals("X-Emby-Token", ignoreCase = true) &&
-            !key.equals("X-MediaBrowser-Token", ignoreCase = true)
+                !key.equals("Cookie", ignoreCase = true) &&
+                !key.equals("X-Emby-Token", ignoreCase = true) &&
+                !key.equals("X-MediaBrowser-Token", ignoreCase = true)
         }
     }
     return headers.filterValues { value -> !value.contains(token) }
 }
 
-private fun originOf(url: String): String? =
-    url.toHttpUrlOrNull()?.let { "${it.scheme}://${it.host}:${it.port}" }
+private fun originOf(url: String): String? = url.toHttpUrlOrNull()?.let { "${it.scheme}://${it.host}:${it.port}" }
 
 /**
  * Sets or clears the `variant` query parameter.

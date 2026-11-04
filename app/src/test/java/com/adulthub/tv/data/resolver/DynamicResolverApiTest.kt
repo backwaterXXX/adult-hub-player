@@ -29,10 +29,10 @@ class DynamicResolverApiTest {
         every { client.create("https://resolver-a.example") } returns firstApi
         every { client.create("https://resolver-b.example") } returns secondApi
         coEvery { firstApi.getCategories() } returns listOf(
-            CategoryDto(id = "a", title = "A", slug = "a"),
+            CategoryDto(id = "a", title = "A", slug = "a")
         )
         coEvery { secondApi.getCategories() } returns listOf(
-            CategoryDto(id = "b", title = "B", slug = "b"),
+            CategoryDto(id = "b", title = "B", slug = "b")
         )
         val dynamicApi = DynamicResolverApi(client, settings)
 
@@ -57,7 +57,7 @@ class DynamicResolverApiTest {
 
         assertEquals(
             "Set a Resolver URL in Settings before using channel features",
-            result.exceptionOrNull()?.message,
+            result.exceptionOrNull()?.message
         )
         io.mockk.verify(exactly = 0) { client.create(any()) }
     }

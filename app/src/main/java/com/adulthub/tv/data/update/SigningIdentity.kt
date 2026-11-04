@@ -29,14 +29,13 @@ object SigningIdentity {
             "Uninstalling removes the local data of this device, including the watch history."
 
     /** SHA-256 digest of the certificate the running app was signed with. */
-    fun installedCertificateSha256(context: Context): String? =
-        installedSignerBytes(context)?.let { sha256(it) }
+    fun installedCertificateSha256(context: Context): String? = installedSignerBytes(context)?.let { sha256(it) }
 
     /** Encoded certificate of the running app, when the platform reports one. */
     fun installedSignerBytes(context: Context): ByteArray? = try {
         val info = context.packageManager.getPackageInfo(
             context.packageName,
-            PackageManager.GET_SIGNING_CERTIFICATES,
+            PackageManager.GET_SIGNING_CERTIFICATES
         )
         info.signingInfo?.apkContentsSigners?.firstOrNull()?.toByteArray()
     } catch (_: Exception) {
@@ -58,8 +57,7 @@ object SigningIdentity {
      * A missing pinned digest means the build does not ship the asset, so the
      * check stays silent instead of blocking updates.
      */
-    fun requiresFreshInstall(context: Context): Boolean =
-        requiresFreshInstall(pinnedCertificateSha256(context), installedCertificateSha256(context))
+    fun requiresFreshInstall(context: Context): Boolean = requiresFreshInstall(pinnedCertificateSha256(context), installedCertificateSha256(context))
 
     /** Comparison of the two digests; unknown values never block an update. */
     fun requiresFreshInstall(pinned: String?, installed: String?): Boolean {
@@ -67,6 +65,5 @@ object SigningIdentity {
         return installed != pinned
     }
 
-    private fun sha256(bytes: ByteArray): String =
-        MessageDigest.getInstance("SHA-256").digest(bytes).joinToString("") { "%02x".format(it) }
+    private fun sha256(bytes: ByteArray): String = MessageDigest.getInstance("SHA-256").digest(bytes).joinToString("") { "%02x".format(it) }
 }

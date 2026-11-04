@@ -2,15 +2,15 @@ package com.adulthub.tv.ui.components
 
 import androidx.compose.foundation.BorderStroke
 import androidx.compose.foundation.layout.RowScope
+import androidx.compose.foundation.shape.RoundedCornerShape
+import androidx.compose.material3.Button as TouchButton
+import androidx.compose.material3.ButtonDefaults as TouchButtonDefaults
+import androidx.compose.material3.ButtonDefaults as TouchOutlinedButtonDefaults
+import androidx.compose.material3.OutlinedButton as TouchOutlinedButton
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.unit.dp
-import androidx.compose.foundation.shape.RoundedCornerShape
-import androidx.compose.material3.ButtonDefaults as TouchButtonDefaults
-import androidx.compose.material3.ButtonDefaults as TouchOutlinedButtonDefaults
-import androidx.compose.material3.Button as TouchButton
-import androidx.compose.material3.OutlinedButton as TouchOutlinedButton
 import androidx.tv.material3.Border
 import androidx.tv.material3.Button
 import androidx.tv.material3.ButtonDefaults
@@ -26,7 +26,7 @@ fun TvPrimaryButton(
     onClick: () -> Unit,
     modifier: Modifier = Modifier,
     enabled: Boolean = true,
-    content: @Composable RowScope.() -> Unit,
+    content: @Composable RowScope.() -> Unit
 ) {
     if (LocalTouchUi.current) {
         TouchButton(
@@ -38,10 +38,10 @@ fun TvPrimaryButton(
                 containerColor = NeonPink,
                 contentColor = Color.White,
                 disabledContainerColor = CardSurfaceFocused,
-                disabledContentColor = TextPrimary.copy(alpha = 0.55f),
+                disabledContentColor = TextPrimary.copy(alpha = 0.55f)
             ),
             contentPadding = androidx.compose.foundation.layout.PaddingValues(horizontal = 14.dp, vertical = 8.dp),
-            content = content,
+            content = content
         )
         return
     }
@@ -54,12 +54,12 @@ fun TvPrimaryButton(
             containerColor = CardSurface,
             contentColor = TextPrimary,
             focusedContainerColor = NeonPink,
-            focusedContentColor = Color.White,
+            focusedContentColor = Color.White
         ),
         border = ButtonDefaults.border(
-            focusedBorder = Border(border = BorderStroke(2.dp, Color.White)),
+            focusedBorder = Border(border = BorderStroke(2.dp, Color.White))
         ),
-        content = content,
+        content = content
     )
 }
 
@@ -68,7 +68,7 @@ fun TvSecondaryButton(
     onClick: () -> Unit,
     modifier: Modifier = Modifier,
     enabled: Boolean = true,
-    content: @Composable RowScope.() -> Unit,
+    content: @Composable RowScope.() -> Unit
 ) {
     if (LocalTouchUi.current) {
         TouchOutlinedButton(
@@ -78,11 +78,11 @@ fun TvSecondaryButton(
             shape = RoundedCornerShape(9.dp),
             colors = TouchOutlinedButtonDefaults.outlinedButtonColors(
                 contentColor = TextPrimary,
-                disabledContentColor = TextPrimary.copy(alpha = 0.55f),
+                disabledContentColor = TextPrimary.copy(alpha = 0.55f)
             ),
             border = BorderStroke(1.dp, CardSurfaceFocused),
             contentPadding = androidx.compose.foundation.layout.PaddingValues(horizontal = 14.dp, vertical = 8.dp),
-            content = content,
+            content = content
         )
         return
     }
@@ -95,12 +95,12 @@ fun TvSecondaryButton(
             containerColor = Color.Transparent,
             contentColor = TextPrimary,
             focusedContainerColor = CardSurfaceFocused,
-            focusedContentColor = NeonPink,
+            focusedContentColor = NeonPink
         ),
         border = OutlinedButtonDefaults.border(
             border = Border(border = BorderStroke(1.dp, CardSurfaceFocused)),
-            focusedBorder = Border(border = BorderStroke(2.dp, NeonPink)),
+            focusedBorder = Border(border = BorderStroke(2.dp, NeonPink))
         ),
-        content = content,
+        content = content
     )
 }

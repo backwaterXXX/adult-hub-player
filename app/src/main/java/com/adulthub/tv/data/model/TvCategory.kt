@@ -7,5 +7,5 @@ data class TvCategory(
     val id: String,
     val name: String,
     val primaryImageTag: String? = null,
-    val movieCount: Int = 0,
+    val movieCount: Int = 0
 )

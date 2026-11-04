@@ -14,8 +14,8 @@ import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.runtime.setValue
-import androidx.compose.ui.Modifier
 import androidx.compose.ui.ExperimentalComposeUiApi
+import androidx.compose.ui.Modifier
 import androidx.compose.ui.focus.FocusRequester
 import androidx.compose.ui.focus.focusRequester
 import androidx.compose.ui.focus.focusRestorer
@@ -25,8 +25,8 @@ import androidx.compose.ui.unit.sp
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import androidx.tv.material3.Text
 import com.adulthub.tv.R
-import com.adulthub.tv.ui.components.TvPrimaryButton
 import com.adulthub.tv.ui.components.TvPageHeader
+import com.adulthub.tv.ui.components.TvPrimaryButton
 import com.adulthub.tv.ui.components.TvSecondaryButton
 import com.adulthub.tv.ui.theme.OledBlack
 import kotlinx.coroutines.delay
@@ -42,7 +42,7 @@ fun LibraryScreen(
     onNavigateToPlayer: (String) -> Unit = {},
     initialCategoryId: String? = null,
     isCurrentDestination: Boolean = true,
-    viewModel: LibraryViewModel = koinViewModel(),
+    viewModel: LibraryViewModel = koinViewModel()
 ) {
     val state by viewModel.uiState.collectAsStateWithLifecycle()
     val contentFocusRequester = remember { FocusRequester() }
@@ -57,12 +57,15 @@ fun LibraryScreen(
             state.selectedTab == LibraryTab.CATEGORIES && state.categoriesState.selectedCategory != null -> {
                 viewModel.selectCategory(null)
             }
+
             state.selectedTab == LibraryTab.STUDIOS && state.studiosState.selectedStudio != null -> {
                 viewModel.selectStudio(null)
             }
+
             state.selectedTab == LibraryTab.CHANNELS && state.channelsState.selectedChannel != null -> {
                 viewModel.selectChannel(null)
             }
+
             else -> onNavigateBack()
         }
     }
@@ -93,19 +96,19 @@ fun LibraryScreen(
     Box(
         modifier = modifier
             .fillMaxSize()
-            .background(OledBlack),
+            .background(OledBlack)
     ) {
         Column(
             modifier = Modifier
                 .fillMaxSize()
                 .focusRequester(contentFocusRequester)
                 .focusGroup()
-                .focusRestorer(),
+                .focusRestorer()
         ) {
             // Header with Back button and TabRow
             TvPageHeader(
                 title = stringResource(R.string.library_catalog_title),
-                onBack = handleBack,
+                onBack = handleBack
             ) {
                 // Tabs
                 LibraryTab.entries.forEach { tab ->
@@ -113,22 +116,22 @@ fun LibraryScreen(
                     if (isSelected) {
                         TvPrimaryButton(
                             onClick = { viewModel.selectTab(tab) },
-                            modifier = Modifier.height(38.dp),
+                            modifier = Modifier.height(38.dp)
                         ) {
                             Text(
                                 text = stringResource(tab.titleRes),
                                 fontSize = 13.sp,
-                                fontWeight = androidx.compose.ui.text.font.FontWeight.SemiBold,
+                                fontWeight = androidx.compose.ui.text.font.FontWeight.SemiBold
                             )
                         }
                     } else {
                         TvSecondaryButton(
                             onClick = { viewModel.selectTab(tab) },
-                            modifier = Modifier.height(38.dp),
+                            modifier = Modifier.height(38.dp)
                         ) {
                             Text(
                                 text = stringResource(tab.titleRes),
-                                fontSize = 13.sp,
+                                fontSize = 13.sp
                             )
                         }
                     }
@@ -156,9 +159,10 @@ fun LibraryScreen(
                             onLoadStudios = viewModel::loadStudiosForFilter,
                             onLoadPerformers = viewModel::loadPerformersForFilter,
                             onSurpriseMe = viewModel::onSurpriseMeClicked,
-                            getImageUrl = viewModel::getItemImageUrl,
+                            getImageUrl = viewModel::getItemImageUrl
                         )
                     }
+
                     LibraryTab.CATEGORIES -> {
                         CategoriesTab(
                             state = state.categoriesState,
@@ -168,9 +172,10 @@ fun LibraryScreen(
                             onRetry = viewModel::loadCategories,
                             onRetryCategoryMovies = viewModel::retrySelectedCategoryMovies,
                             onLoadMore = viewModel::loadMoreCategoryMovies,
-                            getImageUrl = viewModel::getItemImageUrl,
+                            getImageUrl = viewModel::getItemImageUrl
                         )
                     }
+
                     LibraryTab.ACTORS -> {
                         ActorsTab(
                             state = state.actorsState,
@@ -180,9 +185,10 @@ fun LibraryScreen(
                             onRetry = { viewModel.loadActors() },
                             onLoadMore = viewModel::loadMoreActors,
                             onSearchQueryChange = viewModel::setActorSearchQuery,
-                            getImageUrl = viewModel::getPersonImageUrl,
+                            getImageUrl = viewModel::getPersonImageUrl
                         )
                     }
+
                     LibraryTab.STUDIOS -> {
                         StudiosTab(
                             state = state.studiosState,
@@ -192,9 +198,10 @@ fun LibraryScreen(
                             onRetry = viewModel::loadStudios,
                             onRetryStudioMovies = viewModel::retrySelectedStudioMovies,
                             onLoadMore = viewModel::loadMoreStudioMovies,
-                            getImageUrl = viewModel::getItemImageUrl,
+                            getImageUrl = viewModel::getItemImageUrl
                         )
                     }
+
                     LibraryTab.CHANNELS -> {
                         ChannelsTab(
                             state = state.channelsState,
@@ -207,7 +214,7 @@ fun LibraryScreen(
                             onSortModeChange = viewModel::setChannelSortMode,
                             onHideChannel = viewModel::hideCurrentChannel,
                             onDurationFilterChange = viewModel::setChannelDurationFilter,
-                            getVideoThumbnailUrl = viewModel::getChannelVideoThumbnailUrl,
+                            getVideoThumbnailUrl = viewModel::getChannelVideoThumbnailUrl
                         )
                     }
                 }

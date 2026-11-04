@@ -1,11 +1,12 @@
 package com.adulthub.tv.ui.library
 
 import android.content.Context
+import androidx.lifecycle.SavedStateHandle
 import com.adulthub.tv.data.jellyfin.JellyfinClientManager
 import com.adulthub.tv.data.model.ChannelSortMode
 import com.adulthub.tv.data.model.DurationFilter
-import com.adulthub.tv.data.model.TvChannel
 import com.adulthub.tv.data.model.TvCategory
+import com.adulthub.tv.data.model.TvChannel
 import com.adulthub.tv.data.model.TvItem
 import com.adulthub.tv.data.model.TvPerson
 import com.adulthub.tv.data.model.TvStudio
@@ -18,7 +19,7 @@ import com.adulthub.tv.data.repository.TvItemsPage
 import com.adulthub.tv.data.repository.TvPersonPage
 import com.adulthub.tv.data.resolver.VideoDto
 import io.mockk.mockk
-import androidx.lifecycle.SavedStateHandle
+import java.util.UUID
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.ExperimentalCoroutinesApi
 import kotlinx.coroutines.launch
@@ -36,7 +37,6 @@ import org.junit.Assert.assertNotNull
 import org.junit.Assert.assertTrue
 import org.junit.Before
 import org.junit.Test
-import java.util.UUID
 
 @OptIn(ExperimentalCoroutinesApi::class)
 class LibraryViewModelTest {
@@ -84,7 +84,7 @@ class LibraryViewModelTest {
             studioRepository = fakeStudioRepository,
             channelRepository = fakeChannelRepository,
             clientManager = clientManager,
-            context = context,
+            context = context
         )
 
         advanceUntilIdle()
@@ -105,7 +105,7 @@ class LibraryViewModelTest {
             studioRepository = fakeStudioRepository,
             channelRepository = fakeChannelRepository,
             clientManager = clientManager,
-            context = context,
+            context = context
         )
 
         advanceUntilIdle()
@@ -148,7 +148,7 @@ class LibraryViewModelTest {
             studioRepository = fakeStudioRepository,
             channelRepository = fakeChannelRepository,
             clientManager = clientManager,
-            context = context,
+            context = context
         )
 
         advanceUntilIdle()
@@ -171,7 +171,7 @@ class LibraryViewModelTest {
             studioRepository = fakeStudioRepository,
             channelRepository = fakeChannelRepository,
             clientManager = clientManager,
-            context = context,
+            context = context
         )
 
         advanceUntilIdle()
@@ -192,7 +192,7 @@ class LibraryViewModelTest {
             studioRepository = fakeStudioRepository,
             channelRepository = fakeChannelRepository,
             clientManager = clientManager,
-            context = context,
+            context = context
         )
 
         viewModel.selectTab(LibraryTab.ACTORS)
@@ -221,7 +221,7 @@ class LibraryViewModelTest {
             studioRepository = fakeStudioRepository,
             channelRepository = fakeChannelRepository,
             clientManager = clientManager,
-            context = context,
+            context = context
         )
 
         advanceUntilIdle()
@@ -248,7 +248,7 @@ class LibraryViewModelTest {
             studioRepository = fakeStudioRepository,
             channelRepository = fakeChannelRepository,
             clientManager = clientManager,
-            context = context,
+            context = context
         )
 
         advanceUntilIdle()
@@ -268,7 +268,7 @@ class LibraryViewModelTest {
             studioRepository = fakeStudioRepository,
             channelRepository = fakeChannelRepository,
             clientManager = clientManager,
-            context = context,
+            context = context
         )
         advanceUntilIdle()
 
@@ -303,7 +303,7 @@ class LibraryViewModelTest {
             studioRepository = fakeStudioRepository,
             channelRepository = fakeChannelRepository,
             clientManager = clientManager,
-            context = context,
+            context = context
         )
 
         viewModel.selectTab(LibraryTab.STUDIOS)
@@ -335,7 +335,7 @@ class LibraryViewModelTest {
             studioRepository = fakeStudioRepository,
             channelRepository = fakeChannelRepository,
             clientManager = clientManager,
-            context = context,
+            context = context
         )
 
         viewModel.selectCategory(category)
@@ -368,7 +368,7 @@ class LibraryViewModelTest {
         val category = TvCategory(id = "cat-duplicates", name = "Drama")
         val firstPage = listOf(
             TvItem(id = "same-a", title = "Same A", providerVideoId = "provider-1"),
-            TvItem(id = "same-b", title = "Same B", providerVideoId = "provider-1"),
+            TvItem(id = "same-b", title = "Same B", providerVideoId = "provider-1")
         )
         fakeLibraryRepository.genreMoviesPageResult = Result.success(
             TvItemsPage(items = firstPage, totalRecordCount = 4, startIndex = 0)
@@ -379,7 +379,7 @@ class LibraryViewModelTest {
             studioRepository = fakeStudioRepository,
             channelRepository = fakeChannelRepository,
             clientManager = clientManager,
-            context = context,
+            context = context
         )
 
         viewModel.selectCategory(category)
@@ -390,7 +390,7 @@ class LibraryViewModelTest {
             TvItemsPage(
                 items = listOf(TvItem(id = "page-two", title = "Page Two"), TvItem(id = "page-three", title = "Page Three")),
                 totalRecordCount = 4,
-                startIndex = 2,
+                startIndex = 2
             )
         )
         viewModel.loadMoreCategoryMovies()
@@ -416,7 +416,7 @@ class LibraryViewModelTest {
             studioRepository = fakeStudioRepository,
             channelRepository = fakeChannelRepository,
             clientManager = clientManager,
-            context = context,
+            context = context
         )
 
         viewModel.selectStudio(sampleStudio)
@@ -455,7 +455,7 @@ class LibraryViewModelTest {
                 videos = listOf(video1, video2),
                 nextOffsetId = 500L,
                 hasMore = true,
-                messageCount = 2,
+                messageCount = 2
             )
         )
 
@@ -465,7 +465,7 @@ class LibraryViewModelTest {
             studioRepository = fakeStudioRepository,
             channelRepository = fakeChannelRepository,
             clientManager = clientManager,
-            context = context,
+            context = context
         )
 
         advanceUntilIdle()
@@ -486,7 +486,7 @@ class LibraryViewModelTest {
                 videos = listOf(video3),
                 nextOffsetId = 200L,
                 hasMore = false,
-                messageCount = 1,
+                messageCount = 1
             )
         )
 
@@ -517,7 +517,7 @@ class LibraryViewModelTest {
             studioRepository = fakeStudioRepository,
             channelRepository = fakeChannelRepository,
             clientManager = clientManager,
-            context = context,
+            context = context
         )
         viewModel.setChannelDurationFilter(com.adulthub.tv.data.model.DurationFilter.LONG)
 
@@ -537,7 +537,7 @@ class LibraryViewModelTest {
                 videos = listOf(video1),
                 nextOffsetId = 500L,
                 hasMore = true,
-                messageCount = 1,
+                messageCount = 1
             )
         )
 
@@ -547,7 +547,7 @@ class LibraryViewModelTest {
             studioRepository = fakeStudioRepository,
             channelRepository = fakeChannelRepository,
             clientManager = clientManager,
-            context = context,
+            context = context
         )
 
         advanceUntilIdle()
@@ -579,7 +579,7 @@ class LibraryViewModelTest {
                 videos = listOf(shortVideo, longVideo, midVideo),
                 nextOffsetId = null,
                 hasMore = false,
-                messageCount = 3,
+                messageCount = 3
             )
         )
 
@@ -589,7 +589,7 @@ class LibraryViewModelTest {
             studioRepository = fakeStudioRepository,
             channelRepository = fakeChannelRepository,
             clientManager = clientManager,
-            context = context,
+            context = context
         )
         advanceUntilIdle()
         viewModel.selectChannel(sampleChannel)
@@ -618,7 +618,7 @@ class LibraryViewModelTest {
                 videos = listOf(video1, video2Dup, video3),
                 nextOffsetId = null,
                 hasMore = false,
-                messageCount = 3,
+                messageCount = 3
             )
         )
 
@@ -628,7 +628,7 @@ class LibraryViewModelTest {
             studioRepository = fakeStudioRepository,
             channelRepository = fakeChannelRepository,
             clientManager = clientManager,
-            context = context,
+            context = context
         )
         advanceUntilIdle()
         viewModel.selectChannel(sampleChannel)
@@ -648,7 +648,7 @@ class LibraryViewModelTest {
             studioRepository = fakeStudioRepository,
             channelRepository = fakeChannelRepository,
             clientManager = clientManager,
-            context = context,
+            context = context
         )
         advanceUntilIdle()
 
@@ -678,7 +678,7 @@ class LibraryViewModelTest {
             studioRepository = fakeStudioRepository,
             channelRepository = fakeChannelRepository,
             clientManager = clientManager,
-            context = context,
+            context = context
         )
         advanceUntilIdle()
 
@@ -709,7 +709,7 @@ class LibraryViewModelTest {
             studioRepository = fakeStudioRepository,
             channelRepository = fakeChannelRepository,
             clientManager = clientManager,
-            context = context,
+            context = context
         )
         advanceUntilIdle()
 
@@ -752,7 +752,7 @@ class LibraryViewModelTest {
             genreId: String?,
             parentId: String?,
             startIndex: Int,
-            limit: Int,
+            limit: Int
         ): Result<List<TvItem>> = genreMoviesResult
 
         override suspend fun getGenreMoviesPage(
@@ -760,7 +760,7 @@ class LibraryViewModelTest {
             genreId: String?,
             parentId: String?,
             startIndex: Int,
-            limit: Int,
+            limit: Int
         ): Result<TvItemsPage> {
             genreMoviesStartIndexes += startIndex
             val pageRes = genreMoviesPageResult
@@ -781,7 +781,7 @@ class LibraryViewModelTest {
             searchTerm: String?,
             genreIds: List<UUID>,
             studioIds: List<UUID>,
-            personIds: List<UUID>,
+            personIds: List<UUID>
         ): Result<TvItemsPage> {
             lastGenreIds = genreIds
             lastFilters = filters
@@ -796,7 +796,7 @@ class LibraryViewModelTest {
             studioIds: List<UUID>,
             personIds: List<UUID>,
             genres: List<String>,
-            studios: List<String>,
+            studios: List<String>
         ): Result<TvItem?> {
             randomGenreIds = genreIds
             randomFilters = filters
@@ -812,7 +812,7 @@ class LibraryViewModelTest {
             startIndex: Int,
             limit: Int,
             searchTerm: String?,
-            nameStartsWith: String?,
+            nameStartsWith: String?
         ): Result<List<TvPerson>> = personsResult
 
         override suspend fun getPersonsPage(
@@ -820,7 +820,7 @@ class LibraryViewModelTest {
             startIndex: Int,
             limit: Int,
             searchTerm: String?,
-            nameStartsWith: String?,
+            nameStartsWith: String?
         ): Result<TvPersonPage> = personsResult.map { persons ->
             val page = persons.drop(startIndex).take(limit)
             TvPersonPage(persons = page, totalRecordCount = persons.size)
@@ -836,7 +836,7 @@ class LibraryViewModelTest {
             parentId: String?,
             startIndex: Int,
             limit: Int,
-            includeMovieCounts: Boolean,
+            includeMovieCounts: Boolean
         ): Result<List<TvStudio>> = studiosResult
 
         override suspend fun getStudioMovies(studioName: String, parentId: String?, startIndex: Int, limit: Int): Result<List<TvItem>> = studioMoviesResult
@@ -845,7 +845,7 @@ class LibraryViewModelTest {
             studioName: String,
             parentId: String?,
             startIndex: Int,
-            limit: Int,
+            limit: Int
         ): Result<TvItemsPage> {
             val pageResult = studioMoviesPageResult
             if (pageResult != null) return pageResult
@@ -866,7 +866,7 @@ class LibraryViewModelTest {
             channelRepository = fakeChannelRepository,
             clientManager = clientManager,
             savedStateHandle = handle,
-            context = context,
+            context = context
         )
         advanceUntilIdle()
 
@@ -884,7 +884,7 @@ class LibraryViewModelTest {
             channelRepository = fakeChannelRepository,
             clientManager = clientManager,
             savedStateHandle = handle,
-            context = context,
+            context = context
         )
         advanceUntilIdle()
 

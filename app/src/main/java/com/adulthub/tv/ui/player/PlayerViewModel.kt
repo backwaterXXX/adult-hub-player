@@ -3,7 +3,6 @@ package com.adulthub.tv.ui.player
 import android.annotation.SuppressLint
 import android.content.Context
 import android.os.SystemClock
-import com.adulthub.tv.diagnostics.AppLog as Log
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import com.adulthub.tv.R
@@ -20,16 +19,17 @@ import com.adulthub.tv.data.repository.PlaybackRepository
 import com.adulthub.tv.data.resolver.ORIGINAL_VARIANT_ID
 import com.adulthub.tv.data.resolver.VideoVariant
 import com.adulthub.tv.data.resolver.VideoVariantsResult
+import com.adulthub.tv.diagnostics.AppLog as Log
 import com.adulthub.tv.player.PlaybackReporter
+import kotlinx.coroutines.CoroutineScope
+import kotlinx.coroutines.Job
+import kotlinx.coroutines.delay
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.flow.firstOrNull
 import kotlinx.coroutines.flow.update
-import kotlinx.coroutines.Job
-import kotlinx.coroutines.delay
 import kotlinx.coroutines.launch
-import kotlinx.coroutines.CoroutineScope
 
 sealed interface PlayerUiState {
     data object Loading : PlayerUiState
@@ -39,7 +39,7 @@ sealed interface PlayerUiState {
         val startPositionMs: Long = 0L,
         val playbackRequestId: Long = 0L,
         val resolverLatencyMs: Long = 0L,
-        val pendingResumePositionMs: Long? = null,
+        val pendingResumePositionMs: Long? = null
     ) : PlayerUiState
     data class Error(val message: String) : PlayerUiState
 }
@@ -55,7 +55,7 @@ class PlayerViewModel(
     internal val watchHistoryStore: WatchHistoryStore? = null,
     private val persistenceScope: CoroutineScope? = null,
     private val accountScope: AccountScope? = null,
-    private val context: Context,
+    private val context: Context
 ) : ViewModel() {
 
     companion object {
@@ -152,14 +152,14 @@ class PlayerViewModel(
                         providerVideoId = cachedVideo.providerVideoId.ifBlank {
                             cachedVideo.id.removePrefix("telegram:")
                         },
-                        fileSizeBytes = cachedVideo.fileSizeBytes,
+                        fileSizeBytes = cachedVideo.fileSizeBytes
                     )
                 } else if (itemId.contains(":") || itemId.startsWith("-100")) {
                     val provRef = if (itemId.startsWith("telegram:")) itemId.removePrefix("telegram:") else itemId
                     item = TvItem(
                         id = itemId,
                         title = context.getString(R.string.player_channel_video),
-                        providerVideoId = provRef,
+                        providerVideoId = provRef
                     )
                 }
             }
@@ -219,7 +219,7 @@ class PlayerViewModel(
                 startPositionMs = actualStartPositionMs,
                 playbackRequestId = playbackRequestId,
                 resolverLatencyMs = resolverLatencyMs,
-                pendingResumePositionMs = pendingResumePositionMs,
+                pendingResumePositionMs = pendingResumePositionMs
             )
 
             _uiState.value = readyState
@@ -265,7 +265,7 @@ class PlayerViewModel(
                 libraryRepository.getRandomItemFiltered(
                     parentId = libraryId,
                     excludeItemId = currentId,
-                    genres = listOf(genre),
+                    genres = listOf(genre)
                 ).getOrNull()
             }
             if (randomItem == null) {
@@ -275,7 +275,7 @@ class PlayerViewModel(
                     randomItem = libraryRepository.getRandomItemFiltered(
                         parentId = libraryId,
                         excludeItemId = currentId,
-                        personIds = listOf(performerId),
+                        personIds = listOf(performerId)
                     ).getOrNull()
                 }
             }
@@ -284,14 +284,14 @@ class PlayerViewModel(
                     randomItem = libraryRepository.getRandomItemFiltered(
                         parentId = libraryId,
                         excludeItemId = currentId,
-                        studios = listOf(studio),
+                        studios = listOf(studio)
                     ).getOrNull()
                 }
             }
             if (randomItem == null) {
                 randomItem = libraryRepository.getRandomItem(
                     parentId = libraryId,
-                    excludeItemId = currentId,
+                    excludeItemId = currentId
                 ).getOrNull()
             }
 
@@ -307,7 +307,7 @@ class PlayerViewModel(
                         providerVideoId = cached.providerVideoId.ifBlank {
                             cached.id.removePrefix("telegram:")
                         },
-                        fileSizeBytes = cached.fileSizeBytes,
+                        fileSizeBytes = cached.fileSizeBytes
                     )
                 }
             }
@@ -339,7 +339,7 @@ class PlayerViewModel(
                 playbackInfo = playbackInfo,
                 startPositionMs = 0L,
                 playbackRequestId = playbackRequestId,
-                resolverLatencyMs = randomResolverLatencyMs,
+                resolverLatencyMs = randomResolverLatencyMs
             )
 
             startQualityFetch(playbackInfo, playbackRequestId)
@@ -361,7 +361,7 @@ class PlayerViewModel(
         playSessionId: String?,
         playMethod: org.jellyfin.sdk.model.api.PlayMethod,
         getCurrentPositionMs: () -> Long,
-        getIsPaused: () -> Boolean,
+        getIsPaused: () -> Boolean
     ): Long {
         val sessionId = playbackReporter.startSession(
             itemId = itemId,
@@ -369,7 +369,7 @@ class PlayerViewModel(
             playSessionId = playSessionId,
             playMethod = playMethod,
             getCurrentPositionMs = getCurrentPositionMs,
-            getIsPaused = getIsPaused,
+            getIsPaused = getIsPaused
         )
         _reportingSessionId.value = sessionId
         return sessionId
@@ -435,7 +435,7 @@ class PlayerViewModel(
         selectedVariantId = variantId.takeIf { it != ORIGINAL_VARIANT_ID }
         _quality.value = _quality.value.copy(
             isSwitching = false,
-            options = buildQualityOptions(qualityVariants, selectedVariantId),
+            options = buildQualityOptions(qualityVariants, selectedVariantId)
         )
     }
 
@@ -445,7 +445,7 @@ class PlayerViewModel(
         qualitySwitchRequestId = null
         _quality.value = _quality.value.copy(
             isSwitching = false,
-            qualityUnavailableMessage = message,
+            qualityUnavailableMessage = message
         )
         _qualityMessage.value = message
     }
@@ -462,11 +462,9 @@ class PlayerViewModel(
     }
 
     /** The variant the player should report in diagnostics, when it is known. */
-    fun activeVariant(): VideoVariant? =
-        qualityVariants.firstOrNull { it.id == (selectedVariantId ?: ORIGINAL_VARIANT_ID) }
+    fun activeVariant(): VideoVariant? = qualityVariants.firstOrNull { it.id == (selectedVariantId ?: ORIGINAL_VARIANT_ID) }
 
-    fun variantFor(variantId: String): VideoVariant? =
-        qualityVariants.firstOrNull { it.id == variantId }
+    fun variantFor(variantId: String): VideoVariant? = qualityVariants.firstOrNull { it.id == variantId }
 
     private fun resetQualityState() {
         qualityFetchJob?.cancel()
@@ -503,8 +501,9 @@ class PlayerViewModel(
                 qualityVariants = variantsFor(result)
                 _quality.value = when (result) {
                     is VideoVariantsResult.Failed -> PlayerQualityState(
-                        qualityUnavailableMessage = context.getString(R.string.player_error_quality_unavailable),
+                        qualityUnavailableMessage = context.getString(R.string.player_error_quality_unavailable)
                     )
+
                     else -> PlayerQualityState(options = qualityOptionsFor(result, selectedVariantId))
                 }
                 return@launch
@@ -666,7 +665,7 @@ class PlayerViewModel(
                 title = item.title,
                 thumbnailUrl = item.posterUrl,
                 channelId = item.channelId,
-                accountKey = accountKey,
+                accountKey = accountKey
             )
         } else if (positionMs > 15_000L) {
             telegramProgressStore?.saveProgress(
@@ -677,7 +676,7 @@ class PlayerViewModel(
                 thumbnailUrl = item.posterUrl,
                 channelId = item.channelId,
                 isPlayed = false,
-                accountKey = accountKey,
+                accountKey = accountKey
             )
         }
     }

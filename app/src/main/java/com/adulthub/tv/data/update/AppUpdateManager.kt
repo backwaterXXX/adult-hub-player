@@ -19,14 +19,14 @@ data class AppUpdateState(
     val isDownloading: Boolean = false,
     val downloadProgress: Float = 0f,
     val update: AvailableUpdate? = null,
-    val message: String = "",
+    val message: String = ""
 )
 
 class AppUpdateManager(
     private val repository: AppUpdateRepository,
     private val settings: SettingsDataStore,
     private val scope: CoroutineScope,
-    private val context: Context,
+    private val context: Context
 ) {
     private val _state = MutableStateFlow(AppUpdateState())
     val state: StateFlow<AppUpdateState> = _state.asStateFlow()
@@ -59,8 +59,8 @@ class AppUpdateManager(
                             downloadProgress = 1f,
                             message = context.getString(
                                 R.string.settings_update_version_ready,
-                                restoredUpdate.manifest.versionName,
-                            ),
+                                restoredUpdate.manifest.versionName
+                            )
                         )
                     }
                 }
@@ -110,7 +110,7 @@ class AppUpdateManager(
                 isChecking = true,
                 isDownloading = false,
                 downloadProgress = 0f,
-                message = context.getString(R.string.settings_update_checking),
+                message = context.getString(R.string.settings_update_checking)
             )
         }
         try {
@@ -120,7 +120,7 @@ class AppUpdateManager(
                         isChecking = false,
                         isDownloading = true,
                         downloadProgress = if (total <= 0) 0f else (received.toFloat() / total).coerceIn(0f, 1f),
-                        message = context.getString(R.string.settings_update_downloading),
+                        message = context.getString(R.string.settings_update_downloading)
                     )
                 }
             }
@@ -136,19 +136,21 @@ class AppUpdateManager(
                         update = result.update,
                         message = context.getString(
                             R.string.settings_update_version_ready,
-                            result.update.manifest.versionName,
-                        ),
+                            result.update.manifest.versionName
+                        )
                     )
+
                     UpdateCheckResult.UpToDate -> state.copy(
                         isChecking = false,
                         isDownloading = false,
                         update = null,
-                        message = context.getString(R.string.settings_update_up_to_date),
+                        message = context.getString(R.string.settings_update_up_to_date)
                     )
+
                     is UpdateCheckResult.Failed -> state.copy(
                         isChecking = false,
                         isDownloading = false,
-                        message = result.message,
+                        message = result.message
                     )
                 }
             }
@@ -157,7 +159,7 @@ class AppUpdateManager(
         } catch (error: Exception) {
             _state.update {
                 it.copy(
-                    message = error.message ?: context.getString(R.string.settings_update_check_failed),
+                    message = error.message ?: context.getString(R.string.settings_update_check_failed)
                 )
             }
         } finally {

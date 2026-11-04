@@ -41,7 +41,7 @@ import com.adulthub.tv.ui.theme.TextSecondary
 fun QuickConnectScreen(
     viewModel: AuthViewModel,
     onBack: () -> Unit,
-    modifier: Modifier = Modifier,
+    modifier: Modifier = Modifier
 ) {
     val state by viewModel.quickConnectState.collectAsStateWithLifecycle()
 
@@ -56,24 +56,24 @@ fun QuickConnectScreen(
             .fillMaxSize()
             .background(OledBlack)
             .padding(horizontal = 48.dp, vertical = 32.dp),
-        contentAlignment = Alignment.Center,
+        contentAlignment = Alignment.Center
     ) {
         Column(
             modifier = Modifier.width(520.dp),
             horizontalAlignment = Alignment.CenterHorizontally,
-            verticalArrangement = Arrangement.Center,
+            verticalArrangement = Arrangement.Center
         ) {
             Text(
                 text = stringResource(R.string.quick_connect_title),
                 style = MaterialTheme.typography.headlineLarge,
-                color = NeonPink,
+                color = NeonPink
             )
             Spacer(modifier = Modifier.height(12.dp))
             Text(
                 text = stringResource(R.string.quick_connect_instructions),
                 style = MaterialTheme.typography.bodyMedium,
                 color = TextSecondary,
-                textAlign = TextAlign.Center,
+                textAlign = TextAlign.Center
             )
             Spacer(modifier = Modifier.height(28.dp))
 
@@ -84,7 +84,7 @@ fun QuickConnectScreen(
                         .background(CardSurface, shape = RoundedCornerShape(12.dp))
                         .border(2.dp, NeonPink, shape = RoundedCornerShape(12.dp))
                         .padding(horizontal = 32.dp, vertical = 20.dp),
-                    contentAlignment = Alignment.Center,
+                    contentAlignment = Alignment.Center
                 ) {
                     Text(
                         text = formattedCode,
@@ -92,7 +92,7 @@ fun QuickConnectScreen(
                         fontSize = 44.sp,
                         fontWeight = FontWeight.Bold,
                         fontFamily = FontFamily.Monospace,
-                        letterSpacing = 8.sp,
+                        letterSpacing = 8.sp
                     )
                 }
                 Spacer(modifier = Modifier.height(24.dp))
@@ -105,7 +105,7 @@ fun QuickConnectScreen(
                 Text(
                     text = stringResource(R.string.quick_connect_status_connected),
                     style = MaterialTheme.typography.bodyLarge,
-                    color = NeonPink,
+                    color = NeonPink
                 )
                 Spacer(modifier = Modifier.height(24.dp))
             }
@@ -115,14 +115,16 @@ fun QuickConnectScreen(
                     message = state.errorMessage ?: "",
                     onRetry = if (state.isExpired) {
                         { viewModel.startQuickConnect() }
-                    } else null,
+                    } else {
+                        null
+                    }
                 )
                 Spacer(modifier = Modifier.height(16.dp))
             }
 
             Row(
                 horizontalArrangement = Arrangement.Center,
-                verticalAlignment = Alignment.CenterVertically,
+                verticalAlignment = Alignment.CenterVertically
             ) {
                 if (state.isExpired) {
                     TvPrimaryButton(onClick = { viewModel.startQuickConnect() }) {

@@ -6,12 +6,12 @@ import com.adulthub.tv.data.local.SearchHistoryStore
 import com.adulthub.tv.data.local.SettingsDataStore
 import com.adulthub.tv.data.model.TvItem
 import com.adulthub.tv.data.model.TvPerson
+import com.adulthub.tv.data.repository.ChannelRepository
 import com.adulthub.tv.data.repository.LibraryRepository
 import com.adulthub.tv.data.repository.PersonRepository
-import com.adulthub.tv.data.repository.ChannelRepository
 import com.adulthub.tv.data.repository.TvItemsPage
-import com.adulthub.tv.data.resolver.VideoDto
 import com.adulthub.tv.data.resolver.ResolverApi
+import com.adulthub.tv.data.resolver.VideoDto
 import io.mockk.every
 import io.mockk.mockk
 import kotlinx.coroutines.Dispatchers
@@ -43,12 +43,12 @@ class SearchViewModelTest {
 
     private val sampleMovie = TvItem(
         id = "movie-1",
-        title = "Action Hero",
+        title = "Action Hero"
     )
 
     private val sampleActor = TvPerson(
         id = "person-1",
-        name = "John Action",
+        name = "John Action"
     )
 
     @Before
@@ -68,7 +68,7 @@ class SearchViewModelTest {
             libraryRepository = fakeLibraryRepository,
             personRepository = fakePersonRepository,
             settingsDataStore = settingsDataStore,
-            context = context,
+            context = context
         )
 
         val state = viewModel.uiState.value
@@ -90,7 +90,7 @@ class SearchViewModelTest {
             libraryRepository = fakeLibraryRepository,
             personRepository = fakePersonRepository,
             settingsDataStore = settingsDataStore,
-            context = context,
+            context = context
         )
 
         viewModel.onQueryChanged("Action")
@@ -124,7 +124,7 @@ class SearchViewModelTest {
             libraryRepository = fakeLibraryRepository,
             personRepository = fakePersonRepository,
             settingsDataStore = settingsDataStore,
-            context = context,
+            context = context
         )
 
         viewModel.onQueryChanged("Action")
@@ -155,7 +155,7 @@ class SearchViewModelTest {
             libraryRepository = fakeLibraryRepository,
             personRepository = fakePersonRepository,
             settingsDataStore = settingsDataStore,
-            context = context,
+            context = context
         )
 
         viewModel.onQueryChanged("Action")
@@ -174,7 +174,7 @@ class SearchViewModelTest {
         val video = VideoDto(
             id = "telegram:video-7",
             providerVideoId = "video-7",
-            title = "Resolver Action",
+            title = "Resolver Action"
         )
         fakeChannelRepository.searchResult = Result.success(listOf(video))
 
@@ -183,7 +183,7 @@ class SearchViewModelTest {
             personRepository = fakePersonRepository,
             settingsDataStore = settingsDataStore,
             channelRepository = fakeChannelRepository,
-            context = context,
+            context = context
         )
 
         viewModel.onQueryChanged("Action")
@@ -206,7 +206,7 @@ class SearchViewModelTest {
             personRepository = fakePersonRepository,
             settingsDataStore = settingsDataStore,
             searchHistoryStore = fakeSearchStore,
-            context = context,
+            context = context
         )
 
         viewModel.onQueryChanged("Action")
@@ -235,7 +235,7 @@ class SearchViewModelTest {
             personRepository = fakePersonRepository,
             settingsDataStore = settingsDataStore,
             channelRepository = fakeChannelRepository,
-            context = context,
+            context = context
         )
 
         viewModel.onQueryChanged("Action")
@@ -256,7 +256,7 @@ class SearchViewModelTest {
             libraryRepository = fakeLibraryRepository,
             personRepository = fakePersonRepository,
             settingsDataStore = settingsDataStore,
-            context = context,
+            context = context
         )
 
         viewModel.setLastSelectedKey("movie:123")
@@ -267,11 +267,12 @@ class SearchViewModelTest {
     }
 }
 
-private class FakeSearchHistoryStore : SearchHistoryStore(
-    context = mockk(relaxed = true),
-    accountKeyProvider = AccountKeyProvider.ANONYMOUS,
-    dataStore = mockk(relaxed = true),
-) {
+private class FakeSearchHistoryStore :
+    SearchHistoryStore(
+        context = mockk(relaxed = true),
+        accountKeyProvider = AccountKeyProvider.ANONYMOUS,
+        dataStore = mockk(relaxed = true)
+    ) {
     val recordedQueries = mutableListOf<String>()
 
     override suspend fun recordQuery(query: String, accountKey: String?) {
@@ -292,10 +293,8 @@ private class FakeSearchLibraryRepo : LibraryRepository(mockk(relaxed = true), m
         searchTerm: String?,
         genreIds: List<java.util.UUID>,
         studioIds: List<java.util.UUID>,
-        personIds: List<java.util.UUID>,
-    ): Result<TvItemsPage> {
-        return itemsResult
-    }
+        personIds: List<java.util.UUID>
+    ): Result<TvItemsPage> = itemsResult
 }
 
 private class FakeSearchPersonRepo : PersonRepository(mockk(relaxed = true), mockk(relaxed = true), mockk(relaxed = true)) {
@@ -306,10 +305,8 @@ private class FakeSearchPersonRepo : PersonRepository(mockk(relaxed = true), moc
         startIndex: Int,
         limit: Int,
         searchTerm: String?,
-        nameStartsWith: String?,
-    ): Result<List<TvPerson>> {
-        return personsResult
-    }
+        nameStartsWith: String?
+    ): Result<List<TvPerson>> = personsResult
 }
 
 private class FakeSearchChannelRepo : ChannelRepository(mockk<ResolverApi>(relaxed = true)) {

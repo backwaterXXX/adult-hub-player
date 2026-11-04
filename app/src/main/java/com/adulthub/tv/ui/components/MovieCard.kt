@@ -1,5 +1,6 @@
 package com.adulthub.tv.ui.components
 
+import android.net.Uri
 import androidx.compose.foundation.BorderStroke
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
@@ -22,19 +23,20 @@ import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
-import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.graphicsLayer
 import androidx.compose.ui.layout.ContentScale
+import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
+import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import androidx.tv.material3.Border
 import androidx.tv.material3.Card
 import androidx.tv.material3.CardDefaults
@@ -52,9 +54,7 @@ import com.adulthub.tv.ui.theme.NeonPink
 import com.adulthub.tv.ui.theme.SurfaceDark
 import com.adulthub.tv.ui.theme.TextPrimary
 import com.adulthub.tv.ui.theme.TextSecondary
-import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import org.koin.compose.koinInject
-import android.net.Uri
 
 @Composable
 fun MovieCard(
@@ -62,7 +62,7 @@ fun MovieCard(
     imageUrl: String,
     onClick: () -> Unit,
     modifier: Modifier = Modifier,
-    cardWidth: Dp? = 260.dp,
+    cardWidth: Dp? = 260.dp
 ) {
     val context = LocalContext.current
     val settingsDataStore: SettingsDataStore = koinInject()
@@ -75,7 +75,7 @@ fun MovieCard(
     var usePhashThumbnail by remember(item.id, imageUrl, item.progressFraction) {
         mutableStateOf(
             item.progressFraction > 0f ||
-                (item.primaryImageTag.isNullOrBlank() && item.thumbImageTag.isNullOrBlank() && item.backdropImageTag.isNullOrBlank()),
+                (item.primaryImageTag.isNullOrBlank() && item.thumbImageTag.isNullOrBlank() && item.backdropImageTag.isNullOrBlank())
         )
     }
 
@@ -95,7 +95,9 @@ fun MovieCard(
 
     val imageModel = remember(imageUrl, phashThumbnailUrl, usePhashThumbnail, item.id, lowRamMode) {
         val selectedUrl = if (usePhashThumbnail) phashThumbnailUrl else imageUrl
-        if (selectedUrl.isNullOrBlank()) imageUrl else {
+        if (selectedUrl.isNullOrBlank()) {
+            imageUrl
+        } else {
             val request = ImageRequest.Builder(context)
                 .data(selectedUrl)
                 .size(targetWidth, targetHeight)
@@ -115,12 +117,12 @@ fun MovieCard(
         scale = CardDefaults.scale(scale = 1f, focusedScale = if (lowRamMode) 1f else 1.06f),
         border = CardDefaults.border(
             border = Border(BorderStroke(1.dp, Color.White.copy(alpha = 0.12f))),
-            focusedBorder = Border(BorderStroke(3.5.dp, NeonPink)),
+            focusedBorder = Border(BorderStroke(3.5.dp, NeonPink))
         ),
         colors = CardDefaults.colors(
             containerColor = CardSurface,
-            focusedContainerColor = CardSurfaceFocused,
-        ),
+            focusedContainerColor = CardSurfaceFocused
+        )
     ) {
         Column(modifier = Modifier.fillMaxWidth()) {
             Box(
@@ -128,7 +130,7 @@ fun MovieCard(
                     .fillMaxWidth()
                     .aspectRatio(16f / 9f)
                     .clip(RoundedCornerShape(topStart = 8.dp, topEnd = 8.dp))
-                    .background(SurfaceDark),
+                    .background(SurfaceDark)
             ) {
                 AsyncImage(
                     model = imageModel,
@@ -147,7 +149,7 @@ fun MovieCard(
                         } else if (!phashThumbnailFailed && telegramVideoId != null) {
                             usePhashThumbnail = true
                         }
-                    },
+                    }
                 )
 
                 // Genre badge top-left
@@ -156,7 +158,7 @@ fun MovieCard(
                         .align(Alignment.TopStart)
                         .padding(8.dp),
                     horizontalArrangement = Arrangement.spacedBy(4.dp),
-                    verticalAlignment = Alignment.CenterVertically,
+                    verticalAlignment = Alignment.CenterVertically
                 ) {
                     val firstGenre = item.genres.firstOrNull().orEmpty()
                     if (firstGenre.isNotBlank()) {
@@ -169,7 +171,7 @@ fun MovieCard(
                     WatchedBadge(
                         modifier = Modifier
                             .align(Alignment.TopEnd)
-                            .padding(8.dp),
+                            .padding(8.dp)
                     )
                 }
 
@@ -180,7 +182,7 @@ fun MovieCard(
                         durationText = durationText,
                         modifier = Modifier
                             .align(Alignment.BottomEnd)
-                            .padding(horizontal = 8.dp, vertical = if (!item.isPlayed && item.progressFraction > 0f) 12.dp else 8.dp),
+                            .padding(horizontal = 8.dp, vertical = if (!item.isPlayed && item.progressFraction > 0f) 12.dp else 8.dp)
                     )
                 }
 
@@ -191,13 +193,13 @@ fun MovieCard(
                             .align(Alignment.BottomStart)
                             .fillMaxWidth()
                             .height(4.dp)
-                            .background(Color(0x80000000)),
+                            .background(Color(0x80000000))
                     ) {
                         Box(
                             modifier = Modifier
                                 .fillMaxHeight()
                                 .fillMaxWidth(item.progressFraction)
-                                .background(NeonPink),
+                                .background(NeonPink)
                         )
                     }
                 }
@@ -206,7 +208,7 @@ fun MovieCard(
             Column(
                 modifier = Modifier
                     .fillMaxWidth()
-                    .padding(horizontal = 12.dp, vertical = 10.dp),
+                    .padding(horizontal = 12.dp, vertical = 10.dp)
             ) {
                 Text(
                     text = item.title,
@@ -214,7 +216,7 @@ fun MovieCard(
                     color = TextPrimary,
                     maxLines = 1,
                     overflow = TextOverflow.Ellipsis,
-                    fontWeight = FontWeight.SemiBold,
+                    fontWeight = FontWeight.SemiBold
                 )
 
                 val meta = buildString {
@@ -233,7 +235,7 @@ fun MovieCard(
                         style = MaterialTheme.typography.bodySmall,
                         color = TextSecondary,
                         maxLines = 1,
-                        overflow = TextOverflow.Ellipsis,
+                        overflow = TextOverflow.Ellipsis
                     )
                 }
             }
@@ -248,14 +250,13 @@ private fun WatchedBadge(modifier: Modifier = Modifier) {
             .clip(RoundedCornerShape(4.dp))
             .background(Color.Black.copy(alpha = 0.78f))
             .border(1.dp, NeonPink.copy(alpha = 0.85f), RoundedCornerShape(4.dp))
-            .padding(horizontal = 6.dp, vertical = 2.dp),
+            .padding(horizontal = 6.dp, vertical = 2.dp)
     ) {
         Text(
             text = stringResource(R.string.card_watched),
             color = NeonPink,
             fontSize = 10.sp,
-            fontWeight = FontWeight.Bold,
+            fontWeight = FontWeight.Bold
         )
     }
 }
-

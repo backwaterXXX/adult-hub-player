@@ -17,6 +17,7 @@ object AppLog {
 
     private val urlPattern = Regex("(?i)https?://[^\\s\\\"'<>]+")
     private val uuidPattern = Regex("(?i)\\b[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}\\b")
+
     // The separator may also be a JSON style colon, optionally quoted.
     private val secretPattern = Regex("(?i)\\b(token|authorization|password|api[_-]?key)\\b[\\\"']?\\s*[:=]\\s*[\\\"']?[^\\s,;\\\"'}]+")
     private val identifierPattern = Regex("(?i)\\b(item|video|user|session|media[_-]?source)[_-]?id\\b[\\\"']?\\s*[:=]\\s*[\\\"']?[^\\s,;\\\"'}]+")
@@ -54,8 +55,11 @@ object AppLog {
             appendLine("Recent app events: ${snapshot.size}")
             appendLine("Content titles, service URLs, account tokens, and UUIDs are redacted.")
             appendLine()
-            if (snapshot.isEmpty()) appendLine("No diagnostic events have been recorded yet.")
-            else snapshot.forEach(::appendLine)
+            if (snapshot.isEmpty()) {
+                appendLine("No diagnostic events have been recorded yet.")
+            } else {
+                snapshot.forEach(::appendLine)
+            }
         }
     }
 

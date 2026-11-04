@@ -22,7 +22,7 @@ val viewModelModule = module {
             libraryRepository = get(),
             settingsDataStore = get(),
             sessionRestoreRetry = SessionRestoreRetryPolicy(),
-            context = androidApplication(),
+            context = androidApplication()
         )
     }
     viewModel {
@@ -33,7 +33,7 @@ val viewModelModule = module {
             clientManager = get(),
             telegramProgressStore = getOrNull(),
             watchHistoryStore = getOrNull(),
-            context = androidApplication(),
+            context = androidApplication()
         )
     }
     viewModelOf(::LibraryViewModel)
@@ -51,7 +51,7 @@ val viewModelModule = module {
             watchHistoryStore = getOrNull(),
             persistenceScope = getOrNull(),
             accountScope = getOrNull(),
-            context = androidApplication(),
+            context = androidApplication()
         )
     }
     viewModelOf(::SearchViewModel)
@@ -65,7 +65,7 @@ val viewModelModule = module {
             telegramProgressStore = getOrNull(),
             searchHistoryStore = getOrNull(),
             userScopedDataMigration = getOrNull(),
-            context = androidApplication(),
+            context = androidApplication()
         )
     }
 }

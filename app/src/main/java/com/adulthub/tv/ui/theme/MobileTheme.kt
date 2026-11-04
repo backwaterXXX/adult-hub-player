@@ -18,8 +18,8 @@ fun AdultHubMobileTheme(content: @Composable () -> Unit) {
             surface = SurfaceDark,
             onSurface = Color.White,
             surfaceVariant = Color(0xFF292932),
-            onSurfaceVariant = Color(0xFFE2E0E8),
+            onSurfaceVariant = Color(0xFFE2E0E8)
         ),
-        content = content,
+        content = content
     )
 }

@@ -1,16 +1,21 @@
 package com.adulthub.tv.ui.settings
 
 import android.app.Application
-import android.content.Context
 import android.content.ClipData
+import android.content.Context
 import android.content.Intent
 import android.net.Uri
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import coil.Coil
 import com.adulthub.tv.R
-import com.adulthub.tv.diagnostics.AppLog
+import com.adulthub.tv.data.local.BufferProfile
+import com.adulthub.tv.data.local.ResolverUrlSource
+import com.adulthub.tv.data.local.SearchHistoryStore
 import com.adulthub.tv.data.local.SettingsDataStore
+import com.adulthub.tv.data.local.TelegramProgressStore
+import com.adulthub.tv.data.local.UserScopedDataMigration
+import com.adulthub.tv.data.local.WatchHistoryStore
 import com.adulthub.tv.data.model.AuthState
 import com.adulthub.tv.data.model.TvCategory
 import com.adulthub.tv.data.network.ServiceUrlPolicy
@@ -19,26 +24,20 @@ import com.adulthub.tv.data.repository.AuthRepository
 import com.adulthub.tv.data.repository.ChannelRepository
 import com.adulthub.tv.data.repository.LibraryRepository
 import com.adulthub.tv.data.repository.TvLibrary
+import com.adulthub.tv.diagnostics.AppLog
+import kotlinx.coroutines.CancellationException
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.async
+import kotlinx.coroutines.coroutineScope
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.flow.firstOrNull
 import kotlinx.coroutines.flow.update
-import kotlinx.coroutines.async
-import kotlinx.coroutines.coroutineScope
-import kotlinx.coroutines.CancellationException
-import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.sync.Mutex
 import kotlinx.coroutines.sync.withLock
 import kotlinx.coroutines.withContext
-
-import com.adulthub.tv.data.local.SearchHistoryStore
-import com.adulthub.tv.data.local.TelegramProgressStore
-import com.adulthub.tv.data.local.UserScopedDataMigration
-import com.adulthub.tv.data.local.WatchHistoryStore
-import com.adulthub.tv.data.local.BufferProfile
-import com.adulthub.tv.data.local.ResolverUrlSource
 
 data class SettingsUiState(
     val serverUrl: String = "",
@@ -70,7 +69,7 @@ data class SettingsUiState(
     val statusMessage: String? = null,
     val isCheckingConnections: Boolean = false,
     val jellyfinConnectionStatus: String = "",
-    val resolverConnectionStatus: String = "",
+    val resolverConnectionStatus: String = ""
 )
 
 class SettingsViewModel(
@@ -82,13 +81,13 @@ class SettingsViewModel(
     private val telegramProgressStore: TelegramProgressStore? = null,
     private val searchHistoryStore: SearchHistoryStore? = null,
     private val userScopedDataMigration: UserScopedDataMigration? = null,
-    private val context: Application,
+    private val context: Application
 ) : ViewModel() {
 
     private val _uiState = MutableStateFlow(
         SettingsUiState(
             jellyfinConnectionStatus = context.getString(R.string.settings_connection_not_checked),
-            resolverConnectionStatus = context.getString(R.string.settings_connection_not_checked),
+            resolverConnectionStatus = context.getString(R.string.settings_connection_not_checked)
         )
     )
     val uiState: StateFlow<SettingsUiState> = _uiState.asStateFlow()
@@ -112,8 +111,8 @@ class SettingsViewModel(
                     it.copy(
                         statusMessage = context.getString(
                             R.string.settings_error_load,
-                            error.localizedMessage ?: context.getString(R.string.error_storage),
-                        ),
+                            error.localizedMessage ?: context.getString(R.string.error_storage)
+                        )
                     )
                 }
             }
@@ -127,8 +126,9 @@ class SettingsViewModel(
                 authState.serverUrl,
                 authState.serverName.ifEmpty { context.getString(R.string.settings_server_name_default) },
                 authState.username,
-                authState.userId,
+                authState.userId
             )
+
             else -> listOf("", "", "", "")
         }
 
@@ -189,7 +189,7 @@ class SettingsViewModel(
                 hiddenChannelNames = hiddenChannelNames,
                 excludedTags = excluded,
                 availableLibraries = libraries,
-                hasPendingHistoryImport = pendingImport,
+                hasPendingHistoryImport = pendingImport
             )
         }
     }
@@ -213,7 +213,7 @@ class SettingsViewModel(
                             context.getString(R.string.settings_import_done)
                         } else {
                             context.getString(R.string.settings_import_nothing)
-                        },
+                        }
                     )
                 }
             } catch (cancelled: CancellationException) {
@@ -223,8 +223,8 @@ class SettingsViewModel(
                     it.copy(
                         statusMessage = context.getString(
                             R.string.settings_import_failed,
-                            error.localizedMessage ?: context.getString(R.string.error_storage),
-                        ),
+                            error.localizedMessage ?: context.getString(R.string.error_storage)
+                        )
                     )
                 }
             }
@@ -240,9 +240,12 @@ class SettingsViewModel(
             val availableCategoryIds = categories.map { it.id }.toSet()
             val selectedIds = when {
                 categoriesResult.isFailure -> savedCategoryIds.orEmpty()
+
                 savedCategoryIds == null -> categories.take(2).map { it.id }.toSet()
+
                 savedCategoryIds.isNotEmpty() && savedCategoryIds.intersect(availableCategoryIds).isEmpty() ->
                     categories.take(2).map { it.id }.toSet()
+
                 else -> savedCategoryIds.intersect(availableCategoryIds)
             }
             if (categoriesResult.isSuccess) {
@@ -254,7 +257,7 @@ class SettingsViewModel(
                     selectedLibraryName = library.name,
                     availableHomeCategories = categories,
                     selectedHomeCategoryIds = selectedIds,
-                    statusMessage = context.getString(R.string.settings_library_changed, library.name),
+                    statusMessage = context.getString(R.string.settings_library_changed, library.name)
                 )
             }
         }
@@ -270,7 +273,7 @@ class SettingsViewModel(
                         context.getString(R.string.settings_cache_limit_set_off)
                     } else {
                         context.getString(R.string.settings_cache_limit_set, limitMb)
-                    },
+                    }
                 )
             }
         }
@@ -291,8 +294,8 @@ class SettingsViewModel(
                     bufferProfile = profile,
                     statusMessage = context.getString(
                         R.string.settings_buffer_profile_set,
-                        context.getString(profile.labelRes),
-                    ),
+                        context.getString(profile.labelRes)
+                    )
                 )
             }
         }
@@ -308,7 +311,7 @@ class SettingsViewModel(
                         context.getString(R.string.settings_low_ram_enabled)
                     } else {
                         context.getString(R.string.settings_low_ram_disabled)
-                    },
+                    }
                 )
             }
         }
@@ -323,8 +326,8 @@ class SettingsViewModel(
                     statusMessage = context.resources.getQuantityString(
                         R.plurals.settings_seek_step_set,
                         seconds,
-                        seconds,
-                    ),
+                        seconds
+                    )
                 )
             }
         }
@@ -340,7 +343,7 @@ class SettingsViewModel(
                         context.getString(R.string.settings_autoplay_enabled)
                     } else {
                         context.getString(R.string.settings_autoplay_disabled)
-                    },
+                    }
                 )
             }
         }
@@ -355,7 +358,7 @@ class SettingsViewModel(
                 _uiState.update {
                     it.copy(
                         selectedHomeCategoryIds = selectedIds,
-                        statusMessage = context.getString(R.string.settings_home_categories_saved),
+                        statusMessage = context.getString(R.string.settings_home_categories_saved)
                     )
                 }
             }
@@ -373,6 +376,7 @@ class SettingsViewModel(
                 is ServiceUrlValidation.Invalid -> _uiState.update {
                     it.copy(statusMessage = validation.reason)
                 }
+
                 is ServiceUrlValidation.Valid -> {
                     val serviceUrl = validation.value
                     if (serviceUrl.usesCleartext && !settingsDataStore.isCleartextOriginApproved(serviceUrl.normalized)) {
@@ -397,8 +401,8 @@ class SettingsViewModel(
                     it.copy(
                         statusMessage = context.getString(
                             R.string.settings_error_http_consent,
-                            error.localizedMessage ?: context.getString(R.string.error_storage),
-                        ),
+                            error.localizedMessage ?: context.getString(R.string.error_storage)
+                        )
                     )
                 }
                 return@launch
@@ -436,7 +440,7 @@ class SettingsViewModel(
                     } else {
                         context.getString(R.string.settings_http_consent_removed_signout_failed, origin)
                     },
-                    isLoggedOut = currentServerUsesOrigin && signedOut,
+                    isLoggedOut = currentServerUsesOrigin && signedOut
                 )
             }
         }
@@ -462,7 +466,7 @@ class SettingsViewModel(
                     context.getString(R.string.settings_resolver_using_server)
                 } else {
                     context.getString(R.string.settings_resolver_updated)
-                },
+                }
             )
         }
     }
@@ -477,7 +481,7 @@ class SettingsViewModel(
                 it.copy(
                     isCheckingConnections = true,
                     jellyfinConnectionStatus = context.getString(R.string.settings_connection_checking),
-                    resolverConnectionStatus = context.getString(R.string.settings_connection_checking),
+                    resolverConnectionStatus = context.getString(R.string.settings_connection_checking)
                 )
             }
             val resolverUrl = settingsDataStore.getResolverBaseUrl()
@@ -492,12 +496,14 @@ class SettingsViewModel(
                     jellyfinConnectionStatus = connectionMessage(jellyfin),
                     resolverConnectionStatus = when {
                         resolver == null -> context.getString(R.string.settings_not_configured)
+
                         resolver.exceptionOrNull().isResolverNotServed() -> context.getString(
                             R.string.settings_resolver_not_served,
-                            resolverUrl,
+                            resolverUrl
                         )
+
                         else -> connectionMessage(resolver)
-                    },
+                    }
                 )
             }
         }
@@ -513,19 +519,18 @@ class SettingsViewModel(
                         context.getString(R.string.settings_cache_cleared)
                     } else {
                         context.getString(R.string.settings_cache_clear_failed)
-                    },
+                    }
                 )
             }
         }
     }
 
     @OptIn(coil.annotation.ExperimentalCoilApi::class)
-    private fun clearImageCache(context: Context): Boolean =
-        runCatching {
-            val imageLoader = Coil.imageLoader(context)
-            imageLoader.memoryCache?.clear()
-            imageLoader.diskCache?.clear()
-        }.isSuccess
+    private fun clearImageCache(context: Context): Boolean = runCatching {
+        val imageLoader = Coil.imageLoader(context)
+        imageLoader.memoryCache?.clear()
+        imageLoader.diskCache?.clear()
+    }.isSuccess
 
     fun clearStatusMessage() {
         _uiState.update { it.copy(statusMessage = null) }
@@ -561,7 +566,7 @@ class SettingsViewModel(
                 }
                 val chooser = Intent.createChooser(
                     shareIntent,
-                    context.getString(com.adulthub.tv.R.string.settings_diagnostics_share_title),
+                    context.getString(com.adulthub.tv.R.string.settings_diagnostics_share_title)
                 ).addFlags(Intent.FLAG_GRANT_READ_URI_PERMISSION)
                 if (context !is android.app.Activity) chooser.addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)
                 context.startActivity(chooser)
@@ -602,7 +607,7 @@ class SettingsViewModel(
             _uiState.update { state ->
                 state.copy(
                     hiddenChannelIds = state.hiddenChannelIds - channelId,
-                    statusMessage = context.getString(R.string.settings_channel_unhidden),
+                    statusMessage = context.getString(R.string.settings_channel_unhidden)
                 )
             }
         }
@@ -614,7 +619,7 @@ class SettingsViewModel(
             _uiState.update { state ->
                 state.copy(
                     excludedTags = state.excludedTags - tag,
-                    statusMessage = context.getString(R.string.settings_tag_unexcluded, tag),
+                    statusMessage = context.getString(R.string.settings_tag_unexcluded, tag)
                 )
             }
         }
@@ -628,7 +633,7 @@ class SettingsViewModel(
             _uiState.update { state ->
                 state.copy(
                     excludedTags = state.excludedTags + trimmed,
-                    statusMessage = context.getString(R.string.settings_tag_excluded, trimmed),
+                    statusMessage = context.getString(R.string.settings_tag_excluded, trimmed)
                 )
             }
         }
@@ -644,8 +649,8 @@ class SettingsViewModel(
                         isLoggedOut = false,
                         statusMessage = context.getString(
                             R.string.settings_error_sign_out,
-                            error.localizedMessage ?: context.getString(R.string.error_storage),
-                        ),
+                            error.localizedMessage ?: context.getString(R.string.error_storage)
+                        )
                     )
                 }
                 return@launch
@@ -670,8 +675,8 @@ class SettingsViewModel(
             it.copy(
                 statusMessage = context.getString(
                     R.string.settings_error_save,
-                    error.localizedMessage ?: context.getString(R.string.error_storage),
-                ),
+                    error.localizedMessage ?: context.getString(R.string.error_storage)
+                )
             )
         }
         false
@@ -695,8 +700,8 @@ class SettingsViewModel(
                 statusMessage = context.getString(
                     R.string.settings_error_clear,
                     label,
-                    error.localizedMessage ?: context.getString(R.string.error_storage),
-                ),
+                    error.localizedMessage ?: context.getString(R.string.error_storage)
+                )
             )
         }
         false
@@ -707,16 +712,15 @@ class SettingsViewModel(
      * not serve the Resolver, which is the LAN Jellyfin fallback case. Other
      * failures stay generic, so a timeout is not reported as a wrong address.
      */
-    private fun Throwable?.isResolverNotServed(): Boolean =
-        this is retrofit2.HttpException && code() in setOf(404, 405)
+    private fun Throwable?.isResolverNotServed(): Boolean = this is retrofit2.HttpException && code() in setOf(404, 405)
 
     private fun <T> connectionMessage(result: Result<T>): String = result.fold(
         onSuccess = { context.getString(R.string.settings_connection_connected) },
         onFailure = { error ->
             context.getString(
                 R.string.settings_connection_unavailable,
-                error.localizedMessage ?: context.getString(R.string.settings_error_request_failed),
+                error.localizedMessage ?: context.getString(R.string.settings_error_request_failed)
             ).take(100)
-        },
+        }
     )
 }

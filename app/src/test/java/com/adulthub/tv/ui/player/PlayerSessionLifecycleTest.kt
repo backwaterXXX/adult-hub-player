@@ -19,8 +19,8 @@ import kotlinx.coroutines.ExperimentalCoroutinesApi
 import kotlinx.coroutines.flow.flowOf
 import kotlinx.coroutines.test.StandardTestDispatcher
 import kotlinx.coroutines.test.advanceTimeBy
-import kotlinx.coroutines.test.runCurrent
 import kotlinx.coroutines.test.resetMain
+import kotlinx.coroutines.test.runCurrent
 import kotlinx.coroutines.test.runTest
 import kotlinx.coroutines.test.setMain
 import org.jellyfin.sdk.model.api.PlayMethod
@@ -54,13 +54,13 @@ class PlayerSessionLifecycleTest {
         id = "movie-1",
         title = "First Scene",
         providerVideoId = "movie-1",
-        runtimeTicks = 45L * 60 * 10_000_000L,
+        runtimeTicks = 45L * 60 * 10_000_000L
     )
     private val secondItem = TvItem(
         id = "movie-2",
         title = "Second Scene",
         providerVideoId = "movie-2",
-        runtimeTicks = 45L * 60 * 10_000_000L,
+        runtimeTicks = 45L * 60 * 10_000_000L
     )
 
     @Before
@@ -81,7 +81,7 @@ class PlayerSessionLifecycleTest {
         playbackReporter = reporter,
         telegramProgressStore = progressStore,
         persistenceScope = scope,
-        context = context,
+        context = context
     )
 
     @Test
@@ -98,7 +98,7 @@ class PlayerSessionLifecycleTest {
             playSessionId = null,
             playMethod = PlayMethod.DIRECT_PLAY,
             getCurrentPositionMs = { 0L },
-            getIsPaused = { true },
+            getIsPaused = { true }
         )
 
         assertTrue(sessionId > 0L)
@@ -116,7 +116,7 @@ class PlayerSessionLifecycleTest {
             playSessionId = null,
             playMethod = PlayMethod.DIRECT_PLAY,
             getCurrentPositionMs = { 0L },
-            getIsPaused = { true },
+            getIsPaused = { true }
         )
 
         // A second player starts its own session.
@@ -127,7 +127,7 @@ class PlayerSessionLifecycleTest {
             playSessionId = null,
             playMethod = PlayMethod.DIRECT_PLAY,
             getCurrentPositionMs = { 0L },
-            getIsPaused = { true },
+            getIsPaused = { true }
         )
         assertTrue(newSession > oldSession)
 
@@ -160,7 +160,7 @@ class PlayerSessionLifecycleTest {
             playSessionId = null,
             playMethod = PlayMethod.DIRECT_PLAY,
             getCurrentPositionMs = { 0L },
-            getIsPaused = { true },
+            getIsPaused = { true }
         )
 
         // The first film ends.
@@ -189,7 +189,7 @@ class PlayerSessionLifecycleTest {
         fakeLibraryRepo.itemResult = Result.success(firstItem)
         progressStore.failure = com.adulthub.tv.data.local.PreferenceWriteException(
             "The preference could not be stored",
-            java.io.IOException("disk full"),
+            java.io.IOException("disk full")
         )
         val reporter = PlaybackReporter(fakePlaybackRepo, backgroundScope)
         val viewModel = newViewModel(reporter, backgroundScope)
@@ -203,7 +203,7 @@ class PlayerSessionLifecycleTest {
             playSessionId = null,
             playMethod = PlayMethod.DIRECT_PLAY,
             getCurrentPositionMs = { 0L },
-            getIsPaused = { true },
+            getIsPaused = { true }
         )
 
         viewModel.onExitPlayer(20_000_000L, viewModel.reportingSessionId.value)
@@ -228,7 +228,7 @@ class PlayerSessionLifecycleTest {
             playSessionId = null,
             playMethod = PlayMethod.DIRECT_PLAY,
             getCurrentPositionMs = { 0L },
-            getIsPaused = { true },
+            getIsPaused = { true }
         )
 
         viewModel.onExitPlayer(20_000_000L, viewModel.reportingSessionId.value)
@@ -252,8 +252,8 @@ class PlayerSessionLifecycleTest {
                 itemId = "movie-1",
                 streamUrl = "https://resolver.example.com/fresh.mp4",
                 playMethod = PlayMethod.DIRECT_PLAY,
-                title = "First Scene",
-            ),
+                title = "First Scene"
+            )
         )
         val reporter = PlaybackReporter(fakePlaybackRepo, backgroundScope)
         val viewModel = newViewModel(reporter, backgroundScope)
@@ -286,7 +286,7 @@ private class FakeLifecycleLibraryRepository : LibraryRepository(mockk(relaxed =
         studioIds: List<java.util.UUID>,
         personIds: List<java.util.UUID>,
         genres: List<String>,
-        studios: List<String>,
+        studios: List<String>
     ): Result<TvItem?> = randomItemResult
 }
 
@@ -303,25 +303,24 @@ private class FakeLifecyclePlaybackRepository : PlaybackRepository(mockk(relaxed
         positionTicks: Long,
         playSessionId: String?,
         canSeek: Boolean,
-        playMethod: PlayMethod,
+        playMethod: PlayMethod
     ): Result<Unit> = Result.success(Unit)
 
     override suspend fun reportPlaybackStopped(
         itemId: String,
         mediaSourceId: String?,
         positionTicks: Long,
-        playSessionId: String?,
+        playSessionId: String?
     ): Result<Unit> = Result.success(Unit)
 
-    override suspend fun resolvePlaybackInfo(item: TvItem, variantId: String?): Result<PlaybackInfo> =
-        playbackInfoResult ?: Result.success(
-            PlaybackInfo(
-                itemId = item.id,
-                streamUrl = "https://resolver.example.com/admin/play/stream.mp4",
-                playMethod = PlayMethod.DIRECT_PLAY,
-                title = item.title,
-            ),
+    override suspend fun resolvePlaybackInfo(item: TvItem, variantId: String?): Result<PlaybackInfo> = playbackInfoResult ?: Result.success(
+        PlaybackInfo(
+            itemId = item.id,
+            streamUrl = "https://resolver.example.com/admin/play/stream.mp4",
+            playMethod = PlayMethod.DIRECT_PLAY,
+            title = item.title
         )
+    )
 
     override suspend fun reportPlaybackProgress(
         itemId: String,
@@ -330,7 +329,7 @@ private class FakeLifecyclePlaybackRepository : PlaybackRepository(mockk(relaxed
         playSessionId: String?,
         isPaused: Boolean,
         canSeek: Boolean,
-        playMethod: PlayMethod,
+        playMethod: PlayMethod
     ): Result<Unit> {
         lastReportedProgressTicks = positionTicks
         return Result.success(Unit)
@@ -338,11 +337,12 @@ private class FakeLifecyclePlaybackRepository : PlaybackRepository(mockk(relaxed
 }
 
 /** Records the progress writes of a playback. */
-private class RecordingProgressStore : TelegramProgressStore(
-    context = mockk(relaxed = true),
-    accountKeyProvider = com.adulthub.tv.data.local.AccountKeyProvider.ANONYMOUS,
-    dataStore = mockk(relaxed = true),
-) {
+private class RecordingProgressStore :
+    TelegramProgressStore(
+        context = mockk(relaxed = true),
+        accountKeyProvider = com.adulthub.tv.data.local.AccountKeyProvider.ANONYMOUS,
+        dataStore = mockk(relaxed = true)
+    ) {
     val savedVideoIds = mutableListOf<String>()
     var saveCalls = 0
     var failure: Throwable? = null
@@ -357,7 +357,7 @@ private class RecordingProgressStore : TelegramProgressStore(
         thumbnailUrl: String?,
         channelId: String?,
         isPlayed: Boolean,
-        accountKey: String?,
+        accountKey: String?
     ) {
         saveCalls += 1
         failure?.let { throw it }
@@ -370,7 +370,7 @@ private class RecordingProgressStore : TelegramProgressStore(
         title: String?,
         thumbnailUrl: String?,
         channelId: String?,
-        accountKey: String?,
+        accountKey: String?
     ) {
         saveCalls += 1
         failure?.let { throw it }

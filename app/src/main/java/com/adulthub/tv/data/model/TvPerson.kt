@@ -12,5 +12,5 @@ data class TvPerson(
     val nationality: String? = null,
     val aliases: List<String> = emptyList(),
     val photoUrl: String? = null,
-    val movieCount: Int = 0,
+    val movieCount: Int = 0
 )

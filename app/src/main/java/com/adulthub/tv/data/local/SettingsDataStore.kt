@@ -13,22 +13,22 @@ import androidx.datastore.preferences.core.stringPreferencesKey
 import androidx.datastore.preferences.core.stringSetPreferencesKey
 import androidx.datastore.preferences.preferencesDataStore
 import com.adulthub.tv.R
-import com.adulthub.tv.data.model.ChannelSortMode
 import com.adulthub.tv.data.model.AuthState
+import com.adulthub.tv.data.model.ChannelSortMode
 import com.adulthub.tv.data.network.ServiceUrl
 import com.adulthub.tv.data.network.ServiceUrlPolicy
 import com.adulthub.tv.data.network.ServiceUrlValidation
+import java.io.IOException
+import java.util.concurrent.atomic.AtomicReference
 import kotlinx.coroutines.flow.Flow
-import kotlinx.coroutines.flow.combine
 import kotlinx.coroutines.flow.catch
+import kotlinx.coroutines.flow.combine
 import kotlinx.coroutines.flow.first
-import kotlinx.coroutines.flow.onEach
 import kotlinx.coroutines.flow.map
+import kotlinx.coroutines.flow.onEach
 import kotlinx.coroutines.runBlocking
 import kotlinx.serialization.Serializable
 import kotlinx.serialization.json.Json
-import java.io.IOException
-import java.util.concurrent.atomic.AtomicReference
 
 private val Context.settingsDataStore: DataStore<Preferences> by preferencesDataStore(name = "settings_prefs")
 
@@ -38,7 +38,7 @@ enum class BufferProfile(
     val minBufferMs: Int,
     val maxBufferMs: Int,
     val playbackStartMs: Int,
-    val rebufferMs: Int,
+    val rebufferMs: Int
 ) {
     FAST_START("fast_start", R.string.settings_buffer_fast, 5_000, 20_000, 1_000, 2_000),
     STANDARD("standard", R.string.settings_buffer_standard, 15_000, 50_000, 1_500, 3_000),
@@ -64,7 +64,7 @@ data class AppConfigExport(
     val selectedHomeCategoryIds: Set<String>? = null,
     val hiddenChannelIds: Set<String> = emptySet(),
     val excludedTags: Set<String> = emptySet(),
-    val autoUpdateEnabled: Boolean = true,
+    val autoUpdateEnabled: Boolean = true
 )
 
 /** Origin of the effective Resolver address. */
@@ -75,7 +75,7 @@ open class SettingsDataStore(
     crypto: KeyStoreCrypto = KeyStoreCrypto(),
     private val dataStore: DataStore<Preferences> = SafePreferencesDataStore(context.settingsDataStore),
     private val authDataStore: AuthDataStore? = null,
-    accountKeyProvider: AccountKeyProvider? = null,
+    accountKeyProvider: AccountKeyProvider? = null
 ) {
     companion object {
         private val KEY_SCHEMA_VERSION = intPreferencesKey("schema_version")
@@ -104,6 +104,7 @@ open class SettingsDataStore(
     }
 
     private val encryptedValue = EncryptedPreferenceValue(crypto)
+
     /**
      * The selected library is a user choice, so it is stored per account.
      *
@@ -245,11 +246,14 @@ open class SettingsDataStore(
             .catch { if (it is IOException) emit(emptyPreferences()) else throw it }
             .first()
         val sensitiveValues = listOf(
-            KEY_RESOLVER_BASE_URL to snapshot[KEY_RESOLVER_BASE_URL],
+            KEY_RESOLVER_BASE_URL to snapshot[KEY_RESOLVER_BASE_URL]
         )
         val replacements = sensitiveValues.mapNotNull { (key, oldValue) ->
-            if (oldValue.isNullOrBlank() || encryptedValue.isEncrypted(oldValue)) null
-            else Triple(key, oldValue, encryptedValue.encode(oldValue))
+            if (oldValue.isNullOrBlank() || encryptedValue.isEncrypted(oldValue)) {
+                null
+            } else {
+                Triple(key, oldValue, encryptedValue.encode(oldValue))
+            }
         }
         val oldOrigins = snapshot[KEY_APPROVED_CLEARTEXT_ORIGINS].orEmpty()
         // The snapshot is filled from the persisted state on every run, so the cleartext policy
@@ -300,11 +304,9 @@ open class SettingsDataStore(
         }
     }
 
-    private fun selectedLibraryIdKey(accountKey: String) =
-        stringPreferencesKey("${KEY_SELECTED_LIBRARY_ID.name}__$accountKey")
+    private fun selectedLibraryIdKey(accountKey: String) = stringPreferencesKey("${KEY_SELECTED_LIBRARY_ID.name}__$accountKey")
 
-    private fun selectedLibraryNameKey(accountKey: String) =
-        stringPreferencesKey("${KEY_SELECTED_LIBRARY_NAME.name}__$accountKey")
+    private fun selectedLibraryNameKey(accountKey: String) = stringPreferencesKey("${KEY_SELECTED_LIBRARY_NAME.name}__$accountKey")
 
     /**
      * Loads the persisted cleartext consent into the snapshot that guards image requests.
@@ -457,8 +459,11 @@ open class SettingsDataStore(
         val sanitized = url.trimEnd('/')
         val encryptedUrl = sanitized.takeIf { it.isNotBlank() }?.let { encryptedValue.encode(it) }
         dataStore.edit { preferences ->
-            if (sanitized.isBlank()) preferences.remove(KEY_RESOLVER_BASE_URL)
-            else preferences[KEY_RESOLVER_BASE_URL] = requireNotNull(encryptedUrl)
+            if (sanitized.isBlank()) {
+                preferences.remove(KEY_RESOLVER_BASE_URL)
+            } else {
+                preferences[KEY_RESOLVER_BASE_URL] = requireNotNull(encryptedUrl)
+            }
         }
     }
 
@@ -540,28 +545,24 @@ open class SettingsDataStore(
         encodeDefaults = true
     }
 
-    open suspend fun exportNonSecretConfig(): AppConfigExport {
-        return AppConfigExport(
-            version = schemaVersion.first(),
-            selectedLibraryId = getSelectedLibraryId(),
-            selectedLibraryName = getSelectedLibraryName(),
-            resolverBaseUrl = getResolverBaseUrl(),
-            cacheLimitMb = cacheLimitMb.first(),
-            phashOnPlayback = phashOnPlayback.first(),
-            bufferProfile = bufferProfile.first().id,
-            lowRamMode = lowRamMode.first(),
-            seekStepSec = seekStepSec.first(),
-            autoplayNext = autoplayNext.first(),
-            selectedHomeCategoryIds = selectedHomeCategoryIds.first(),
-            hiddenChannelIds = hiddenChannelIds.first(),
-            excludedTags = excludedTags.first(),
-            autoUpdateEnabled = autoUpdateEnabled.first(),
-        )
-    }
+    open suspend fun exportNonSecretConfig(): AppConfigExport = AppConfigExport(
+        version = schemaVersion.first(),
+        selectedLibraryId = getSelectedLibraryId(),
+        selectedLibraryName = getSelectedLibraryName(),
+        resolverBaseUrl = getResolverBaseUrl(),
+        cacheLimitMb = cacheLimitMb.first(),
+        phashOnPlayback = phashOnPlayback.first(),
+        bufferProfile = bufferProfile.first().id,
+        lowRamMode = lowRamMode.first(),
+        seekStepSec = seekStepSec.first(),
+        autoplayNext = autoplayNext.first(),
+        selectedHomeCategoryIds = selectedHomeCategoryIds.first(),
+        hiddenChannelIds = hiddenChannelIds.first(),
+        excludedTags = excludedTags.first(),
+        autoUpdateEnabled = autoUpdateEnabled.first()
+    )
 
-    open suspend fun exportNonSecretConfigJson(): String {
-        return jsonConfig.encodeToString(AppConfigExport.serializer(), exportNonSecretConfig())
-    }
+    open suspend fun exportNonSecretConfigJson(): String = jsonConfig.encodeToString(AppConfigExport.serializer(), exportNonSecretConfig())
 
     open suspend fun importNonSecretConfig(config: AppConfigExport) {
         val libId = config.selectedLibraryId

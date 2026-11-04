@@ -5,6 +5,9 @@ import androidx.test.core.app.ApplicationProvider
 import androidx.test.ext.junit.runners.AndroidJUnit4
 import androidx.test.platform.app.InstrumentationRegistry
 import com.adulthub.tv.data.local.BufferProfile
+import java.util.concurrent.CountDownLatch
+import java.util.concurrent.TimeUnit
+import java.util.concurrent.atomic.AtomicReference
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.SupervisorJob
@@ -18,9 +21,6 @@ import org.junit.Assert.assertTrue
 import org.junit.Before
 import org.junit.Test
 import org.junit.runner.RunWith
-import java.util.concurrent.CountDownLatch
-import java.util.concurrent.TimeUnit
-import java.util.concurrent.atomic.AtomicReference
 
 private const val QUALITY_SWITCH_SETTLE_SECONDS = 10L
 
@@ -134,7 +134,7 @@ class PlayerManagerInstrumentedTest {
             }
             assertTrue(
                 "release() must resolve a pending quality switch instead of leaving it hanging",
-                switchFinished.await(QUALITY_SWITCH_SETTLE_SECONDS, TimeUnit.SECONDS),
+                switchFinished.await(QUALITY_SWITCH_SETTLE_SECONDS, TimeUnit.SECONDS)
             )
             assertFalse(switchOutcome.get()!!)
         } finally {
@@ -160,7 +160,7 @@ class PlayerManagerInstrumentedTest {
             }
             assertTrue(
                 "A new playback must resolve the pending quality switch of the previous one",
-                switchFinished.await(QUALITY_SWITCH_SETTLE_SECONDS, TimeUnit.SECONDS),
+                switchFinished.await(QUALITY_SWITCH_SETTLE_SECONDS, TimeUnit.SECONDS)
             )
             assertFalse(switchOutcome.get()!!)
         } finally {

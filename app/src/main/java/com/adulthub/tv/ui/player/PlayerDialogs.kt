@@ -2,8 +2,6 @@ package com.adulthub.tv.ui.player
 
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
-import androidx.compose.foundation.verticalScroll
-import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
@@ -16,7 +14,9 @@ import androidx.compose.foundation.layout.heightIn
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
+import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.RoundedCornerShape
+import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.rounded.ArrowBack
 import androidx.compose.material.icons.rounded.Close
@@ -55,7 +55,7 @@ fun ResumePlaybackDialog(
     resumePositionMs: Long,
     onResume: () -> Unit,
     onStartFromBeginning: () -> Unit,
-    modifier: Modifier = Modifier,
+    modifier: Modifier = Modifier
 ) {
     val resumeButtonFocusRequester = remember { FocusRequester() }
 
@@ -67,7 +67,7 @@ fun ResumePlaybackDialog(
         modifier = modifier
             .fillMaxSize()
             .background(Color.Black.copy(alpha = 0.85f)),
-        contentAlignment = Alignment.Center,
+        contentAlignment = Alignment.Center
     ) {
         Column(
             modifier = Modifier
@@ -76,15 +76,15 @@ fun ResumePlaybackDialog(
                 .background(SurfaceDark)
                 .border(2.dp, NeonPink, RoundedCornerShape(16.dp))
                 .padding(32.dp),
-            horizontalAlignment = Alignment.CenterHorizontally,
+            horizontalAlignment = Alignment.CenterHorizontally
         ) {
             Text(
                 text = stringResource(R.string.player_resume_title),
                 style = MaterialTheme.typography.headlineMedium.copy(
                     fontWeight = FontWeight.Bold,
-                    color = Color.White,
+                    color = Color.White
                 ),
-                textAlign = TextAlign.Center,
+                textAlign = TextAlign.Center
             )
 
             Spacer(modifier = Modifier.height(16.dp))
@@ -92,16 +92,16 @@ fun ResumePlaybackDialog(
             Text(
                 text = stringResource(R.string.player_resume_message, formatTime(resumePositionMs)),
                 style = MaterialTheme.typography.bodyLarge.copy(
-                    color = Color.White.copy(alpha = 0.8f),
+                    color = Color.White.copy(alpha = 0.8f)
                 ),
-                textAlign = TextAlign.Center,
+                textAlign = TextAlign.Center
             )
 
             Spacer(modifier = Modifier.height(28.dp))
 
             Row(
                 modifier = Modifier.fillMaxWidth(),
-                horizontalArrangement = Arrangement.Center,
+                horizontalArrangement = Arrangement.Center
             ) {
                 Button(
                     onClick = onResume,
@@ -109,25 +109,25 @@ fun ResumePlaybackDialog(
                         containerColor = NeonPink,
                         focusedContainerColor = NeonPink,
                         contentColor = Color.White,
-                        focusedContentColor = Color.White,
+                        focusedContentColor = Color.White
                     ),
                     shape = ButtonDefaults.shape(RoundedCornerShape(12.dp)),
                     modifier = Modifier
                         .focusRequester(resumeButtonFocusRequester)
-                        .height(44.dp),
+                        .height(44.dp)
                 ) {
                     Row(
                         verticalAlignment = Alignment.CenterVertically,
-                        horizontalArrangement = Arrangement.spacedBy(8.dp),
+                        horizontalArrangement = Arrangement.spacedBy(8.dp)
                     ) {
                         Icon(
                             imageVector = Icons.Rounded.PlayArrow,
                             contentDescription = null,
-                            modifier = Modifier.size(20.dp),
+                            modifier = Modifier.size(20.dp)
                         )
                         Text(
                             text = stringResource(R.string.player_resume_action, formatTime(resumePositionMs)),
-                            fontWeight = FontWeight.Bold,
+                            fontWeight = FontWeight.Bold
                         )
                     }
                 }
@@ -140,7 +140,7 @@ fun ResumePlaybackDialog(
                         containerColor = Color.Transparent,
                         focusedContainerColor = SurfaceDark,
                         contentColor = Color.White,
-                        focusedContentColor = Color.White,
+                        focusedContentColor = Color.White
                     ),
                     border = OutlinedButtonDefaults.border(
                         border = androidx.tv.material3.Border(
@@ -148,23 +148,23 @@ fun ResumePlaybackDialog(
                         ),
                         focusedBorder = androidx.tv.material3.Border(
                             border = androidx.compose.foundation.BorderStroke(2.dp, NeonPink)
-                        ),
+                        )
                     ),
                     shape = OutlinedButtonDefaults.shape(RoundedCornerShape(12.dp)),
-                    modifier = Modifier.height(44.dp),
+                    modifier = Modifier.height(44.dp)
                 ) {
                     Row(
                         verticalAlignment = Alignment.CenterVertically,
-                        horizontalArrangement = Arrangement.spacedBy(8.dp),
+                        horizontalArrangement = Arrangement.spacedBy(8.dp)
                     ) {
                         Icon(
                             imageVector = Icons.Rounded.Replay,
                             contentDescription = null,
-                            modifier = Modifier.size(18.dp),
+                            modifier = Modifier.size(18.dp)
                         )
                         Text(
                             text = stringResource(R.string.player_start_over),
-                            fontWeight = FontWeight.Medium,
+                            fontWeight = FontWeight.Medium
                         )
                     }
                 }
@@ -179,7 +179,7 @@ fun EndOfMovieDialog(
     onBackToDetails: () -> Unit,
     modifier: Modifier = Modifier,
     countdownSeconds: Int? = null,
-    onCancelCountdown: () -> Unit = {},
+    onCancelCountdown: () -> Unit = {}
 ) {
     val nextButtonFocusRequester = remember { FocusRequester() }
 
@@ -194,7 +194,7 @@ fun EndOfMovieDialog(
         modifier = modifier
             .fillMaxSize()
             .background(Color.Black.copy(alpha = 0.85f)),
-        contentAlignment = Alignment.Center,
+        contentAlignment = Alignment.Center
     ) {
         Column(
             modifier = Modifier
@@ -203,15 +203,15 @@ fun EndOfMovieDialog(
                 .background(SurfaceDark)
                 .border(2.dp, NeonPink, RoundedCornerShape(16.dp))
                 .padding(32.dp),
-            horizontalAlignment = Alignment.CenterHorizontally,
+            horizontalAlignment = Alignment.CenterHorizontally
         ) {
             Text(
                 text = if (isCountingDown) stringResource(R.string.player_next_in_seconds, countdownSec) else stringResource(R.string.player_scene_finished),
                 style = MaterialTheme.typography.headlineMedium.copy(
                     fontWeight = FontWeight.Bold,
-                    color = Color.White,
+                    color = Color.White
                 ),
-                textAlign = TextAlign.Center,
+                textAlign = TextAlign.Center
             )
 
             Spacer(modifier = Modifier.height(12.dp))
@@ -219,16 +219,16 @@ fun EndOfMovieDialog(
             Text(
                 text = if (isCountingDown) stringResource(R.string.player_autoplay_hint) else stringResource(R.string.player_next_question),
                 style = MaterialTheme.typography.bodyLarge.copy(
-                    color = Color.White.copy(alpha = 0.8f),
+                    color = Color.White.copy(alpha = 0.8f)
                 ),
-                textAlign = TextAlign.Center,
+                textAlign = TextAlign.Center
             )
 
             Spacer(modifier = Modifier.height(28.dp))
 
             Row(
                 modifier = Modifier.fillMaxWidth(),
-                horizontalArrangement = Arrangement.Center,
+                horizontalArrangement = Arrangement.Center
             ) {
                 Button(
                     onClick = onNextRandom,
@@ -236,25 +236,25 @@ fun EndOfMovieDialog(
                         containerColor = NeonPink,
                         focusedContainerColor = NeonPink,
                         contentColor = Color.White,
-                        focusedContentColor = Color.White,
+                        focusedContentColor = Color.White
                     ),
                     shape = ButtonDefaults.shape(RoundedCornerShape(12.dp)),
                     modifier = Modifier
                         .focusRequester(nextButtonFocusRequester)
-                        .height(44.dp),
+                        .height(44.dp)
                 ) {
                     Row(
                         verticalAlignment = Alignment.CenterVertically,
-                        horizontalArrangement = Arrangement.spacedBy(8.dp),
+                        horizontalArrangement = Arrangement.spacedBy(8.dp)
                     ) {
                         Icon(
                             imageVector = if (isCountingDown) Icons.Rounded.PlayArrow else Icons.Rounded.Shuffle,
                             contentDescription = null,
-                            modifier = Modifier.size(20.dp),
+                            modifier = Modifier.size(20.dp)
                         )
                         Text(
                             text = if (isCountingDown) stringResource(R.string.player_play_now) else stringResource(R.string.player_next_movie),
-                            fontWeight = FontWeight.Bold,
+                            fontWeight = FontWeight.Bold
                         )
                     }
                 }
@@ -267,7 +267,7 @@ fun EndOfMovieDialog(
                         containerColor = Color.Transparent,
                         focusedContainerColor = SurfaceDark,
                         contentColor = Color.White,
-                        focusedContentColor = Color.White,
+                        focusedContentColor = Color.White
                     ),
                     border = OutlinedButtonDefaults.border(
                         border = androidx.tv.material3.Border(
@@ -275,23 +275,23 @@ fun EndOfMovieDialog(
                         ),
                         focusedBorder = androidx.tv.material3.Border(
                             border = androidx.compose.foundation.BorderStroke(2.dp, NeonPink)
-                        ),
+                        )
                     ),
                     shape = OutlinedButtonDefaults.shape(RoundedCornerShape(12.dp)),
-                    modifier = Modifier.height(44.dp),
+                    modifier = Modifier.height(44.dp)
                 ) {
                     Row(
                         verticalAlignment = Alignment.CenterVertically,
-                        horizontalArrangement = Arrangement.spacedBy(8.dp),
+                        horizontalArrangement = Arrangement.spacedBy(8.dp)
                     ) {
                         Icon(
                             imageVector = if (isCountingDown) Icons.Rounded.Close else Icons.Rounded.ArrowBack,
                             contentDescription = null,
-                            modifier = Modifier.size(18.dp),
+                            modifier = Modifier.size(18.dp)
                         )
                         Text(
                             text = if (isCountingDown) stringResource(R.string.player_cancel) else stringResource(R.string.player_back_to_details),
-                            fontWeight = FontWeight.Medium,
+                            fontWeight = FontWeight.Medium
                         )
                     }
                 }
@@ -306,7 +306,7 @@ fun PlaybackErrorDialog(
     onRetry: () -> Unit,
     onBack: () -> Unit,
     modifier: Modifier = Modifier,
-    retryMessage: String? = null,
+    retryMessage: String? = null
 ) {
     val retryButtonFocusRequester = remember { FocusRequester() }
 
@@ -318,7 +318,7 @@ fun PlaybackErrorDialog(
         modifier = modifier
             .fillMaxSize()
             .background(Color.Black.copy(alpha = 0.85f)),
-        contentAlignment = Alignment.Center,
+        contentAlignment = Alignment.Center
     ) {
         Column(
             modifier = Modifier
@@ -327,15 +327,15 @@ fun PlaybackErrorDialog(
                 .background(SurfaceDark)
                 .border(2.dp, Color.Red, RoundedCornerShape(16.dp))
                 .padding(32.dp),
-            horizontalAlignment = Alignment.CenterHorizontally,
+            horizontalAlignment = Alignment.CenterHorizontally
         ) {
             Text(
                 text = stringResource(R.string.player_error_title),
                 style = MaterialTheme.typography.headlineMedium.copy(
                     fontWeight = FontWeight.Bold,
-                    color = Color.Red,
+                    color = Color.Red
                 ),
-                textAlign = TextAlign.Center,
+                textAlign = TextAlign.Center
             )
 
             Spacer(modifier = Modifier.height(12.dp))
@@ -343,9 +343,9 @@ fun PlaybackErrorDialog(
             Text(
                 text = errorMessage,
                 style = MaterialTheme.typography.bodyLarge.copy(
-                    color = Color.White.copy(alpha = 0.85f),
+                    color = Color.White.copy(alpha = 0.85f)
                 ),
-                textAlign = TextAlign.Center,
+                textAlign = TextAlign.Center
             )
 
             retryMessage?.let { message ->
@@ -353,9 +353,9 @@ fun PlaybackErrorDialog(
                 Text(
                     text = message,
                     style = MaterialTheme.typography.bodyMedium.copy(
-                        color = Color(0xFFFFB74D),
+                        color = Color(0xFFFFB74D)
                     ),
-                    textAlign = TextAlign.Center,
+                    textAlign = TextAlign.Center
                 )
             }
 
@@ -363,7 +363,7 @@ fun PlaybackErrorDialog(
 
             Row(
                 modifier = Modifier.fillMaxWidth(),
-                horizontalArrangement = Arrangement.Center,
+                horizontalArrangement = Arrangement.Center
             ) {
                 Button(
                     onClick = onRetry,
@@ -371,25 +371,25 @@ fun PlaybackErrorDialog(
                         containerColor = NeonPink,
                         focusedContainerColor = NeonPink,
                         contentColor = Color.White,
-                        focusedContentColor = Color.White,
+                        focusedContentColor = Color.White
                     ),
                     shape = ButtonDefaults.shape(RoundedCornerShape(12.dp)),
                     modifier = Modifier
                         .focusRequester(retryButtonFocusRequester)
-                        .height(44.dp),
+                        .height(44.dp)
                 ) {
                     Row(
                         verticalAlignment = Alignment.CenterVertically,
-                        horizontalArrangement = Arrangement.spacedBy(8.dp),
+                        horizontalArrangement = Arrangement.spacedBy(8.dp)
                     ) {
                         Icon(
                             imageVector = Icons.Rounded.Refresh,
                             contentDescription = null,
-                            modifier = Modifier.size(18.dp),
+                            modifier = Modifier.size(18.dp)
                         )
                         Text(
                             text = stringResource(R.string.player_retry),
-                            fontWeight = FontWeight.Bold,
+                            fontWeight = FontWeight.Bold
                         )
                     }
                 }
@@ -402,7 +402,7 @@ fun PlaybackErrorDialog(
                         containerColor = Color.Transparent,
                         focusedContainerColor = SurfaceDark,
                         contentColor = Color.White,
-                        focusedContentColor = Color.White,
+                        focusedContentColor = Color.White
                     ),
                     border = OutlinedButtonDefaults.border(
                         border = androidx.tv.material3.Border(
@@ -410,23 +410,23 @@ fun PlaybackErrorDialog(
                         ),
                         focusedBorder = androidx.tv.material3.Border(
                             border = androidx.compose.foundation.BorderStroke(2.dp, NeonPink)
-                        ),
+                        )
                     ),
                     shape = OutlinedButtonDefaults.shape(RoundedCornerShape(12.dp)),
-                    modifier = Modifier.height(44.dp),
+                    modifier = Modifier.height(44.dp)
                 ) {
                     Row(
                         verticalAlignment = Alignment.CenterVertically,
-                        horizontalArrangement = Arrangement.spacedBy(8.dp),
+                        horizontalArrangement = Arrangement.spacedBy(8.dp)
                     ) {
                         Icon(
                             imageVector = Icons.Rounded.ArrowBack,
                             contentDescription = null,
-                            modifier = Modifier.size(18.dp),
+                            modifier = Modifier.size(18.dp)
                         )
                         Text(
                             text = stringResource(R.string.player_back),
-                            fontWeight = FontWeight.Medium,
+                            fontWeight = FontWeight.Medium
                         )
                     }
                 }
@@ -439,13 +439,13 @@ fun PlaybackErrorDialog(
 fun PlaybackInfoOverlay(
     technicalInfo: com.adulthub.tv.player.PlaybackTechnicalInfo,
     modifier: Modifier = Modifier,
-    isMobile: Boolean = false,
+    isMobile: Boolean = false
 ) {
     Box(
         modifier = modifier
             .fillMaxSize()
             .then(if (isMobile) Modifier.padding(16.dp) else Modifier.padding(top = 28.dp, end = 40.dp)),
-        contentAlignment = if (isMobile) Alignment.Center else Alignment.TopEnd,
+        contentAlignment = if (isMobile) Alignment.Center else Alignment.TopEnd
     ) {
         Column(
             modifier = Modifier
@@ -453,12 +453,12 @@ fun PlaybackInfoOverlay(
                 .clip(RoundedCornerShape(12.dp))
                 .background(Color.Black.copy(alpha = 0.72f))
                 .border(1.dp, NeonPink.copy(alpha = 0.5f), RoundedCornerShape(12.dp))
-                .padding(14.dp),
+                .padding(14.dp)
         ) {
             Row(
                 modifier = Modifier.fillMaxWidth(),
                 horizontalArrangement = Arrangement.SpaceBetween,
-                verticalAlignment = Alignment.CenterVertically,
+                verticalAlignment = Alignment.CenterVertically
             ) {
                 Text(
                     text = stringResource(R.string.player_tech_stats_title),
@@ -466,8 +466,8 @@ fun PlaybackInfoOverlay(
                         fontWeight = FontWeight.Bold,
                         color = Color.White,
                         fontSize = 13.sp,
-                        letterSpacing = 1.sp,
-                    ),
+                        letterSpacing = 1.sp
+                    )
                 )
                 val isDirect = technicalInfo.playMethod.contains("Direct", ignoreCase = true)
                 Box(
@@ -475,13 +475,13 @@ fun PlaybackInfoOverlay(
                         .clip(RoundedCornerShape(6.dp))
                         .background(NeonPink.copy(alpha = 0.16f))
                         .border(1.dp, NeonPink, RoundedCornerShape(6.dp))
-                        .padding(horizontal = 8.dp, vertical = 3.dp),
+                        .padding(horizontal = 8.dp, vertical = 3.dp)
                 ) {
                     Text(
                         text = if (isDirect) stringResource(R.string.player_tech_direct) else stringResource(R.string.player_tech_transcode),
                         color = NeonPink,
                         fontWeight = FontWeight.Bold,
-                        fontSize = 11.sp,
+                        fontSize = 11.sp
                     )
                 }
             }
@@ -493,14 +493,14 @@ fun PlaybackInfoOverlay(
                     .fillMaxWidth()
                     .background(Color.White.copy(alpha = 0.05f), RoundedCornerShape(8.dp))
                     .padding(horizontal = 12.dp, vertical = 8.dp),
-                verticalArrangement = Arrangement.spacedBy(6.dp),
+                verticalArrangement = Arrangement.spacedBy(6.dp)
             ) {
                 TechnicalInfoRow(label = stringResource(R.string.player_tech_stream_mode), value = technicalInfo.playMethod)
                 TechnicalInfoRow(label = stringResource(R.string.player_tech_decoder), value = technicalInfo.decoderMode)
                 if (technicalInfo.resolverLatencyMs != null && technicalInfo.resolverLatencyMs > 0L) {
                     TechnicalInfoRow(
                         label = stringResource(R.string.player_tech_resolver_latency),
-                        value = stringResource(R.string.player_tech_value_ms, technicalInfo.resolverLatencyMs),
+                        value = stringResource(R.string.player_tech_value_ms, technicalInfo.resolverLatencyMs)
                     )
                 }
                 if (technicalInfo.retryCount > 0) {
@@ -509,7 +509,7 @@ fun PlaybackInfoOverlay(
                 technicalInfo.firstFrameMs?.let { startupMs ->
                     TechnicalInfoRow(
                         label = stringResource(R.string.player_tech_first_frame),
-                        value = stringResource(R.string.player_tech_value_ms, startupMs),
+                        value = stringResource(R.string.player_tech_value_ms, startupMs)
                     )
                 }
                 TechnicalInfoRow(
@@ -518,13 +518,13 @@ fun PlaybackInfoOverlay(
                         R.plurals.player_tech_rebuffer_events,
                         technicalInfo.rebufferCount,
                         technicalInfo.rebufferCount,
-                        technicalInfo.rebufferDurationMs / 1000,
-                    ),
+                        technicalInfo.rebufferDurationMs / 1000
+                    )
                 )
                 technicalInfo.lastSeekBufferDurationMs?.let { seekBufferMs ->
                     TechnicalInfoRow(
                         label = stringResource(R.string.player_tech_last_seek_buffer),
-                        value = stringResource(R.string.player_tech_value_ms, seekBufferMs),
+                        value = stringResource(R.string.player_tech_value_ms, seekBufferMs)
                     )
                 }
                 TechnicalInfoRow(label = stringResource(R.string.player_tech_dropped_frames), value = "${technicalInfo.droppedFrames}")
@@ -545,7 +545,7 @@ fun PlaybackInfoOverlay(
                 }
                 TechnicalInfoRow(
                     label = stringResource(R.string.player_tech_buffer_ahead),
-                    value = stringResource(R.string.player_tech_value_seconds, technicalInfo.bufferHealthMs / 1000),
+                    value = stringResource(R.string.player_tech_value_seconds, technicalInfo.bufferHealthMs / 1000)
                 )
                 TechnicalInfoRow(label = stringResource(R.string.player_tech_container), value = technicalInfo.container)
                 TechnicalInfoRow(label = stringResource(R.string.player_tech_file_size), value = technicalInfo.fileSize)
@@ -558,11 +558,11 @@ fun PlaybackInfoOverlay(
 fun PlaybackInfoDialog(
     technicalInfo: com.adulthub.tv.player.PlaybackTechnicalInfo,
     onDismiss: () -> Unit,
-    modifier: Modifier = Modifier,
+    modifier: Modifier = Modifier
 ) {
     PlaybackInfoOverlay(
         technicalInfo = technicalInfo,
-        modifier = modifier,
+        modifier = modifier
     )
 }
 
@@ -571,18 +571,18 @@ private fun TechnicalInfoRow(label: String, value: String) {
     Row(
         modifier = Modifier.fillMaxWidth(),
         horizontalArrangement = Arrangement.SpaceBetween,
-        verticalAlignment = Alignment.CenterVertically,
+        verticalAlignment = Alignment.CenterVertically
     ) {
         Text(
             text = label,
             color = Color.White.copy(alpha = 0.6f),
-            fontSize = 12.sp,
+            fontSize = 12.sp
         )
         Text(
             text = value,
             color = Color.White,
             fontWeight = FontWeight.SemiBold,
-            fontSize = 12.sp,
+            fontSize = 12.sp
         )
     }
 }

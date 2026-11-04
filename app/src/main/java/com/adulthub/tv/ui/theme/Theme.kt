@@ -22,16 +22,16 @@ private val DarkColorScheme = darkColorScheme(
     onSurfaceVariant = TextSecondary,
     error = ErrorRed,
     onError = Color.Black,
-    border = FocusBorder,
+    border = FocusBorder
 )
 
 @Composable
 fun AdultHubTvTheme(
-    content: @Composable () -> Unit,
+    content: @Composable () -> Unit
 ) {
     MaterialTheme(
         colorScheme = DarkColorScheme,
         typography = AppTypography,
-        content = content,
+        content = content
     )
 }

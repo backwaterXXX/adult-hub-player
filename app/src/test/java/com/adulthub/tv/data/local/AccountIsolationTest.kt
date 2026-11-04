@@ -9,6 +9,7 @@ import androidx.datastore.preferences.core.stringPreferencesKey
 import com.adulthub.tv.data.model.AuthState
 import com.adulthub.tv.data.model.TvItem
 import io.mockk.mockk
+import kotlin.time.Duration.Companion.seconds
 import kotlinx.coroutines.ExperimentalCoroutinesApi
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.MutableStateFlow
@@ -25,7 +26,6 @@ import org.junit.Before
 import org.junit.Rule
 import org.junit.Test
 import org.junit.rules.TemporaryFolder
-import kotlin.time.Duration.Companion.seconds
 
 /** A provider whose account key can be switched during the test. */
 private class FakeAccountKeyProvider(initialKey: String) : AccountKeyProvider {
@@ -58,7 +58,7 @@ class AccountIsolationTest {
         val testFile = tmpFolder.newFile("test_account_isolation.preferences_pb")
         dataStore = PreferenceDataStoreFactory.create(
             scope = testScope,
-            produceFile = { testFile },
+            produceFile = { testFile }
         )
         accountKeys = FakeAccountKeyProvider(firstAccount)
     }
@@ -178,12 +178,12 @@ class AccountIsolationTest {
             userId = "user-42",
             accessToken = "token",
             username = "user",
-            serverName = "Jellyfin",
+            serverName = "Jellyfin"
         )
 
         assertEquals(
             AccountScope.digest("https://jellyfin.example.org", "user-42"),
-            AccountScope.keyOf(authenticated),
+            AccountScope.keyOf(authenticated)
         )
         assertEquals(AccountScope.ANONYMOUS_KEY, AccountScope.keyOf(AuthState.NotAuthenticated))
     }

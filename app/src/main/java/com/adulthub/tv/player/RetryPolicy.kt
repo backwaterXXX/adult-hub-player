@@ -12,7 +12,7 @@ import kotlinx.coroutines.CancellationException
  * position cannot fake it either.
  */
 internal class RetryBudget(
-    private val stablePlaybackThresholdMs: Long,
+    private val stablePlaybackThresholdMs: Long
 ) {
     private var attempts = 0
     private var stablePlaybackMs = 0L
@@ -84,7 +84,7 @@ internal suspend fun resolveRetryStreamUrl(
     provider: (suspend (itemId: String, positionMs: Long) -> String?)?,
     itemId: String,
     positionMs: Long,
-    fallbackUrl: String,
+    fallbackUrl: String
 ): String? {
     if (provider == null) return fallbackUrl
     val refreshed = try {

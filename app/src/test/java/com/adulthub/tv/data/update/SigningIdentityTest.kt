@@ -28,8 +28,7 @@ class SigningIdentityTest {
         return context
     }
 
-    private fun digestOf(bytes: ByteArray): String =
-        MessageDigest.getInstance("SHA-256").digest(bytes).joinToString("") { "%02x".format(it) }
+    private fun digestOf(bytes: ByteArray): String = MessageDigest.getInstance("SHA-256").digest(bytes).joinToString("") { "%02x".format(it) }
 
     @Test
     fun `the pinned certificate digest is read from the asset`() {

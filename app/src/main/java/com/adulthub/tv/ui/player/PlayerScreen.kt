@@ -10,6 +10,8 @@ import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.shape.CircleShape
+import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.DisposableEffect
 import androidx.compose.runtime.LaunchedEffect
@@ -39,29 +41,27 @@ import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
-import androidx.compose.foundation.shape.CircleShape
-import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.ui.viewinterop.AndroidView
-import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import androidx.lifecycle.Lifecycle
 import androidx.lifecycle.LifecycleEventObserver
 import androidx.lifecycle.LifecycleOwner
+import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import androidx.media3.common.Player
 import androidx.media3.common.util.UnstableApi
 import androidx.media3.ui.AspectRatioFrameLayout
 import androidx.media3.ui.PlayerView
 import androidx.tv.material3.Text
 import com.adulthub.tv.R
+import com.adulthub.tv.diagnostics.AppLog as Log
 import com.adulthub.tv.player.PlayerManager
 import com.adulthub.tv.ui.theme.NeonPink
 import com.adulthub.tv.ui.theme.OledBlack
+import java.util.Locale
+import kotlin.math.abs
 import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.launch
-import java.util.Locale
-import kotlin.math.abs
-import com.adulthub.tv.diagnostics.AppLog as Log
 import org.koin.androidx.compose.koinViewModel
 import org.koin.compose.koinInject
 import org.koin.core.qualifier.named
@@ -74,7 +74,7 @@ fun PlayerScreen(
     modifier: Modifier = Modifier,
     resume: Boolean? = null,
     mobileControls: Boolean = false,
-    viewModel: PlayerViewModel = koinViewModel(),
+    viewModel: PlayerViewModel = koinViewModel()
 ) {
     val context = LocalContext.current
     val coroutineScope = rememberCoroutineScope()
@@ -90,7 +90,7 @@ fun PlayerScreen(
     fun seekFeedbackLabel(deltaMs: Long): String = String.format(
         Locale.US,
         if (deltaMs > 0) seekForwardTemplate else seekBackwardTemplate,
-        abs(deltaMs / 1000),
+        abs(deltaMs / 1000)
     )
 
     // Keep screen on during playback
@@ -109,7 +109,7 @@ fun PlayerScreen(
 
     val settingsDataStore: com.adulthub.tv.data.local.SettingsDataStore = koinInject()
     val playbackHttpClient: okhttp3.OkHttpClient = koinInject(
-        qualifier = named(com.adulthub.tv.di.PLAYBACK_HTTP_CLIENT),
+        qualifier = named(com.adulthub.tv.di.PLAYBACK_HTTP_CLIENT)
     )
     val playerViewHolder = remember { mutableStateOf<PlayerView?>(null) }
     val playerManagerState by produceState<PlayerManager?>(null, context, settingsDataStore) {
@@ -212,7 +212,7 @@ fun PlayerScreen(
             viewModel.playbackReporter.reportStart(
                 positionMs = posMs,
                 canSeek = playerManager.exoPlayer.isCurrentMediaItemSeekable,
-                sessionId = currentReportingSessionId,
+                sessionId = currentReportingSessionId
             )
         }
         playerManager.onPlaybackEnded = {
@@ -249,7 +249,7 @@ fun PlayerScreen(
             technicalInfo = playerManager.getTechnicalInfo(
                 playbackInfo = state.playbackInfo,
                 resolverLatencyMs = state.resolverLatencyMs,
-                reportedVariant = viewModel.activeVariant(),
+                reportedVariant = viewModel.activeVariant()
             )
             delay(1_000L)
         }
@@ -274,7 +274,7 @@ fun PlayerScreen(
             playSessionId = info.playSessionId,
             playMethod = info.playMethod,
             getCurrentPositionMs = { playerManager.currentPositionMs.value },
-            getIsPaused = { !playerManager.isPlaying.value },
+            getIsPaused = { !playerManager.isPlaying.value }
         )
 
         resizeMode = AspectRatioFrameLayout.RESIZE_MODE_FIT
@@ -287,7 +287,7 @@ fun PlayerScreen(
             startPositionMs = state.startPositionMs,
             title = info.title,
             headers = info.headers,
-            itemId = state.item.id,
+            itemId = state.item.id
         )
 
         // If waiting for user to confirm resume from ResumePlaybackDialog, pause immediately
@@ -385,16 +385,22 @@ fun PlayerScreen(
 
     // Handle Back button
     BackHandler {
-        when (resolvePlayerBackAction(
-            autoplayCountdownSec = autoplayCountdownSec,
-            showInfoDialog = showInfoDialog,
-            hasPendingResumeDialog = pendingResumeDialogPosition != null,
-            isOsdVisible = isOsdVisible,
-        )) {
+        when (
+            resolvePlayerBackAction(
+                autoplayCountdownSec = autoplayCountdownSec,
+                showInfoDialog = showInfoDialog,
+                hasPendingResumeDialog = pendingResumeDialogPosition != null,
+                isOsdVisible = isOsdVisible
+            )
+        ) {
             PlayerBackAction.CANCEL_AUTOPLAY -> autoplayCountdownSec = null
+
             PlayerBackAction.CLOSE_INFO_DIALOG -> showInfoDialog = false
+
             PlayerBackAction.DISMISS_RESUME_DIALOG -> viewModel.onResumeDialogHandled()
+
             PlayerBackAction.HIDE_OSD -> isOsdVisible = false
+
             PlayerBackAction.EXIT_PLAYER -> {
                 viewModel.onExitPlayer(playerManager.currentPositionMs.value, reportingSessionId)
                 onBack()
@@ -425,8 +431,11 @@ fun PlayerScreen(
                                 isOsdVisible = true
                                 osdTimerTrigger = System.currentTimeMillis()
                                 true
-                            } else false
+                            } else {
+                                false
+                            }
                         }
+
                         Key.DirectionLeft -> {
                             if (!isOsdVisible && !isPlaybackEnded && playerError == null && !showInfoDialog) {
                                 val delta = -seekStepSec * 1_000L
@@ -435,11 +444,14 @@ fun PlayerScreen(
                                 viewModel.playbackReporter.reportProgressNow(
                                     playerManager.currentPositionMs.value,
                                     !playerManager.isPlaying.value,
-                                    reportingSessionId,
+                                    reportingSessionId
                                 )
                                 true
-                            } else false
+                            } else {
+                                false
+                            }
                         }
+
                         Key.DirectionRight -> {
                             if (!isOsdVisible && !isPlaybackEnded && playerError == null && !showInfoDialog) {
                                 val delta = seekStepSec * 1_000L
@@ -448,21 +460,29 @@ fun PlayerScreen(
                                 viewModel.playbackReporter.reportProgressNow(
                                     playerManager.currentPositionMs.value,
                                     !playerManager.isPlaying.value,
-                                    reportingSessionId,
+                                    reportingSessionId
                                 )
                                 true
-                            } else false
+                            } else {
+                                false
+                            }
                         }
+
                         Key.DirectionUp, Key.DirectionDown -> {
                             if (!isOsdVisible && !isPlaybackEnded && playerError == null && !showInfoDialog) {
                                 isOsdVisible = true
                                 osdTimerTrigger = System.currentTimeMillis()
                                 true
-                            } else false
+                            } else {
+                                false
+                            }
                         }
+
                         else -> false
                     }
-                } else false
+                } else {
+                    false
+                }
             }
     ) {
         if (retryStatus != null) {
@@ -474,7 +494,7 @@ fun PlayerScreen(
                     .align(Alignment.TopCenter)
                     .padding(top = 32.dp)
                     .background(Color.Black.copy(alpha = 0.8f), RoundedCornerShape(8.dp))
-                    .padding(horizontal = 20.dp, vertical = 14.dp),
+                    .padding(horizontal = 20.dp, vertical = 14.dp)
             )
         }
 
@@ -487,7 +507,7 @@ fun PlayerScreen(
                     .align(Alignment.TopCenter)
                     .padding(top = 32.dp)
                     .background(Color.Black.copy(alpha = 0.8f), RoundedCornerShape(8.dp))
-                    .padding(horizontal = 20.dp, vertical = 12.dp),
+                    .padding(horizontal = 20.dp, vertical = 12.dp)
             )
         }
 
@@ -498,7 +518,7 @@ fun PlayerScreen(
                     .clip(CircleShape)
                     .background(Color.Black.copy(alpha = 0.6f))
                     .padding(20.dp),
-                contentAlignment = Alignment.Center,
+                contentAlignment = Alignment.Center
             ) {
                 Column(horizontalAlignment = Alignment.CenterHorizontally) {
                     com.adulthub.tv.ui.components.LoadingIndicator()
@@ -506,7 +526,7 @@ fun PlayerScreen(
                         text = stringResource(R.string.player_changing_quality),
                         color = Color.White,
                         fontSize = 14.sp,
-                        modifier = Modifier.padding(top = 8.dp),
+                        modifier = Modifier.padding(top = 8.dp)
                     )
                 }
             }
@@ -516,13 +536,14 @@ fun PlayerScreen(
             is PlayerUiState.Loading -> {
                 Box(
                     modifier = Modifier.fillMaxSize(),
-                    contentAlignment = Alignment.Center,
+                    contentAlignment = Alignment.Center
                 ) {
                     com.adulthub.tv.ui.components.LoadingIndicator(
-                        message = stringResource(R.string.player_loading_stream),
+                        message = stringResource(R.string.player_loading_stream)
                     )
                 }
             }
+
             is PlayerUiState.Error -> {
                 PlaybackErrorDialog(
                     errorMessage = state.message,
@@ -530,9 +551,10 @@ fun PlayerScreen(
                     onBack = {
                         viewModel.onExitPlayer(0L, reportingSessionId)
                         onBack()
-                    },
+                    }
                 )
             }
+
             is PlayerUiState.Ready -> {
                 // Video Surface
                 AndroidView(
@@ -548,121 +570,128 @@ fun PlayerScreen(
                         view.player = playerManager.exoPlayer
                         view.resizeMode = resizeMode
                     },
-                    modifier = Modifier.fillMaxSize(),
+                    modifier = Modifier.fillMaxSize()
                 )
 
                 // Use a touch-first overlay on phones. The TV overlay is designed for a remote.
-                if (mobileControls) MobilePlayerOverlay(
-                    title = state.item.title,
-                    isPlaying = isPlaying,
-                    isBuffering = playbackState == Player.STATE_BUFFERING || isLoadingRandom,
-                    positionFlow = playerManager.currentPositionMs,
-                    durationMs = durationMs,
-                    isOsdVisible = isOsdVisible,
-                    onShowOsd = {
-                        isOsdVisible = true
-                        osdTimerTrigger = System.currentTimeMillis()
-                    },
-                    onInteraction = { osdTimerTrigger = System.currentTimeMillis() },
-                    onPlayPauseClick = {
-                        playerManager.togglePlayPause()
-                        viewModel.playbackReporter.reportProgressNow(playerManager.currentPositionMs.value, !playerManager.isPlaying.value, reportingSessionId)
-                    },
-                    onSeekRelative = { deltaMs ->
-                        playerManager.seekBy(deltaMs)
-                        seekFeedback = seekFeedbackLabel(deltaMs)
-                        viewModel.playbackReporter.reportProgressNow(playerManager.currentPositionMs.value, !playerManager.isPlaying.value, reportingSessionId)
-                    },
-                    onSeekTo = { positionMs ->
-                        playerManager.seekTo(positionMs)
-                        viewModel.playbackReporter.reportProgressNow(positionMs, !playerManager.isPlaying.value, reportingSessionId)
-                    },
-                    isMuted = isMuted,
-                    onMuteClick = { playerManager.toggleMute() },
-                    onRandomClick = { viewModel.playRandomMovie(playerManager.currentPositionMs.value, reportingSessionId) },
-                    onInfoClick = { showInfoDialog = !showInfoDialog },
-                    onBackClick = {
-                        viewModel.onExitPlayer(playerManager.currentPositionMs.value, reportingSessionId)
-                        onBack()
-                    },
-                    isFavorite = state.item.isFavorite,
-                    onToggleFavorite = viewModel::toggleFavorite,
-                    playbackSpeed = playbackSpeed,
-                    onPlaybackSpeedChange = { speed -> playbackSpeed = speed; playerManager.setPlaybackSpeed(speed) },
-                    resizeMode = resizeMode,
-                    onResizeModeChange = { resizeMode = it },
-                    seekFeedback = seekFeedback,
-                    seekStepSec = seekStepSec,
-                    qualityOptions = qualityState.options,
-                    isQualitySwitching = qualityState.isSwitching,
-                    qualityLoadFailed = qualityState.qualityUnavailableMessage != null,
-                    onQualitySelected = requestQualityChange,
-                    onQualityRetry = { viewModel.retryQualityFetch() },
-                ) else PlayerOverlay(
-                    title = state.item.title,
-                    isPlaying = isPlaying,
-                    isBuffering = playbackState == Player.STATE_BUFFERING || isLoadingRandom,
-                    positionFlow = playerManager.currentPositionMs,
-                    durationMs = durationMs,
-                    isOsdVisible = isOsdVisible,
-                    seekFeedback = seekFeedback,
-                    playPauseFocusRequester = playPauseFocusRequester,
-                    onShowOsd = {
-                        isOsdVisible = true
-                        osdTimerTrigger = System.currentTimeMillis()
-                    },
-                    onResetOsdTimer = {
-                        osdTimerTrigger = System.currentTimeMillis()
-                    },
-                    onPlayPauseClick = {
-                        playerManager.togglePlayPause()
-                        viewModel.playbackReporter.reportProgressNow(
-                            playerManager.currentPositionMs.value,
-                            !playerManager.isPlaying.value,
-                            reportingSessionId,
-                        )
-                    },
-                    isMuted = isMuted,
-                    onMuteClick = { playerManager.toggleMute() },
-                    onSeekRelative = { deltaMs ->
-                        playerManager.seekBy(deltaMs)
-                        seekFeedback = seekFeedbackLabel(deltaMs)
-                        viewModel.playbackReporter.reportProgressNow(
-                            playerManager.currentPositionMs.value,
-                            !playerManager.isPlaying.value,
-                            reportingSessionId,
-                        )
-                    },
-                    onRandomClick = {
-                        viewModel.playRandomMovie(playerManager.currentPositionMs.value, reportingSessionId)
-                    },
-                    onInfoClick = {
-                        showInfoDialog = !showInfoDialog
-                    },
-                    onBackClick = {
-                        viewModel.onExitPlayer(playerManager.currentPositionMs.value, reportingSessionId)
-                        onBack()
-                    },
-                    isFavorite = state.item.isFavorite,
-                    onToggleFavorite = {
-                        viewModel.toggleFavorite()
-                    },
-                    seekStepSec = seekStepSec,
-                    playbackSpeed = playbackSpeed,
-                    onPlaybackSpeedChange = { newSpeed ->
-                        playbackSpeed = newSpeed
-                        playerManager.setPlaybackSpeed(newSpeed)
-                    },
-                    resizeMode = resizeMode,
-                    onResizeModeChange = { newMode ->
-                        resizeMode = newMode
-                    },
-                    qualityOptions = qualityState.options,
-                    isQualitySwitching = qualityState.isSwitching,
-                    qualityLoadFailed = qualityState.qualityUnavailableMessage != null,
-                    onQualitySelected = requestQualityChange,
-                    onQualityRetry = { viewModel.retryQualityFetch() },
-                )
+                if (mobileControls) {
+                    MobilePlayerOverlay(
+                        title = state.item.title,
+                        isPlaying = isPlaying,
+                        isBuffering = playbackState == Player.STATE_BUFFERING || isLoadingRandom,
+                        positionFlow = playerManager.currentPositionMs,
+                        durationMs = durationMs,
+                        isOsdVisible = isOsdVisible,
+                        onShowOsd = {
+                            isOsdVisible = true
+                            osdTimerTrigger = System.currentTimeMillis()
+                        },
+                        onInteraction = { osdTimerTrigger = System.currentTimeMillis() },
+                        onPlayPauseClick = {
+                            playerManager.togglePlayPause()
+                            viewModel.playbackReporter.reportProgressNow(playerManager.currentPositionMs.value, !playerManager.isPlaying.value, reportingSessionId)
+                        },
+                        onSeekRelative = { deltaMs ->
+                            playerManager.seekBy(deltaMs)
+                            seekFeedback = seekFeedbackLabel(deltaMs)
+                            viewModel.playbackReporter.reportProgressNow(playerManager.currentPositionMs.value, !playerManager.isPlaying.value, reportingSessionId)
+                        },
+                        onSeekTo = { positionMs ->
+                            playerManager.seekTo(positionMs)
+                            viewModel.playbackReporter.reportProgressNow(positionMs, !playerManager.isPlaying.value, reportingSessionId)
+                        },
+                        isMuted = isMuted,
+                        onMuteClick = { playerManager.toggleMute() },
+                        onRandomClick = { viewModel.playRandomMovie(playerManager.currentPositionMs.value, reportingSessionId) },
+                        onInfoClick = { showInfoDialog = !showInfoDialog },
+                        onBackClick = {
+                            viewModel.onExitPlayer(playerManager.currentPositionMs.value, reportingSessionId)
+                            onBack()
+                        },
+                        isFavorite = state.item.isFavorite,
+                        onToggleFavorite = viewModel::toggleFavorite,
+                        playbackSpeed = playbackSpeed,
+                        onPlaybackSpeedChange = { speed ->
+                            playbackSpeed = speed
+                            playerManager.setPlaybackSpeed(speed)
+                        },
+                        resizeMode = resizeMode,
+                        onResizeModeChange = { resizeMode = it },
+                        seekFeedback = seekFeedback,
+                        seekStepSec = seekStepSec,
+                        qualityOptions = qualityState.options,
+                        isQualitySwitching = qualityState.isSwitching,
+                        qualityLoadFailed = qualityState.qualityUnavailableMessage != null,
+                        onQualitySelected = requestQualityChange,
+                        onQualityRetry = { viewModel.retryQualityFetch() }
+                    )
+                } else {
+                    PlayerOverlay(
+                        title = state.item.title,
+                        isPlaying = isPlaying,
+                        isBuffering = playbackState == Player.STATE_BUFFERING || isLoadingRandom,
+                        positionFlow = playerManager.currentPositionMs,
+                        durationMs = durationMs,
+                        isOsdVisible = isOsdVisible,
+                        seekFeedback = seekFeedback,
+                        playPauseFocusRequester = playPauseFocusRequester,
+                        onShowOsd = {
+                            isOsdVisible = true
+                            osdTimerTrigger = System.currentTimeMillis()
+                        },
+                        onResetOsdTimer = {
+                            osdTimerTrigger = System.currentTimeMillis()
+                        },
+                        onPlayPauseClick = {
+                            playerManager.togglePlayPause()
+                            viewModel.playbackReporter.reportProgressNow(
+                                playerManager.currentPositionMs.value,
+                                !playerManager.isPlaying.value,
+                                reportingSessionId
+                            )
+                        },
+                        isMuted = isMuted,
+                        onMuteClick = { playerManager.toggleMute() },
+                        onSeekRelative = { deltaMs ->
+                            playerManager.seekBy(deltaMs)
+                            seekFeedback = seekFeedbackLabel(deltaMs)
+                            viewModel.playbackReporter.reportProgressNow(
+                                playerManager.currentPositionMs.value,
+                                !playerManager.isPlaying.value,
+                                reportingSessionId
+                            )
+                        },
+                        onRandomClick = {
+                            viewModel.playRandomMovie(playerManager.currentPositionMs.value, reportingSessionId)
+                        },
+                        onInfoClick = {
+                            showInfoDialog = !showInfoDialog
+                        },
+                        onBackClick = {
+                            viewModel.onExitPlayer(playerManager.currentPositionMs.value, reportingSessionId)
+                            onBack()
+                        },
+                        isFavorite = state.item.isFavorite,
+                        onToggleFavorite = {
+                            viewModel.toggleFavorite()
+                        },
+                        seekStepSec = seekStepSec,
+                        playbackSpeed = playbackSpeed,
+                        onPlaybackSpeedChange = { newSpeed ->
+                            playbackSpeed = newSpeed
+                            playerManager.setPlaybackSpeed(newSpeed)
+                        },
+                        resizeMode = resizeMode,
+                        onResizeModeChange = { newMode ->
+                            resizeMode = newMode
+                        },
+                        qualityOptions = qualityState.options,
+                        isQualitySwitching = qualityState.isSwitching,
+                        qualityLoadFailed = qualityState.qualityUnavailableMessage != null,
+                        onQualitySelected = requestQualityChange,
+                        onQualityRetry = { viewModel.retryQualityFetch() }
+                    )
+                }
 
                 phashStatus?.takeIf { it.message != hiddenPhashStatusMessage }?.let { status ->
                     Box(
@@ -670,13 +699,13 @@ fun PlayerScreen(
                             .align(Alignment.TopEnd)
                             .padding(20.dp)
                             .background(Color.Black.copy(alpha = 0.62f), RoundedCornerShape(6.dp))
-                            .padding(horizontal = 12.dp, vertical = 7.dp),
+                            .padding(horizontal = 12.dp, vertical = 7.dp)
                     ) {
                         Text(
                             text = status.message,
                             color = if (status.terminal && status.message.contains("failed", true)) Color(0xFFFFB4AB) else NeonPink,
                             fontSize = 12.sp,
-                            maxLines = 2,
+                            maxLines = 2
                         )
                     }
                 }
@@ -685,7 +714,7 @@ fun PlayerScreen(
                 technicalInfo?.let { info ->
                     PlaybackInfoOverlay(
                         technicalInfo = info,
-                        isMobile = mobileControls,
+                        isMobile = mobileControls
                     )
                 }
 
@@ -704,7 +733,7 @@ fun PlayerScreen(
                         countdownSeconds = autoplayCountdownSec,
                         onCancelCountdown = {
                             autoplayCountdownSec = null
-                        },
+                        }
                     )
                 }
 
@@ -722,7 +751,7 @@ fun PlayerScreen(
                             viewModel.onResumeDialogHandled()
                             playerManager.seekTo(0L)
                             playerManager.play()
-                        },
+                        }
                     )
                 }
 
@@ -743,7 +772,7 @@ fun PlayerScreen(
                                         startPositionMs = playerManager.currentPositionMs.value,
                                         title = state.playbackInfo.title,
                                         headers = state.playbackInfo.headers,
-                                        itemId = state.item.id,
+                                        itemId = state.item.id
                                     )
                                 } else {
                                     retryMessage = streamRefreshFailureMessage
@@ -753,12 +782,11 @@ fun PlayerScreen(
                         onBack = {
                             viewModel.onExitPlayer(playerManager.currentPositionMs.value, reportingSessionId)
                             onBack()
-                        },
+                        }
                     )
                 }
             }
         }
-
     }
 }
 

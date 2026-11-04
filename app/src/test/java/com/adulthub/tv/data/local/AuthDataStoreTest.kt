@@ -41,7 +41,7 @@ class AuthDataStoreTest {
         val testFile = tmpFolder.newFile("auth.preferences_pb")
         val dataStore: DataStore<Preferences> = PreferenceDataStoreFactory.create(
             scope = testScope,
-            produceFile = { testFile },
+            produceFile = { testFile }
         )
         authDataStore = AuthDataStore(context, crypto, dataStore)
     }
@@ -52,7 +52,7 @@ class AuthDataStoreTest {
             userId = "user-1",
             username = "user",
             accessToken = accessToken,
-            serverName = "jf.example.com",
+            serverName = "jf.example.com"
         )
     }
 
@@ -71,34 +71,33 @@ class AuthDataStoreTest {
         assertFalse(authDataStore.clearSessionIfAccessTokenMatches("older-token"))
         assertEquals(
             "current-token",
-            (authDataStore.getAuthState() as AuthState.Authenticated).accessToken,
+            (authDataStore.getAuthState() as AuthState.Authenticated).accessToken
         )
     }
 
     @Test
-    fun `a session saved during the token check survives a stale rejection`() =
-        runTest(testDispatcher) {
-            save("current-token")
-            val decryptStarted = CompletableDeferred<Unit>()
-            val releaseDecrypt = CompletableDeferred<Unit>()
-            coEvery { crypto.decrypt(any()) } coAnswers {
-                val value = firstArg<String>()
-                if (value == "enc_current-token") {
-                    decryptStarted.complete(Unit)
-                    releaseDecrypt.await()
-                }
-                value.removePrefix("enc_")
+    fun `a session saved during the token check survives a stale rejection`() = runTest(testDispatcher) {
+        save("current-token")
+        val decryptStarted = CompletableDeferred<Unit>()
+        val releaseDecrypt = CompletableDeferred<Unit>()
+        coEvery { crypto.decrypt(any()) } coAnswers {
+            val value = firstArg<String>()
+            if (value == "enc_current-token") {
+                decryptStarted.complete(Unit)
+                releaseDecrypt.await()
             }
-
-            val clearing = async { authDataStore.clearSessionIfAccessTokenMatches("current-token") }
-            decryptStarted.await()
-            save("newer-token")
-            releaseDecrypt.complete(Unit)
-
-            assertFalse(clearing.await())
-            assertEquals(
-                "newer-token",
-                (authDataStore.getAuthState() as AuthState.Authenticated).accessToken,
-            )
+            value.removePrefix("enc_")
         }
+
+        val clearing = async { authDataStore.clearSessionIfAccessTokenMatches("current-token") }
+        decryptStarted.await()
+        save("newer-token")
+        releaseDecrypt.complete(Unit)
+
+        assertFalse(clearing.await())
+        assertEquals(
+            "newer-token",
+            (authDataStore.getAuthState() as AuthState.Authenticated).accessToken
+        )
+    }
 }

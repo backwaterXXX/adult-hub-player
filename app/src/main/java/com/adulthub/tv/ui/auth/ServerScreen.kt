@@ -42,7 +42,7 @@ import com.adulthub.tv.ui.theme.TextSecondary
 @Composable
 fun ServerScreen(
     viewModel: AuthViewModel,
-    modifier: Modifier = Modifier,
+    modifier: Modifier = Modifier
 ) {
     val state by viewModel.serverState.collectAsStateWithLifecycle()
     val localNetwork = LocalNetworkPermission.current
@@ -52,7 +52,7 @@ fun ServerScreen(
             .fillMaxSize()
             .background(OledBlack)
             .padding(horizontal = 48.dp, vertical = 32.dp),
-        contentAlignment = Alignment.Center,
+        contentAlignment = Alignment.Center
     ) {
         if (state.isConnecting) {
             LoadingIndicator(message = stringResource(R.string.server_connecting))
@@ -61,19 +61,19 @@ fun ServerScreen(
                 modifier = Modifier
                     .fillMaxWidth(0.65f),
                 horizontalAlignment = Alignment.CenterHorizontally,
-                verticalArrangement = Arrangement.Center,
+                verticalArrangement = Arrangement.Center
             ) {
                 item {
                     Text(
                         text = stringResource(R.string.server_title),
                         style = MaterialTheme.typography.headlineLarge,
-                        color = NeonPink,
+                        color = NeonPink
                     )
                     Spacer(modifier = Modifier.height(8.dp))
                     Text(
                         text = stringResource(R.string.server_subtitle),
                         style = MaterialTheme.typography.bodyMedium,
-                        color = TextSecondary,
+                        color = TextSecondary
                     )
                     Spacer(modifier = Modifier.height(28.dp))
                 }
@@ -86,14 +86,14 @@ fun ServerScreen(
                         hint = stringResource(R.string.server_url_hint),
                         keyboardOptions = KeyboardOptions(
                             keyboardType = KeyboardType.Uri,
-                            imeAction = ImeAction.Done,
+                            imeAction = ImeAction.Done
                         ),
                         keyboardActions = KeyboardActions(
                             onDone = {
                                 localNetwork.ensureGranted(state.serverUrl) { viewModel.connectServer() }
-                            },
+                            }
                         ),
-                        modifier = Modifier.fillMaxWidth(),
+                        modifier = Modifier.fillMaxWidth()
                     )
                     Spacer(modifier = Modifier.height(20.dp))
                 }
@@ -101,13 +101,13 @@ fun ServerScreen(
                 item {
                     Row(
                         modifier = Modifier.fillMaxWidth(),
-                        horizontalArrangement = Arrangement.Center,
+                        horizontalArrangement = Arrangement.Center
                     ) {
                         TvPrimaryButton(
                             onClick = {
                                 localNetwork.ensureGranted(state.serverUrl) { viewModel.connectServer() }
                             },
-                            modifier = Modifier.width(200.dp),
+                            modifier = Modifier.width(200.dp)
                         ) {
                             Text(text = stringResource(R.string.action_connect))
                         }
@@ -125,7 +125,7 @@ fun ServerScreen(
                                 } else {
                                     localNetwork.ensureGranted(state.serverUrl) { viewModel.connectServer() }
                                 }
-                            },
+                            }
                         )
                         Spacer(modifier = Modifier.height(16.dp))
                     }
@@ -139,7 +139,7 @@ fun ServerScreen(
                             color = TextSecondary,
                             modifier = Modifier
                                 .fillMaxWidth()
-                                .padding(vertical = 8.dp),
+                                .padding(vertical = 8.dp)
                         )
                     }
 
@@ -149,24 +149,24 @@ fun ServerScreen(
                                 .fillMaxWidth()
                                 .padding(vertical = 4.dp),
                             horizontalArrangement = Arrangement.SpaceBetween,
-                            verticalAlignment = Alignment.CenterVertically,
+                            verticalAlignment = Alignment.CenterVertically
                         ) {
                             Column(modifier = Modifier.weight(1f)) {
                                 Text(
                                     text = server.name.ifEmpty { "Jellyfin Server" },
-                                    style = MaterialTheme.typography.titleMedium,
+                                    style = MaterialTheme.typography.titleMedium
                                 )
                                 Text(
                                     text = server.url,
                                     style = MaterialTheme.typography.bodyMedium,
-                                    color = TextSecondary,
+                                    color = TextSecondary
                                 )
                             }
                             Spacer(modifier = Modifier.width(16.dp))
                             TvSecondaryButton(
                                 onClick = {
                                     localNetwork.ensureGranted(server.url) { viewModel.connectServer(server.url) }
-                                },
+                                }
                             ) {
                                 Text(text = stringResource(R.string.action_connect))
                             }
@@ -180,7 +180,7 @@ fun ServerScreen(
             CleartextHttpConsentDialog(
                 url = url,
                 onApprove = viewModel::confirmHttpConsent,
-                onDismiss = viewModel::dismissHttpConsent,
+                onDismiss = viewModel::dismissHttpConsent
             )
         }
     }

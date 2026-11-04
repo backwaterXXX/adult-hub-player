@@ -27,12 +27,11 @@ import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.snapshotFlow
-import androidx.lifecycle.compose.collectAsStateWithLifecycle
-import org.koin.compose.koinInject
 import androidx.compose.ui.Alignment
-import kotlinx.coroutines.flow.distinctUntilChanged
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
+import androidx.compose.ui.focus.FocusRequester
+import androidx.compose.ui.focus.focusRequester
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.graphicsLayer
 import androidx.compose.ui.layout.ContentScale
@@ -43,6 +42,7 @@ import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
+import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import androidx.tv.material3.Border
 import androidx.tv.material3.Card
 import androidx.tv.material3.CardDefaults
@@ -59,16 +59,14 @@ import com.adulthub.tv.ui.components.ErrorMessage
 import com.adulthub.tv.ui.components.LoadingIndicator
 import com.adulthub.tv.ui.components.TvPrimaryButton
 import com.adulthub.tv.ui.components.TvSecondaryButton
-import androidx.compose.ui.focus.FocusRequester
-import androidx.compose.ui.focus.focusRequester
-import kotlinx.coroutines.delay
 import com.adulthub.tv.ui.theme.CardSurface
 import com.adulthub.tv.ui.theme.CardSurfaceFocused
 import com.adulthub.tv.ui.theme.NeonPink
 import com.adulthub.tv.ui.theme.SurfaceDark
 import com.adulthub.tv.ui.theme.TextPrimary
 import com.adulthub.tv.ui.theme.TextSecondary
-import androidx.lifecycle.compose.collectAsStateWithLifecycle
+import kotlinx.coroutines.delay
+import kotlinx.coroutines.flow.distinctUntilChanged
 import org.koin.compose.koinInject
 
 @Composable
@@ -84,7 +82,7 @@ fun ChannelsTab(
     onSortModeChange: (ChannelSortMode) -> Unit = {},
     onHideChannel: () -> Unit = {},
     onDurationFilterChange: (DurationFilter) -> Unit = {},
-    getVideoThumbnailUrl: (String?) -> String = { it.orEmpty() },
+    getVideoThumbnailUrl: (String?) -> String = { it.orEmpty() }
 ) {
     val telegramProgressStore: com.adulthub.tv.data.local.TelegramProgressStore = koinInject()
     val progressList by telegramProgressStore.allProgress.collectAsStateWithLifecycle(initialValue = emptyList())
@@ -143,7 +141,7 @@ fun ChannelsTab(
     Column(
         modifier = modifier
             .fillMaxSize()
-            .padding(horizontal = 48.dp),
+            .padding(horizontal = 48.dp)
     ) {
         if (state.selectedChannel != null) {
             // Selected Channel Header
@@ -152,12 +150,12 @@ fun ChannelsTab(
                     .fillMaxWidth()
                     .padding(vertical = 4.dp),
                 horizontalArrangement = Arrangement.SpaceBetween,
-                verticalAlignment = Alignment.CenterVertically,
+                verticalAlignment = Alignment.CenterVertically
             ) {
                 Row(
                     modifier = Modifier.weight(1f, fill = false),
                     verticalAlignment = Alignment.CenterVertically,
-                    horizontalArrangement = Arrangement.spacedBy(8.dp),
+                    horizontalArrangement = Arrangement.spacedBy(8.dp)
                 ) {
                     Text(
                         text = state.selectedChannel.title,
@@ -165,7 +163,7 @@ fun ChannelsTab(
                         color = NeonPink,
                         fontWeight = FontWeight.Bold,
                         maxLines = 1,
-                        overflow = TextOverflow.Ellipsis,
+                        overflow = TextOverflow.Ellipsis
                     )
                     Text(
                         text = if (state.hasMoreVideos) {
@@ -175,13 +173,13 @@ fun ChannelsTab(
                         },
                         style = MaterialTheme.typography.bodySmall,
                         color = TextSecondary,
-                        maxLines = 1,
+                        maxLines = 1
                     )
                 }
 
                 Row(
                     verticalAlignment = Alignment.CenterVertically,
-                    horizontalArrangement = Arrangement.spacedBy(8.dp),
+                    horizontalArrangement = Arrangement.spacedBy(8.dp)
                 ) {
                     // Sort Cycler Button
                     TvSecondaryButton(
@@ -193,7 +191,7 @@ fun ChannelsTab(
                             }
                             onSortModeChange(nextMode)
                         },
-                        modifier = Modifier.height(34.dp),
+                        modifier = Modifier.height(34.dp)
                     ) {
                         Text(text = stringResource(R.string.library_sort_value, stringResource(state.sortMode.labelRes)), fontSize = 12.sp)
                     }
@@ -209,7 +207,7 @@ fun ChannelsTab(
                             }
                             onDurationFilterChange(nextDuration)
                         },
-                        modifier = Modifier.height(34.dp),
+                        modifier = Modifier.height(34.dp)
                     ) {
                         val durationText = if (state.durationFilter == DurationFilter.ALL) {
                             stringResource(R.string.filter_duration_all)
@@ -222,7 +220,7 @@ fun ChannelsTab(
                     // Hide Channel Button
                     TvSecondaryButton(
                         onClick = onHideChannel,
-                        modifier = Modifier.height(34.dp),
+                        modifier = Modifier.height(34.dp)
                     ) {
                         Text(text = stringResource(R.string.action_hide_channel), fontSize = 12.sp)
                     }
@@ -230,7 +228,7 @@ fun ChannelsTab(
                     // Back to Channels Button
                     TvSecondaryButton(
                         onClick = onBackToChannels,
-                        modifier = Modifier.height(34.dp),
+                        modifier = Modifier.height(34.dp)
                     ) {
                         Text(text = stringResource(R.string.library_back_to_channels), fontSize = 12.sp)
                     }
@@ -240,30 +238,30 @@ fun ChannelsTab(
             if (state.isLoadingVideos) {
                 Box(
                     modifier = Modifier.fillMaxSize(),
-                    contentAlignment = Alignment.Center,
+                    contentAlignment = Alignment.Center
                 ) {
                     LoadingIndicator(message = stringResource(R.string.library_loading_channel_videos))
                 }
             } else if (state.channelVideosError != null && state.channelVideos.isEmpty()) {
                 Box(
                     modifier = Modifier.fillMaxSize(),
-                    contentAlignment = Alignment.Center,
+                    contentAlignment = Alignment.Center
                 ) {
                     ErrorMessage(
                         message = state.channelVideosError,
                         onRetry = onRetryChannelVideos,
-                        modifier = Modifier.fillMaxWidth(0.5f),
+                        modifier = Modifier.fillMaxWidth(0.5f)
                     )
                 }
             } else if (state.channelVideos.isEmpty()) {
                 Box(
                     modifier = Modifier.fillMaxSize(),
-                    contentAlignment = Alignment.Center,
+                    contentAlignment = Alignment.Center
                 ) {
                     Text(
                         text = stringResource(R.string.library_no_videos_in_channel, state.selectedChannel.title),
                         style = MaterialTheme.typography.bodyLarge,
-                        color = TextSecondary,
+                        color = TextSecondary
                     )
                 }
             } else {
@@ -273,11 +271,11 @@ fun ChannelsTab(
                     contentPadding = PaddingValues(top = 4.dp, bottom = 48.dp),
                     horizontalArrangement = Arrangement.spacedBy(16.dp),
                     verticalArrangement = Arrangement.spacedBy(16.dp),
-                    modifier = Modifier.fillMaxSize(),
+                    modifier = Modifier.fillMaxSize()
                 ) {
                     items(
                         items = state.channelVideos,
-                        key = { it.id },
+                        key = { it.id }
                     ) { video ->
                         val requester = remember(video.id) {
                             videoFocusRequesterMap.getOrPut(video.id) { FocusRequester() }
@@ -290,7 +288,7 @@ fun ChannelsTab(
                             isPlayed = record?.isPlayed == true,
                             progressFraction = record?.progressFraction ?: 0f,
                             onClick = { onVideoClick(video) },
-                            modifier = Modifier.focusRequester(requester),
+                            modifier = Modifier.focusRequester(requester)
                         )
                     }
 
@@ -300,7 +298,7 @@ fun ChannelsTab(
                                 modifier = Modifier
                                     .fillMaxWidth()
                                     .padding(vertical = 16.dp),
-                                contentAlignment = Alignment.Center,
+                                contentAlignment = Alignment.Center
                             ) {
                                 LoadingIndicator(message = stringResource(R.string.library_loading_more_channel_videos))
                             }
@@ -313,11 +311,11 @@ fun ChannelsTab(
                                 modifier = Modifier
                                     .fillMaxWidth()
                                     .padding(vertical = 16.dp),
-                                contentAlignment = Alignment.Center,
+                                contentAlignment = Alignment.Center
                             ) {
                                 TvSecondaryButton(
                                     onClick = onLoadMore,
-                                    modifier = Modifier.height(44.dp),
+                                    modifier = Modifier.height(44.dp)
                                 ) {
                                     Text(text = stringResource(R.string.library_load_more_videos))
                                 }
@@ -331,17 +329,17 @@ fun ChannelsTab(
                                 modifier = Modifier
                                     .fillMaxWidth()
                                     .padding(vertical = 16.dp),
-                                horizontalAlignment = Alignment.CenterHorizontally,
+                                horizontalAlignment = Alignment.CenterHorizontally
                             ) {
                                 Text(
                                     text = state.channelVideosError,
                                     style = MaterialTheme.typography.bodySmall,
                                     color = MaterialTheme.colorScheme.error,
-                                    modifier = Modifier.padding(bottom = 8.dp),
+                                    modifier = Modifier.padding(bottom = 8.dp)
                                 )
                                 TvSecondaryButton(
                                     onClick = onLoadMore,
-                                    modifier = Modifier.height(36.dp),
+                                    modifier = Modifier.height(36.dp)
                                 ) {
                                     Text(text = stringResource(R.string.library_retry_loading_more))
                                 }
@@ -356,16 +354,16 @@ fun ChannelsTab(
                 modifier = Modifier
                     .fillMaxWidth()
                     .padding(vertical = 6.dp),
-                verticalAlignment = Alignment.CenterVertically,
+                verticalAlignment = Alignment.CenterVertically
             ) {
                 Text(
                     text = pluralStringResource(
                         R.plurals.library_video_channels_count,
                         state.channels.size,
-                        state.channels.size,
+                        state.channels.size
                     ),
                     style = MaterialTheme.typography.bodyMedium,
-                    color = TextSecondary,
+                    color = TextSecondary
                 )
             }
 
@@ -373,35 +371,38 @@ fun ChannelsTab(
                 state.isLoading -> {
                     Box(
                         modifier = Modifier.fillMaxSize(),
-                        contentAlignment = Alignment.Center,
+                        contentAlignment = Alignment.Center
                     ) {
                         LoadingIndicator(message = stringResource(R.string.library_loading_channels))
                     }
                 }
+
                 state.errorMessage != null && state.channels.isEmpty() -> {
                     Box(
                         modifier = Modifier.fillMaxSize(),
-                        contentAlignment = Alignment.Center,
+                        contentAlignment = Alignment.Center
                     ) {
                         ErrorMessage(
                             message = state.errorMessage,
                             onRetry = onRetry,
-                            modifier = Modifier.fillMaxWidth(0.5f),
+                            modifier = Modifier.fillMaxWidth(0.5f)
                         )
                     }
                 }
+
                 state.isEmpty -> {
                     Box(
                         modifier = Modifier.fillMaxSize(),
-                        contentAlignment = Alignment.Center,
+                        contentAlignment = Alignment.Center
                     ) {
                         Text(
                             text = stringResource(R.string.library_no_channels_available),
                             style = MaterialTheme.typography.bodyLarge,
-                            color = TextSecondary,
+                            color = TextSecondary
                         )
                     }
                 }
+
                 else -> {
                     LazyVerticalGrid(
                         columns = GridCells.Fixed(4),
@@ -409,11 +410,11 @@ fun ChannelsTab(
                         contentPadding = PaddingValues(top = 4.dp, bottom = 48.dp),
                         horizontalArrangement = Arrangement.spacedBy(16.dp),
                         verticalArrangement = Arrangement.spacedBy(16.dp),
-                        modifier = Modifier.fillMaxSize(),
+                        modifier = Modifier.fillMaxSize()
                     ) {
                         items(
                             items = state.channels,
-                            key = { it.id },
+                            key = { it.id }
                         ) { channel ->
                             val requester = remember(channel.id) {
                                 channelFocusRequesterMap.getOrPut(channel.id) { FocusRequester() }
@@ -421,7 +422,7 @@ fun ChannelsTab(
                             ChannelCard(
                                 channel = channel,
                                 onClick = { onChannelClick(channel) },
-                                modifier = Modifier.focusRequester(requester),
+                                modifier = Modifier.focusRequester(requester)
                             )
                         }
                     }
@@ -435,7 +436,7 @@ fun ChannelsTab(
 private fun ChannelCard(
     channel: TvChannel,
     onClick: () -> Unit,
-    modifier: Modifier = Modifier,
+    modifier: Modifier = Modifier
 ) {
     Card(
         onClick = onClick,
@@ -447,18 +448,18 @@ private fun ChannelCard(
         scale = CardDefaults.scale(scale = 1f, focusedScale = 1.05f),
         border = CardDefaults.border(
             border = Border(BorderStroke(1.dp, Color.White.copy(alpha = 0.12f))),
-            focusedBorder = Border(BorderStroke(3.5.dp, NeonPink)),
+            focusedBorder = Border(BorderStroke(3.5.dp, NeonPink))
         ),
         colors = CardDefaults.colors(
             containerColor = CardSurface,
-            focusedContainerColor = CardSurfaceFocused,
-        ),
+            focusedContainerColor = CardSurfaceFocused
+        )
     ) {
         Column(
             modifier = Modifier
                 .fillMaxSize()
                 .padding(16.dp),
-            verticalArrangement = Arrangement.Center,
+            verticalArrangement = Arrangement.Center
         ) {
             Text(
                 text = channel.title,
@@ -466,14 +467,14 @@ private fun ChannelCard(
                 color = TextPrimary,
                 maxLines = 1,
                 overflow = TextOverflow.Ellipsis,
-                fontWeight = FontWeight.Bold,
+                fontWeight = FontWeight.Bold
             )
             Spacer(modifier = Modifier.height(4.dp))
             Text(
                 text = channel.slug,
                 style = MaterialTheme.typography.bodySmall,
                 color = TextSecondary,
-                fontSize = 12.sp,
+                fontSize = 12.sp
             )
         }
     }
@@ -486,7 +487,7 @@ private fun ChannelVideoCard(
     onClick: () -> Unit,
     modifier: Modifier = Modifier,
     isPlayed: Boolean = false,
-    progressFraction: Float = 0f,
+    progressFraction: Float = 0f
 ) {
     val totalSec = video.duration.toLong()
     val untitledVideo = stringResource(R.string.library_untitled_video)
@@ -494,9 +495,14 @@ private fun ChannelVideoCard(
         val h = totalSec / 3600
         val m = (totalSec % 3600) / 60
         val s = totalSec % 60
-        if (h > 0) String.format(java.util.Locale.US, "%d:%02d:%02d", h, m, s)
-        else String.format(java.util.Locale.US, "%02d:%02d", m, s)
-    } else ""
+        if (h > 0) {
+            String.format(java.util.Locale.US, "%d:%02d:%02d", h, m, s)
+        } else {
+            String.format(java.util.Locale.US, "%02d:%02d", m, s)
+        }
+    } else {
+        ""
+    }
 
     Card(
         onClick = onClick,
@@ -507,12 +513,12 @@ private fun ChannelVideoCard(
         scale = CardDefaults.scale(scale = 1f, focusedScale = 1.05f),
         border = CardDefaults.border(
             border = Border(BorderStroke(1.dp, Color.White.copy(alpha = 0.12f))),
-            focusedBorder = Border(BorderStroke(3.5.dp, NeonPink)),
+            focusedBorder = Border(BorderStroke(3.5.dp, NeonPink))
         ),
         colors = CardDefaults.colors(
             containerColor = CardSurface,
-            focusedContainerColor = CardSurfaceFocused,
-        ),
+            focusedContainerColor = CardSurfaceFocused
+        )
     ) {
         Column(modifier = Modifier.fillMaxWidth()) {
             Box(
@@ -521,14 +527,14 @@ private fun ChannelVideoCard(
                     .aspectRatio(16f / 9f)
                     .clip(RoundedCornerShape(topStart = 10.dp, topEnd = 10.dp))
                     .background(SurfaceDark),
-                contentAlignment = Alignment.Center,
+                contentAlignment = Alignment.Center
             ) {
                 if (thumbnailUrl.isNotBlank()) {
                     AsyncImage(
                         model = thumbnailUrl,
                         contentDescription = video.title,
                         contentScale = ContentScale.Crop,
-                        modifier = Modifier.fillMaxSize(),
+                        modifier = Modifier.fillMaxSize()
                     )
                 }
 
@@ -541,13 +547,13 @@ private fun ChannelVideoCard(
                             .clip(RoundedCornerShape(4.dp))
                             .background(Color.Black.copy(alpha = 0.78f))
                             .border(1.dp, NeonPink.copy(alpha = 0.85f), RoundedCornerShape(4.dp))
-                            .padding(horizontal = 6.dp, vertical = 2.dp),
+                            .padding(horizontal = 6.dp, vertical = 2.dp)
                     ) {
                         Text(
                             text = stringResource(R.string.library_watched_badge),
                             color = NeonPink,
                             fontSize = 10.sp,
-                            fontWeight = FontWeight.Bold,
+                            fontWeight = FontWeight.Bold
                         )
                     }
                 }
@@ -557,7 +563,7 @@ private fun ChannelVideoCard(
                         durationText = formattedDuration,
                         modifier = Modifier
                             .align(Alignment.BottomEnd)
-                            .padding(horizontal = 8.dp, vertical = if (!isPlayed && progressFraction > 0f) 12.dp else 8.dp),
+                            .padding(horizontal = 8.dp, vertical = if (!isPlayed && progressFraction > 0f) 12.dp else 8.dp)
                     )
                 }
 
@@ -568,13 +574,13 @@ private fun ChannelVideoCard(
                             .align(Alignment.BottomStart)
                             .fillMaxWidth()
                             .height(4.dp)
-                            .background(Color(0x80000000)),
+                            .background(Color(0x80000000))
                     ) {
                         Box(
                             modifier = Modifier
                                 .fillMaxHeight()
                                 .fillMaxWidth(progressFraction)
-                                .background(NeonPink),
+                                .background(NeonPink)
                         )
                     }
                 }
@@ -583,7 +589,7 @@ private fun ChannelVideoCard(
             Column(
                 modifier = Modifier
                     .fillMaxWidth()
-                    .padding(12.dp),
+                    .padding(12.dp)
             ) {
                 Text(
                     text = video.title.ifBlank { untitledVideo },
@@ -591,7 +597,7 @@ private fun ChannelVideoCard(
                     color = TextPrimary,
                     maxLines = 2,
                     overflow = TextOverflow.Ellipsis,
-                    fontWeight = FontWeight.SemiBold,
+                    fontWeight = FontWeight.SemiBold
                 )
             }
         }

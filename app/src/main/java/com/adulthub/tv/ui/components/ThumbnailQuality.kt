@@ -44,16 +44,11 @@ object ThumbnailQualityConfig {
     const val DEFAULT_PERSON_MAX_WIDTH = 300
     const val LOW_RAM_PERSON_MAX_WIDTH = 200
 
-    fun movieTargetWidth(lowRamMode: Boolean): Int =
-        if (lowRamMode) LOW_RAM_MOVIE_MAX_WIDTH else DEFAULT_MOVIE_MAX_WIDTH
+    fun movieTargetWidth(lowRamMode: Boolean): Int = if (lowRamMode) LOW_RAM_MOVIE_MAX_WIDTH else DEFAULT_MOVIE_MAX_WIDTH
 
-    fun movieTargetHeight(lowRamMode: Boolean): Int =
-        (movieTargetWidth(lowRamMode) * 9) / 16
+    fun movieTargetHeight(lowRamMode: Boolean): Int = (movieTargetWidth(lowRamMode) * 9) / 16
 
-    fun personTargetWidth(lowRamMode: Boolean): Int =
-        if (lowRamMode) LOW_RAM_PERSON_MAX_WIDTH else DEFAULT_PERSON_MAX_WIDTH
+    fun personTargetWidth(lowRamMode: Boolean): Int = if (lowRamMode) LOW_RAM_PERSON_MAX_WIDTH else DEFAULT_PERSON_MAX_WIDTH
 
-    fun personTargetHeight(lowRamMode: Boolean): Int =
-        (personTargetWidth(lowRamMode) * 3) / 2
+    fun personTargetHeight(lowRamMode: Boolean): Int = (personTargetWidth(lowRamMode) * 3) / 2
 }
-

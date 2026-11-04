@@ -5,12 +5,12 @@ import androidx.datastore.core.DataStore
 import androidx.datastore.preferences.core.PreferenceDataStoreFactory
 import androidx.datastore.preferences.core.Preferences
 import io.mockk.mockk
+import kotlin.time.Duration.Companion.seconds
 import kotlinx.coroutines.ExperimentalCoroutinesApi
 import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.test.TestScope
 import kotlinx.coroutines.test.UnconfinedTestDispatcher
 import kotlinx.coroutines.test.runTest
-import kotlin.time.Duration.Companion.seconds
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertFalse
 import org.junit.Assert.assertNotNull
@@ -39,11 +39,11 @@ class TelegramProgressStoreTest {
         val testFile = tmpFolder.newFile("test_telegram_progress.preferences_pb")
         dataStore = PreferenceDataStoreFactory.create(
             scope = testScope,
-            produceFile = { testFile },
+            produceFile = { testFile }
         )
         store = TelegramProgressStore(
             context = context,
-            dataStore = dataStore,
+            dataStore = dataStore
         )
     }
 
@@ -58,7 +58,7 @@ class TelegramProgressStoreTest {
             title = "Test Video 1",
             thumbnailUrl = "https://thumb.url/1.jpg",
             channelId = "chan_1",
-            isPlayed = false,
+            isPlayed = false
         )
 
         val record = store.getProgress("tg_123")
@@ -80,7 +80,7 @@ class TelegramProgressStoreTest {
             positionMs = 50_000L,
             durationMs = 100_000L,
             title = "Video 2",
-            isPlayed = false,
+            isPlayed = false
         )
 
         store.markPlayed("tg_456", isPlayed = true)

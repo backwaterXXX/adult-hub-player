@@ -3,8 +3,8 @@ package com.adulthub.tv.ui.home
 import android.content.Context
 import com.adulthub.tv.data.jellyfin.JellyfinClientManager
 import com.adulthub.tv.data.local.SettingsDataStore
-import com.adulthub.tv.data.model.TvItem
 import com.adulthub.tv.data.model.TvCategory
+import com.adulthub.tv.data.model.TvItem
 import com.adulthub.tv.data.model.TvPerson
 import com.adulthub.tv.data.repository.LibraryRepository
 import com.adulthub.tv.data.repository.PersonRepository
@@ -43,14 +43,14 @@ class HomeViewModelTest {
         id = "movie-1",
         title = "Sample Movie",
         runtimeTicks = 36000000000L,
-        genres = listOf("Action"),
+        genres = listOf("Action")
     )
 
     private val samplePerson = TvPerson(
         id = "person-1",
         name = "Eva Elfie",
         primaryImageTag = "image-tag",
-        movieCount = 15,
+        movieCount = 15
     )
 
     @Before
@@ -76,7 +76,7 @@ class HomeViewModelTest {
             personRepository = fakePersonRepository,
             settingsDataStore = settingsDataStore,
             clientManager = clientManager,
-            context = context,
+            context = context
         )
 
         advanceUntilIdle()
@@ -107,7 +107,7 @@ class HomeViewModelTest {
             personRepository = fakePersonRepository,
             settingsDataStore = settingsDataStore,
             clientManager = clientManager,
-            context = context,
+            context = context
         )
 
         advanceUntilIdle()
@@ -135,7 +135,7 @@ class HomeViewModelTest {
             personRepository = fakePersonRepository,
             settingsDataStore = settingsDataStore,
             clientManager = clientManager,
-            context = context,
+            context = context
         )
 
         advanceUntilIdle()
@@ -157,7 +157,7 @@ class HomeViewModelTest {
             personRepository = fakePersonRepository,
             settingsDataStore = settingsDataStore,
             clientManager = clientManager,
-            context = context,
+            context = context
         )
 
         advanceUntilIdle()
@@ -178,7 +178,7 @@ class HomeViewModelTest {
             personRepository = fakePersonRepository,
             settingsDataStore = settingsDataStore,
             clientManager = clientManager,
-            context = context,
+            context = context
         )
 
         advanceUntilIdle()
@@ -201,7 +201,7 @@ class HomeViewModelTest {
             personRepository = fakePersonRepository,
             settingsDataStore = settingsDataStore,
             clientManager = clientManager,
-            context = context,
+            context = context
         )
 
         val events = mutableListOf<HomeNavEvent>()
@@ -225,7 +225,7 @@ class HomeViewModelTest {
             personRepository = fakePersonRepository,
             settingsDataStore = settingsDataStore,
             clientManager = clientManager,
-            context = context,
+            context = context
         )
 
         val events = mutableListOf<HomeNavEvent>()
@@ -236,7 +236,7 @@ class HomeViewModelTest {
         val tgItem = TvItem(
             id = "-100123:456",
             title = "Telegram Vid",
-            providerVideoId = "-100123:456",
+            providerVideoId = "-100123:456"
         )
         viewModel.onMovieClicked(tgItem)
         advanceUntilIdle()
@@ -254,7 +254,7 @@ class HomeViewModelTest {
             personRepository = fakePersonRepository,
             settingsDataStore = settingsDataStore,
             clientManager = clientManager,
-            context = context,
+            context = context
         )
 
         val events = mutableListOf<HomeNavEvent>()
@@ -278,15 +278,14 @@ class HomeViewModelTest {
         var singleRandomResult: Result<TvItem?> = Result.success(null)
         var latestRequests = 0
 
-        override suspend fun getGenres(parentId: String?, limit: Int): Result<List<TvCategory>> =
-            Result.success(emptyList())
+        override suspend fun getGenres(parentId: String?, limit: Int): Result<List<TvCategory>> = Result.success(emptyList())
 
         override suspend fun getGenreMovies(
             genreName: String,
             genreId: String?,
             parentId: String?,
             startIndex: Int,
-            limit: Int,
+            limit: Int
         ): Result<List<TvItem>> = Result.success(emptyList())
 
         override suspend fun getResumeItems(limit: Int): Result<List<TvItem>> = resumeResult
@@ -297,7 +296,7 @@ class HomeViewModelTest {
         override suspend fun getRandomItems(
             parentId: String?,
             limit: Int,
-            filters: Set<org.jellyfin.sdk.model.api.ItemFilter>,
+            filters: Set<org.jellyfin.sdk.model.api.ItemFilter>
         ): Result<List<TvItem>> = randomResult
         override suspend fun getRandomItem(parentId: String?, excludeItemId: String?): Result<TvItem?> = singleRandomResult
     }
@@ -310,10 +309,9 @@ class HomeViewModelTest {
             startIndex: Int,
             limit: Int,
             searchTerm: String?,
-            nameStartsWith: String?,
+            nameStartsWith: String?
         ): Result<List<TvPerson>> = personsResult
 
-        override suspend fun getRandomPersonsWithPhotos(limit: Int): Result<List<TvPerson>> =
-            personsResult.map { it.filter { person -> !person.primaryImageTag.isNullOrBlank() }.take(limit) }
+        override suspend fun getRandomPersonsWithPhotos(limit: Int): Result<List<TvPerson>> = personsResult.map { it.filter { person -> !person.primaryImageTag.isNullOrBlank() }.take(limit) }
     }
 }

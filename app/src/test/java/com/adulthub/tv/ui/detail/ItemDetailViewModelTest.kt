@@ -34,13 +34,13 @@ class ItemDetailViewModelTest {
         id = "movie-1",
         title = "Inception",
         genres = listOf("Sci-Fi"),
-        isFavorite = false,
+        isFavorite = false
     )
 
     private val similarItem = TvItem(
         id = "movie-2",
         title = "Interstellar",
-        genres = listOf("Sci-Fi"),
+        genres = listOf("Sci-Fi")
     )
 
     @Before
@@ -61,7 +61,7 @@ class ItemDetailViewModelTest {
         val viewModel = ItemDetailViewModel(
             libraryRepository = fakeLibraryRepository,
             clientManager = clientManager,
-            context = context,
+            context = context
         )
 
         viewModel.loadDetails("movie-1")
@@ -84,7 +84,7 @@ class ItemDetailViewModelTest {
         val viewModel = ItemDetailViewModel(
             libraryRepository = fakeLibraryRepository,
             clientManager = clientManager,
-            context = context,
+            context = context
         )
 
         viewModel.loadDetails("movie-1")
@@ -107,12 +107,12 @@ class ItemDetailViewModelTest {
     @Test
     fun `toggleWatched uses provider video id for Telegram items`() = runTest(testDispatcher) {
         fakeLibraryRepository.itemDetailsResult = Result.success(
-            TvItem(id = "internal-item-id", title = "Channel clip", providerVideoId = "telegram:clip-42"),
+            TvItem(id = "internal-item-id", title = "Channel clip", providerVideoId = "telegram:clip-42")
         )
         val viewModel = ItemDetailViewModel(
             libraryRepository = fakeLibraryRepository,
             clientManager = clientManager,
-            context = context,
+            context = context
         )
 
         viewModel.loadDetails("internal-item-id")
@@ -129,7 +129,7 @@ class ItemDetailViewModelTest {
         val viewModel = ItemDetailViewModel(
             libraryRepository = fakeLibraryRepository,
             clientManager = clientManager,
-            context = context,
+            context = context
         )
 
         viewModel.loadDetails("movie-1")
@@ -154,7 +154,7 @@ class ItemDetailViewModelTest {
         val viewModel = ItemDetailViewModel(
             libraryRepository = fakeLibraryRepository,
             clientManager = clientManager,
-            context = context,
+            context = context
         )
 
         viewModel.loadDetails("movie-1")
@@ -181,7 +181,7 @@ class ItemDetailViewModelTest {
             libraryRepository = fakeLibraryRepository,
             clientManager = clientManager,
             settingsDataStore = settingsDataStore,
-            context = context,
+            context = context
         )
 
         viewModel.excludeTag("pov")

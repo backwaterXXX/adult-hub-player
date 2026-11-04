@@ -46,21 +46,21 @@ class PlayerViewModelTest {
         id = "movie-1",
         title = "Test Scene",
         runtimeTicks = 45L * 60 * 10_000_000L,
-        playbackPositionTicks = 0L,
+        playbackPositionTicks = 0L
     )
 
     private val resumeItem = TvItem(
         id = "movie-2",
         title = "Resume Scene",
         runtimeTicks = 45L * 60 * 10_000_000L,
-        playbackPositionTicks = 600_000 * 10_000L, // 10 minutes in
+        playbackPositionTicks = 600_000 * 10_000L // 10 minutes in
     )
 
     private val randomItem = TvItem(
         id = "movie-3",
         title = "Random Scene",
         runtimeTicks = 30L * 60 * 10_000_000L,
-        playbackPositionTicks = 0L,
+        playbackPositionTicks = 0L
     )
 
     @Before
@@ -83,7 +83,7 @@ class PlayerViewModelTest {
             playbackRepository = fakePlaybackRepo,
             settingsDataStore = settingsDataStore,
             playbackReporter = playbackReporter,
-            context = context,
+            context = context
         )
 
         viewModel.loadItem("movie-1")
@@ -105,7 +105,7 @@ class PlayerViewModelTest {
             playbackRepository = fakePlaybackRepo,
             settingsDataStore = settingsDataStore,
             playbackReporter = playbackReporter,
-            context = context,
+            context = context
         )
 
         viewModel.loadItem("movie-2")
@@ -126,7 +126,7 @@ class PlayerViewModelTest {
             playbackRepository = fakePlaybackRepo,
             settingsDataStore = settingsDataStore,
             playbackReporter = playbackReporter,
-            context = context,
+            context = context
         )
 
         viewModel.loadItem("movie-2", resume = false)
@@ -147,7 +147,7 @@ class PlayerViewModelTest {
             playbackRepository = fakePlaybackRepo,
             settingsDataStore = settingsDataStore,
             playbackReporter = playbackReporter,
-            context = context,
+            context = context
         )
 
         viewModel.loadItem("movie-1")
@@ -171,7 +171,7 @@ class PlayerViewModelTest {
             playbackRepository = fakePlaybackRepo,
             settingsDataStore = settingsDataStore,
             playbackReporter = playbackReporter,
-            context = context,
+            context = context
         )
 
         viewModel.loadItem("unknown-id")
@@ -193,7 +193,7 @@ class PlayerViewModelTest {
             playbackRepository = fakePlaybackRepo,
             settingsDataStore = settingsDataStore,
             playbackReporter = playbackReporter,
-            context = context,
+            context = context
         )
 
         viewModel.loadItem("movie-1")
@@ -218,7 +218,7 @@ class PlayerViewModelTest {
             playbackRepository = fakePlaybackRepo,
             settingsDataStore = settingsDataStore,
             playbackReporter = playbackReporter,
-            context = context,
+            context = context
         )
 
         viewModel.loadItem("movie-1")
@@ -238,7 +238,7 @@ class PlayerViewModelTest {
             id = "telegram:12345",
             providerVideoId = "-1001188284602:100:12345",
             title = "Test Channel Video",
-            duration = 600.0,
+            duration = 600.0
         )
         channelRepo.cacheVideo(testVideo)
 
@@ -249,7 +249,7 @@ class PlayerViewModelTest {
             settingsDataStore = settingsDataStore,
             playbackReporter = playbackReporter,
             channelRepository = channelRepo,
-            context = context,
+            context = context
         )
 
         viewModel.loadItem("-1001188284602:100:12345")
@@ -271,14 +271,14 @@ class PlayerViewModelTest {
             positionMs = 45_000L,
             durationMs = 120_000L,
             updatedAt = System.currentTimeMillis(),
-            title = "Test Channel Video",
+            title = "Test Channel Video"
         )
         val channelRepo = ChannelRepository(mockk(relaxed = true))
         val testVideo = VideoDto(
             id = "-1001188284602:100:12345",
             providerVideoId = "-1001188284602:100:12345",
             title = "Test Channel Video",
-            duration = 120.0,
+            duration = 120.0
         )
         channelRepo.cacheVideo(testVideo)
         val playbackReporter = PlaybackReporter(fakePlaybackRepo, CoroutineScope(testDispatcher))
@@ -289,7 +289,7 @@ class PlayerViewModelTest {
             playbackReporter = playbackReporter,
             channelRepository = channelRepo,
             telegramProgressStore = tgStore,
-            context = context,
+            context = context
         )
 
         viewModel.loadItem("-1001188284602:100:12345")
@@ -317,7 +317,7 @@ class PlayerViewModelTest {
                     id = videoId,
                     providerVideoId = videoId,
                     title = "Current channel video",
-                    duration = 120.0,
+                    duration = 120.0
                 )
             )
         }
@@ -328,7 +328,7 @@ class PlayerViewModelTest {
             playbackReporter = PlaybackReporter(fakePlaybackRepo, CoroutineScope(testDispatcher)),
             channelRepository = channelRepo,
             telegramProgressStore = telegramStore,
-            context = context,
+            context = context
         )
 
         viewModel.loadItem(videoId)
@@ -344,7 +344,7 @@ class PlayerViewModelTest {
                 title = "Current channel video",
                 thumbnailUrl = null,
                 channelId = null,
-                isPlayed = false,
+                isPlayed = false
             )
         }
     }
@@ -354,13 +354,9 @@ private class FakeLibraryRepository : LibraryRepository(mockk(relaxed = true), m
     var itemResult: Result<TvItem> = Result.success(TvItem(id = "default", title = "Default"))
     var randomItemResult: Result<TvItem?> = Result.success(TvItem(id = "random", title = "Random"))
 
-    override suspend fun getItemDetails(itemId: String): Result<TvItem> {
-        return itemResult
-    }
+    override suspend fun getItemDetails(itemId: String): Result<TvItem> = itemResult
 
-    override suspend fun getRandomItem(parentId: String?, excludeItemId: String?): Result<TvItem?> {
-        return randomItemResult
-    }
+    override suspend fun getRandomItem(parentId: String?, excludeItemId: String?): Result<TvItem?> = randomItemResult
 }
 
 private class FakePlaybackRepository : PlaybackRepository(mockk(relaxed = true), mockk(relaxed = true)) {
@@ -369,16 +365,14 @@ private class FakePlaybackRepository : PlaybackRepository(mockk(relaxed = true),
     var lastReportedProgressTicks: Long? = null
     var lastReportedStoppedTicks: Long? = null
 
-    override suspend fun resolvePlaybackInfo(item: TvItem, variantId: String?): Result<PlaybackInfo> {
-        return playbackInfoResult ?: Result.success(
-            PlaybackInfo(
-                itemId = item.id,
-                streamUrl = "https://resolver.example.com/admin/play/stream.mp4",
-                playMethod = PlayMethod.DIRECT_PLAY,
-                title = item.title,
-            )
+    override suspend fun resolvePlaybackInfo(item: TvItem, variantId: String?): Result<PlaybackInfo> = playbackInfoResult ?: Result.success(
+        PlaybackInfo(
+            itemId = item.id,
+            streamUrl = "https://resolver.example.com/admin/play/stream.mp4",
+            playMethod = PlayMethod.DIRECT_PLAY,
+            title = item.title
         )
-    }
+    )
 
     override suspend fun reportPlaybackStart(
         itemId: String,
@@ -386,7 +380,7 @@ private class FakePlaybackRepository : PlaybackRepository(mockk(relaxed = true),
         positionTicks: Long,
         playSessionId: String?,
         canSeek: Boolean,
-        playMethod: PlayMethod,
+        playMethod: PlayMethod
     ): Result<Unit> {
         lastReportedStartTicks = positionTicks
         return Result.success(Unit)
@@ -399,7 +393,7 @@ private class FakePlaybackRepository : PlaybackRepository(mockk(relaxed = true),
         playSessionId: String?,
         isPaused: Boolean,
         canSeek: Boolean,
-        playMethod: PlayMethod,
+        playMethod: PlayMethod
     ): Result<Unit> {
         lastReportedProgressTicks = positionTicks
         return Result.success(Unit)
@@ -409,7 +403,7 @@ private class FakePlaybackRepository : PlaybackRepository(mockk(relaxed = true),
         itemId: String,
         mediaSourceId: String?,
         positionTicks: Long,
-        playSessionId: String?,
+        playSessionId: String?
     ): Result<Unit> {
         lastReportedStoppedTicks = positionTicks
         return Result.success(Unit)

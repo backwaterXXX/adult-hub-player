@@ -8,20 +8,20 @@ sealed class Screen(val route: String) {
     data object LibrarySelect : Screen("library_select")
     data object Home : Screen("home")
     data object Library : Screen("library?categoryId={categoryId}") {
-        fun createRoute(categoryId: String? = null): String =
-            if (categoryId.isNullOrBlank()) "library"
-            else "library?categoryId=${RouteEncoder.encode(categoryId)}"
+        fun createRoute(categoryId: String? = null): String = if (categoryId.isNullOrBlank()) {
+            "library"
+        } else {
+            "library?categoryId=${RouteEncoder.encode(categoryId)}"
+        }
     }
     data object ItemDetail : Screen("item_detail/{itemId}") {
         fun createRoute(itemId: String): String = "item_detail/${RouteEncoder.encode(itemId)}"
     }
     data object PersonDetail : Screen("person_detail/{personId}/{personName}") {
-        fun createRoute(personId: String, personName: String): String =
-            "person_detail/${RouteEncoder.encode(personId)}/${RouteEncoder.encode(personName)}"
+        fun createRoute(personId: String, personName: String): String = "person_detail/${RouteEncoder.encode(personId)}/${RouteEncoder.encode(personName)}"
     }
     data object Search : Screen("search?query={query}") {
-        fun createRoute(query: String = ""): String =
-            if (query.isNotBlank()) "search?query=${RouteEncoder.encode(query)}" else "search"
+        fun createRoute(query: String = ""): String = if (query.isNotBlank()) "search?query=${RouteEncoder.encode(query)}" else "search"
     }
     data object Settings : Screen("settings")
     data object Player : Screen("player/{itemId}?resume={resume}") {

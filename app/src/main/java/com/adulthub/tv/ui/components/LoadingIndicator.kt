@@ -26,22 +26,22 @@ import com.adulthub.tv.ui.theme.TextSecondary
 @Composable
 fun LoadingIndicator(
     modifier: Modifier = Modifier,
-    message: String = "",
+    message: String = ""
 ) {
     val transition = rememberInfiniteTransition(label = "loading_rotation")
     val rotation by transition.animateFloat(
         initialValue = 0f,
         targetValue = 360f,
         animationSpec = infiniteRepeatable(
-            animation = tween(durationMillis = 1000, easing = LinearEasing),
+            animation = tween(durationMillis = 1000, easing = LinearEasing)
         ),
-        label = "rotation",
+        label = "rotation"
     )
 
     Column(
         modifier = modifier,
         horizontalAlignment = Alignment.CenterHorizontally,
-        verticalArrangement = Arrangement.Center,
+        verticalArrangement = Arrangement.Center
     ) {
         Canvas(modifier = Modifier.size(48.dp)) {
             val strokeWidth = 4.dp.toPx()
@@ -50,7 +50,7 @@ fun LoadingIndicator(
                 startAngle = rotation,
                 sweepAngle = 270f,
                 useCenter = false,
-                style = Stroke(width = strokeWidth, cap = StrokeCap.Round),
+                style = Stroke(width = strokeWidth, cap = StrokeCap.Round)
             )
         }
         if (message.isNotEmpty()) {
@@ -58,7 +58,7 @@ fun LoadingIndicator(
             Text(
                 text = message,
                 style = MaterialTheme.typography.bodyMedium,
-                color = TextSecondary,
+                color = TextSecondary
             )
         }
     }

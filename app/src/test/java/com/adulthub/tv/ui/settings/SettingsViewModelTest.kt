@@ -9,16 +9,14 @@ import com.adulthub.tv.data.local.SettingsDataStore
 import com.adulthub.tv.data.local.TelegramProgressStore
 import com.adulthub.tv.data.local.WatchHistoryStore
 import com.adulthub.tv.data.model.AuthState
+import com.adulthub.tv.data.model.TvChannel
 import com.adulthub.tv.data.repository.AuthRepository
 import com.adulthub.tv.data.repository.ChannelRepository
 import com.adulthub.tv.data.repository.LibraryRepository
 import com.adulthub.tv.data.repository.TvLibrary
-import com.adulthub.tv.data.model.TvChannel
 import com.adulthub.tv.data.resolver.ResolverApi
 import io.mockk.every
 import io.mockk.mockk
-import okhttp3.MediaType.Companion.toMediaType
-import okhttp3.ResponseBody.Companion.toResponseBody
 import kotlinx.coroutines.CompletableDeferred
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.ExperimentalCoroutinesApi
@@ -30,6 +28,8 @@ import kotlinx.coroutines.test.resetMain
 import kotlinx.coroutines.test.runCurrent
 import kotlinx.coroutines.test.runTest
 import kotlinx.coroutines.test.setMain
+import okhttp3.MediaType.Companion.toMediaType
+import okhttp3.ResponseBody.Companion.toResponseBody
 import org.junit.After
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertFalse
@@ -77,7 +77,7 @@ class SettingsViewModelTest {
             authRepository = fakeAuthRepo,
             libraryRepository = fakeLibraryRepo,
             settingsDataStore = fakeDataStore,
-            context = context,
+            context = context
         )
         advanceUntilIdle()
 
@@ -99,7 +99,7 @@ class SettingsViewModelTest {
             authRepository = fakeAuthRepo,
             libraryRepository = fakeLibraryRepo,
             settingsDataStore = fakeDataStore,
-            context = context,
+            context = context
         )
         advanceUntilIdle()
 
@@ -120,7 +120,7 @@ class SettingsViewModelTest {
             authRepository = fakeAuthRepo,
             libraryRepository = fakeLibraryRepo,
             settingsDataStore = fakeDataStore,
-            context = context,
+            context = context
         )
         advanceUntilIdle()
         val saveGate = CompletableDeferred<Unit>()
@@ -144,14 +144,14 @@ class SettingsViewModelTest {
             listOf(
                 com.adulthub.tv.data.model.TvCategory("new-a", "A"),
                 com.adulthub.tv.data.model.TvCategory("new-b", "B"),
-                com.adulthub.tv.data.model.TvCategory("new-c", "C"),
+                com.adulthub.tv.data.model.TvCategory("new-c", "C")
             )
         )
         val viewModel = SettingsViewModel(
             authRepository = fakeAuthRepo,
             libraryRepository = fakeLibraryRepo,
             settingsDataStore = fakeDataStore,
-            context = context,
+            context = context
         )
         advanceUntilIdle()
 
@@ -168,7 +168,7 @@ class SettingsViewModelTest {
             authRepository = fakeAuthRepo,
             libraryRepository = fakeLibraryRepo,
             settingsDataStore = fakeDataStore,
-            context = context,
+            context = context
         )
         advanceUntilIdle()
 
@@ -185,7 +185,7 @@ class SettingsViewModelTest {
             authRepository = fakeAuthRepo,
             libraryRepository = fakeLibraryRepo,
             settingsDataStore = fakeDataStore,
-            context = context,
+            context = context
         )
         advanceUntilIdle()
 
@@ -202,7 +202,7 @@ class SettingsViewModelTest {
             authRepository = fakeAuthRepo,
             libraryRepository = fakeLibraryRepo,
             settingsDataStore = fakeDataStore,
-            context = context,
+            context = context
         )
         advanceUntilIdle()
 
@@ -225,7 +225,7 @@ class SettingsViewModelTest {
             authRepository = fakeAuthRepo,
             libraryRepository = fakeLibraryRepo,
             settingsDataStore = fakeDataStore,
-            context = context,
+            context = context
         )
         advanceUntilIdle()
 
@@ -243,7 +243,7 @@ class SettingsViewModelTest {
             authRepository = fakeAuthRepo,
             libraryRepository = fakeLibraryRepo,
             settingsDataStore = fakeDataStore,
-            context = context,
+            context = context
         )
         advanceUntilIdle()
 
@@ -261,7 +261,7 @@ class SettingsViewModelTest {
             authRepository = fakeAuthRepo,
             libraryRepository = fakeLibraryRepo,
             settingsDataStore = fakeDataStore,
-            context = context,
+            context = context
         )
         advanceUntilIdle()
 
@@ -282,7 +282,7 @@ class SettingsViewModelTest {
             libraryRepository = fakeLibraryRepo,
             settingsDataStore = fakeDataStore,
             channelRepository = resolverRepository,
-            context = context,
+            context = context
         )
         advanceUntilIdle()
 
@@ -293,13 +293,14 @@ class SettingsViewModelTest {
         assertTrue(viewModel.uiState.value.resolverConnectionStatus.contains("Resolver timeout"))
         assertEquals(false, viewModel.uiState.value.isCheckingConnections)
     }
+
     @Test
     fun `connection check reports an address that does not serve the Resolver`() = runTest(testDispatcher) {
         every { context.getString(R.string.settings_resolver_not_served, any()) } returns
             "No Resolver at this address"
         val notFound = retrofit2.Response.error<Any>(
             404,
-            "not found".toResponseBody("text/plain".toMediaType()),
+            "not found".toResponseBody("text/plain".toMediaType())
         )
         val resolverRepository = FakeSettingsChannelRepo().apply {
             categoriesResult = Result.failure(retrofit2.HttpException(notFound))
@@ -309,7 +310,7 @@ class SettingsViewModelTest {
             libraryRepository = fakeLibraryRepo,
             settingsDataStore = fakeDataStore,
             channelRepository = resolverRepository,
-            context = context,
+            context = context
         )
         advanceUntilIdle()
 
@@ -325,7 +326,7 @@ class SettingsViewModelTest {
             authRepository = fakeAuthRepo,
             libraryRepository = fakeLibraryRepo,
             settingsDataStore = fakeDataStore,
-            context = context,
+            context = context
         )
         advanceUntilIdle()
 
@@ -343,7 +344,7 @@ class SettingsViewModelTest {
             authRepository = fakeAuthRepo,
             libraryRepository = fakeLibraryRepo,
             settingsDataStore = fakeDataStore,
-            context = context,
+            context = context
         )
         advanceUntilIdle()
 
@@ -360,7 +361,7 @@ class SettingsViewModelTest {
             authRepository = fakeAuthRepo,
             libraryRepository = fakeLibraryRepo,
             settingsDataStore = fakeDataStore,
-            context = context,
+            context = context
         )
         advanceUntilIdle()
 
@@ -379,7 +380,7 @@ class SettingsViewModelTest {
             libraryRepository = fakeLibraryRepo,
             settingsDataStore = fakeDataStore,
             watchHistoryStore = fakeWatchHistoryStore,
-            context = context,
+            context = context
         )
         advanceUntilIdle()
 
@@ -398,7 +399,7 @@ class SettingsViewModelTest {
             libraryRepository = fakeLibraryRepo,
             settingsDataStore = fakeDataStore,
             telegramProgressStore = fakeProgressStore,
-            context = context,
+            context = context
         )
         advanceUntilIdle()
 
@@ -417,7 +418,7 @@ class SettingsViewModelTest {
             libraryRepository = fakeLibraryRepo,
             settingsDataStore = fakeDataStore,
             searchHistoryStore = fakeSearchStore,
-            context = context,
+            context = context
         )
         advanceUntilIdle()
 
@@ -434,7 +435,7 @@ class SettingsViewModelTest {
             authRepository = fakeAuthRepo,
             libraryRepository = fakeLibraryRepo,
             settingsDataStore = fakeDataStore,
-            context = context,
+            context = context
         )
         advanceUntilIdle()
 
@@ -454,7 +455,7 @@ class SettingsViewModelTest {
             authRepository = fakeAuthRepo,
             libraryRepository = fakeLibraryRepo,
             settingsDataStore = fakeDataStore,
-            context = context,
+            context = context
         )
         advanceUntilIdle()
 
@@ -466,33 +467,36 @@ class SettingsViewModelTest {
     }
 }
 
-private class FakeWatchHistoryStore : WatchHistoryStore(
-    context = mockk(relaxed = true),
-    accountKeyProvider = AccountKeyProvider.ANONYMOUS,
-    dataStore = mockk(relaxed = true),
-) {
+private class FakeWatchHistoryStore :
+    WatchHistoryStore(
+        context = mockk(relaxed = true),
+        accountKeyProvider = AccountKeyProvider.ANONYMOUS,
+        dataStore = mockk(relaxed = true)
+    ) {
     var clearCount = 0
     override suspend fun clearHistory() {
         clearCount++
     }
 }
 
-private class FakeTelegramProgressStore : TelegramProgressStore(
-    context = mockk(relaxed = true),
-    accountKeyProvider = AccountKeyProvider.ANONYMOUS,
-    dataStore = mockk(relaxed = true),
-) {
+private class FakeTelegramProgressStore :
+    TelegramProgressStore(
+        context = mockk(relaxed = true),
+        accountKeyProvider = AccountKeyProvider.ANONYMOUS,
+        dataStore = mockk(relaxed = true)
+    ) {
     var clearCount = 0
     override suspend fun clearAll() {
         clearCount++
     }
 }
 
-private class FakeSearchHistoryStore : SearchHistoryStore(
-    context = mockk(relaxed = true),
-    accountKeyProvider = AccountKeyProvider.ANONYMOUS,
-    dataStore = mockk(relaxed = true),
-) {
+private class FakeSearchHistoryStore :
+    SearchHistoryStore(
+        context = mockk(relaxed = true),
+        accountKeyProvider = AccountKeyProvider.ANONYMOUS,
+        dataStore = mockk(relaxed = true)
+    ) {
     var clearCount = 0
     override suspend fun clearHistory() {
         clearCount++
@@ -506,7 +510,7 @@ private class FakeSettingsAuthRepo : AuthRepository(mockk(relaxed = true), mockk
             userId = "user-123",
             accessToken = "tok-abc",
             username = "admin",
-            serverName = "Main Jellyfin",
+            serverName = "Main Jellyfin"
         )
     )
     override val authState: Flow<AuthState> = authStateFlow
@@ -524,12 +528,9 @@ private class FakeSettingsLibraryRepo : LibraryRepository(mockk(relaxed = true),
     var librariesResult: Result<List<TvLibrary>> = Result.success(emptyList())
     var genresResult: Result<List<com.adulthub.tv.data.model.TvCategory>> = Result.success(emptyList())
 
-    override suspend fun getLibraries(): Result<List<TvLibrary>> {
-        return librariesResult
-    }
+    override suspend fun getLibraries(): Result<List<TvLibrary>> = librariesResult
 
-    override suspend fun getGenres(parentId: String?, limit: Int): Result<List<com.adulthub.tv.data.model.TvCategory>> =
-        genresResult
+    override suspend fun getGenres(parentId: String?, limit: Int): Result<List<com.adulthub.tv.data.model.TvCategory>> = genresResult
 }
 
 private class FakeSettingsChannelRepo : ChannelRepository(mockk<ResolverApi>(relaxed = true)) {
@@ -580,8 +581,7 @@ private class FakeSettingsDataStore : SettingsDataStore(mockk(relaxed = true)) {
         excludedTags.value = excludedTags.value - tag
     }
 
-    override suspend fun isCleartextOriginApproved(url: String): Boolean =
-        url.startsWith("https://") || url in approvedCleartextOrigins.value
+    override suspend fun isCleartextOriginApproved(url: String): Boolean = url.startsWith("https://") || url in approvedCleartextOrigins.value
 
     override suspend fun approveCleartextOrigin(url: String) {
         approvedCleartextOrigins.value = approvedCleartextOrigins.value + url

@@ -80,7 +80,7 @@ private fun NavHostController.navigateSingleTop(route: String) {
 
 private fun NavHostController.navigateToItemDetail(
     itemId: String,
-    returnToPreviousDetail: Boolean = false,
+    returnToPreviousDetail: Boolean = false
 ) {
     val route = Screen.ItemDetail.createRoute(itemId)
     if (
@@ -100,7 +100,7 @@ private fun NavHostController.navigateToItemDetail(
 fun AppNavigation(
     modifier: Modifier = Modifier,
     navController: NavHostController = rememberNavController(),
-    authViewModel: AuthViewModel = koinViewModel(),
+    authViewModel: AuthViewModel = koinViewModel()
 ) {
     LaunchedEffect(authViewModel) {
         authViewModel.navEvents.collect { event ->
@@ -111,22 +111,26 @@ fun AppNavigation(
                         launchSingleTop = true
                     }
                 }
+
                 is AuthNavEvent.NavigateToLogin -> {
                     navController.navigate(Screen.Login.route) {
                         launchSingleTop = true
                     }
                 }
+
                 is AuthNavEvent.NavigateToQuickConnect -> {
                     navController.navigate(Screen.QuickConnect.route) {
                         launchSingleTop = true
                     }
                 }
+
                 is AuthNavEvent.NavigateToLibrarySelect -> {
                     navController.navigate(Screen.LibrarySelect.route) {
                         popUpTo(0) { inclusive = true }
                         launchSingleTop = true
                     }
                 }
+
                 is AuthNavEvent.NavigateToHome -> {
                     navController.navigate(Screen.Home.route) {
                         popUpTo(0) { inclusive = true }
@@ -141,183 +145,183 @@ fun AppNavigation(
         NavHost(
             navController = navController,
             startDestination = Screen.Splash.route,
-            modifier = Modifier.fillMaxSize(),
+            modifier = Modifier.fillMaxSize()
         ) {
-        composable(Screen.Splash.route) {
-            SplashScreen()
-        }
-        composable(Screen.Server.route) {
-            ServerScreen(viewModel = authViewModel)
-        }
-        composable(Screen.Login.route) {
-            LoginScreen(
-                viewModel = authViewModel,
-                onBackToServer = { navController.popBackStack() },
-            )
-        }
-        composable(Screen.QuickConnect.route) {
-            QuickConnectScreen(
-                viewModel = authViewModel,
-                onBack = { navController.popBackStack() },
-            )
-        }
-        composable(Screen.LibrarySelect.route) {
-            LibrarySelectScreen(viewModel = authViewModel)
-        }
-        composable(Screen.Home.route) { backStackEntry ->
-            HomeScreen(
-                isCurrentDestination = rememberIsCurrentDestination(navController, backStackEntry),
-                onNavigateToItemDetail = { itemId ->
-                    navController.navigateToItemDetail(itemId)
-                },
-                onNavigateToPersonDetail = { personId, personName ->
-                    navController.navigateSingleTop(Screen.PersonDetail.createRoute(personId, personName))
-                },
-                onNavigateToPlayer = { playItemId ->
-                    navController.navigateSingleTop(Screen.Player.createRoute(playItemId))
-                },
-                onNavigateToLibrary = {
-                    navController.navigateSingleTop(Screen.Library.createRoute())
-                },
-                onNavigateToSearch = {
-                    navController.navigateSingleTop(Screen.Search.createRoute())
-                },
-                onNavigateToSettings = {
-                    navController.navigateSingleTop(Screen.Settings.route)
-                },
-                onNavigateToLibraryCategory = { categoryId ->
-                    navController.navigateSingleTop(Screen.Library.createRoute(categoryId))
-                },
-            )
-        }
-        composable(
-            route = Screen.ItemDetail.route,
-            arguments = listOf(navArgument("itemId") { type = NavType.StringType }),
-        ) { backStackEntry ->
-            val itemId = backStackEntry.arguments?.getString("itemId").orEmpty()
-            com.adulthub.tv.ui.detail.ItemDetailScreen(
-                itemId = itemId,
-                isCurrentDestination = rememberIsCurrentDestination(navController, backStackEntry),
-                onNavigateBack = { navController.popBackStack() },
-                onNavigateToPlayer = { playItemId, resume ->
-                    navController.navigateSingleTop(Screen.Player.createRoute(playItemId, resume))
-                },
-                onNavigateToItemDetail = { nextItemId ->
-                    navController.navigateToItemDetail(nextItemId)
-                },
-                onNavigateToPersonDetail = { personId, personName ->
-                    navController.navigateSingleTop(Screen.PersonDetail.createRoute(personId, personName))
-                },
-                onNavigateToSearch = { query ->
-                    navController.navigateSingleTop(Screen.Search.createRoute(query))
-                },
-            )
-        }
-        composable(
-            route = Screen.PersonDetail.route,
-            arguments = listOf(
-                navArgument("personId") { type = NavType.StringType },
-                navArgument("personName") { type = NavType.StringType },
-            ),
-        ) { backStackEntry ->
-            val personId = backStackEntry.arguments?.getString("personId").orEmpty()
-            val personName = backStackEntry.arguments?.getString("personName").orEmpty()
-            com.adulthub.tv.ui.person.PersonDetailScreen(
-                personId = personId,
-                personName = personName,
-                isCurrentDestination = rememberIsCurrentDestination(navController, backStackEntry),
-                onNavigateBack = { navController.popBackStack() },
-                onNavigateToItemDetail = { nextItemId ->
-                    navController.navigateToItemDetail(nextItemId, returnToPreviousDetail = true)
-                },
-            )
-        }
-        composable(
-            route = Screen.Player.route,
-            arguments = listOf(
-                navArgument("itemId") { type = NavType.StringType },
-                navArgument("resume") {
-                    type = NavType.StringType
-                    nullable = true
-                    defaultValue = null
-                },
-            ),
-        ) { backStackEntry ->
-            val itemId = backStackEntry.arguments?.getString("itemId").orEmpty()
-            val resume = backStackEntry.arguments?.getString("resume")?.toBooleanStrictOrNull()
-            com.adulthub.tv.ui.player.PlayerScreen(
-                itemId = itemId,
-                resume = resume,
-                onBack = { navController.popBackStack() },
-            )
-        }
-        composable(
-            route = Screen.Library.route,
-            arguments = listOf(
-                navArgument("categoryId") {
-                    type = NavType.StringType
-                    nullable = true
-                    defaultValue = null
-                }
-            ),
-        ) { backStackEntry ->
-            com.adulthub.tv.ui.library.LibraryScreen(
-                initialCategoryId = backStackEntry.arguments?.getString("categoryId"),
-                isCurrentDestination = rememberIsCurrentDestination(navController, backStackEntry),
-                onNavigateBack = { navController.popBackStack() },
-                onNavigateToItemDetail = { itemId ->
-                    navController.navigateToItemDetail(itemId)
-                },
-                onNavigateToPersonDetail = { personId, personName ->
-                    navController.navigateSingleTop(Screen.PersonDetail.createRoute(personId, personName))
-                },
-                onNavigateToPlayer = { playItemId ->
-                    navController.navigateSingleTop(Screen.Player.createRoute(playItemId))
-                },
-            )
-        }
-        composable(
-            route = Screen.Search.route,
-            arguments = listOf(
-                navArgument("query") {
-                    type = NavType.StringType
-                    nullable = true
-                    defaultValue = null
-                }
-            ),
-        ) { backStackEntry ->
-            val query = backStackEntry.arguments?.getString("query")
-            com.adulthub.tv.ui.search.SearchScreen(
-                initialQuery = query,
-                isCurrentDestination = rememberIsCurrentDestination(navController, backStackEntry),
-                onNavigateBack = { navController.popBackStack() },
-                onNavigateToItemDetail = { itemId ->
-                    navController.navigateToItemDetail(itemId)
-                },
-                onNavigateToPersonDetail = { personId, personName ->
-                    navController.navigateSingleTop(Screen.PersonDetail.createRoute(personId, personName))
-                },
-                onNavigateToPlayer = { itemId ->
-                    navController.navigateSingleTop(Screen.Player.createRoute(itemId))
-                },
-            )
-        }
-        composable(Screen.Settings.route) {
-            com.adulthub.tv.ui.settings.SettingsScreen(
-                onNavigateBack = { navController.popBackStack() },
-                onSignOut = {
-                    navController.navigate(Screen.Server.route) {
-                        popUpTo(0) { inclusive = true }
-                        launchSingleTop = true
+            composable(Screen.Splash.route) {
+                SplashScreen()
+            }
+            composable(Screen.Server.route) {
+                ServerScreen(viewModel = authViewModel)
+            }
+            composable(Screen.Login.route) {
+                LoginScreen(
+                    viewModel = authViewModel,
+                    onBackToServer = { navController.popBackStack() }
+                )
+            }
+            composable(Screen.QuickConnect.route) {
+                QuickConnectScreen(
+                    viewModel = authViewModel,
+                    onBack = { navController.popBackStack() }
+                )
+            }
+            composable(Screen.LibrarySelect.route) {
+                LibrarySelectScreen(viewModel = authViewModel)
+            }
+            composable(Screen.Home.route) { backStackEntry ->
+                HomeScreen(
+                    isCurrentDestination = rememberIsCurrentDestination(navController, backStackEntry),
+                    onNavigateToItemDetail = { itemId ->
+                        navController.navigateToItemDetail(itemId)
+                    },
+                    onNavigateToPersonDetail = { personId, personName ->
+                        navController.navigateSingleTop(Screen.PersonDetail.createRoute(personId, personName))
+                    },
+                    onNavigateToPlayer = { playItemId ->
+                        navController.navigateSingleTop(Screen.Player.createRoute(playItemId))
+                    },
+                    onNavigateToLibrary = {
+                        navController.navigateSingleTop(Screen.Library.createRoute())
+                    },
+                    onNavigateToSearch = {
+                        navController.navigateSingleTop(Screen.Search.createRoute())
+                    },
+                    onNavigateToSettings = {
+                        navController.navigateSingleTop(Screen.Settings.route)
+                    },
+                    onNavigateToLibraryCategory = { categoryId ->
+                        navController.navigateSingleTop(Screen.Library.createRoute(categoryId))
                     }
-                },
-            )
+                )
+            }
+            composable(
+                route = Screen.ItemDetail.route,
+                arguments = listOf(navArgument("itemId") { type = NavType.StringType })
+            ) { backStackEntry ->
+                val itemId = backStackEntry.arguments?.getString("itemId").orEmpty()
+                com.adulthub.tv.ui.detail.ItemDetailScreen(
+                    itemId = itemId,
+                    isCurrentDestination = rememberIsCurrentDestination(navController, backStackEntry),
+                    onNavigateBack = { navController.popBackStack() },
+                    onNavigateToPlayer = { playItemId, resume ->
+                        navController.navigateSingleTop(Screen.Player.createRoute(playItemId, resume))
+                    },
+                    onNavigateToItemDetail = { nextItemId ->
+                        navController.navigateToItemDetail(nextItemId)
+                    },
+                    onNavigateToPersonDetail = { personId, personName ->
+                        navController.navigateSingleTop(Screen.PersonDetail.createRoute(personId, personName))
+                    },
+                    onNavigateToSearch = { query ->
+                        navController.navigateSingleTop(Screen.Search.createRoute(query))
+                    }
+                )
+            }
+            composable(
+                route = Screen.PersonDetail.route,
+                arguments = listOf(
+                    navArgument("personId") { type = NavType.StringType },
+                    navArgument("personName") { type = NavType.StringType }
+                )
+            ) { backStackEntry ->
+                val personId = backStackEntry.arguments?.getString("personId").orEmpty()
+                val personName = backStackEntry.arguments?.getString("personName").orEmpty()
+                com.adulthub.tv.ui.person.PersonDetailScreen(
+                    personId = personId,
+                    personName = personName,
+                    isCurrentDestination = rememberIsCurrentDestination(navController, backStackEntry),
+                    onNavigateBack = { navController.popBackStack() },
+                    onNavigateToItemDetail = { nextItemId ->
+                        navController.navigateToItemDetail(nextItemId, returnToPreviousDetail = true)
+                    }
+                )
+            }
+            composable(
+                route = Screen.Player.route,
+                arguments = listOf(
+                    navArgument("itemId") { type = NavType.StringType },
+                    navArgument("resume") {
+                        type = NavType.StringType
+                        nullable = true
+                        defaultValue = null
+                    }
+                )
+            ) { backStackEntry ->
+                val itemId = backStackEntry.arguments?.getString("itemId").orEmpty()
+                val resume = backStackEntry.arguments?.getString("resume")?.toBooleanStrictOrNull()
+                com.adulthub.tv.ui.player.PlayerScreen(
+                    itemId = itemId,
+                    resume = resume,
+                    onBack = { navController.popBackStack() }
+                )
+            }
+            composable(
+                route = Screen.Library.route,
+                arguments = listOf(
+                    navArgument("categoryId") {
+                        type = NavType.StringType
+                        nullable = true
+                        defaultValue = null
+                    }
+                )
+            ) { backStackEntry ->
+                com.adulthub.tv.ui.library.LibraryScreen(
+                    initialCategoryId = backStackEntry.arguments?.getString("categoryId"),
+                    isCurrentDestination = rememberIsCurrentDestination(navController, backStackEntry),
+                    onNavigateBack = { navController.popBackStack() },
+                    onNavigateToItemDetail = { itemId ->
+                        navController.navigateToItemDetail(itemId)
+                    },
+                    onNavigateToPersonDetail = { personId, personName ->
+                        navController.navigateSingleTop(Screen.PersonDetail.createRoute(personId, personName))
+                    },
+                    onNavigateToPlayer = { playItemId ->
+                        navController.navigateSingleTop(Screen.Player.createRoute(playItemId))
+                    }
+                )
+            }
+            composable(
+                route = Screen.Search.route,
+                arguments = listOf(
+                    navArgument("query") {
+                        type = NavType.StringType
+                        nullable = true
+                        defaultValue = null
+                    }
+                )
+            ) { backStackEntry ->
+                val query = backStackEntry.arguments?.getString("query")
+                com.adulthub.tv.ui.search.SearchScreen(
+                    initialQuery = query,
+                    isCurrentDestination = rememberIsCurrentDestination(navController, backStackEntry),
+                    onNavigateBack = { navController.popBackStack() },
+                    onNavigateToItemDetail = { itemId ->
+                        navController.navigateToItemDetail(itemId)
+                    },
+                    onNavigateToPersonDetail = { personId, personName ->
+                        navController.navigateSingleTop(Screen.PersonDetail.createRoute(personId, personName))
+                    },
+                    onNavigateToPlayer = { itemId ->
+                        navController.navigateSingleTop(Screen.Player.createRoute(itemId))
+                    }
+                )
+            }
+            composable(Screen.Settings.route) {
+                com.adulthub.tv.ui.settings.SettingsScreen(
+                    onNavigateBack = { navController.popBackStack() },
+                    onSignOut = {
+                        navController.navigate(Screen.Server.route) {
+                            popUpTo(0) { inclusive = true }
+                            launchSingleTop = true
+                        }
+                    }
+                )
+            }
         }
-    }
 
         TvExitPrompt(
             navController = navController,
-            modifier = Modifier.align(Alignment.BottomCenter),
+            modifier = Modifier.align(Alignment.BottomCenter)
         )
     }
 }
@@ -331,7 +335,7 @@ fun AppNavigation(
 @Composable
 private fun TvExitPrompt(
     navController: NavHostController,
-    modifier: Modifier = Modifier,
+    modifier: Modifier = Modifier
 ) {
     val currentEntry by navController.currentBackStackEntryAsState()
     val currentRoute = currentEntry?.destination?.route
@@ -364,7 +368,7 @@ private fun TvExitPrompt(
                 Toast.makeText(
                     context,
                     exitMessage,
-                    Toast.LENGTH_SHORT,
+                    Toast.LENGTH_SHORT
                 ).show()
             }
         } else {
@@ -381,25 +385,25 @@ private fun TvExitPrompt(
         visible = showExitPrompt,
         enter = fadeIn(),
         exit = fadeOut(),
-        modifier = modifier.padding(bottom = 36.dp),
+        modifier = modifier.padding(bottom = 36.dp)
     ) {
         Box(
             modifier = Modifier
                 .background(
                     color = Color(0xF0181818),
-                    shape = RoundedCornerShape(24.dp),
+                    shape = RoundedCornerShape(24.dp)
                 )
                 .border(
                     width = 1.dp,
                     color = NeonPink,
-                    shape = RoundedCornerShape(24.dp),
+                    shape = RoundedCornerShape(24.dp)
                 )
-                .padding(horizontal = 24.dp, vertical = 12.dp),
+                .padding(horizontal = 24.dp, vertical = 12.dp)
         ) {
             Text(
                 text = stringResource(R.string.press_back_again_to_exit),
                 style = MaterialTheme.typography.bodyMedium,
-                color = Color.White,
+                color = Color.White
             )
         }
     }

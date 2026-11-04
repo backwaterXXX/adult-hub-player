@@ -11,7 +11,7 @@ class PlayerBackActionTest {
             autoplayCountdownSec = null,
             showInfoDialog = false,
             hasPendingResumeDialog = true,
-            isOsdVisible = true,
+            isOsdVisible = true
         )
         assertEquals(PlayerBackAction.DISMISS_RESUME_DIALOG, action)
     }
@@ -22,7 +22,7 @@ class PlayerBackActionTest {
             autoplayCountdownSec = null,
             showInfoDialog = true,
             hasPendingResumeDialog = true,
-            isOsdVisible = true,
+            isOsdVisible = true
         )
         assertEquals(PlayerBackAction.CLOSE_INFO_DIALOG, action)
     }
@@ -33,7 +33,7 @@ class PlayerBackActionTest {
             autoplayCountdownSec = 5,
             showInfoDialog = false,
             hasPendingResumeDialog = false,
-            isOsdVisible = true,
+            isOsdVisible = true
         )
         assertEquals(PlayerBackAction.CANCEL_AUTOPLAY, action)
     }
@@ -44,7 +44,7 @@ class PlayerBackActionTest {
             autoplayCountdownSec = null,
             showInfoDialog = false,
             hasPendingResumeDialog = false,
-            isOsdVisible = true,
+            isOsdVisible = true
         )
         assertEquals(PlayerBackAction.HIDE_OSD, action)
     }
@@ -55,7 +55,7 @@ class PlayerBackActionTest {
             autoplayCountdownSec = null,
             showInfoDialog = false,
             hasPendingResumeDialog = false,
-            isOsdVisible = false,
+            isOsdVisible = false
         )
         assertEquals(PlayerBackAction.EXIT_PLAYER, action)
     }

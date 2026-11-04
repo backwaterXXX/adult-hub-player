@@ -24,8 +24,7 @@ class StaleSessionTest {
 
         override suspend fun currentOwner(): SessionOwner = owner
 
-        override suspend fun isCurrent(owner: SessionOwner): Boolean =
-            this.owner.sessionMarker == owner.sessionMarker
+        override suspend fun isCurrent(owner: SessionOwner): Boolean = this.owner.sessionMarker == owner.sessionMarker
     }
 
     @Test

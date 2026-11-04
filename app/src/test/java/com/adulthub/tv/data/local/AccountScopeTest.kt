@@ -3,6 +3,7 @@ package com.adulthub.tv.data.local
 import com.adulthub.tv.data.model.AuthState
 import io.mockk.every
 import io.mockk.mockk
+import kotlin.time.Duration.Companion.seconds
 import kotlinx.coroutines.flow.flow
 import kotlinx.coroutines.test.runTest
 import org.junit.Assert.assertEquals
@@ -10,7 +11,6 @@ import org.junit.Assert.assertFalse
 import org.junit.Assert.assertNotEquals
 import org.junit.Assert.assertTrue
 import org.junit.Test
-import kotlin.time.Duration.Companion.seconds
 
 class AccountScopeTest {
 
@@ -19,7 +19,7 @@ class AccountScopeTest {
         userId = "user-1",
         accessToken = "token-one",
         username = "user",
-        serverName = "Jellyfin",
+        serverName = "Jellyfin"
     )
 
     private val secondSession = firstSession.copy(accessToken = "token-two")
@@ -46,9 +46,9 @@ class AccountScopeTest {
         assertEquals(
             SessionOwner(
                 accountKey = AccountScope.keyOf(firstSession),
-                sessionMarker = AccountScope.markerOf(firstSession),
+                sessionMarker = AccountScope.markerOf(firstSession)
             ),
-            owner,
+            owner
         )
     }
 

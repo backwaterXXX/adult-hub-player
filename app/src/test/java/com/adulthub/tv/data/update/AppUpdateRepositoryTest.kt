@@ -1,11 +1,11 @@
 package com.adulthub.tv.data.update
 
+import java.io.File
+import java.security.MessageDigest
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertFalse
 import org.junit.Assert.assertTrue
 import org.junit.Test
-import java.io.File
-import java.security.MessageDigest
 
 class AppUpdateRepositoryTest {
 
@@ -20,7 +20,7 @@ class AppUpdateRepositoryTest {
         minSdk: Int = 28,
         sizeBytes: Long = 1024L,
         sha256: String = "a".repeat(64),
-        apkAssetName: String = "AdultHubTV-0.1.71.apk",
+        apkAssetName: String = "AdultHubTV-0.1.71.apk"
     ) = UpdateManifest(
         schemaVersion = schemaVersion,
         applicationId = applicationId,
@@ -29,7 +29,7 @@ class AppUpdateRepositoryTest {
         minSdk = minSdk,
         apkAssetName = apkAssetName,
         sizeBytes = sizeBytes,
-        sha256 = sha256,
+        sha256 = sha256
     )
 
     @Test
@@ -105,7 +105,7 @@ class AppUpdateRepositoryTest {
     fun `redirects are resolved relative to the current url`() {
         assertEquals(
             "https://api.github.com/repos/owner/repo/releases/assets/1",
-            resolveRedirectTarget("https://api.github.com/repos/owner/repo", "/repos/owner/repo/releases/assets/1"),
+            resolveRedirectTarget("https://api.github.com/repos/owner/repo", "/repos/owner/repo/releases/assets/1")
         )
     }
 

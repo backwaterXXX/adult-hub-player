@@ -26,8 +26,8 @@ class LocalNetworkAccessPolicyTest {
             LocalNetworkAccessPolicy.requiresPermission(
                 sdkInt = 37,
                 granted = true,
-                targetUrl = "http://192.168.1.111:8096",
-            ),
+                targetUrl = "http://192.168.1.111:8096"
+            )
         )
     }
 
@@ -37,8 +37,8 @@ class LocalNetworkAccessPolicyTest {
             LocalNetworkAccessPolicy.requiresPermission(
                 sdkInt = 36,
                 granted = false,
-                targetUrl = "http://192.168.1.111:8096",
-            ),
+                targetUrl = "http://192.168.1.111:8096"
+            )
         )
     }
 
@@ -54,14 +54,14 @@ class LocalNetworkAccessPolicyTest {
             "http://127.0.0.1:8096",
             "http://localhost:8096",
             "http://jellyfin.local:8096",
-            "https://adult.ferges.eu",
+            "https://adult.ferges.eu"
         )
         // The last entry is a public name that resolves to the LAN through the local DNS, so
         // a by-name check cannot know it; the string tests below cover the parsed addresses.
         privateHosts.dropLast(1).forEach { url ->
             assertTrue(
                 "expected the permission requirement for $url",
-                LocalNetworkAccessPolicy.requiresPermission(sdkInt = 37, granted = false, targetUrl = url),
+                LocalNetworkAccessPolicy.requiresPermission(sdkInt = 37, granted = false, targetUrl = url)
             )
         }
     }
@@ -72,11 +72,11 @@ class LocalNetworkAccessPolicyTest {
             "https://jellyfin.example.com:8096",
             "https://8.8.8.8:8096",
             "https://172.32.0.1",
-            "https://11.0.0.1",
+            "https://11.0.0.1"
         ).forEach { url ->
             assertFalse(
                 "expected no permission requirement for $url",
-                LocalNetworkAccessPolicy.requiresPermission(sdkInt = 37, granted = false, targetUrl = url),
+                LocalNetworkAccessPolicy.requiresPermission(sdkInt = 37, granted = false, targetUrl = url)
             )
         }
     }
@@ -87,15 +87,15 @@ class LocalNetworkAccessPolicyTest {
             LocalNetworkAccessPolicy.requiresPermission(
                 sdkInt = 37,
                 granted = false,
-                targetUrl = "192.168.1.111:8096",
-            ),
+                targetUrl = "192.168.1.111:8096"
+            )
         )
         assertFalse(
             LocalNetworkAccessPolicy.requiresPermission(
                 sdkInt = 37,
                 granted = false,
-                targetUrl = "jellyfin.example.com:8096",
-            ),
+                targetUrl = "jellyfin.example.com:8096"
+            )
         )
     }
 

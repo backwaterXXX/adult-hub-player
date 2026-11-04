@@ -7,6 +7,7 @@ import androidx.datastore.preferences.core.edit
 import androidx.datastore.preferences.core.emptyPreferences
 import androidx.datastore.preferences.core.stringPreferencesKey
 import androidx.datastore.preferences.preferencesDataStore
+import java.io.IOException
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.catch
 import kotlinx.coroutines.flow.combine
@@ -15,7 +16,6 @@ import kotlinx.coroutines.flow.map
 import kotlinx.serialization.Serializable
 import kotlinx.serialization.encodeToString
 import kotlinx.serialization.json.Json
-import java.io.IOException
 
 private val Context.telegramProgressDataStore: DataStore<Preferences> by preferencesDataStore(name = "telegram_progress_prefs")
 
@@ -28,18 +28,20 @@ data class TelegramProgressRecord(
     val title: String,
     val thumbnailUrl: String? = null,
     val channelId: String? = null,
-    val isPlayed: Boolean = false,
+    val isPlayed: Boolean = false
 ) {
     val progressFraction: Float
         get() = if (durationMs > 0L) {
             (positionMs.toFloat() / durationMs.toFloat()).coerceIn(0f, 1f)
-        } else 0f
+        } else {
+            0f
+        }
 }
 
 open class TelegramProgressStore(
     private val context: Context,
     accountKeyProvider: AccountKeyProvider = AccountKeyProvider.ANONYMOUS,
-    private val dataStore: DataStore<Preferences> = SafePreferencesDataStore(context.telegramProgressDataStore),
+    private val dataStore: DataStore<Preferences> = SafePreferencesDataStore(context.telegramProgressDataStore)
 ) {
     companion object {
         /** Unscoped key written by versions that did not isolate accounts yet. */
@@ -82,7 +84,7 @@ open class TelegramProgressStore(
         thumbnailUrl: String? = null,
         channelId: String? = null,
         isPlayed: Boolean = false,
-        accountKey: String? = null,
+        accountKey: String? = null
     ) {
         if (providerVideoId.isBlank()) return
         // The key is resolved before the write starts, so a session change during
@@ -100,7 +102,7 @@ open class TelegramProgressStore(
                 title = title.ifBlank { existing?.title ?: "Telegram Video" },
                 thumbnailUrl = thumbnailUrl ?: existing?.thumbnailUrl,
                 channelId = channelId ?: existing?.channelId,
-                isPlayed = isPlayed,
+                isPlayed = isPlayed
             )
             currentMap[providerVideoId] = record
 
@@ -124,7 +126,7 @@ open class TelegramProgressStore(
         title: String? = null,
         thumbnailUrl: String? = null,
         channelId: String? = null,
-        accountKey: String? = null,
+        accountKey: String? = null
     ) {
         if (providerVideoId.isBlank()) return
         val accountKey = accountKey ?: accountKeys.currentKey()
@@ -139,7 +141,7 @@ open class TelegramProgressStore(
                 title = title ?: existing?.title ?: "Telegram Video",
                 thumbnailUrl = thumbnailUrl ?: existing?.thumbnailUrl,
                 channelId = channelId ?: existing?.channelId,
-                isPlayed = isPlayed,
+                isPlayed = isPlayed
             )
             currentMap[providerVideoId] = record
             val trimmedMap = if (currentMap.size > MAX_LRU_ENTRIES) {
@@ -192,7 +194,7 @@ open class TelegramProgressStore(
             val target = progressKey(accountKey)
             val merged = mergeProgress(
                 parseMap(prefs[target]),
-                parseMap(legacy),
+                parseMap(legacy)
             )
             prefs[target] = json.encodeToString(merged)
             prefs.remove(stringPreferencesKey(LEGACY_KEY_PROGRESS_MAP))
@@ -203,7 +205,7 @@ open class TelegramProgressStore(
 
     private fun mergeProgress(
         current: Map<String, TelegramProgressRecord>,
-        legacy: Map<String, TelegramProgressRecord>,
+        legacy: Map<String, TelegramProgressRecord>
     ): Map<String, TelegramProgressRecord> {
         val merged = LinkedHashMap(current)
         for ((videoId, record) in legacy) {
@@ -218,8 +220,7 @@ open class TelegramProgressStore(
             .associate { it.key to it.value }
     }
 
-    private fun progressKey(accountKey: String) =
-        stringPreferencesKey("${LEGACY_KEY_PROGRESS_MAP}__$accountKey")
+    private fun progressKey(accountKey: String) = stringPreferencesKey("${LEGACY_KEY_PROGRESS_MAP}__$accountKey")
 
     private fun parseMap(jsonStr: String?): Map<String, TelegramProgressRecord> {
         if (jsonStr.isNullOrBlank()) return emptyMap()

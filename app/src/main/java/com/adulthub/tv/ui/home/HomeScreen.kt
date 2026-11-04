@@ -36,7 +36,6 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
-import kotlinx.coroutines.delay
 import androidx.tv.material3.MaterialTheme
 import androidx.tv.material3.Text
 import com.adulthub.tv.R
@@ -53,6 +52,7 @@ import com.adulthub.tv.ui.theme.NeonPink
 import com.adulthub.tv.ui.theme.OledBlack
 import com.adulthub.tv.ui.theme.TextPrimary
 import com.adulthub.tv.ui.theme.TextSecondary
+import kotlinx.coroutines.delay
 import org.koin.androidx.compose.koinViewModel
 
 @Composable
@@ -67,7 +67,7 @@ fun HomeScreen(
     onNavigateToLibraryCategory: (String) -> Unit = { onNavigateToLibrary() },
     onNavigateToSearch: () -> Unit = {},
     onNavigateToSettings: () -> Unit = {},
-    isCurrentDestination: Boolean = true,
+    isCurrentDestination: Boolean = true
 ) {
     val state by viewModel.uiState.collectAsStateWithLifecycle()
     var hasBeenCurrentDestination by rememberSaveable { mutableStateOf(false) }
@@ -104,14 +104,14 @@ fun HomeScreen(
     Box(
         modifier = modifier
             .fillMaxSize()
-            .background(OledBlack),
+            .background(OledBlack)
     ) {
         LazyColumn(
             modifier = Modifier
                 .fillMaxSize()
                 .focusRequester(homeFocusRequester)
                 .focusRestorer(),
-            contentPadding = PaddingValues(top = 28.dp, bottom = 48.dp),
+            contentPadding = PaddingValues(top = 28.dp, bottom = 48.dp)
         ) {
             // Top Bar
             item {
@@ -121,7 +121,7 @@ fun HomeScreen(
                     onLibrary = viewModel::onLibraryClicked,
                     onSearch = viewModel::onSearchClicked,
                     onSettings = viewModel::onSettingsClicked,
-                    modifier = Modifier.padding(horizontal = 48.dp, vertical = 8.dp),
+                    modifier = Modifier.padding(horizontal = 48.dp, vertical = 8.dp)
                 )
                 Spacer(modifier = Modifier.height(16.dp))
             }
@@ -134,21 +134,21 @@ fun HomeScreen(
                     errorMessage = state.resumeSection.errorMessage,
                     isEmpty = state.resumeSection.isEmpty,
                     emptyMessage = stringResource(R.string.home_resume_empty),
-                    onRetry = viewModel::loadResume,
+                    onRetry = viewModel::loadResume
                 ) {
                     LazyRow(
                         modifier = Modifier.focusRestorer(),
                         contentPadding = PaddingValues(horizontal = 48.dp),
-                        horizontalArrangement = Arrangement.spacedBy(16.dp),
+                        horizontalArrangement = Arrangement.spacedBy(16.dp)
                     ) {
                         items(
                             items = state.resumeSection.items,
-                            key = { it.id },
+                            key = { it.id }
                         ) { item ->
                             MovieCard(
                                 item = item,
                                 imageUrl = viewModel.getItemImageUrl(item),
-                                onClick = { viewModel.onMovieClicked(item) },
+                                onClick = { viewModel.onMovieClicked(item) }
                             )
                         }
                     }
@@ -164,21 +164,21 @@ fun HomeScreen(
                         errorMessage = state.watchHistorySection.errorMessage,
                         isEmpty = state.watchHistorySection.isEmpty,
                         emptyMessage = "",
-                        onRetry = viewModel::loadWatchHistory,
+                        onRetry = viewModel::loadWatchHistory
                     ) {
                         LazyRow(
                             modifier = Modifier.focusRestorer(),
                             contentPadding = PaddingValues(horizontal = 48.dp),
-                            horizontalArrangement = Arrangement.spacedBy(16.dp),
+                            horizontalArrangement = Arrangement.spacedBy(16.dp)
                         ) {
                             items(
                                 items = state.watchHistorySection.items,
-                                key = { "history_${it.id}" },
+                                key = { "history_${it.id}" }
                             ) { item ->
                                 MovieCard(
                                     item = item,
                                     imageUrl = viewModel.getItemImageUrl(item),
-                                    onClick = { viewModel.onMovieClicked(item) },
+                                    onClick = { viewModel.onMovieClicked(item) }
                                 )
                             }
                         }
@@ -194,21 +194,21 @@ fun HomeScreen(
                     errorMessage = state.latestSection.errorMessage,
                     isEmpty = state.latestSection.isEmpty,
                     emptyMessage = stringResource(R.string.home_latest_empty),
-                    onRetry = viewModel::loadLatest,
+                    onRetry = viewModel::loadLatest
                 ) {
                     LazyRow(
                         modifier = Modifier.focusRestorer(),
                         contentPadding = PaddingValues(horizontal = 48.dp),
-                        horizontalArrangement = Arrangement.spacedBy(16.dp),
+                        horizontalArrangement = Arrangement.spacedBy(16.dp)
                     ) {
                         items(
                             items = state.latestSection.items,
-                            key = { it.id },
+                            key = { it.id }
                         ) { item ->
                             MovieCard(
                                 item = item,
                                 imageUrl = viewModel.getItemImageUrl(item),
-                                onClick = { viewModel.onMovieClicked(item) },
+                                onClick = { viewModel.onMovieClicked(item) }
                             )
                         }
                     }
@@ -227,7 +227,7 @@ fun HomeScreen(
                     headerAction = {
                         TvSecondaryButton(
                             onClick = viewModel::toggleRandomUnwatchedOnly,
-                            modifier = Modifier.height(32.dp),
+                            modifier = Modifier.height(32.dp)
                         ) {
                             Text(
                                 text = if (state.randomUnwatchedOnly) {
@@ -235,24 +235,24 @@ fun HomeScreen(
                                 } else {
                                     stringResource(R.string.shuffle_watched_and_unwatched)
                                 },
-                                fontSize = 12.sp,
+                                fontSize = 12.sp
                             )
                         }
-                    },
+                    }
                 ) {
                     LazyRow(
                         modifier = Modifier.focusRestorer(),
                         contentPadding = PaddingValues(horizontal = 48.dp),
-                        horizontalArrangement = Arrangement.spacedBy(16.dp),
+                        horizontalArrangement = Arrangement.spacedBy(16.dp)
                     ) {
                         items(
                             items = state.randomSection.items,
-                            key = { it.id },
+                            key = { it.id }
                         ) { item ->
                             MovieCard(
                                 item = item,
                                 imageUrl = viewModel.getItemImageUrl(item),
-                                onClick = { viewModel.onMovieClicked(item) },
+                                onClick = { viewModel.onMovieClicked(item) }
                             )
                         }
                     }
@@ -267,21 +267,21 @@ fun HomeScreen(
                     errorMessage = state.performersSection.errorMessage,
                     isEmpty = state.performersSection.isEmpty,
                     emptyMessage = stringResource(R.string.home_performers_empty),
-                    onRetry = viewModel::loadPerformers,
+                    onRetry = viewModel::loadPerformers
                 ) {
                     LazyRow(
                         modifier = Modifier.focusRestorer(),
                         contentPadding = PaddingValues(horizontal = 48.dp),
-                        horizontalArrangement = Arrangement.spacedBy(16.dp),
+                        horizontalArrangement = Arrangement.spacedBy(16.dp)
                     ) {
                         items(
                             items = state.performersSection.items,
-                            key = { it.id },
+                            key = { it.id }
                         ) { person ->
                             PersonCard(
                                 person = person,
                                 imageUrl = viewModel.getPersonImageUrl(person),
-                                onClick = { viewModel.onPersonClicked(person) },
+                                onClick = { viewModel.onPersonClicked(person) }
                             )
                         }
                     }
@@ -291,35 +291,35 @@ fun HomeScreen(
             // Category Rows (Pkt 11)
             items(
                 items = state.categoryRows,
-                key = { "category_${it.categoryId}" },
+                key = { "category_${it.categoryId}" }
             ) { categoryRow ->
                 SectionRow(
                     title = categoryRow.categoryName,
                     headerAction = {
                         TvSecondaryButton(
                             onClick = { viewModel.onCategorySeeAllClicked(categoryRow.categoryId) },
-                            modifier = Modifier.height(32.dp),
+                            modifier = Modifier.height(32.dp)
                         ) {
                             Text(
                                 text = stringResource(R.string.action_see_all),
-                                fontSize = 12.sp,
+                                fontSize = 12.sp
                             )
                         }
-                    },
+                    }
                 ) {
                     LazyRow(
                         modifier = Modifier.focusRestorer(),
                         contentPadding = PaddingValues(horizontal = 48.dp),
-                        horizontalArrangement = Arrangement.spacedBy(16.dp),
+                        horizontalArrangement = Arrangement.spacedBy(16.dp)
                     ) {
                         items(
                             items = categoryRow.items,
-                            key = { it.id },
+                            key = { it.id }
                         ) { item ->
                             MovieCard(
                                 item = item,
                                 imageUrl = viewModel.getItemImageUrl(item),
-                                onClick = { viewModel.onMovieClicked(item) },
+                                onClick = { viewModel.onMovieClicked(item) }
                             )
                         }
                     }
@@ -331,13 +331,14 @@ fun HomeScreen(
                         title = stringResource(R.string.home_categories_title),
                         isLoading = state.categoryRowsLoading,
                         errorMessage = state.categoryRowsErrorMessage,
-                        onRetry = viewModel::reloadCategoryRows,
+                        onRetry = viewModel::reloadCategoryRows
                     ) {}
                 }
             }
         }
     }
 }
+
 @Composable
 private fun HomeTopBar(
     libraryName: String,
@@ -345,12 +346,12 @@ private fun HomeTopBar(
     onLibrary: () -> Unit,
     onSearch: () -> Unit,
     onSettings: () -> Unit,
-    modifier: Modifier = Modifier,
+    modifier: Modifier = Modifier
 ) {
     Row(
         modifier = modifier.fillMaxWidth(),
         horizontalArrangement = Arrangement.SpaceBetween,
-        verticalAlignment = Alignment.CenterVertically,
+        verticalAlignment = Alignment.CenterVertically
     ) {
         // Logo & Library Name
         Row(verticalAlignment = Alignment.CenterVertically) {
@@ -359,7 +360,7 @@ private fun HomeTopBar(
                 color = NeonPink,
                 fontSize = 24.sp,
                 fontWeight = FontWeight.Bold,
-                letterSpacing = 4.sp,
+                letterSpacing = 4.sp
             )
 
             if (libraryName.isNotBlank()) {
@@ -369,13 +370,13 @@ private fun HomeTopBar(
                         .clip(RoundedCornerShape(16.dp))
                         .background(CardSurface)
                         .border(1.dp, CardSurfaceFocused, RoundedCornerShape(16.dp))
-                        .padding(horizontal = 12.dp, vertical = 6.dp),
+                        .padding(horizontal = 12.dp, vertical = 6.dp)
                 ) {
                     Text(
                         text = libraryName,
                         style = MaterialTheme.typography.bodySmall,
                         color = TextSecondary,
-                        fontWeight = FontWeight.Medium,
+                        fontWeight = FontWeight.Medium
                     )
                 }
             }
@@ -384,46 +385,46 @@ private fun HomeTopBar(
         // Navigation Actions
         Row(
             horizontalArrangement = Arrangement.spacedBy(12.dp),
-            verticalAlignment = Alignment.CenterVertically,
+            verticalAlignment = Alignment.CenterVertically
         ) {
             TvPrimaryButton(
                 onClick = onPlayRandom,
-                modifier = Modifier.height(40.dp),
+                modifier = Modifier.height(40.dp)
             ) {
                 Text(
                     text = stringResource(R.string.home_play_random),
                     fontSize = 13.sp,
-                    fontWeight = FontWeight.SemiBold,
+                    fontWeight = FontWeight.SemiBold
                 )
             }
 
             TvSecondaryButton(
                 onClick = onLibrary,
-                modifier = Modifier.height(40.dp),
+                modifier = Modifier.height(40.dp)
             ) {
                 Text(
                     text = stringResource(R.string.nav_library),
-                    fontSize = 13.sp,
+                    fontSize = 13.sp
                 )
             }
 
             TvSecondaryButton(
                 onClick = onSearch,
-                modifier = Modifier.height(40.dp),
+                modifier = Modifier.height(40.dp)
             ) {
                 Text(
                     text = stringResource(R.string.nav_search),
-                    fontSize = 13.sp,
+                    fontSize = 13.sp
                 )
             }
 
             TvSecondaryButton(
                 onClick = onSettings,
-                modifier = Modifier.height(40.dp),
+                modifier = Modifier.height(40.dp)
             ) {
                 Text(
                     text = stringResource(R.string.nav_settings),
-                    fontSize = 13.sp,
+                    fontSize = 13.sp
                 )
             }
         }

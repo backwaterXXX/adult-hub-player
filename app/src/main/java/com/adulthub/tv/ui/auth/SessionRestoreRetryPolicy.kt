@@ -15,7 +15,7 @@ package com.adulthub.tv.ui.auth
  * runs immediately, so the list always starts with `0`.
  */
 class SessionRestoreRetryPolicy(
-    private val delaysMs: List<Long> = DEFAULT_DELAYS_MS,
+    private val delaysMs: List<Long> = DEFAULT_DELAYS_MS
 ) {
 
     /** Number of discovery attempts, at least one. */

@@ -7,19 +7,19 @@ import android.os.StatFs
 import androidx.core.content.FileProvider
 import com.adulthub.tv.BuildConfig
 import com.adulthub.tv.data.local.SettingsDataStore
-import kotlinx.coroutines.Dispatchers
-import kotlinx.coroutines.runInterruptible
-import kotlinx.serialization.Serializable
-import kotlinx.serialization.json.Json
-import kotlinx.serialization.encodeToString
-import okhttp3.Interceptor
-import okhttp3.OkHttpClient
-import okhttp3.Request
 import java.io.File
 import java.io.FileOutputStream
 import java.net.URI
 import java.security.MessageDigest
 import java.util.concurrent.TimeUnit
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.runInterruptible
+import kotlinx.serialization.Serializable
+import kotlinx.serialization.encodeToString
+import kotlinx.serialization.json.Json
+import okhttp3.Interceptor
+import okhttp3.OkHttpClient
+import okhttp3.Request
 
 @Serializable
 data class UpdateManifest(
@@ -31,7 +31,7 @@ data class UpdateManifest(
     val apkAssetName: String,
     val sizeBytes: Long,
     val sha256: String,
-    val releaseNotes: String? = null,
+    val releaseNotes: String? = null
 )
 
 @Serializable
@@ -57,7 +57,7 @@ class AppUpdateRepository(
         .followRedirects(false)
         .followSslRedirects(false)
         .build(),
-    cleartextInterceptor: Interceptor? = null,
+    cleartextInterceptor: Interceptor? = null
 ) {
     private val httpClient = client.newBuilder()
         .apply { cleartextInterceptor?.let(::addNetworkInterceptor) }
@@ -71,9 +71,9 @@ class AppUpdateRepository(
         return try {
             val releaseUrl = "$GITHUB_API/repos/${BuildConfig.UPDATE_GITHUB_OWNER}/${BuildConfig.UPDATE_GITHUB_REPO}/releases/latest"
             val release = json.decodeFromString<GitHubRelease>(fetchBytes(releaseUrl, MAX_RELEASE_BYTES).toString(Charsets.UTF_8))
-        val manifestAssetName = BuildConfig.UPDATE_MANIFEST_ASSET
-        val manifestAsset = release.assets.singleOrNull { it.name == manifestAssetName }
-            ?: throw IllegalStateException("Latest GitHub release has no $manifestAssetName asset")
+            val manifestAssetName = BuildConfig.UPDATE_MANIFEST_ASSET
+            val manifestAsset = release.assets.singleOrNull { it.name == manifestAssetName }
+                ?: throw IllegalStateException("Latest GitHub release has no $manifestAssetName asset")
             val manifestBody = fetchBytes(assetUrl(manifestAsset.id), MAX_MANIFEST_BYTES, OCTET_STREAM)
             val manifest = json.decodeFromString<UpdateManifest>(manifestBody.toString(Charsets.UTF_8))
             validateManifest(manifest)
@@ -107,7 +107,7 @@ class AppUpdateRepository(
     fun installerUri(file: File) = FileProvider.getUriForFile(
         context,
         "${context.packageName}.updates",
-        file,
+        file
     )
 
     suspend fun restoreDownloadedUpdate(): AvailableUpdate? {
@@ -142,7 +142,7 @@ class AppUpdateRepository(
         validateUpdateManifest(
             manifest = manifest,
             packageName = context.packageName,
-            sdkInt = Build.VERSION.SDK_INT,
+            sdkInt = Build.VERSION.SDK_INT
         )
     }
 
@@ -314,7 +314,7 @@ internal fun computeSha256(file: File): String {
  */
 internal fun sameSigningCertificates(
     installed: Set<List<Byte>>,
-    update: Set<List<Byte>>,
+    update: Set<List<Byte>>
 ): Boolean = installed.isNotEmpty() && installed == update
 
 /** Resolves a redirect target and rejects anything that is not served over HTTPS. */

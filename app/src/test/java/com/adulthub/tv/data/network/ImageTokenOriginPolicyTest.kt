@@ -23,7 +23,7 @@ class ImageTokenOriginPolicyTest {
         assertTrue(
             ImageTokenOriginPolicy.allows(
                 "http://192.168.1.111:8096/Items/abc/Images/Primary?tag=1",
-                trusted,
+                trusted
             )
         )
     }
@@ -34,7 +34,7 @@ class ImageTokenOriginPolicyTest {
             ImageTokenOriginPolicy.allows(
                 "https://adult.ferges.eu/admin/api/v2/video-phash/thumbnail" +
                     "?video_id=telegram%3A-1001140295673%3A799%3A6048558423836984833",
-                trusted,
+                trusted
             )
         )
     }
@@ -58,7 +58,7 @@ class ImageTokenOriginPolicyTest {
         assertTrue(
             ImageTokenOriginPolicy.allows(
                 "https://adult.ferges.eu:443/admin/api/v2/video-phash/thumbnail?video_id=x",
-                listOf("https://adult.ferges.eu"),
+                listOf("https://adult.ferges.eu")
             )
         )
     }
@@ -68,13 +68,13 @@ class ImageTokenOriginPolicyTest {
         assertTrue(
             ImageTokenOriginPolicy.allows(
                 "https://adult.ferges.eu/admin/api/v2/video-phash/thumbnail?video_id=x",
-                listOf("https://adult.ferges.eu/"),
+                listOf("https://adult.ferges.eu/")
             )
         )
         assertTrue(
             ImageTokenOriginPolicy.allows(
                 "https://adult.ferges.eu/admin/api/v2/video-phash/thumbnail?video_id=x",
-                listOf("https://adult.ferges.eu/admin"),
+                listOf("https://adult.ferges.eu/admin")
             )
         )
     }
@@ -84,7 +84,7 @@ class ImageTokenOriginPolicyTest {
         assertTrue(
             ImageTokenOriginPolicy.allows(
                 "https://Adult.Ferges.EU/admin/api/v2/x",
-                listOf("https://adult.ferges.eu"),
+                listOf("https://adult.ferges.eu")
             )
         )
     }
@@ -94,7 +94,7 @@ class ImageTokenOriginPolicyTest {
         assertFalse(
             ImageTokenOriginPolicy.allows(
                 "https://adult.ferges.eu/admin/api/v2/video-phash/thumbnail?video_id=x",
-                listOf(null, "", "   "),
+                listOf(null, "", "   ")
             )
         )
     }

@@ -11,7 +11,7 @@ import okhttp3.Response
  * yet, and a 403 is a decision about one resource, not a rejected session.
  */
 internal class JellyfinSessionRejectionInterceptor(
-    private val onRejectedToken: (String) -> Unit,
+    private val onRejectedToken: (String) -> Unit
 ) : Interceptor {
     override fun intercept(chain: Interceptor.Chain): Response {
         val response = chain.proceed(chain.request())

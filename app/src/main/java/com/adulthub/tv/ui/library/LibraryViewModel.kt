@@ -22,6 +22,7 @@ import com.adulthub.tv.data.repository.PersonRepository
 import com.adulthub.tv.data.repository.StudioRepository
 import com.adulthub.tv.data.resolver.VideoDto
 import com.adulthub.tv.data.resolver.resolveResolverUrl
+import java.util.UUID
 import kotlinx.coroutines.Job
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.flow.MutableSharedFlow
@@ -36,14 +37,13 @@ import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.launch
 import org.jellyfin.sdk.model.api.ItemFilter
 import org.jellyfin.sdk.model.api.SortOrder
-import java.util.UUID
 
 enum class LibraryTab(@StringRes val titleRes: Int) {
     ALL(R.string.library_tab_movies),
     CATEGORIES(R.string.library_tab_categories),
     ACTORS(R.string.library_tab_actors),
     STUDIOS(R.string.library_tab_studios),
-    CHANNELS(R.string.library_tab_channels),
+    CHANNELS(R.string.library_tab_channels)
 }
 
 data class AllItemsTabState(
@@ -75,7 +75,7 @@ data class AllItemsTabState(
     val selectedGenre: TvCategory? = null,
     val selectedStudio: TvStudio? = null,
     val selectedPerformer: TvPerson? = null,
-    val lastSelectedItemId: String? = null,
+    val lastSelectedItemId: String? = null
 ) {
     val isEmpty: Boolean get() = !isLoading && errorMessage == null && items.isEmpty()
 }
@@ -93,7 +93,7 @@ data class CategoriesTabState(
     val categoryMoviesOffset: Int = 0,
     val categoryMoviesError: String? = null,
     val lastSelectedCategoryId: String? = null,
-    val lastSelectedMovieId: String? = null,
+    val lastSelectedMovieId: String? = null
 ) {
     val isEmpty: Boolean get() = !isLoading && errorMessage == null && categories.isEmpty()
 }
@@ -109,7 +109,7 @@ data class ActorsTabState(
     val selectedLetter: Char? = null,
     val onlyWithPhoto: Boolean = false,
     val searchQuery: String = "",
-    val lastSelectedPersonId: String? = null,
+    val lastSelectedPersonId: String? = null
 ) {
     val isEmpty: Boolean get() = !isLoading && errorMessage == null && filteredPersons.isEmpty()
 }
@@ -127,7 +127,7 @@ data class StudiosTabState(
     val studioMoviesOffset: Int = 0,
     val studioMoviesError: String? = null,
     val lastSelectedStudioId: String? = null,
-    val lastSelectedMovieId: String? = null,
+    val lastSelectedMovieId: String? = null
 ) {
     val isEmpty: Boolean get() = !isLoading && errorMessage == null && studios.isEmpty()
 }
@@ -151,7 +151,7 @@ data class ChannelsTabState(
     val channelVideosError: String? = null,
     val resolverBaseUrl: String = SettingsDataStore.DEFAULT_RESOLVER_URL,
     val lastSelectedChannelId: String? = null,
-    val lastSelectedVideoId: String? = null,
+    val lastSelectedVideoId: String? = null
 ) {
     val isEmpty: Boolean get() = !isLoading && errorMessage == null && channels.isEmpty()
 }
@@ -162,7 +162,7 @@ data class LibraryUiState(
     val categoriesState: CategoriesTabState = CategoriesTabState(),
     val actorsState: ActorsTabState = ActorsTabState(),
     val studiosState: StudiosTabState = StudiosTabState(),
-    val channelsState: ChannelsTabState = ChannelsTabState(),
+    val channelsState: ChannelsTabState = ChannelsTabState()
 )
 
 sealed interface LibraryNavEvent {
@@ -180,7 +180,7 @@ class LibraryViewModel(
     private val clientManager: JellyfinClientManager,
     private val settingsDataStore: SettingsDataStore? = null,
     private val savedStateHandle: SavedStateHandle = SavedStateHandle(),
-    private val context: Context,
+    private val context: Context
 ) : ViewModel() {
 
     private val _uiState = MutableStateFlow(LibraryUiState())
@@ -207,7 +207,7 @@ class LibraryViewModel(
                 settings.resolverBaseUrl.distinctUntilChanged().collect { url ->
                     _uiState.update { state ->
                         state.copy(
-                            channelsState = state.channelsState.copy(resolverBaseUrl = url),
+                            channelsState = state.channelsState.copy(resolverBaseUrl = url)
                         )
                     }
                 }
@@ -219,12 +219,12 @@ class LibraryViewModel(
                             state.channelsState.rawChannelVideos,
                             state.channelsState.durationFilter,
                             state.channelsState.excludedTags,
-                            mode,
+                            mode
                         )
                         state.copy(
                             channelsState = state.channelsState.copy(
                                 sortMode = mode,
-                                channelVideos = sorted,
+                                channelVideos = sorted
                             )
                         )
                     }
@@ -233,13 +233,13 @@ class LibraryViewModel(
             viewModelScope.launch {
                 settings.excludedTags.distinctUntilChanged().collect { excluded ->
                     _uiState.update { state ->
-                        val as_ = state.allState
+                        val allState = state.allState
                         val cs = state.channelsState
-                        val allFiltered = applyAllItemsFilters(as_.rawItems, as_.durationFilter, as_.hdOnly, excluded)
+                        val allFiltered = applyAllItemsFilters(allState.rawItems, allState.durationFilter, allState.hdOnly, excluded)
                         val chFiltered = applyChannelFilters(cs.rawChannelVideos, cs.durationFilter, excluded, cs.sortMode)
                         state.copy(
-                            allState = as_.copy(excludedTags = excluded, items = allFiltered),
-                            channelsState = cs.copy(excludedTags = excluded, channelVideos = chFiltered),
+                            allState = allState.copy(excludedTags = excluded, items = allFiltered),
+                            channelsState = cs.copy(excludedTags = excluded, channelVideos = chFiltered)
                         )
                     }
                 }
@@ -250,7 +250,7 @@ class LibraryViewModel(
                         val cs = state.channelsState
                         val visible = cs.channels.filter { it.id !in hidden }
                         state.copy(
-                            channelsState = cs.copy(hiddenChannelIds = hidden, channels = visible),
+                            channelsState = cs.copy(hiddenChannelIds = hidden, channels = visible)
                         )
                     }
                 }
@@ -264,11 +264,13 @@ class LibraryViewModel(
             _uiState.update { it.copy(allState = it.allState.copy(isLoadingGenres = true)) }
             val result = libraryRepository.getGenres()
             _uiState.update { state ->
-                state.copy(allState = state.allState.copy(
-                    genres = result.getOrDefault(emptyList()).sortedBy { it.name.lowercase() },
-                    areGenresLoaded = result.isSuccess,
-                    isLoadingGenres = false,
-                ))
+                state.copy(
+                    allState = state.allState.copy(
+                        genres = result.getOrDefault(emptyList()).sortedBy { it.name.lowercase() },
+                        areGenresLoaded = result.isSuccess,
+                        isLoadingGenres = false
+                    )
+                )
             }
         }
     }
@@ -281,11 +283,13 @@ class LibraryViewModel(
             // add one request per studio to a list of several hundred entries.
             val result = studioRepository.getStudios(limit = 500)
             _uiState.update { state ->
-                state.copy(allState = state.allState.copy(
-                    studios = result.getOrDefault(emptyList()).sortedBy { it.name.lowercase() },
-                    areStudiosLoaded = result.isSuccess,
-                    isLoadingStudios = false,
-                ))
+                state.copy(
+                    allState = state.allState.copy(
+                        studios = result.getOrDefault(emptyList()).sortedBy { it.name.lowercase() },
+                        areStudiosLoaded = result.isSuccess,
+                        isLoadingStudios = false
+                    )
+                )
             }
         }
     }
@@ -296,11 +300,13 @@ class LibraryViewModel(
             _uiState.update { it.copy(allState = it.allState.copy(isLoadingPerformers = true)) }
             val result = personRepository.getPersons(limit = 100)
             _uiState.update { state ->
-                state.copy(allState = state.allState.copy(
-                    performers = result.getOrDefault(emptyList()).sortedBy { it.name.lowercase() },
-                    arePerformersLoaded = result.isSuccess,
-                    isLoadingPerformers = false,
-                ))
+                state.copy(
+                    allState = state.allState.copy(
+                        performers = result.getOrDefault(emptyList()).sortedBy { it.name.lowercase() },
+                        arePerformersLoaded = result.isSuccess,
+                        isLoadingPerformers = false
+                    )
+                )
             }
         }
     }
@@ -321,11 +327,13 @@ class LibraryViewModel(
         viewModelScope.launch {
             val categories = libraryRepository.getGenres().getOrDefault(emptyList())
             _uiState.update { state ->
-                state.copy(categoriesState = state.categoriesState.copy(
-                    categories = categories.sortedBy { it.name.lowercase() },
-                    isLoading = false,
-                    errorMessage = null,
-                ))
+                state.copy(
+                    categoriesState = state.categoriesState.copy(
+                        categories = categories.sortedBy { it.name.lowercase() },
+                        isLoading = false,
+                        errorMessage = null
+                    )
+                )
             }
             categories.firstOrNull { it.id == categoryId }?.let(::selectCategory)
         }
@@ -345,7 +353,7 @@ class LibraryViewModel(
                         state.copy(
                             categoriesState = state.categoriesState.copy(
                                 categories = categories.sortedBy { it.name.lowercase() },
-                                isLoading = false,
+                                isLoading = false
                             )
                         )
                     },
@@ -353,7 +361,7 @@ class LibraryViewModel(
                         state.copy(
                             categoriesState = state.categoriesState.copy(
                                 isLoading = false,
-                                errorMessage = error.localizedMessage ?: context.getString(R.string.library_error_categories),
+                                errorMessage = error.localizedMessage ?: context.getString(R.string.library_error_categories)
                             )
                         )
                     }
@@ -375,7 +383,7 @@ class LibraryViewModel(
                     isLoadingMoreCategoryMovies = false,
                     hasMoreCategoryMovies = false,
                     totalCount = 0,
-                    categoryMoviesOffset = 0,
+                    categoryMoviesOffset = 0
                 )
             )
         }
@@ -408,10 +416,12 @@ class LibraryViewModel(
                         categoriesState = state.categoriesState.copy(
                             isLoadingCategoryMovies = reset,
                             isLoadingMoreCategoryMovies = !reset,
-                            categoryMoviesError = if (reset) null else state.categoriesState.categoryMoviesError,
+                            categoryMoviesError = if (reset) null else state.categoriesState.categoryMoviesError
                         )
                     )
-                } else state
+                } else {
+                    state
+                }
             }
 
             val startIndex = if (reset) 0 else _uiState.value.categoriesState.categoryMoviesOffset
@@ -420,7 +430,7 @@ class LibraryViewModel(
                 genreName = category.name,
                 genreId = category.id,
                 startIndex = startIndex,
-                limit = pageSize,
+                limit = pageSize
             )
 
             _uiState.update { state ->
@@ -442,7 +452,7 @@ class LibraryViewModel(
                                 isLoadingCategoryMovies = false,
                                 isLoadingMoreCategoryMovies = false,
                                 categoryMoviesError = null,
-                                hasMoreCategoryMovies = hasMore,
+                                hasMoreCategoryMovies = hasMore
                             )
                         )
                     },
@@ -451,7 +461,7 @@ class LibraryViewModel(
                             categoriesState = state.categoriesState.copy(
                                 isLoadingCategoryMovies = false,
                                 isLoadingMoreCategoryMovies = false,
-                                categoryMoviesError = error.localizedMessage ?: context.getString(R.string.library_error_category_movies),
+                                categoryMoviesError = error.localizedMessage ?: context.getString(R.string.library_error_category_movies)
                             )
                         )
                     }
@@ -499,7 +509,7 @@ class LibraryViewModel(
                 filters = filters,
                 genreIds = listOfNotNull(currentState.selectedGenre?.id?.toUuidOrNull()),
                 studioIds = listOfNotNull(currentState.selectedStudio?.id?.toUuidOrNull()),
-                personIds = listOfNotNull(currentState.selectedPerformer?.id?.toUuidOrNull()),
+                personIds = listOfNotNull(currentState.selectedPerformer?.id?.toUuidOrNull())
             )
 
             if (generation != allItemsGeneration) return@launch
@@ -514,7 +524,7 @@ class LibraryViewModel(
                             rawCombined,
                             state.allState.durationFilter,
                             state.allState.hdOnly,
-                            state.allState.excludedTags,
+                            state.allState.excludedTags
                         )
                         val hasMore = rawCombined.size < page.totalRecordCount
                         if (filtered.isEmpty() && hasMore && autoFetchEmptyAttempts < 3) {
@@ -528,7 +538,7 @@ class LibraryViewModel(
                                 startIndex = startIndex,
                                 isLoading = false,
                                 isLoadingMore = false,
-                                hasMore = hasMore,
+                                hasMore = hasMore
                             )
                         )
                     },
@@ -537,7 +547,7 @@ class LibraryViewModel(
                             allState = state.allState.copy(
                                 isLoading = false,
                                 isLoadingMore = false,
-                                errorMessage = error.localizedMessage ?: context.getString(R.string.library_error_movies),
+                                errorMessage = error.localizedMessage ?: context.getString(R.string.library_error_movies)
                             )
                         )
                     }
@@ -551,18 +561,18 @@ class LibraryViewModel(
 
     fun setDurationFilter(filter: DurationFilter) {
         _uiState.update { state ->
-            val as_ = state.allState
-            val filtered = applyAllItemsFilters(as_.rawItems, filter, as_.hdOnly, as_.excludedTags)
-            state.copy(allState = as_.copy(durationFilter = filter, items = filtered))
+            val allState = state.allState
+            val filtered = applyAllItemsFilters(allState.rawItems, filter, allState.hdOnly, allState.excludedTags)
+            state.copy(allState = allState.copy(durationFilter = filter, items = filtered))
         }
     }
 
     fun toggleHdOnly() {
         _uiState.update { state ->
-            val as_ = state.allState
-            val newHd = !as_.hdOnly
-            val filtered = applyAllItemsFilters(as_.rawItems, as_.durationFilter, newHd, as_.excludedTags)
-            state.copy(allState = as_.copy(hdOnly = newHd, items = filtered))
+            val allState = state.allState
+            val newHd = !allState.hdOnly
+            val filtered = applyAllItemsFilters(allState.rawItems, allState.durationFilter, newHd, allState.excludedTags)
+            state.copy(allState = allState.copy(hdOnly = newHd, items = filtered))
         }
     }
 
@@ -570,7 +580,7 @@ class LibraryViewModel(
         items: List<TvItem>,
         durationFilter: DurationFilter,
         hdOnly: Boolean,
-        excludedTags: Set<String>,
+        excludedTags: Set<String>
     ): List<TvItem> {
         return items.filter { item ->
             if (excludedTags.isNotEmpty()) {
@@ -637,7 +647,7 @@ class LibraryViewModel(
                 filters = buildSet {
                     if (filters.favoritesOnly) add(ItemFilter.IS_FAVORITE)
                     if (filters.unwatchedOnly) add(ItemFilter.IS_UNPLAYED)
-                },
+                }
             ).getOrNull() ?: filters.items.shuffled().firstOrNull()
             item?.let { _navEvents.emit(LibraryNavEvent.NavigateToItemDetail(it.id)) }
         }
@@ -651,15 +661,17 @@ class LibraryViewModel(
         if (reset) actorsLoadJob?.cancel()
         actorsLoadJob = viewModelScope.launch {
             _uiState.update { state ->
-                state.copy(actorsState = state.actorsState.copy(
-                    isLoading = reset,
-                    isLoadingMore = !reset,
-                    errorMessage = null,
-                    allPersons = if (reset) emptyList() else state.actorsState.allPersons,
-                    filteredPersons = if (reset) emptyList() else state.actorsState.filteredPersons,
-                    hasMore = if (reset) true else state.actorsState.hasMore,
-                    totalCount = if (reset) 0 else state.actorsState.totalCount,
-                ))
+                state.copy(
+                    actorsState = state.actorsState.copy(
+                        isLoading = reset,
+                        isLoadingMore = !reset,
+                        errorMessage = null,
+                        allPersons = if (reset) emptyList() else state.actorsState.allPersons,
+                        filteredPersons = if (reset) emptyList() else state.actorsState.filteredPersons,
+                        hasMore = if (reset) true else state.actorsState.hasMore,
+                        totalCount = if (reset) 0 else state.actorsState.totalCount
+                    )
+                )
             }
             val requestState = _uiState.value.actorsState
             val startIndex = if (reset) 0 else requestState.allPersons.size
@@ -668,7 +680,7 @@ class LibraryViewModel(
                 startIndex = startIndex,
                 limit = pageSize,
                 searchTerm = requestState.searchQuery.takeIf(String::isNotBlank),
-                nameStartsWith = requestState.selectedLetter?.toString(),
+                nameStartsWith = requestState.selectedLetter?.toString()
             )
             _uiState.update { state ->
                 val actors = state.actorsState
@@ -682,25 +694,29 @@ class LibraryViewModel(
                             combined,
                             actors.selectedLetter,
                             actors.onlyWithPhoto,
-                            actors.searchQuery,
+                            actors.searchQuery
                         )
-                        state.copy(actorsState = actors.copy(
-                            allPersons = combined,
-                            filteredPersons = filtered,
-                            totalCount = page.totalRecordCount,
-                            isLoading = false,
-                            isLoadingMore = false,
-                            hasMore = startIndex + page.persons.size < page.totalRecordCount,
-                            errorMessage = null,
-                        ))
+                        state.copy(
+                            actorsState = actors.copy(
+                                allPersons = combined,
+                                filteredPersons = filtered,
+                                totalCount = page.totalRecordCount,
+                                isLoading = false,
+                                isLoadingMore = false,
+                                hasMore = startIndex + page.persons.size < page.totalRecordCount,
+                                errorMessage = null
+                            )
+                        )
                     },
                     onFailure = { error ->
-                        state.copy(actorsState = actors.copy(
-                            isLoading = false,
-                            isLoadingMore = false,
-                            errorMessage = error.localizedMessage ?: context.getString(R.string.library_error_actors),
-                        ))
-                    },
+                        state.copy(
+                            actorsState = actors.copy(
+                                isLoading = false,
+                                isLoadingMore = false,
+                                errorMessage = error.localizedMessage ?: context.getString(R.string.library_error_actors)
+                            )
+                        )
+                    }
                 )
             }
         }
@@ -715,7 +731,7 @@ class LibraryViewModel(
             state.copy(
                 actorsState = state.actorsState.copy(
                     selectedLetter = updatedLetter,
-                    filteredPersons = filtered,
+                    filteredPersons = filtered
                 )
             )
         }
@@ -729,7 +745,7 @@ class LibraryViewModel(
             state.copy(
                 actorsState = state.actorsState.copy(
                     onlyWithPhoto = newOnly,
-                    filteredPersons = filtered,
+                    filteredPersons = filtered
                 )
             )
         }
@@ -741,7 +757,7 @@ class LibraryViewModel(
             state.copy(
                 actorsState = state.actorsState.copy(
                     searchQuery = query,
-                    filteredPersons = filtered,
+                    filteredPersons = filtered
                 )
             )
         }
@@ -754,18 +770,16 @@ class LibraryViewModel(
         }
     }
 
-private fun filterActors(
+    private fun filterActors(
         all: List<TvPerson>,
         letter: Char?,
         onlyWithPhoto: Boolean,
-        query: String,
-    ): List<TvPerson> {
-        return all.filter { person ->
-            val matchesLetter = letter == null || person.name.startsWith(letter, ignoreCase = true)
-            val matchesPhoto = !onlyWithPhoto || !person.primaryImageTag.isNullOrBlank()
-            val matchesSearch = query.isBlank() || person.name.contains(query, ignoreCase = true)
-            matchesLetter && matchesPhoto && matchesSearch
-        }
+        query: String
+    ): List<TvPerson> = all.filter { person ->
+        val matchesLetter = letter == null || person.name.startsWith(letter, ignoreCase = true)
+        val matchesPhoto = !onlyWithPhoto || !person.primaryImageTag.isNullOrBlank()
+        val matchesSearch = query.isBlank() || person.name.contains(query, ignoreCase = true)
+        matchesLetter && matchesPhoto && matchesSearch
     }
 
     // --- STUDIOS TAB ---
@@ -782,7 +796,7 @@ private fun filterActors(
                         state.copy(
                             studiosState = state.studiosState.copy(
                                 studios = studios.sortedBy { it.name.lowercase() },
-                                isLoading = false,
+                                isLoading = false
                             )
                         )
                     },
@@ -790,7 +804,7 @@ private fun filterActors(
                         state.copy(
                             studiosState = state.studiosState.copy(
                                 isLoading = false,
-                                errorMessage = error.localizedMessage ?: context.getString(R.string.library_error_studios),
+                                errorMessage = error.localizedMessage ?: context.getString(R.string.library_error_studios)
                             )
                         )
                     }
@@ -812,7 +826,7 @@ private fun filterActors(
                     isLoadingMoreStudioMovies = false,
                     hasMoreStudioMovies = false,
                     totalCount = 0,
-                    studioMoviesOffset = 0,
+                    studioMoviesOffset = 0
                 )
             )
         }
@@ -845,10 +859,12 @@ private fun filterActors(
                         studiosState = state.studiosState.copy(
                             isLoadingStudioMovies = reset,
                             isLoadingMoreStudioMovies = !reset,
-                            studioMoviesError = if (reset) null else state.studiosState.studioMoviesError,
+                            studioMoviesError = if (reset) null else state.studiosState.studioMoviesError
                         )
                     )
-                } else state
+                } else {
+                    state
+                }
             }
 
             val startIndex = if (reset) 0 else _uiState.value.studiosState.studioMoviesOffset
@@ -856,7 +872,7 @@ private fun filterActors(
             val result = studioRepository.getStudioMoviesPage(
                 studioName = studio.name,
                 startIndex = startIndex,
-                limit = pageSize,
+                limit = pageSize
             )
 
             _uiState.update { state ->
@@ -878,7 +894,7 @@ private fun filterActors(
                                 isLoadingStudioMovies = false,
                                 isLoadingMoreStudioMovies = false,
                                 studioMoviesError = null,
-                                hasMoreStudioMovies = hasMore,
+                                hasMoreStudioMovies = hasMore
                             )
                         )
                     },
@@ -887,7 +903,7 @@ private fun filterActors(
                             studiosState = state.studiosState.copy(
                                 isLoadingStudioMovies = false,
                                 isLoadingMoreStudioMovies = false,
-                                studioMoviesError = error.localizedMessage ?: context.getString(R.string.library_error_studio_movies),
+                                studioMoviesError = error.localizedMessage ?: context.getString(R.string.library_error_studio_movies)
                             )
                         )
                     }
@@ -912,7 +928,7 @@ private fun filterActors(
                         state.copy(
                             channelsState = state.channelsState.copy(
                                 channels = visible,
-                                isLoading = false,
+                                isLoading = false
                             )
                         )
                     },
@@ -920,7 +936,7 @@ private fun filterActors(
                         state.copy(
                             channelsState = state.channelsState.copy(
                                 isLoading = false,
-                                errorMessage = error.localizedMessage ?: context.getString(R.string.library_error_channels),
+                                errorMessage = error.localizedMessage ?: context.getString(R.string.library_error_channels)
                             )
                         )
                     }
@@ -945,7 +961,7 @@ private fun filterActors(
             state.copy(
                 channelsState = cs.copy(
                     durationFilter = filter,
-                    channelVideos = filtered,
+                    channelVideos = filtered
                 )
             )
         }
@@ -956,18 +972,20 @@ private fun filterActors(
     fun selectChannel(channel: TvChannel?) {
         channelVideosJob?.cancel()
         _uiState.update { state ->
-            state.copy(channelsState = state.channelsState.copy(
-                selectedChannel = channel,
-                lastSelectedChannelId = channel?.id ?: state.channelsState.lastSelectedChannelId,
-                rawChannelVideos = emptyList(),
-                channelVideos = emptyList(),
-                channelVideosError = null,
-                isLoadingVideos = false,
-                isLoadingMoreVideos = false,
-                hasMoreVideos = false,
-                nextOffsetId = null,
-                totalMessageCount = 0,
-            ))
+            state.copy(
+                channelsState = state.channelsState.copy(
+                    selectedChannel = channel,
+                    lastSelectedChannelId = channel?.id ?: state.channelsState.lastSelectedChannelId,
+                    rawChannelVideos = emptyList(),
+                    channelVideos = emptyList(),
+                    channelVideosError = null,
+                    isLoadingVideos = false,
+                    isLoadingMoreVideos = false,
+                    hasMoreVideos = false,
+                    nextOffsetId = null,
+                    totalMessageCount = 0
+                )
+            )
         }
         channel?.let { loadChannelVideos(it, reset = true) }
     }
@@ -979,7 +997,7 @@ private fun filterActors(
             state.copy(
                 channelsState = cs.copy(
                     sortMode = mode,
-                    channelVideos = sorted,
+                    channelVideos = sorted
                 )
             )
         }
@@ -988,25 +1006,25 @@ private fun filterActors(
         }
     }
 
-    private fun sortChannelVideos(videos: List<VideoDto>, mode: ChannelSortMode): List<VideoDto> {
-        return when (mode) {
-            ChannelSortMode.LATEST -> videos
-            ChannelSortMode.LONGEST -> videos.sortedWith(
-                compareByDescending<VideoDto> { it.duration }
-                    .thenByDescending { it.id }
-            )
-            ChannelSortMode.SHORTEST -> videos.sortedWith(
-                compareBy<VideoDto> { if (it.duration <= 0.0) Double.MAX_VALUE else it.duration }
-                    .thenBy { it.id }
-            )
-        }
+    private fun sortChannelVideos(videos: List<VideoDto>, mode: ChannelSortMode): List<VideoDto> = when (mode) {
+        ChannelSortMode.LATEST -> videos
+
+        ChannelSortMode.LONGEST -> videos.sortedWith(
+            compareByDescending<VideoDto> { it.duration }
+                .thenByDescending { it.id }
+        )
+
+        ChannelSortMode.SHORTEST -> videos.sortedWith(
+            compareBy<VideoDto> { if (it.duration <= 0.0) Double.MAX_VALUE else it.duration }
+                .thenBy { it.id }
+        )
     }
 
     private fun applyChannelFilters(
         videos: List<VideoDto>,
         durationFilter: DurationFilter,
         excludedTags: Set<String>,
-        mode: ChannelSortMode,
+        mode: ChannelSortMode
     ): List<VideoDto> {
         val filtered = videos.filter { video ->
             if (excludedTags.isNotEmpty()) {
@@ -1047,19 +1065,23 @@ private fun filterActors(
         channelVideosJob = viewModelScope.launch {
             _uiState.update { state ->
                 if (state.channelsState.selectedChannel?.id == channel.id) {
-                    state.copy(channelsState = state.channelsState.copy(
-                        isLoadingVideos = reset,
-                        isLoadingMoreVideos = !reset,
-                        channelVideosError = if (reset) null else state.channelsState.channelVideosError,
-                    ))
-                } else state
+                    state.copy(
+                        channelsState = state.channelsState.copy(
+                            isLoadingVideos = reset,
+                            isLoadingMoreVideos = !reset,
+                            channelVideosError = if (reset) null else state.channelsState.channelVideosError
+                        )
+                    )
+                } else {
+                    state
+                }
             }
 
             val currentOffset = if (reset) null else _uiState.value.channelsState.nextOffsetId
             val historyResult = channelRepository.getChannelHistory(
                 channelId = channel.id,
                 offsetId = currentOffset,
-                limit = 100,
+                limit = 100
             )
 
             // The fallback is a network call, so it is resolved before the state update:
@@ -1083,22 +1105,24 @@ private fun filterActors(
                             combined,
                             state.channelsState.durationFilter,
                             state.channelsState.excludedTags,
-                            state.channelsState.sortMode,
+                            state.channelsState.sortMode
                         )
                         val hasMore = page.hasMore && page.nextOffsetId != null && page.nextOffsetId != currentOffset
                         if (filtered.isEmpty() && hasMore && autoFetchEmptyAttempts < 3) {
                             shouldAutoFetch = true
                         }
-                        state.copy(channelsState = state.channelsState.copy(
-                            rawChannelVideos = combined,
-                            channelVideos = filtered,
-                            isLoadingVideos = false,
-                            isLoadingMoreVideos = false,
-                            channelVideosError = null,
-                            hasMoreVideos = hasMore,
-                            nextOffsetId = page.nextOffsetId,
-                            totalMessageCount = page.messageCount,
-                        ))
+                        state.copy(
+                            channelsState = state.channelsState.copy(
+                                rawChannelVideos = combined,
+                                channelVideos = filtered,
+                                isLoadingVideos = false,
+                                isLoadingMoreVideos = false,
+                                channelVideosError = null,
+                                hasMoreVideos = hasMore,
+                                nextOffsetId = page.nextOffsetId,
+                                totalMessageCount = page.messageCount
+                            )
+                        )
                     },
                     onFailure = { error ->
                         if (reset) {
@@ -1109,42 +1133,50 @@ private fun filterActors(
                                         distinct,
                                         state.channelsState.durationFilter,
                                         state.channelsState.excludedTags,
-                                        state.channelsState.sortMode,
+                                        state.channelsState.sortMode
                                     )
-                                    state.copy(channelsState = state.channelsState.copy(
-                                        rawChannelVideos = distinct,
-                                        channelVideos = sortedFallback,
-                                        isLoadingVideos = false,
-                                        isLoadingMoreVideos = false,
-                                        channelVideosError = null,
-                                        hasMoreVideos = false,
-                                        nextOffsetId = null,
-                                        totalMessageCount = distinct.size,
-                                    ))
+                                    state.copy(
+                                        channelsState = state.channelsState.copy(
+                                            rawChannelVideos = distinct,
+                                            channelVideos = sortedFallback,
+                                            isLoadingVideos = false,
+                                            isLoadingMoreVideos = false,
+                                            channelVideosError = null,
+                                            hasMoreVideos = false,
+                                            nextOffsetId = null,
+                                            totalMessageCount = distinct.size
+                                        )
+                                    )
                                 },
                                 onFailure = { fallbackError ->
-                                    state.copy(channelsState = state.channelsState.copy(
-                                        rawChannelVideos = emptyList(),
-                                        channelVideos = emptyList(),
-                                        isLoadingVideos = false,
-                                        isLoadingMoreVideos = false,
-                                        channelVideosError = fallbackError.localizedMessage ?: error.localizedMessage ?: context.getString(R.string.library_error_channel_videos),
-                                        hasMoreVideos = false,
-                                        nextOffsetId = null,
-                                    ))
+                                    state.copy(
+                                        channelsState = state.channelsState.copy(
+                                            rawChannelVideos = emptyList(),
+                                            channelVideos = emptyList(),
+                                            isLoadingVideos = false,
+                                            isLoadingMoreVideos = false,
+                                            channelVideosError = fallbackError.localizedMessage ?: error.localizedMessage ?: context.getString(R.string.library_error_channel_videos),
+                                            hasMoreVideos = false,
+                                            nextOffsetId = null
+                                        )
+                                    )
                                 }
-                            ) ?: state.copy(channelsState = state.channelsState.copy(
-                                isLoadingVideos = false,
-                                isLoadingMoreVideos = false,
-                                channelVideosError = error.localizedMessage ?: context.getString(R.string.library_error_channel_videos),
-                            ))
+                            ) ?: state.copy(
+                                channelsState = state.channelsState.copy(
+                                    isLoadingVideos = false,
+                                    isLoadingMoreVideos = false,
+                                    channelVideosError = error.localizedMessage ?: context.getString(R.string.library_error_channel_videos)
+                                )
+                            )
                         } else {
-                            state.copy(channelsState = state.channelsState.copy(
-                                isLoadingMoreVideos = false,
-                                channelVideosError = error.localizedMessage ?: context.getString(R.string.library_error_more_channel_videos),
-                            ))
+                            state.copy(
+                                channelsState = state.channelsState.copy(
+                                    isLoadingMoreVideos = false,
+                                    channelVideosError = error.localizedMessage ?: context.getString(R.string.library_error_more_channel_videos)
+                                )
+                            )
                         }
-                    },
+                    }
                 )
             }
             if (shouldAutoFetch) {
@@ -1158,18 +1190,15 @@ private fun filterActors(
 
     fun getItemImageUrl(item: TvItem): String = clientManager.getItemImageUrl(item)
 
-    fun getPersonImageUrl(person: TvPerson): String =
-        if (!person.primaryImageTag.isNullOrBlank()) {
-            clientManager.getPersonImageUrl(person.id, person.primaryImageTag, maxWidth = 300)
-        } else if (!person.photoUrl.isNullOrBlank()) {
-            person.photoUrl
-        } else {
-            clientManager.getPersonImageUrl(person.id, null, maxWidth = 300)
-        }
-
-    fun getChannelVideoThumbnailUrl(thumbnail: String?): String {
-        return resolveResolverUrl(thumbnail, _uiState.value.channelsState.resolverBaseUrl)
+    fun getPersonImageUrl(person: TvPerson): String = if (!person.primaryImageTag.isNullOrBlank()) {
+        clientManager.getPersonImageUrl(person.id, person.primaryImageTag, maxWidth = 300)
+    } else if (!person.photoUrl.isNullOrBlank()) {
+        person.photoUrl
+    } else {
+        clientManager.getPersonImageUrl(person.id, null, maxWidth = 300)
     }
+
+    fun getChannelVideoThumbnailUrl(thumbnail: String?): String = resolveResolverUrl(thumbnail, _uiState.value.channelsState.resolverBaseUrl)
 
     fun onMovieClicked(item: TvItem) {
         _uiState.update { state ->
@@ -1246,24 +1275,24 @@ private fun filterActors(
                 ?: current.allState.durationFilter,
             selectedGenre = restoreSelection(KEY_GENRE_ID, KEY_GENRE_NAME) { id, name -> TvCategory(id, name) },
             selectedStudio = restoreSelection(KEY_STUDIO_ID, KEY_STUDIO_NAME) { id, name -> TvStudio(id, name) },
-            selectedPerformer = restoreSelection(KEY_PERFORMER_ID, KEY_PERFORMER_NAME) { id, name -> TvPerson(id, name) },
+            selectedPerformer = restoreSelection(KEY_PERFORMER_ID, KEY_PERFORMER_NAME) { id, name -> TvPerson(id, name) }
         )
         val restoredActors = current.actorsState.copy(
             selectedLetter = savedStateHandle.get<String>(KEY_ACTOR_LETTER)?.firstOrNull(),
-            onlyWithPhoto = savedStateHandle.get<Boolean>(KEY_ONLY_WITH_PHOTO) ?: current.actorsState.onlyWithPhoto,
+            onlyWithPhoto = savedStateHandle.get<Boolean>(KEY_ONLY_WITH_PHOTO) ?: current.actorsState.onlyWithPhoto
         )
         val restoredChannels = current.channelsState.copy(
             durationFilter = savedStateHandle.get<String>(KEY_CHANNEL_DURATION_FILTER)
                 ?.let { name -> DurationFilter.entries.firstOrNull { it.name == name } }
                 ?: current.channelsState.durationFilter,
             hiddenChannelIds = savedStateHandle.get<ArrayList<String>>(KEY_HIDDEN_CHANNELS)?.toSet()
-                ?: current.channelsState.hiddenChannelIds,
+                ?: current.channelsState.hiddenChannelIds
         )
         _uiState.value = current.copy(
             selectedTab = restoredTab,
             allState = restoredAll,
             actorsState = restoredActors,
-            channelsState = restoredChannels,
+            channelsState = restoredChannels
         )
     }
 

@@ -7,12 +7,12 @@ import androidx.datastore.preferences.core.edit
 import androidx.datastore.preferences.core.emptyPreferences
 import androidx.datastore.preferences.core.stringPreferencesKey
 import androidx.datastore.preferences.preferencesDataStore
+import java.io.IOException
 import kotlinx.coroutines.flow.catch
 import kotlinx.coroutines.flow.first
 import kotlinx.serialization.Serializable
 import kotlinx.serialization.encodeToString
 import kotlinx.serialization.json.Json
-import java.io.IOException
 
 private val Context.phashJobDataStore: DataStore<Preferences> by preferencesDataStore(name = "phash_jobs_prefs")
 
@@ -31,14 +31,14 @@ data class StoredPhashJob(
      * budget measures the life of the task. Records of an earlier version have no
      * start time and use the time of their last change.
      */
-    val startedAt: Long = updatedAt,
+    val startedAt: Long = updatedAt
 )
 
 /** Persists resolver job IDs so polling can resume after navigation or process death. */
 class PhashJobStore(
     context: Context,
     accountKeyProvider: AccountKeyProvider = AccountKeyProvider.ANONYMOUS,
-    private val dataStore: DataStore<Preferences> = SafePreferencesDataStore(context.phashJobDataStore),
+    private val dataStore: DataStore<Preferences> = SafePreferencesDataStore(context.phashJobDataStore)
 ) {
     companion object {
         /** Unscoped key written by versions that did not isolate accounts yet. */
@@ -47,14 +47,16 @@ class PhashJobStore(
     }
 
     private val accountKeys: AccountKeyProvider = accountKeyProvider
-    private val json = Json { ignoreUnknownKeys = true; encodeDefaults = true }
+    private val json = Json {
+        ignoreUnknownKeys = true
+        encodeDefaults = true
+    }
 
     private val preferences = dataStore.data.catch { error ->
         if (error is IOException) emit(emptyPreferences()) else throw error
     }
 
-    suspend fun get(videoId: String, accountKey: String? = null): StoredPhashJob? =
-        readJobs(accountKey).firstOrNull { it.videoId == videoId }
+    suspend fun get(videoId: String, accountKey: String? = null): StoredPhashJob? = readJobs(accountKey).firstOrNull { it.videoId == videoId }
 
     suspend fun getAll(accountKey: String? = null): List<StoredPhashJob> = readJobs(accountKey)
 
@@ -83,8 +85,11 @@ class PhashJobStore(
         val accountKey = accountKey ?: accountKeys.currentKey()
         dataStore.edit { prefs ->
             val remaining = decode(prefs[jobsKey(accountKey)]).filterNot { it.videoId == videoId }
-            if (remaining.isEmpty()) prefs.remove(jobsKey(accountKey))
-            else prefs[jobsKey(accountKey)] = json.encodeToString(remaining)
+            if (remaining.isEmpty()) {
+                prefs.remove(jobsKey(accountKey))
+            } else {
+                prefs[jobsKey(accountKey)] = json.encodeToString(remaining)
+            }
         }
     }
 
@@ -109,7 +114,7 @@ class PhashJobStore(
             val target = jobsKey(accountKey)
             val merged = mergeJobs(
                 decode(prefs[target]),
-                decode(legacy),
+                decode(legacy)
             )
             prefs[target] = json.encodeToString(merged)
             prefs.remove(stringPreferencesKey(LEGACY_KEY_JOBS))
@@ -136,6 +141,5 @@ class PhashJobStore(
 
     private fun jobsKey(accountKey: String) = stringPreferencesKey("${LEGACY_KEY_JOBS}__$accountKey")
 
-    private fun decode(raw: String?): List<StoredPhashJob> =
-        raw?.let { runCatching { json.decodeFromString<List<StoredPhashJob>>(it) }.getOrNull() }.orEmpty()
+    private fun decode(raw: String?): List<StoredPhashJob> = raw?.let { runCatching { json.decodeFromString<List<StoredPhashJob>>(it) }.getOrNull() }.orEmpty()
 }

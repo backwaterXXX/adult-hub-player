@@ -3,6 +3,7 @@ package com.adulthub.tv.ui.navigation
 import android.os.SystemClock
 import android.widget.Toast
 import androidx.activity.compose.BackHandler
+import androidx.compose.foundation.layout.padding
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.MenuBook
 import androidx.compose.material.icons.filled.Home
@@ -11,7 +12,6 @@ import androidx.compose.material.icons.filled.Settings
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Modifier
-import androidx.compose.foundation.layout.padding
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.res.stringResource
 import androidx.navigation.NavHostController
@@ -40,7 +40,7 @@ private val MOBILE_TOP_LEVEL_ROUTES = setOf(
     Screen.Home.route,
     Screen.Library.route,
     Screen.Search.route,
-    Screen.Settings.route,
+    Screen.Settings.route
 )
 
 /**
@@ -83,14 +83,14 @@ fun MobileAppNavigation(modifier: Modifier = Modifier) {
         modifier = modifier,
         bottomBar = {
             MobileBottomBar(navController = nav)
-        },
+        }
     ) { padding ->
         MobileExitHandler(navController = nav)
         NavHost(navController = nav, startDestination = Screen.Splash.route, modifier = Modifier.padding(padding)) {
             composable(Screen.Splash.route) {
                 MobilePage(
                     title = stringResource(R.string.app_name),
-                    subtitle = stringResource(R.string.mobile_splash_subtitle),
+                    subtitle = stringResource(R.string.mobile_splash_subtitle)
                 )
             }
             composable(Screen.Server.route) { MobileServerScreen(auth) }
@@ -101,11 +101,29 @@ fun MobileAppNavigation(modifier: Modifier = Modifier) {
                 val vm: HomeViewModel = koinViewModel()
                 MobileHomeScreen(vm, isCurrentDestination = rememberIsCurrentDestination(nav, homeEntry), onItem = { nav.navigateMobile(Screen.ItemDetail.createRoute(it)) }, onPlay = { nav.navigateMobile(Screen.Player.createRoute(it)) }, onPerson = { id, name -> nav.navigateMobile(Screen.PersonDetail.createRoute(id, name)) }, onSearch = { nav.navigateMobile(Screen.Search.createRoute()) }, onLibrary = { nav.navigateMobile(Screen.Library.createRoute()) }, onCategory = { nav.navigateMobile(Screen.Library.createRoute(it)) })
             }
-            composable(Screen.Library.route, arguments = listOf(navArgument("categoryId") { type = NavType.StringType; nullable = true; defaultValue = null })) { back ->
+            composable(
+                Screen.Library.route,
+                arguments = listOf(
+                    navArgument("categoryId") {
+                        type = NavType.StringType
+                        nullable = true
+                        defaultValue = null
+                    }
+                )
+            ) { back ->
                 val vm: LibraryViewModel = koinViewModel()
                 MobileLibraryScreen(vm, back.arguments?.getString("categoryId"), onItem = { nav.navigateMobile(Screen.ItemDetail.createRoute(it)) }, onPlay = { nav.navigateMobile(Screen.Player.createRoute(it)) }, onPerson = { id, name -> nav.navigateMobile(Screen.PersonDetail.createRoute(id, name)) })
             }
-            composable(Screen.Search.route, arguments = listOf(navArgument("query") { type = NavType.StringType; nullable = true; defaultValue = null })) { back ->
+            composable(
+                Screen.Search.route,
+                arguments = listOf(
+                    navArgument("query") {
+                        type = NavType.StringType
+                        nullable = true
+                        defaultValue = null
+                    }
+                )
+            ) { back ->
                 val vm: SearchViewModel = koinViewModel()
                 MobileSearchScreen(vm, back.arguments?.getString("query"), onItem = { nav.navigateMobile(Screen.ItemDetail.createRoute(it)) }, onPlay = { nav.navigateMobile(Screen.Player.createRoute(it)) }, onPerson = { id, name -> nav.navigateMobile(Screen.PersonDetail.createRoute(id, name)) })
             }
@@ -116,7 +134,7 @@ fun MobileAppNavigation(modifier: Modifier = Modifier) {
                     com.adulthub.tv.ui.settings.SettingsScreen(
                         onNavigateBack = { nav.popBackStack() },
                         onSignOut = { nav.navigate(Screen.Server.route) { popUpTo(0) } },
-                        isMobile = true,
+                        isMobile = true
                     )
                 }
             }
@@ -129,20 +147,30 @@ fun MobileAppNavigation(modifier: Modifier = Modifier) {
                     onPlay = { id, resume -> nav.navigateMobile(Screen.Player.createRoute(id, resume)) },
                     onItem = { nav.navigateMobile(Screen.ItemDetail.createRoute(it)) },
                     onPerson = { id, name -> nav.navigateMobile(Screen.PersonDetail.createRoute(id, name)) },
-                    onSearch = { nav.navigateMobile(Screen.Search.createRoute(it)) },
+                    onSearch = { nav.navigateMobile(Screen.Search.createRoute(it)) }
                 )
             }
             composable(Screen.PersonDetail.route, arguments = listOf(navArgument("personId") { type = NavType.StringType }, navArgument("personName") { type = NavType.StringType })) { back ->
                 val vm: PersonDetailViewModel = koinViewModel()
                 MobilePersonScreen(vm, back.arguments?.getString("personId").orEmpty(), back.arguments?.getString("personName").orEmpty(), onItem = { nav.navigateMobile(Screen.ItemDetail.createRoute(it)) })
             }
-            composable(Screen.Player.route, arguments = listOf(navArgument("itemId") { type = NavType.StringType }, navArgument("resume") { type = NavType.StringType; nullable = true; defaultValue = null })) { back ->
+            composable(
+                Screen.Player.route,
+                arguments = listOf(
+                    navArgument("itemId") { type = NavType.StringType },
+                    navArgument("resume") {
+                        type = NavType.StringType
+                        nullable = true
+                        defaultValue = null
+                    }
+                )
+            ) { back ->
                 AdultHubTvTheme {
                     PlayerScreen(
                         itemId = back.arguments?.getString("itemId").orEmpty(),
                         onBack = { nav.popBackStack() },
                         resume = back.arguments?.getString("resume")?.toBooleanStrictOrNull(),
-                        mobileControls = true,
+                        mobileControls = true
                     )
                 }
             }
@@ -198,7 +226,7 @@ private fun MobileBottomBar(navController: NavHostController) {
             Screen.Home.route to (stringResource(R.string.nav_home) to Icons.Filled.Home),
             Screen.Library.route to (stringResource(R.string.nav_library) to Icons.AutoMirrored.Filled.MenuBook),
             Screen.Search.route to (stringResource(R.string.nav_search) to Icons.Filled.Search),
-            Screen.Settings.route to (stringResource(R.string.nav_settings) to Icons.Filled.Settings),
+            Screen.Settings.route to (stringResource(R.string.nav_settings) to Icons.Filled.Settings)
         ).forEach { (destination, pair) ->
             val selected = route == destination
             NavigationBarItem(
@@ -211,7 +239,7 @@ private fun MobileBottomBar(navController: NavHostController) {
                     }
                 },
                 icon = { Icon(pair.second, contentDescription = pair.first) },
-                label = { Text(pair.first) },
+                label = { Text(pair.first) }
             )
         }
     }

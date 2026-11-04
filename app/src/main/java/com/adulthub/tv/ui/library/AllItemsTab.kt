@@ -1,6 +1,5 @@
 package com.adulthub.tv.ui.library
 
-import androidx.compose.ui.ExperimentalComposeUiApi
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
@@ -19,28 +18,28 @@ import androidx.compose.foundation.layout.heightIn
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.lazy.LazyColumn
-import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.lazy.grid.GridCells
 import androidx.compose.foundation.lazy.grid.GridItemSpan
 import androidx.compose.foundation.lazy.grid.LazyVerticalGrid
 import androidx.compose.foundation.lazy.grid.items
 import androidx.compose.foundation.lazy.grid.rememberLazyGridState
+import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.text.BasicTextField
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
-import kotlinx.coroutines.delay
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
+import androidx.compose.ui.ExperimentalComposeUiApi
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.focus.FocusRequester
-import androidx.compose.ui.focus.onFocusChanged
-import androidx.compose.ui.focus.focusRestorer
 import androidx.compose.ui.focus.focusRequester
+import androidx.compose.ui.focus.focusRestorer
+import androidx.compose.ui.focus.onFocusChanged
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.res.pluralStringResource
 import androidx.compose.ui.res.stringResource
@@ -65,6 +64,7 @@ import com.adulthub.tv.ui.theme.CardSurface
 import com.adulthub.tv.ui.theme.NeonPink
 import com.adulthub.tv.ui.theme.SurfaceDark
 import com.adulthub.tv.ui.theme.TextSecondary
+import kotlinx.coroutines.delay
 import org.jellyfin.sdk.model.api.SortOrder
 
 @Composable
@@ -87,7 +87,7 @@ fun AllItemsTab(
     onLoadStudios: () -> Unit,
     onLoadPerformers: () -> Unit,
     onSurpriseMe: () -> Unit,
-    getImageUrl: (TvItem) -> String,
+    getImageUrl: (TvItem) -> String
 ) {
     var filterPicker by rememberSaveable { mutableStateOf<CatalogFilter?>(null) }
     val gridState = rememberLazyGridState()
@@ -108,7 +108,7 @@ fun AllItemsTab(
     Column(
         modifier = modifier
             .fillMaxSize()
-            .padding(horizontal = 48.dp),
+            .padding(horizontal = 48.dp)
     ) {
         // Filter & Sort Bar
         Row(
@@ -116,18 +116,18 @@ fun AllItemsTab(
                 .fillMaxWidth()
                 .padding(vertical = 12.dp),
             horizontalArrangement = Arrangement.spacedBy(12.dp),
-            verticalAlignment = Alignment.CenterVertically,
+            verticalAlignment = Alignment.CenterVertically
         ) {
             Row(horizontalArrangement = Arrangement.spacedBy(10.dp)) {
                 Text(
                     text = pluralStringResource(
                         R.plurals.library_movies_count,
                         state.totalCount,
-                        state.totalCount,
+                        state.totalCount
                     ),
                     style = MaterialTheme.typography.bodyMedium,
                     color = TextSecondary,
-                    modifier = Modifier.align(Alignment.CenterVertically),
+                    modifier = Modifier.align(Alignment.CenterVertically)
                 )
                 // Sort By Button
                 TvSecondaryButton(
@@ -139,7 +139,7 @@ fun AllItemsTab(
                         }
                         onSortChange(nextSort, state.sortOrder)
                     },
-                    modifier = Modifier.height(36.dp),
+                    modifier = Modifier.height(36.dp)
                 ) {
                     val label = stringResource(
                         when (state.sortBy) {
@@ -147,7 +147,7 @@ fun AllItemsTab(
                             "SortName" -> R.string.library_sort_by_title
                             "Runtime" -> R.string.library_sort_by_duration
                             else -> R.string.library_sort_by_default
-                        },
+                        }
                     )
                     Text(text = stringResource(R.string.library_sort_value, label), fontSize = 12.sp)
                 }
@@ -162,7 +162,7 @@ fun AllItemsTab(
                         }
                         onSortChange(state.sortBy, nextOrder)
                     },
-                    modifier = Modifier.height(36.dp),
+                    modifier = Modifier.height(36.dp)
                 ) {
                     val arrow = if (state.sortOrder == SortOrder.DESCENDING) {
                         stringResource(R.string.library_sort_order_desc)
@@ -176,14 +176,14 @@ fun AllItemsTab(
                 if (state.favoritesOnly) {
                     TvPrimaryButton(
                         onClick = onToggleFavorites,
-                        modifier = Modifier.height(36.dp),
+                        modifier = Modifier.height(36.dp)
                     ) {
                         Text(text = stringResource(R.string.library_filter_favorites), fontSize = 12.sp)
                     }
                 } else {
                     TvSecondaryButton(
                         onClick = onToggleFavorites,
-                        modifier = Modifier.height(36.dp),
+                        modifier = Modifier.height(36.dp)
                     ) {
                         Text(text = stringResource(R.string.library_filter_favorites), fontSize = 12.sp)
                     }
@@ -215,7 +215,7 @@ fun AllItemsTab(
         Row(
             modifier = Modifier.fillMaxWidth().padding(bottom = 8.dp),
             horizontalArrangement = Arrangement.spacedBy(10.dp),
-            verticalAlignment = Alignment.CenterVertically,
+            verticalAlignment = Alignment.CenterVertically
         ) {
             TvSecondaryButton(
                 onClick = {
@@ -227,35 +227,44 @@ fun AllItemsTab(
                     }
                     onDurationFilterChange(nextDuration)
                 },
-                modifier = Modifier.height(36.dp),
+                modifier = Modifier.height(36.dp)
             ) {
                 Text(stringResource(state.durationFilter.labelRes), fontSize = 12.sp)
             }
-            TvSecondaryButton(onClick = { filterPicker = CatalogFilter.GENRE; onLoadGenres() }, modifier = Modifier.height(36.dp)) {
+            TvSecondaryButton(onClick = {
+                filterPicker = CatalogFilter.GENRE
+                onLoadGenres()
+            }, modifier = Modifier.height(36.dp)) {
                 Text(
                     stringResource(
                         R.string.library_filter_genre,
-                        state.selectedGenre?.name ?: stringResource(R.string.library_filter_all),
+                        state.selectedGenre?.name ?: stringResource(R.string.library_filter_all)
                     ),
-                    fontSize = 12.sp,
+                    fontSize = 12.sp
                 )
             }
-            TvSecondaryButton(onClick = { filterPicker = CatalogFilter.STUDIO; onLoadStudios() }, modifier = Modifier.height(36.dp)) {
+            TvSecondaryButton(onClick = {
+                filterPicker = CatalogFilter.STUDIO
+                onLoadStudios()
+            }, modifier = Modifier.height(36.dp)) {
                 Text(
                     stringResource(
                         R.string.library_filter_studio,
-                        state.selectedStudio?.name ?: stringResource(R.string.library_filter_all),
+                        state.selectedStudio?.name ?: stringResource(R.string.library_filter_all)
                     ),
-                    fontSize = 12.sp,
+                    fontSize = 12.sp
                 )
             }
-            TvSecondaryButton(onClick = { filterPicker = CatalogFilter.PERFORMER; onLoadPerformers() }, modifier = Modifier.height(36.dp)) {
+            TvSecondaryButton(onClick = {
+                filterPicker = CatalogFilter.PERFORMER
+                onLoadPerformers()
+            }, modifier = Modifier.height(36.dp)) {
                 Text(
                     stringResource(
                         R.string.library_filter_performer,
-                        state.selectedPerformer?.name ?: stringResource(R.string.library_filter_all),
+                        state.selectedPerformer?.name ?: stringResource(R.string.library_filter_all)
                     ),
-                    fontSize = 12.sp,
+                    fontSize = 12.sp
                 )
             }
             Spacer(modifier = Modifier.weight(1f))
@@ -286,7 +295,7 @@ fun AllItemsTab(
                         CatalogFilter.GENRE -> R.string.library_choose_genre
                         CatalogFilter.STUDIO -> R.string.library_choose_studio
                         CatalogFilter.PERFORMER -> R.string.library_choose_performer
-                    },
+                    }
                 ),
                 options = options,
                 selectedId = selectedId,
@@ -299,7 +308,7 @@ fun AllItemsTab(
                         CatalogFilter.PERFORMER -> onSelectPerformer(state.performers.firstOrNull { it.id == id })
                     }
                     filterPicker = null
-                },
+                }
             )
         }
 
@@ -307,35 +316,38 @@ fun AllItemsTab(
             state.isLoading -> {
                 Box(
                     modifier = Modifier.fillMaxSize(),
-                    contentAlignment = Alignment.Center,
+                    contentAlignment = Alignment.Center
                 ) {
                     LoadingIndicator(message = stringResource(R.string.library_loading_movies))
                 }
             }
+
             state.errorMessage != null && state.items.isEmpty() -> {
                 Box(
                     modifier = Modifier.fillMaxSize(),
-                    contentAlignment = Alignment.Center,
+                    contentAlignment = Alignment.Center
                 ) {
                     ErrorMessage(
                         message = state.errorMessage,
                         onRetry = onRetry,
-                        modifier = Modifier.fillMaxWidth(0.5f),
+                        modifier = Modifier.fillMaxWidth(0.5f)
                     )
                 }
             }
+
             state.isEmpty -> {
                 Box(
                     modifier = Modifier.fillMaxSize(),
-                    contentAlignment = Alignment.Center,
+                    contentAlignment = Alignment.Center
                 ) {
                     Text(
                         text = stringResource(R.string.library_no_movies_matching_filters),
                         style = MaterialTheme.typography.bodyLarge,
-                        color = TextSecondary,
+                        color = TextSecondary
                     )
                 }
             }
+
             else -> {
                 LazyVerticalGrid(
                     columns = GridCells.Fixed(4),
@@ -343,11 +355,11 @@ fun AllItemsTab(
                     contentPadding = PaddingValues(top = 8.dp, bottom = 48.dp),
                     horizontalArrangement = Arrangement.spacedBy(16.dp),
                     verticalArrangement = Arrangement.spacedBy(16.dp),
-                    modifier = Modifier.fillMaxSize().focusRestorer(),
+                    modifier = Modifier.fillMaxSize().focusRestorer()
                 ) {
                     items(
                         items = state.items,
-                        key = { it.id },
+                        key = { it.id }
                     ) { item ->
                         val requester = remember(item.id) {
                             focusRequesterMap.getOrPut(item.id) { FocusRequester() }
@@ -358,7 +370,7 @@ fun AllItemsTab(
                             onClick = { onMovieClick(item) },
                             modifier = Modifier
                                 .fillMaxWidth()
-                                .focusRequester(requester),
+                                .focusRequester(requester)
                         )
                     }
 
@@ -368,14 +380,14 @@ fun AllItemsTab(
                                 modifier = Modifier
                                     .fillMaxWidth()
                                     .padding(vertical = 24.dp),
-                                contentAlignment = Alignment.Center,
+                                contentAlignment = Alignment.Center
                             ) {
                                 if (state.isLoadingMore) {
                                     LoadingIndicator(message = stringResource(R.string.library_loading_more_movies))
                                 } else {
                                     TvSecondaryButton(
                                         onClick = onLoadMore,
-                                        modifier = Modifier.height(44.dp),
+                                        modifier = Modifier.height(44.dp)
                                     ) {
                                         Text(text = stringResource(R.string.library_load_more_movies))
                                     }
@@ -400,7 +412,7 @@ private fun CatalogFilterDialog(
     selectedId: String?,
     isLoading: Boolean,
     onDismiss: () -> Unit,
-    onSelect: (String?) -> Unit,
+    onSelect: (String?) -> Unit
 ) {
     var query by remember(title) { mutableStateOf("") }
     val filterListHint = stringResource(R.string.library_filter_list_hint)
@@ -425,7 +437,7 @@ private fun CatalogFilterDialog(
                 .heightIn(max = 680.dp)
                 .background(SurfaceDark, RoundedCornerShape(18.dp))
                 .border(2.dp, NeonPink, RoundedCornerShape(18.dp))
-                .padding(24.dp),
+                .padding(24.dp)
         ) {
             Text(title, style = MaterialTheme.typography.headlineSmall, color = NeonPink, fontWeight = FontWeight.Bold)
             Spacer(modifier = Modifier.height(14.dp))
@@ -436,21 +448,25 @@ private fun CatalogFilterDialog(
                     .border(
                         width = if (isSearchFocused) 2.dp else 1.dp,
                         color = if (isSearchFocused) NeonPink else Color.White.copy(alpha = 0.2f),
-                        shape = RoundedCornerShape(10.dp),
+                        shape = RoundedCornerShape(10.dp)
                     )
                     .padding(horizontal = 14.dp, vertical = 12.dp)
                     .then(
-                        if (isSearchEditing) Modifier else Modifier
-                            .focusRequester(searchFocus)
-                            .clickable(
-                                interactionSource = searchInteraction,
-                                indication = null,
-                                onClick = {
-                                    searchEditorHadFocus = false
-                                    isSearchEditing = true
-                                },
-                            ),
-                    ),
+                        if (isSearchEditing) {
+                            Modifier
+                        } else {
+                            Modifier
+                                .focusRequester(searchFocus)
+                                .clickable(
+                                    interactionSource = searchInteraction,
+                                    indication = null,
+                                    onClick = {
+                                        searchEditorHadFocus = false
+                                        isSearchEditing = true
+                                    }
+                                )
+                        }
+                    )
             ) {
                 if (isSearchEditing) {
                     BasicTextField(
@@ -475,13 +491,13 @@ private fun CatalogFilterDialog(
                                 Text(filterListHint, color = Color.White.copy(alpha = 0.45f), fontSize = 16.sp)
                             }
                             inner()
-                        },
+                        }
                     )
                 } else {
                     Text(
                         query.ifEmpty { filterListHint },
                         color = if (query.isEmpty()) Color.White.copy(alpha = 0.45f) else Color.White,
-                        fontSize = 16.sp,
+                        fontSize = 16.sp
                     )
                 }
             }

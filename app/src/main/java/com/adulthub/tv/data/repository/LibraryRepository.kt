@@ -4,9 +4,10 @@ import com.adulthub.tv.data.jellyfin.JellyfinClientManager
 import com.adulthub.tv.data.jellyfin.toTvItem
 import com.adulthub.tv.data.local.AccountKeyProvider
 import com.adulthub.tv.data.local.SettingsDataStore
+import com.adulthub.tv.data.local.TelegramProgressStore
 import com.adulthub.tv.data.model.TvCategory
 import com.adulthub.tv.data.model.TvItem
-import com.adulthub.tv.data.local.TelegramProgressStore
+import java.util.UUID
 import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.withContext
@@ -16,8 +17,8 @@ import org.jellyfin.sdk.api.client.extensions.userDataApi
 import org.jellyfin.sdk.api.client.extensions.userViewApi
 import org.jellyfin.sdk.model.api.BaseItemKind
 import org.jellyfin.sdk.model.api.ImageType
-import org.jellyfin.sdk.model.api.ItemFilter
 import org.jellyfin.sdk.model.api.ItemFields
+import org.jellyfin.sdk.model.api.ItemFilter
 import org.jellyfin.sdk.model.api.ItemSortBy
 import org.jellyfin.sdk.model.api.MediaType
 import org.jellyfin.sdk.model.api.SortOrder
@@ -26,18 +27,17 @@ import org.jellyfin.sdk.model.api.request.GetItemsRequest
 import org.jellyfin.sdk.model.api.request.GetLatestMediaRequest
 import org.jellyfin.sdk.model.api.request.GetResumeItemsRequest
 import org.jellyfin.sdk.model.api.request.GetSimilarItemsRequest
-import java.util.UUID
 
 data class TvLibrary(
     val id: String,
     val name: String,
-    val collectionType: String? = null,
+    val collectionType: String? = null
 )
 
 data class TvItemsPage(
     val items: List<TvItem>,
     val totalRecordCount: Int,
-    val startIndex: Int,
+    val startIndex: Int
 )
 
 internal fun itemSortBy(sortBy: String): ItemSortBy = when (sortBy.lowercase()) {
@@ -53,7 +53,7 @@ open class LibraryRepository(
     private val clientManager: JellyfinClientManager,
     private val settingsDataStore: SettingsDataStore,
     private val telegramProgressStore: TelegramProgressStore? = null,
-    private val accountKeyProvider: AccountKeyProvider? = null,
+    private val accountKeyProvider: AccountKeyProvider? = null
 ) {
     open suspend fun getLibraries(): Result<List<TvLibrary>> = withContext(Dispatchers.IO) {
         try {
@@ -63,7 +63,7 @@ open class LibraryRepository(
                 TvLibrary(
                     id = item.id.toString(),
                     name = item.name.orEmpty(),
-                    collectionType = item.collectionType?.toString(),
+                    collectionType = item.collectionType?.toString()
                 )
             }
             Result.success(libraries)
@@ -84,7 +84,7 @@ open class LibraryRepository(
         searchTerm: String? = null,
         genreIds: List<UUID> = emptyList(),
         studioIds: List<UUID> = emptyList(),
-        personIds: List<UUID> = emptyList(),
+        personIds: List<UUID> = emptyList()
     ): Result<TvItemsPage> = withContext(Dispatchers.IO) {
         try {
             val api = clientManager.getApi()
@@ -110,14 +110,14 @@ open class LibraryRepository(
                     genreIds = genreIds,
                     studioIds = studioIds,
                     personIds = personIds,
-                    enableTotalRecordCount = true,
-                ),
+                    enableTotalRecordCount = true
+                )
             )
 
             val page = TvItemsPage(
                 items = response.content.items.map { it.toTvItem() },
                 totalRecordCount = response.content.totalRecordCount,
-                startIndex = response.content.startIndex,
+                startIndex = response.content.startIndex
             )
             Result.success(page)
         } catch (e: CancellationException) {
@@ -129,7 +129,7 @@ open class LibraryRepository(
 
     open suspend fun getLatestItems(
         parentId: String? = null,
-        limit: Int = 20,
+        limit: Int = 20
     ): Result<List<TvItem>> = withContext(Dispatchers.IO) {
         try {
             val api = clientManager.getApi()
@@ -142,8 +142,8 @@ open class LibraryRepository(
                     userId = userUuid,
                     parentId = parentUuid,
                     limit = limit,
-                    fields = setOf(ItemFields.PROVIDER_IDS),
-                ),
+                    fields = setOf(ItemFields.PROVIDER_IDS)
+                )
             )
             val items = response.content.map { it.toTvItem() }
             Result.success(items)
@@ -163,8 +163,8 @@ open class LibraryRepository(
                     userId = userUuid,
                     limit = limit,
                     mediaTypes = setOf(MediaType.VIDEO),
-                    fields = setOf(ItemFields.PROVIDER_IDS),
-                ),
+                    fields = setOf(ItemFields.PROVIDER_IDS)
+                )
             )
             val items = response.content.items.map { it.toTvItem() }
             Result.success(items)
@@ -177,7 +177,7 @@ open class LibraryRepository(
 
     open suspend fun getRandomItem(
         parentId: String? = null,
-        excludeItemId: String? = null,
+        excludeItemId: String? = null
     ): Result<TvItem?> = getRandomItemFiltered(parentId, excludeItemId)
 
     open suspend fun getRandomItemFiltered(
@@ -188,7 +188,7 @@ open class LibraryRepository(
         studioIds: List<UUID> = emptyList(),
         personIds: List<UUID> = emptyList(),
         genres: List<String> = emptyList(),
-        studios: List<String> = emptyList(),
+        studios: List<String> = emptyList()
     ): Result<TvItem?> = withContext(Dispatchers.IO) {
         try {
             val api = clientManager.getApi()
@@ -210,8 +210,8 @@ open class LibraryRepository(
                     studioIds = studioIds,
                     personIds = personIds,
                     genres = genres,
-                    studios = studios,
-                ),
+                    studios = studios
+                )
             )
             val excludeUuid = excludeItemId?.let { runCatching { UUID.fromString(it) }.getOrNull() }
             val item = response.content.items
@@ -229,7 +229,7 @@ open class LibraryRepository(
     open suspend fun getRandomItems(
         parentId: String? = null,
         limit: Int = 20,
-        filters: Set<ItemFilter> = emptySet(),
+        filters: Set<ItemFilter> = emptySet()
     ): Result<List<TvItem>> = withContext(Dispatchers.IO) {
         try {
             val api = clientManager.getApi()
@@ -246,8 +246,8 @@ open class LibraryRepository(
                     includeItemTypes = setOf(BaseItemKind.MOVIE),
                     fields = setOf(ItemFields.PROVIDER_IDS),
                     sortBy = listOf(ItemSortBy.RANDOM),
-                    filters = filters,
-                ),
+                    filters = filters
+                )
             )
             val items = response.content.items.map { it.toTvItem() }
             Result.success(items)
@@ -282,8 +282,8 @@ open class LibraryRepository(
                     itemId = uuid,
                     userId = userUuid,
                     limit = limit,
-                    fields = setOf(ItemFields.PROVIDER_IDS),
-                ),
+                    fields = setOf(ItemFields.PROVIDER_IDS)
+                )
             )
             Result.success(response.content.items.map { it.toTvItem() })
         } catch (e: CancellationException) {
@@ -329,7 +329,7 @@ open class LibraryRepository(
                 telegramProgressStore?.markPlayed(
                     providerVideoId = itemId,
                     isPlayed = isPlayed,
-                    accountKey = accountKey,
+                    accountKey = accountKey
                 )
             }
             Result.success(isPlayed)
@@ -342,7 +342,7 @@ open class LibraryRepository(
 
     open suspend fun getGenres(
         parentId: String? = null,
-        limit: Int = 200,
+        limit: Int = 200
     ): Result<List<TvCategory>> = withContext(Dispatchers.IO) {
         try {
             val api = clientManager.getApi()
@@ -356,15 +356,15 @@ open class LibraryRepository(
                     parentId = parentUuid,
                     limit = limit,
                     sortBy = listOf(ItemSortBy.SORT_NAME),
-                    sortOrder = listOf(SortOrder.ASCENDING),
-                ),
+                    sortOrder = listOf(SortOrder.ASCENDING)
+                )
             )
             val genres = response.content.items.map { item ->
                 TvCategory(
                     id = item.id.toString(),
                     name = item.name.orEmpty(),
                     primaryImageTag = item.imageTags?.get(ImageType.PRIMARY),
-                    movieCount = item.childCount ?: 0,
+                    movieCount = item.childCount ?: 0
                 )
             }
             Result.success(genres)
@@ -380,7 +380,7 @@ open class LibraryRepository(
         genreId: String? = null,
         parentId: String? = null,
         startIndex: Int = 0,
-        limit: Int = 60,
+        limit: Int = 60
     ): Result<TvItemsPage> = withContext(Dispatchers.IO) {
         try {
             val api = clientManager.getApi()
@@ -402,13 +402,13 @@ open class LibraryRepository(
                     genres = if (genreUuid == null) listOf(genreName) else emptyList(),
                     sortBy = listOf(ItemSortBy.DATE_CREATED),
                     sortOrder = listOf(SortOrder.DESCENDING),
-                    enableTotalRecordCount = true,
-                ),
+                    enableTotalRecordCount = true
+                )
             )
             val page = TvItemsPage(
                 items = response.content.items.map { it.toTvItem() },
                 totalRecordCount = response.content.totalRecordCount,
-                startIndex = response.content.startIndex,
+                startIndex = response.content.startIndex
             )
             Result.success(page)
         } catch (e: CancellationException) {
@@ -423,12 +423,12 @@ open class LibraryRepository(
         genreId: String? = null,
         parentId: String? = null,
         startIndex: Int = 0,
-        limit: Int = 60,
+        limit: Int = 60
     ): Result<List<TvItem>> = getGenreMoviesPage(
         genreName = genreName,
         genreId = genreId,
         parentId = parentId,
         startIndex = startIndex,
-        limit = limit,
+        limit = limit
     ).map { it.items }
 }

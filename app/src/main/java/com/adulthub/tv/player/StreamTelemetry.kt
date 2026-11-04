@@ -2,8 +2,8 @@ package com.adulthub.tv.player
 
 import android.util.Log
 import androidx.media3.common.C
-import androidx.media3.datasource.DataSpec
 import androidx.media3.datasource.DataSource
+import androidx.media3.datasource.DataSpec
 import androidx.media3.datasource.TransferListener
 
 private const val LOG_TAG = "PlayerManager"
@@ -19,7 +19,7 @@ internal class FileSizeTrackingDataSource(
     private val upstream: DataSource,
     private val onFileSize: (Long) -> Unit,
     private val onContentType: (String) -> Unit,
-    private val onBytesTransferred: (Int) -> Unit,
+    private val onBytesTransferred: (Int) -> Unit
 ) : DataSource {
     override fun addTransferListener(transferListener: TransferListener) {
         upstream.addTransferListener(transferListener)
@@ -33,7 +33,7 @@ internal class FileSizeTrackingDataSource(
             headers = headers,
             contentLength = length,
             position = dataSpec.position,
-            requestedLength = dataSpec.length,
+            requestedLength = dataSpec.length
         )?.let { totalSize ->
             onFileSize(totalSize)
             Log.i(LOG_TAG, "Detected stream size=$totalSize bytes")
@@ -65,7 +65,7 @@ internal fun detectedStreamSize(
     headers: Map<String, List<String>>,
     contentLength: Long,
     position: Long,
-    requestedLength: Long,
+    requestedLength: Long
 ): Long? {
     val totalFromRange = headers.firstHeaderValue("Content-Range")
         ?.substringAfterLast('/', "")
@@ -77,5 +77,4 @@ internal fun detectedStreamSize(
     return totalFromRange ?: totalFromFullResponse
 }
 
-private fun Map<String, List<String>>.firstHeaderValue(name: String): String? =
-    entries.firstOrNull { it.key.equals(name, ignoreCase = true) }?.value?.firstOrNull()
+private fun Map<String, List<String>>.firstHeaderValue(name: String): String? = entries.firstOrNull { it.key.equals(name, ignoreCase = true) }?.value?.firstOrNull()

@@ -16,7 +16,7 @@ import androidx.navigation.compose.currentBackStackEntryAsState
 @Composable
 internal fun rememberIsCurrentDestination(
     navController: NavHostController,
-    entry: NavBackStackEntry,
+    entry: NavBackStackEntry
 ): Boolean {
     val currentEntry by navController.currentBackStackEntryAsState()
     return currentEntry?.id == entry.id

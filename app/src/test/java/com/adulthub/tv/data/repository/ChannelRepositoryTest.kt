@@ -40,7 +40,7 @@ class ChannelRepositoryTest {
                 channelId = "channel-1",
                 page = 2,
                 sort = "popular",
-                minDuration = 600,
+                minDuration = 600
             )
         }
 
@@ -56,7 +56,7 @@ class ChannelRepositoryTest {
                 id = "video-$index",
                 providerVideoId = "provider-$index",
                 slug = "slug-$index",
-                title = "Video $index",
+                title = "Video $index"
             )
         }
         repository.cacheVideos(videos)
@@ -65,7 +65,7 @@ class ChannelRepositoryTest {
         assertSame(videos.last(), repository.getVideo("slug-500"))
 
         repository.cacheVideo(
-            VideoDto(id = "video-501", providerVideoId = "provider-501", title = "Video 501"),
+            VideoDto(id = "video-501", providerVideoId = "provider-501", title = "Video 501")
         )
 
         assertSame(videos.first(), repository.getVideo("video-1"))

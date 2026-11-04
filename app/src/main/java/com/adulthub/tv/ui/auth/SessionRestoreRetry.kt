@@ -10,7 +10,7 @@ import kotlinx.coroutines.delay
  */
 internal suspend fun <T> discoverWithRetry(
     policy: SessionRestoreRetryPolicy,
-    discover: suspend () -> Result<T>,
+    discover: suspend () -> Result<T>
 ): Result<T> {
     var result: Result<T> = Result.failure(IllegalStateException("no attempt"))
     for (attempt in 0 until policy.attempts) {

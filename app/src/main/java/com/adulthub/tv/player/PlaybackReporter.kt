@@ -1,8 +1,8 @@
 package com.adulthub.tv.player
 
-import com.adulthub.tv.diagnostics.AppLog as Log
 import com.adulthub.tv.data.repository.PlaybackRepository
-import org.jellyfin.sdk.model.api.PlayMethod
+import com.adulthub.tv.diagnostics.AppLog as Log
+import java.util.concurrent.atomic.AtomicLong
 import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Job
@@ -14,7 +14,7 @@ import kotlinx.coroutines.isActive
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
 import kotlinx.coroutines.withTimeoutOrNull
-import java.util.concurrent.atomic.AtomicLong
+import org.jellyfin.sdk.model.api.PlayMethod
 
 private const val TAG = "PlaybackReporter"
 private const val REPORTING_INTERVAL_MS = 10_000L
@@ -25,7 +25,7 @@ private const val MAX_QUEUED_PROGRESS = 8
 
 class PlaybackReporter(
     private val playbackRepository: PlaybackRepository,
-    private val coroutineScope: CoroutineScope,
+    private val coroutineScope: CoroutineScope
 ) {
     private var reportingJob: Job? = null
     private val sessionCounter = AtomicLong(0)
@@ -74,7 +74,7 @@ class PlaybackReporter(
         @Volatile
         var hasStarted: Boolean = false,
         @Volatile
-        var stopped: Boolean = false,
+        var stopped: Boolean = false
     )
 
     @Synchronized
@@ -84,7 +84,7 @@ class PlaybackReporter(
         playSessionId: String?,
         playMethod: PlayMethod,
         getCurrentPositionMs: () -> Long,
-        getIsPaused: () -> Boolean,
+        getIsPaused: () -> Boolean
     ): Long {
         // Stop any existing session first
         currentSession?.let { existingSession ->
@@ -99,7 +99,7 @@ class PlaybackReporter(
             playSessionId = playSessionId,
             playMethod = playMethod,
             getCurrentPositionMs = getCurrentPositionMs,
-            getIsPaused = getIsPaused,
+            getIsPaused = getIsPaused
         )
         currentSession = newSession
         Log.d(TAG, "Starting playback reporting session")
@@ -220,9 +220,10 @@ class PlaybackReporter(
                     positionTicks = ticks,
                     playSessionId = session.playSessionId,
                     canSeek = session.canSeek,
-                    playMethod = session.playMethod,
+                    playMethod = session.playMethod
                 ).onFailure { error -> Log.w(TAG, "Playback start report failed (${error.javaClass.simpleName})") }
             }
+
             is ReportCommand.Progress -> {
                 playbackRepository.reportPlaybackProgress(
                     itemId = session.itemId,
@@ -231,9 +232,10 @@ class PlaybackReporter(
                     playSessionId = session.playSessionId,
                     isPaused = command.isPaused,
                     canSeek = session.canSeek,
-                    playMethod = session.playMethod,
+                    playMethod = session.playMethod
                 ).onFailure { error -> Log.w(TAG, "Playback progress report failed (${error.javaClass.simpleName})") }
             }
+
             is ReportCommand.Stop -> {
                 withContext(NonCancellable) {
                     withTimeoutOrNull(3_000L) {
@@ -242,7 +244,7 @@ class PlaybackReporter(
                             itemId = session.itemId,
                             mediaSourceId = session.mediaSourceId,
                             positionTicks = ticks,
-                            playSessionId = session.playSessionId,
+                            playSessionId = session.playSessionId
                         )
                         result.onFailure { error -> Log.w(TAG, "Playback stop report failed (${error.javaClass.simpleName})") }
                         if (result.isSuccess) Log.d(TAG, "Playback stop report accepted by server")
@@ -260,7 +262,7 @@ class PlaybackReporter(
         data class Progress(
             override val session: SessionInfo,
             override val positionMs: Long,
-            val isPaused: Boolean,
+            val isPaused: Boolean
         ) : ReportCommand
         data class Stop(override val session: SessionInfo, override val positionMs: Long) : ReportCommand
     }

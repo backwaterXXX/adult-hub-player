@@ -41,5 +41,5 @@ enum class ShuffleContextMode(@StringRes val labelRes: Int) {
     DEFAULT(R.string.shuffle_any_random),
     UNWATCHED(R.string.shuffle_unwatched),
     SAME_PERFORMER(R.string.shuffle_same_performer_mode),
-    SAME_CATEGORY(R.string.shuffle_same_category_mode),
+    SAME_CATEGORY(R.string.shuffle_same_category_mode)
 }

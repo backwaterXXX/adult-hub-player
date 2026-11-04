@@ -31,7 +31,7 @@ class ResumePlaybackDialogTest {
                 ResumePlaybackDialog(
                     resumePositionMs = 65_000L,
                     onResume = {},
-                    onStartFromBeginning = {},
+                    onStartFromBeginning = {}
                 )
             }
         }
@@ -48,7 +48,7 @@ class ResumePlaybackDialogTest {
                 ResumePlaybackDialog(
                     resumePositionMs = 65_000L,
                     onResume = { resumed = true },
-                    onStartFromBeginning = {},
+                    onStartFromBeginning = {}
                 )
             }
         }
@@ -68,7 +68,7 @@ class ResumePlaybackDialogTest {
                 ResumePlaybackDialog(
                     resumePositionMs = 65_000L,
                     onResume = {},
-                    onStartFromBeginning = { startedFromBeginning = true },
+                    onStartFromBeginning = { startedFromBeginning = true }
                 )
             }
         }

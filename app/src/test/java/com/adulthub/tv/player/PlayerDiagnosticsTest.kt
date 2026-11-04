@@ -27,7 +27,7 @@ class PlayerDiagnosticsTest {
     fun `recognises the telegram proxy stream as its own playback method`() {
         assertEquals(
             "Direct Stream (Telegram Proxy)",
-            playMethod("http://192.168.1.20:8099/admin/play/telegram:-100:1:2/stream?mode=proxy"),
+            playMethod("http://192.168.1.20:8099/admin/play/telegram:-100:1:2/stream?mode=proxy")
         )
     }
 
@@ -50,8 +50,8 @@ class PlayerDiagnosticsTest {
                 headers = mapOf("Content-Range" to listOf("bytes 0-1023/7340032")),
                 contentLength = 1_024L,
                 position = 0L,
-                requestedLength = 1_024L,
-            ),
+                requestedLength = 1_024L
+            )
         )
     }
 
@@ -63,8 +63,8 @@ class PlayerDiagnosticsTest {
                 headers = emptyMap(),
                 contentLength = 7_340_032L,
                 position = 0L,
-                requestedLength = C.LENGTH_UNSET.toLong(),
-            ),
+                requestedLength = C.LENGTH_UNSET.toLong()
+            )
         )
     }
 
@@ -76,8 +76,8 @@ class PlayerDiagnosticsTest {
                 headers = emptyMap(),
                 contentLength = 1_024L,
                 position = 4_096L,
-                requestedLength = 1_024L,
-            ),
+                requestedLength = 1_024L
+            )
         )
         assertEquals(
             null,
@@ -85,8 +85,8 @@ class PlayerDiagnosticsTest {
                 headers = mapOf("Content-Range" to listOf("bytes 0-1023/invalid")),
                 contentLength = -1L,
                 position = 0L,
-                requestedLength = C.LENGTH_UNSET.toLong(),
-            ),
+                requestedLength = C.LENGTH_UNSET.toLong()
+            )
         )
     }
 
@@ -98,8 +98,8 @@ class PlayerDiagnosticsTest {
                 headers = mapOf("content-range" to listOf("bytes 0-511/512")),
                 contentLength = 512L,
                 position = 0L,
-                requestedLength = 512L,
-            ),
+                requestedLength = 512L
+            )
         )
     }
 }

@@ -8,6 +8,7 @@ import androidx.datastore.preferences.core.emptyPreferences
 import androidx.datastore.preferences.core.stringPreferencesKey
 import androidx.datastore.preferences.preferencesDataStore
 import com.adulthub.tv.data.model.TvItem
+import java.io.IOException
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.catch
 import kotlinx.coroutines.flow.combine
@@ -16,7 +17,6 @@ import kotlinx.coroutines.flow.map
 import kotlinx.serialization.Serializable
 import kotlinx.serialization.encodeToString
 import kotlinx.serialization.json.Json
-import java.io.IOException
 
 private val Context.watchHistoryDataStore: DataStore<Preferences> by preferencesDataStore(name = "watch_history_prefs")
 
@@ -33,30 +33,30 @@ data class WatchHistoryRecord(
     val providerVideoId: String? = null,
     val isPlayed: Boolean = false,
     val progressFraction: Float = 0f,
-    val genres: List<String> = emptyList(),
+    val genres: List<String> = emptyList()
 ) {
-    fun toTvItem(): TvItem {
-        return TvItem(
-            id = itemId,
-            title = title,
-            overview = overview,
-            posterUrl = posterUrl,
-            backdropUrl = backdropUrl,
-            runtimeTicks = runtimeTicks,
-            providerVideoId = providerVideoId,
-            isPlayed = isPlayed,
-            playbackPositionTicks = if (runtimeTicks != null && progressFraction > 0f) {
-                (runtimeTicks * progressFraction).toLong()
-            } else 0L,
-            genres = genres,
-        )
-    }
+    fun toTvItem(): TvItem = TvItem(
+        id = itemId,
+        title = title,
+        overview = overview,
+        posterUrl = posterUrl,
+        backdropUrl = backdropUrl,
+        runtimeTicks = runtimeTicks,
+        providerVideoId = providerVideoId,
+        isPlayed = isPlayed,
+        playbackPositionTicks = if (runtimeTicks != null && progressFraction > 0f) {
+            (runtimeTicks * progressFraction).toLong()
+        } else {
+            0L
+        },
+        genres = genres
+    )
 }
 
 open class WatchHistoryStore(
     private val context: Context,
     accountKeyProvider: AccountKeyProvider = AccountKeyProvider.ANONYMOUS,
-    private val dataStore: DataStore<Preferences> = SafePreferencesDataStore(context.watchHistoryDataStore),
+    private val dataStore: DataStore<Preferences> = SafePreferencesDataStore(context.watchHistoryDataStore)
 ) {
     companion object {
         /** Unscoped key written by versions that did not isolate accounts yet. */
@@ -87,7 +87,7 @@ open class WatchHistoryStore(
     suspend fun recordWatch(
         item: TvItem,
         watchedAt: Long = System.currentTimeMillis(),
-        accountKey: String? = null,
+        accountKey: String? = null
     ) {
         if (item.id.isBlank()) return
         // The key is resolved before the write starts, so a session change during
@@ -111,7 +111,7 @@ open class WatchHistoryStore(
                 providerVideoId = item.providerVideoId,
                 isPlayed = item.isPlayed,
                 progressFraction = item.progressFraction,
-                genres = item.genres,
+                genres = item.genres
             )
 
             // Insert at the front (most recent)
@@ -155,7 +155,7 @@ open class WatchHistoryStore(
             val target = historyKey(accountKey)
             val merged = mergeHistory(
                 parseList(prefs[target]),
-                parseList(legacy),
+                parseList(legacy)
             )
             prefs[target] = json.encodeToString(merged)
             prefs.remove(stringPreferencesKey(LEGACY_KEY_HISTORY_LIST))
@@ -166,7 +166,7 @@ open class WatchHistoryStore(
 
     private fun mergeHistory(
         current: List<WatchHistoryRecord>,
-        legacy: List<WatchHistoryRecord>,
+        legacy: List<WatchHistoryRecord>
     ): List<WatchHistoryRecord> {
         val byItem = LinkedHashMap<String, WatchHistoryRecord>()
         for (record in current + legacy) {
@@ -181,8 +181,7 @@ open class WatchHistoryStore(
             .take(MAX_HISTORY_ENTRIES)
     }
 
-    private fun historyKey(accountKey: String) =
-        stringPreferencesKey("${LEGACY_KEY_HISTORY_LIST}__$accountKey")
+    private fun historyKey(accountKey: String) = stringPreferencesKey("${LEGACY_KEY_HISTORY_LIST}__$accountKey")
 
     private fun parseList(jsonStr: String?): List<WatchHistoryRecord> {
         if (jsonStr.isNullOrBlank()) return emptyList()

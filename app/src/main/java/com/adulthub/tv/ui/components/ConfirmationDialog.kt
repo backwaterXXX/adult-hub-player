@@ -34,7 +34,7 @@ fun ConfirmationDialog(
     confirmText: String = stringResource(R.string.action_confirm_clear),
     cancelText: String = stringResource(R.string.action_cancel),
     onConfirm: () -> Unit,
-    onDismiss: () -> Unit,
+    onDismiss: () -> Unit
 ) {
     val cancelFocusRequester = remember { FocusRequester() }
 
@@ -48,27 +48,27 @@ fun ConfirmationDialog(
                 .fillMaxWidth(0.85f)
                 .widthIn(max = 640.dp)
                 .background(SurfaceDark, RoundedCornerShape(18.dp))
-                .padding(32.dp),
+                .padding(32.dp)
         ) {
             Text(
                 text = title,
                 style = MaterialTheme.typography.headlineSmall,
-                color = NeonPink,
+                color = NeonPink
             )
             Spacer(Modifier.height(16.dp))
             Text(
                 text = message,
                 style = MaterialTheme.typography.bodyLarge,
-                color = TextSecondary,
+                color = TextSecondary
             )
             Spacer(Modifier.height(26.dp))
             Row(
                 modifier = Modifier.fillMaxWidth(),
-                horizontalArrangement = Arrangement.End,
+                horizontalArrangement = Arrangement.End
             ) {
                 TvSecondaryButton(
                     onClick = onDismiss,
-                    modifier = Modifier.focusRequester(cancelFocusRequester),
+                    modifier = Modifier.focusRequester(cancelFocusRequester)
                 ) {
                     Text(cancelText)
                 }

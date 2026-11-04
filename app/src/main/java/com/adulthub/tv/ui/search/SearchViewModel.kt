@@ -13,8 +13,8 @@ import com.adulthub.tv.data.repository.ChannelRepository
 import com.adulthub.tv.data.repository.LibraryRepository
 import com.adulthub.tv.data.repository.PersonRepository
 import com.adulthub.tv.data.resolver.VideoDto
-import kotlinx.coroutines.FlowPreview
 import kotlinx.coroutines.CancellationException
+import kotlinx.coroutines.FlowPreview
 import kotlinx.coroutines.Job
 import kotlinx.coroutines.async
 import kotlinx.coroutines.coroutineScope
@@ -39,7 +39,7 @@ data class SearchUiState(
     val errorMessage: String? = null,
     val hasSearched: Boolean = false,
     val lastSelectedKey: String? = null,
-    val recentQueries: List<String> = emptyList(),
+    val recentQueries: List<String> = emptyList()
 )
 
 @SuppressLint("StaticFieldLeak")
@@ -51,7 +51,7 @@ class SearchViewModel(
     private val channelRepository: ChannelRepository? = null,
     private val searchHistoryStore: SearchHistoryStore? = null,
     private val accountScope: com.adulthub.tv.data.local.AccountScope? = null,
-    private val context: Context,
+    private val context: Context
 ) : ViewModel() {
 
     private val _query = MutableStateFlow("")
@@ -83,7 +83,7 @@ class SearchViewModel(
                                 actors = emptyList(),
                                 channelVideos = emptyList(),
                                 hasSearched = false,
-                                errorMessage = null,
+                                errorMessage = null
                             )
                         }
                     } else {
@@ -126,7 +126,7 @@ class SearchViewModel(
                 movies = emptyList(),
                 actors = emptyList(),
                 channelVideos = emptyList(),
-                errorMessage = null,
+                errorMessage = null
             )
         }
 
@@ -137,7 +137,7 @@ class SearchViewModel(
                 libraryRepository.getItems(
                     parentId = libraryId,
                     searchTerm = searchTerm,
-                    limit = 30,
+                    limit = 30
                 )
             }
 
@@ -145,7 +145,7 @@ class SearchViewModel(
                 personRepository.getPersons(
                     parentId = libraryId,
                     searchTerm = searchTerm,
-                    limit = 30,
+                    limit = 30
                 )
             }
             val channelVideosDeferred = async {
@@ -163,7 +163,7 @@ class SearchViewModel(
                             if (state.query == searchTerm) state.copy(movies = movies) else state
                         }
                     },
-                    onFailure = failures::add,
+                    onFailure = failures::add
                 )
             }
             val personUpdates = launch {
@@ -174,7 +174,7 @@ class SearchViewModel(
                             if (state.query == searchTerm) state.copy(actors = actors) else state
                         }
                     },
-                    onFailure = failures::add,
+                    onFailure = failures::add
                 )
             }
             val channelUpdates = launch {
@@ -186,7 +186,7 @@ class SearchViewModel(
                             if (state.query == searchTerm) state.copy(channelVideos = channelVideos) else state
                         }
                     },
-                    onFailure = failures::add,
+                    onFailure = failures::add
                 )
             }
             joinAll(movieUpdates, personUpdates, channelUpdates)
@@ -195,7 +195,9 @@ class SearchViewModel(
             val totalSections = 2 + if (channelRepository != null) 1 else 0
             val error = if (successfulSections == 0 && failures.size == totalSections) {
                 failures.firstOrNull()?.message ?: context.getString(R.string.library_search_failed_retry)
-            } else null
+            } else {
+                null
+            }
 
             val resolverBaseUrl = try {
                 settingsDataStore.getResolverBaseUrl()
@@ -217,7 +219,7 @@ class SearchViewModel(
                     isSearching = false,
                     resolverBaseUrl = resolverBaseUrl,
                     hasSearched = true,
-                    errorMessage = error,
+                    errorMessage = error
                 )
             }
         }

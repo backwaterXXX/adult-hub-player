@@ -8,7 +8,7 @@ data class TvPersonRole(
     val name: String,
     val role: String? = null,
     val type: String? = null,
-    val primaryImageTag: String? = null,
+    val primaryImageTag: String? = null
 )
 
 @Immutable
@@ -37,7 +37,7 @@ data class TvItem(
     val container: String? = null,
     val fileSizeBytes: Long? = null,
     val width: Int? = null,
-    val height: Int? = null,
+    val height: Int? = null
 ) {
     val isTelegram: Boolean
         get() = !providerVideoId.isNullOrBlank() || id.startsWith("telegram:")

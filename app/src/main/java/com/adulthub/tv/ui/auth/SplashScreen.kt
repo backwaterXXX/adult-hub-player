@@ -23,24 +23,24 @@ import com.adulthub.tv.ui.theme.OledBlack
 
 @Composable
 fun SplashScreen(
-    modifier: Modifier = Modifier,
+    modifier: Modifier = Modifier
 ) {
     Box(
         modifier = modifier
             .fillMaxSize()
             .background(OledBlack),
-        contentAlignment = Alignment.Center,
+        contentAlignment = Alignment.Center
     ) {
         Column(
             horizontalAlignment = Alignment.CenterHorizontally,
-            verticalArrangement = Arrangement.Center,
+            verticalArrangement = Arrangement.Center
         ) {
             Text(
                 text = stringResource(R.string.app_brand),
                 color = NeonPink,
                 fontSize = 36.sp,
                 fontWeight = FontWeight.Bold,
-                letterSpacing = 6.sp,
+                letterSpacing = 6.sp
             )
             Spacer(modifier = Modifier.height(32.dp))
             LoadingIndicator(message = stringResource(R.string.splash_checking_session))

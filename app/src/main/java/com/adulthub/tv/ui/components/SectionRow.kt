@@ -33,12 +33,12 @@ fun SectionRow(
     emptyMessage: String? = null,
     onRetry: (() -> Unit)? = null,
     headerAction: (@Composable () -> Unit)? = null,
-    content: @Composable () -> Unit,
+    content: @Composable () -> Unit
 ) {
     Column(
         modifier = modifier
             .fillMaxWidth()
-            .padding(vertical = 12.dp),
+            .padding(vertical = 12.dp)
     ) {
         // Section Header
         Row(
@@ -46,13 +46,13 @@ fun SectionRow(
                 .fillMaxWidth()
                 .padding(horizontal = 48.dp, vertical = 6.dp),
             verticalAlignment = Alignment.CenterVertically,
-            horizontalArrangement = Arrangement.SpaceBetween,
+            horizontalArrangement = Arrangement.SpaceBetween
         ) {
             Row(verticalAlignment = Alignment.CenterVertically) {
                 if (!icon.isNullOrBlank()) {
                     Text(
                         text = icon,
-                        style = MaterialTheme.typography.titleLarge,
+                        style = MaterialTheme.typography.titleLarge
                     )
                     Spacer(modifier = Modifier.width(10.dp))
                 }
@@ -61,7 +61,7 @@ fun SectionRow(
                     text = title,
                     style = MaterialTheme.typography.titleLarge,
                     color = TextPrimary,
-                    fontWeight = FontWeight.Bold,
+                    fontWeight = FontWeight.Bold
                 )
             }
 
@@ -78,40 +78,43 @@ fun SectionRow(
                         .fillMaxWidth()
                         .height(160.dp)
                         .padding(horizontal = 48.dp),
-                    contentAlignment = Alignment.CenterStart,
+                    contentAlignment = Alignment.CenterStart
                 ) {
                     LoadingIndicator(message = stringResource(R.string.section_loading, title))
                 }
             }
+
             errorMessage != null -> {
                 Box(
                     modifier = Modifier
                         .fillMaxWidth()
                         .padding(horizontal = 48.dp),
-                    contentAlignment = Alignment.CenterStart,
+                    contentAlignment = Alignment.CenterStart
                 ) {
                     ErrorMessage(
                         message = errorMessage,
                         onRetry = onRetry,
-                        modifier = Modifier.fillMaxWidth(0.6f),
+                        modifier = Modifier.fillMaxWidth(0.6f)
                     )
                 }
             }
+
             isEmpty -> {
                 Box(
                     modifier = Modifier
                         .fillMaxWidth()
                         .height(80.dp)
                         .padding(horizontal = 48.dp),
-                    contentAlignment = Alignment.CenterStart,
+                    contentAlignment = Alignment.CenterStart
                 ) {
                     Text(
                         text = emptyMessage ?: stringResource(R.string.section_no_items),
                         style = MaterialTheme.typography.bodyMedium,
-                        color = TextSecondary,
+                        color = TextSecondary
                     )
                 }
             }
+
             else -> {
                 content()
             }

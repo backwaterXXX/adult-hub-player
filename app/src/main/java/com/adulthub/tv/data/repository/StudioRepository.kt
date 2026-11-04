@@ -5,6 +5,7 @@ import com.adulthub.tv.data.jellyfin.toTvItem
 import com.adulthub.tv.data.local.SettingsDataStore
 import com.adulthub.tv.data.model.TvItem
 import com.adulthub.tv.data.model.TvStudio
+import java.util.UUID
 import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.async
@@ -23,17 +24,16 @@ import org.jellyfin.sdk.model.api.ItemSortBy
 import org.jellyfin.sdk.model.api.SortOrder
 import org.jellyfin.sdk.model.api.request.GetItemsRequest
 import org.jellyfin.sdk.model.api.request.GetStudiosRequest
-import java.util.UUID
 
 open class StudioRepository(
     private val clientManager: JellyfinClientManager,
-    private val settingsDataStore: SettingsDataStore,
+    private val settingsDataStore: SettingsDataStore
 ) {
     open suspend fun getStudios(
         parentId: String? = null,
         startIndex: Int = 0,
         limit: Int = 50,
-        includeMovieCounts: Boolean = false,
+        includeMovieCounts: Boolean = false
     ): Result<List<TvStudio>> = withContext(Dispatchers.IO) {
         try {
             val api = clientManager.getApi()
@@ -46,8 +46,8 @@ open class StudioRepository(
                     userId = userUuid,
                     parentId = parentUuid,
                     startIndex = startIndex,
-                    limit = limit,
-                ),
+                    limit = limit
+                )
             )
             val items = response.content.items
             val movieCounts = if (includeMovieCounts) fetchMovieCounts(items, targetParentId) else emptyMap()
@@ -57,7 +57,7 @@ open class StudioRepository(
                     id = item.id.toString(),
                     name = name,
                     primaryImageTag = item.imageTags?.get(ImageType.PRIMARY),
-                    movieCount = movieCounts[name],
+                    movieCount = movieCounts[name]
                 )
             }
             Result.success(studios)
@@ -77,7 +77,7 @@ open class StudioRepository(
      */
     private suspend fun fetchMovieCounts(
         items: List<BaseItemDto>,
-        parentId: String?,
+        parentId: String?
     ): Map<String, Int> {
         val countSemaphore = Semaphore(4)
         return coroutineScope {
@@ -108,7 +108,7 @@ open class StudioRepository(
         studioName: String,
         parentId: String? = null,
         startIndex: Int = 0,
-        limit: Int = 50,
+        limit: Int = 50
     ): Result<TvItemsPage> = withContext(Dispatchers.IO) {
         try {
             val api = clientManager.getApi()
@@ -128,13 +128,13 @@ open class StudioRepository(
                     fields = setOf(ItemFields.PROVIDER_IDS),
                     sortBy = listOf(ItemSortBy.DATE_CREATED),
                     sortOrder = listOf(SortOrder.DESCENDING),
-                    enableTotalRecordCount = true,
-                ),
+                    enableTotalRecordCount = true
+                )
             )
             val page = TvItemsPage(
                 items = response.content.items.map { it.toTvItem() },
                 totalRecordCount = response.content.totalRecordCount,
-                startIndex = response.content.startIndex,
+                startIndex = response.content.startIndex
             )
             Result.success(page)
         } catch (e: CancellationException) {
@@ -148,12 +148,12 @@ open class StudioRepository(
         studioName: String,
         parentId: String? = null,
         startIndex: Int = 0,
-        limit: Int = 50,
+        limit: Int = 50
     ): Result<List<TvItem>> = getStudioMoviesPage(
         studioName = studioName,
         parentId = parentId,
         startIndex = startIndex,
-        limit = limit,
+        limit = limit
     ).map { it.items }
 
     private companion object {

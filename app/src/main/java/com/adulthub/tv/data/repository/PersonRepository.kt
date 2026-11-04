@@ -6,6 +6,7 @@ import com.adulthub.tv.data.local.SettingsDataStore
 import com.adulthub.tv.data.model.TvItem
 import com.adulthub.tv.data.model.TvPerson
 import com.adulthub.tv.data.resolver.ResolverApi
+import java.util.UUID
 import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.withContext
@@ -15,24 +16,23 @@ import org.jellyfin.sdk.model.api.ImageType
 import org.jellyfin.sdk.model.api.ItemSortBy
 import org.jellyfin.sdk.model.api.SortOrder
 import org.jellyfin.sdk.model.api.request.GetItemsRequest
-import java.util.UUID
 
 data class TvPersonPage(
     val persons: List<TvPerson>,
-    val totalRecordCount: Int,
+    val totalRecordCount: Int
 )
 
 open class PersonRepository(
     private val clientManager: JellyfinClientManager,
     private val resolverApi: ResolverApi,
-    private val settingsDataStore: SettingsDataStore,
+    private val settingsDataStore: SettingsDataStore
 ) {
     open suspend fun getPersons(
         parentId: String? = null,
         startIndex: Int = 0,
         limit: Int = 100,
         searchTerm: String? = null,
-        nameStartsWith: String? = null,
+        nameStartsWith: String? = null
     ): Result<List<TvPerson>> = withContext(Dispatchers.IO) {
         getPersonsPage(parentId, startIndex, limit, searchTerm, nameStartsWith)
             .map(TvPersonPage::persons)
@@ -43,7 +43,7 @@ open class PersonRepository(
         startIndex: Int = 0,
         limit: Int = 100,
         searchTerm: String? = null,
-        nameStartsWith: String? = null,
+        nameStartsWith: String? = null
     ): Result<TvPersonPage> = withContext(Dispatchers.IO) {
         try {
             val api = clientManager.getApi()
@@ -65,22 +65,22 @@ open class PersonRepository(
                     sortBy = listOf(ItemSortBy.SORT_NAME),
                     sortOrder = listOf(SortOrder.ASCENDING),
                     enableImages = true,
-                    enableTotalRecordCount = true,
-                ),
+                    enableTotalRecordCount = true
+                )
             )
             val persons = response.content.items.map { item ->
                 TvPerson(
                     id = item.id.toString(),
                     name = item.name.orEmpty(),
                     primaryImageTag = item.imageTags?.get(ImageType.PRIMARY),
-                    movieCount = item.childCount ?: 0,
+                    movieCount = item.childCount ?: 0
                 )
             }
             Result.success(
                 TvPersonPage(
                     persons = persons,
-                    totalRecordCount = response.content.totalRecordCount,
-                ),
+                    totalRecordCount = response.content.totalRecordCount
+                )
             )
         } catch (e: CancellationException) {
             throw e
@@ -89,45 +89,44 @@ open class PersonRepository(
         }
     }
 
-    open suspend fun getRandomPersonsWithPhotos(limit: Int = 20): Result<List<TvPerson>> =
-        withContext(Dispatchers.IO) {
-            try {
-                val api = clientManager.getApi()
-                val targetParentId = settingsDataStore.getSelectedLibraryId()
-                val parentUuid = targetParentId?.let { UUID.fromString(it) }
-                val userUuid = clientManager.currentUserId?.let { runCatching { UUID.fromString(it) }.getOrNull() }
-                val fetchLimit = (limit.coerceAtLeast(1) * 5).coerceAtMost(100)
-                val response = api.libraryApi.getItems(
-                    GetItemsRequest(
-                        userId = userUuid,
-                        parentId = parentUuid,
-                        recursive = true,
-                        limit = fetchLimit,
-                        includeItemTypes = setOf(BaseItemKind.PERSON),
-                        personTypes = listOf("Actor"),
-                        sortBy = listOf(ItemSortBy.RANDOM),
-                        enableImages = true,
-                        enableTotalRecordCount = false,
-                    ),
+    open suspend fun getRandomPersonsWithPhotos(limit: Int = 20): Result<List<TvPerson>> = withContext(Dispatchers.IO) {
+        try {
+            val api = clientManager.getApi()
+            val targetParentId = settingsDataStore.getSelectedLibraryId()
+            val parentUuid = targetParentId?.let { UUID.fromString(it) }
+            val userUuid = clientManager.currentUserId?.let { runCatching { UUID.fromString(it) }.getOrNull() }
+            val fetchLimit = (limit.coerceAtLeast(1) * 5).coerceAtMost(100)
+            val response = api.libraryApi.getItems(
+                GetItemsRequest(
+                    userId = userUuid,
+                    parentId = parentUuid,
+                    recursive = true,
+                    limit = fetchLimit,
+                    includeItemTypes = setOf(BaseItemKind.PERSON),
+                    personTypes = listOf("Actor"),
+                    sortBy = listOf(ItemSortBy.RANDOM),
+                    enableImages = true,
+                    enableTotalRecordCount = false
                 )
-                val persons = response.content.items.mapNotNull { item ->
-                    val imageTag = item.imageTags?.get(ImageType.PRIMARY)
-                        ?.takeIf(String::isNotBlank)
-                        ?: return@mapNotNull null
-                    TvPerson(
-                        id = item.id.toString(),
-                        name = item.name.orEmpty(),
-                        primaryImageTag = imageTag,
-                        movieCount = item.childCount ?: 0,
-                    )
-                }.take(limit.coerceAtLeast(1))
-                Result.success(persons)
-            } catch (e: CancellationException) {
-                throw e
-            } catch (e: Exception) {
-                Result.failure(e)
-            }
+            )
+            val persons = response.content.items.mapNotNull { item ->
+                val imageTag = item.imageTags?.get(ImageType.PRIMARY)
+                    ?.takeIf(String::isNotBlank)
+                    ?: return@mapNotNull null
+                TvPerson(
+                    id = item.id.toString(),
+                    name = item.name.orEmpty(),
+                    primaryImageTag = imageTag,
+                    movieCount = item.childCount ?: 0
+                )
+            }.take(limit.coerceAtLeast(1))
+            Result.success(persons)
+        } catch (e: CancellationException) {
+            throw e
+        } catch (e: Exception) {
+            Result.failure(e)
         }
+    }
 
     open suspend fun getPersonDetails(personId: String, personName: String): Result<TvPerson> = withContext(Dispatchers.IO) {
         try {
@@ -138,7 +137,7 @@ open class PersonRepository(
                 api.libraryApi.getItems(
                     GetItemsRequest(
                         userId = userUuid,
-                        ids = listOf(uuid),
+                        ids = listOf(uuid)
                     )
                 ).content.items.firstOrNull()
             } catch (cancelled: CancellationException) {
@@ -165,7 +164,7 @@ open class PersonRepository(
                 nationality = bioDto?.nationality,
                 aliases = bioDto?.aliases ?: emptyList(),
                 photoUrl = bioDto?.photoUrl,
-                movieCount = jfPerson?.childCount ?: 0,
+                movieCount = jfPerson?.childCount ?: 0
             )
             Result.success(person)
         } catch (e: CancellationException) {
@@ -179,7 +178,7 @@ open class PersonRepository(
         personId: String,
         parentId: String? = null,
         startIndex: Int = 0,
-        limit: Int = 50,
+        limit: Int = 50
     ): Result<List<TvItem>> = withContext(Dispatchers.IO) {
         try {
             val api = clientManager.getApi()
@@ -198,8 +197,8 @@ open class PersonRepository(
                     recursive = true,
                     includeItemTypes = setOf(BaseItemKind.MOVIE),
                     sortBy = listOf(ItemSortBy.DATE_CREATED),
-                    sortOrder = listOf(SortOrder.DESCENDING),
-                ),
+                    sortOrder = listOf(SortOrder.DESCENDING)
+                )
             )
             Result.success(response.content.items.map { it.toTvItem() })
         } catch (e: CancellationException) {
