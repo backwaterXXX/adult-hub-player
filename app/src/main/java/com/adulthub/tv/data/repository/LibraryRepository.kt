@@ -10,12 +10,10 @@ import com.adulthub.tv.data.local.TelegramProgressStore
 import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.withContext
-import org.jellyfin.sdk.api.client.extensions.genresApi
-import org.jellyfin.sdk.api.client.extensions.itemsApi
+import org.jellyfin.sdk.api.client.extensions.genreApi
 import org.jellyfin.sdk.api.client.extensions.libraryApi
-import org.jellyfin.sdk.api.client.extensions.playStateApi
-import org.jellyfin.sdk.api.client.extensions.userLibraryApi
-import org.jellyfin.sdk.api.client.extensions.userViewsApi
+import org.jellyfin.sdk.api.client.extensions.userDataApi
+import org.jellyfin.sdk.api.client.extensions.userViewApi
 import org.jellyfin.sdk.model.api.BaseItemKind
 import org.jellyfin.sdk.model.api.ImageType
 import org.jellyfin.sdk.model.api.ItemFilter
@@ -23,6 +21,11 @@ import org.jellyfin.sdk.model.api.ItemFields
 import org.jellyfin.sdk.model.api.ItemSortBy
 import org.jellyfin.sdk.model.api.MediaType
 import org.jellyfin.sdk.model.api.SortOrder
+import org.jellyfin.sdk.model.api.request.GetGenresRequest
+import org.jellyfin.sdk.model.api.request.GetItemsRequest
+import org.jellyfin.sdk.model.api.request.GetLatestMediaRequest
+import org.jellyfin.sdk.model.api.request.GetResumeItemsRequest
+import org.jellyfin.sdk.model.api.request.GetSimilarItemsRequest
 import java.util.UUID
 
 data class TvLibrary(
@@ -55,7 +58,7 @@ open class LibraryRepository(
     open suspend fun getLibraries(): Result<List<TvLibrary>> = withContext(Dispatchers.IO) {
         try {
             val api = clientManager.getApi()
-            val response = api.userViewsApi.getUserViews()
+            val response = api.userViewApi.getUserViews()
             val libraries = response.content.items.map { item ->
                 TvLibrary(
                     id = item.id.toString(),
@@ -87,29 +90,34 @@ open class LibraryRepository(
             val api = clientManager.getApi()
             val targetParentId = parentId ?: settingsDataStore.getSelectedLibraryId()
             val parentUuid = targetParentId?.let { UUID.fromString(it) }
+            val userUuid = clientManager.currentUserId?.let { runCatching { UUID.fromString(it) }.getOrNull() }
 
             val sortByItem = itemSortBy(sortBy)
 
-            val response = api.itemsApi.getItems(
-                parentId = parentUuid,
-                startIndex = startIndex,
-                limit = limit,
-                recursive = true,
-                includeItemTypes = setOf(BaseItemKind.MOVIE),
-                fields = setOf(ItemFields.PROVIDER_IDS),
-                sortBy = setOf(sortByItem),
-                sortOrder = setOf(sortOrder),
-                filters = filters,
-                searchTerm = searchTerm,
-                genreIds = genreIds,
-                studioIds = studioIds,
-                personIds = personIds,
+            val response = api.libraryApi.getItems(
+                GetItemsRequest(
+                    userId = userUuid,
+                    parentId = parentUuid,
+                    startIndex = startIndex,
+                    limit = limit,
+                    recursive = true,
+                    includeItemTypes = setOf(BaseItemKind.MOVIE),
+                    fields = setOf(ItemFields.PROVIDER_IDS),
+                    sortBy = listOf(sortByItem),
+                    sortOrder = listOf(sortOrder),
+                    filters = filters,
+                    searchTerm = searchTerm,
+                    genreIds = genreIds,
+                    studioIds = studioIds,
+                    personIds = personIds,
+                    enableTotalRecordCount = true,
+                ),
             )
 
             val page = TvItemsPage(
                 items = response.content.items.map { it.toTvItem() },
                 totalRecordCount = response.content.totalRecordCount,
-                startIndex = response.content.startIndex ?: startIndex,
+                startIndex = response.content.startIndex,
             )
             Result.success(page)
         } catch (e: CancellationException) {
@@ -127,11 +135,15 @@ open class LibraryRepository(
             val api = clientManager.getApi()
             val targetParentId = parentId ?: settingsDataStore.getSelectedLibraryId()
             val parentUuid = targetParentId?.let { UUID.fromString(it) }
+            val userUuid = clientManager.currentUserId?.let { runCatching { UUID.fromString(it) }.getOrNull() }
 
-            val response = api.userLibraryApi.getLatestMedia(
-                parentId = parentUuid,
-                limit = limit,
-                fields = setOf(ItemFields.PROVIDER_IDS),
+            val response = api.libraryApi.getLatestMedia(
+                GetLatestMediaRequest(
+                    userId = userUuid,
+                    parentId = parentUuid,
+                    limit = limit,
+                    fields = setOf(ItemFields.PROVIDER_IDS),
+                ),
             )
             val items = response.content.map { it.toTvItem() }
             Result.success(items)
@@ -145,10 +157,14 @@ open class LibraryRepository(
     open suspend fun getResumeItems(limit: Int = 12): Result<List<TvItem>> = withContext(Dispatchers.IO) {
         try {
             val api = clientManager.getApi()
-            val response = api.itemsApi.getResumeItems(
-                limit = limit,
-                mediaTypes = setOf(MediaType.VIDEO),
-                fields = setOf(ItemFields.PROVIDER_IDS),
+            val userUuid = clientManager.currentUserId?.let { runCatching { UUID.fromString(it) }.getOrNull() }
+            val response = api.libraryApi.getResumeItems(
+                GetResumeItemsRequest(
+                    userId = userUuid,
+                    limit = limit,
+                    mediaTypes = setOf(MediaType.VIDEO),
+                    fields = setOf(ItemFields.PROVIDER_IDS),
+                ),
             )
             val items = response.content.items.map { it.toTvItem() }
             Result.success(items)
@@ -178,20 +194,24 @@ open class LibraryRepository(
             val api = clientManager.getApi()
             val targetParentId = parentId ?: settingsDataStore.getSelectedLibraryId()
             val parentUuid = targetParentId?.let { UUID.fromString(it) }
+            val userUuid = clientManager.currentUserId?.let { runCatching { UUID.fromString(it) }.getOrNull() }
 
-            val response = api.itemsApi.getItems(
-                parentId = parentUuid,
-                limit = 5,
-                recursive = true,
-                includeItemTypes = setOf(BaseItemKind.MOVIE),
-                fields = setOf(ItemFields.PROVIDER_IDS),
-                sortBy = setOf(ItemSortBy.RANDOM),
-                filters = filters,
-                genreIds = genreIds,
-                studioIds = studioIds,
-                personIds = personIds,
-                genres = genres,
-                studios = studios,
+            val response = api.libraryApi.getItems(
+                GetItemsRequest(
+                    userId = userUuid,
+                    parentId = parentUuid,
+                    limit = 5,
+                    recursive = true,
+                    includeItemTypes = setOf(BaseItemKind.MOVIE),
+                    fields = setOf(ItemFields.PROVIDER_IDS),
+                    sortBy = listOf(ItemSortBy.RANDOM),
+                    filters = filters,
+                    genreIds = genreIds,
+                    studioIds = studioIds,
+                    personIds = personIds,
+                    genres = genres,
+                    studios = studios,
+                ),
             )
             val excludeUuid = excludeItemId?.let { runCatching { UUID.fromString(it) }.getOrNull() }
             val item = response.content.items
@@ -215,15 +235,19 @@ open class LibraryRepository(
             val api = clientManager.getApi()
             val targetParentId = parentId ?: settingsDataStore.getSelectedLibraryId()
             val parentUuid = targetParentId?.let { UUID.fromString(it) }
+            val userUuid = clientManager.currentUserId?.let { runCatching { UUID.fromString(it) }.getOrNull() }
 
-            val response = api.itemsApi.getItems(
-                parentId = parentUuid,
-                limit = limit,
-                recursive = true,
-                includeItemTypes = setOf(BaseItemKind.MOVIE),
-                fields = setOf(ItemFields.PROVIDER_IDS),
-                sortBy = setOf(ItemSortBy.RANDOM),
-                filters = filters,
+            val response = api.libraryApi.getItems(
+                GetItemsRequest(
+                    userId = userUuid,
+                    parentId = parentUuid,
+                    limit = limit,
+                    recursive = true,
+                    includeItemTypes = setOf(BaseItemKind.MOVIE),
+                    fields = setOf(ItemFields.PROVIDER_IDS),
+                    sortBy = listOf(ItemSortBy.RANDOM),
+                    filters = filters,
+                ),
             )
             val items = response.content.items.map { it.toTvItem() }
             Result.success(items)
@@ -238,7 +262,8 @@ open class LibraryRepository(
         try {
             val api = clientManager.getApi()
             val uuid = UUID.fromString(itemId)
-            val response = api.userLibraryApi.getItem(itemId = uuid)
+            val userUuid = clientManager.currentUserId?.let { runCatching { UUID.fromString(it) }.getOrNull() }
+            val response = api.libraryApi.getItem(itemId = uuid, userId = userUuid)
             Result.success(response.content.toTvItem())
         } catch (e: CancellationException) {
             throw e
@@ -251,10 +276,14 @@ open class LibraryRepository(
         try {
             val api = clientManager.getApi()
             val uuid = UUID.fromString(itemId)
+            val userUuid = clientManager.currentUserId?.let { runCatching { UUID.fromString(it) }.getOrNull() }
             val response = api.libraryApi.getSimilarItems(
-                itemId = uuid,
-                limit = limit,
-                fields = setOf(ItemFields.PROVIDER_IDS),
+                GetSimilarItemsRequest(
+                    itemId = uuid,
+                    userId = userUuid,
+                    limit = limit,
+                    fields = setOf(ItemFields.PROVIDER_IDS),
+                ),
             )
             Result.success(response.content.items.map { it.toTvItem() })
         } catch (e: CancellationException) {
@@ -268,10 +297,11 @@ open class LibraryRepository(
         try {
             val api = clientManager.getApi()
             val uuid = UUID.fromString(itemId)
+            val userUuid = clientManager.currentUserId?.let { runCatching { UUID.fromString(it) }.getOrNull() }
             if (markFavorite) {
-                api.userLibraryApi.markFavoriteItem(itemId = uuid)
+                api.userDataApi.markFavoriteItem(itemId = uuid, userId = userUuid)
             } else {
-                api.userLibraryApi.unmarkFavoriteItem(itemId = uuid)
+                api.userDataApi.unmarkFavoriteItem(itemId = uuid, userId = userUuid)
             }
             Result.success(markFavorite)
         } catch (e: CancellationException) {
@@ -291,9 +321,9 @@ open class LibraryRepository(
                 val api = clientManager.getApi()
                 val userId = clientManager.currentUserId?.let { runCatching { UUID.fromString(it) }.getOrNull() }
                 if (isPlayed) {
-                    api.playStateApi.markPlayedItem(itemId = uuid, userId = userId)
+                    api.userDataApi.markPlayedItem(itemId = uuid, userId = userId)
                 } else {
-                    api.playStateApi.markUnplayedItem(itemId = uuid, userId = userId)
+                    api.userDataApi.markUnplayedItem(itemId = uuid, userId = userId)
                 }
             } else {
                 telegramProgressStore?.markPlayed(
@@ -318,12 +348,16 @@ open class LibraryRepository(
             val api = clientManager.getApi()
             val targetParentId = parentId ?: settingsDataStore.getSelectedLibraryId()
             val parentUuid = targetParentId?.let { UUID.fromString(it) }
+            val userUuid = clientManager.currentUserId?.let { runCatching { UUID.fromString(it) }.getOrNull() }
 
-            val response = api.genresApi.getGenres(
-                parentId = parentUuid,
-                limit = limit,
-                sortBy = setOf(ItemSortBy.SORT_NAME),
-                sortOrder = setOf(SortOrder.ASCENDING),
+            val response = api.genreApi.getGenres(
+                GetGenresRequest(
+                    userId = userUuid,
+                    parentId = parentUuid,
+                    limit = limit,
+                    sortBy = listOf(ItemSortBy.SORT_NAME),
+                    sortOrder = listOf(SortOrder.ASCENDING),
+                ),
             )
             val genres = response.content.items.map { item ->
                 TvCategory(
@@ -353,23 +387,28 @@ open class LibraryRepository(
             val targetParentId = parentId ?: settingsDataStore.getSelectedLibraryId()
             val parentUuid = targetParentId?.let { UUID.fromString(it) }
             val genreUuid = genreId?.let { runCatching { UUID.fromString(it) }.getOrNull() }
+            val userUuid = clientManager.currentUserId?.let { runCatching { UUID.fromString(it) }.getOrNull() }
 
-            val response = api.itemsApi.getItems(
-                parentId = parentUuid,
-                startIndex = startIndex,
-                limit = limit,
-                recursive = true,
-                includeItemTypes = setOf(BaseItemKind.MOVIE),
-                fields = setOf(ItemFields.PROVIDER_IDS),
-                genreIds = if (genreUuid != null) listOf(genreUuid) else emptyList(),
-                genres = if (genreUuid == null) listOf(genreName) else emptyList(),
-                sortBy = setOf(ItemSortBy.DATE_CREATED),
-                sortOrder = setOf(SortOrder.DESCENDING),
+            val response = api.libraryApi.getItems(
+                GetItemsRequest(
+                    userId = userUuid,
+                    parentId = parentUuid,
+                    startIndex = startIndex,
+                    limit = limit,
+                    recursive = true,
+                    includeItemTypes = setOf(BaseItemKind.MOVIE),
+                    fields = setOf(ItemFields.PROVIDER_IDS),
+                    genreIds = if (genreUuid != null) listOf(genreUuid) else emptyList(),
+                    genres = if (genreUuid == null) listOf(genreName) else emptyList(),
+                    sortBy = listOf(ItemSortBy.DATE_CREATED),
+                    sortOrder = listOf(SortOrder.DESCENDING),
+                    enableTotalRecordCount = true,
+                ),
             )
             val page = TvItemsPage(
                 items = response.content.items.map { it.toTvItem() },
                 totalRecordCount = response.content.totalRecordCount,
-                startIndex = response.content.startIndex ?: startIndex,
+                startIndex = response.content.startIndex,
             )
             Result.success(page)
         } catch (e: CancellationException) {

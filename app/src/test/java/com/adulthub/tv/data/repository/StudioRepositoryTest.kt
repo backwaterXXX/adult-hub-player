@@ -9,14 +9,15 @@ import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.test.runTest
 import org.jellyfin.sdk.api.client.ApiClient
 import org.jellyfin.sdk.api.client.Response
-import org.jellyfin.sdk.api.client.extensions.itemsApi
-import org.jellyfin.sdk.api.client.extensions.studiosApi
-import org.jellyfin.sdk.api.operations.ItemsApi
-import org.jellyfin.sdk.api.operations.StudiosApi
-import org.jellyfin.sdk.model.api.request.GetItemsRequest
+import org.jellyfin.sdk.api.client.extensions.libraryApi
+import org.jellyfin.sdk.api.client.extensions.studioApi
+import org.jellyfin.sdk.api.operations.LibraryApi
+import org.jellyfin.sdk.api.operations.StudioApi
 import org.jellyfin.sdk.model.api.BaseItemDto
 import org.jellyfin.sdk.model.api.BaseItemDtoQueryResult
 import org.jellyfin.sdk.model.api.ImageType
+import org.jellyfin.sdk.model.api.request.GetItemsRequest
+import org.jellyfin.sdk.model.api.request.GetStudiosRequest
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertNull
 import org.junit.Assert.assertTrue
@@ -29,8 +30,8 @@ class StudioRepositoryTest {
     private val clientManager: JellyfinClientManager = mockk(relaxed = true)
     private val settingsDataStore: SettingsDataStore = mockk(relaxed = true)
     private val mockApi: ApiClient = mockk(relaxed = true)
-    private val mockStudiosApi: StudiosApi = mockk()
-    private val mockItemsApi: ItemsApi = mockk()
+    private val mockStudioApi: StudioApi = mockk()
+    private val mockLibraryApi: LibraryApi = mockk()
 
     private val repository = StudioRepository(
         clientManager = clientManager,
@@ -39,8 +40,8 @@ class StudioRepositoryTest {
 
     init {
         coEvery { clientManager.getApi() } returns mockApi
-        every { mockApi.studiosApi } returns mockStudiosApi
-        every { mockApi.itemsApi } returns mockItemsApi
+        every { mockApi.studioApi } returns mockStudioApi
+        every { mockApi.libraryApi } returns mockLibraryApi
     }
 
     @Test
@@ -61,7 +62,7 @@ class StudioRepositoryTest {
         val mockResponse = mockk<Response<BaseItemDtoQueryResult>> {
             every { content } returns mockQueryResult
         }
-        coEvery { mockStudiosApi.getStudios(parentId = libraryId, startIndex = 0, limit = 50) } returns mockResponse
+        coEvery { mockStudioApi.getStudios(any<GetStudiosRequest>()) } returns mockResponse
 
         val result = repository.getStudios(startIndex = 0, limit = 50)
 
@@ -79,7 +80,7 @@ class StudioRepositoryTest {
     @Test
     fun `getStudios rethrows CancellationException`() = runTest {
         coEvery { settingsDataStore.getSelectedLibraryId() } returns UUID.randomUUID().toString()
-        coEvery { mockStudiosApi.getStudios(parentId = any(), startIndex = any(), limit = any()) } throws CancellationException("Cancelled")
+        coEvery { mockStudioApi.getStudios(any<GetStudiosRequest>()) } throws CancellationException("Cancelled")
 
         try {
             repository.getStudios()
@@ -106,7 +107,7 @@ class StudioRepositoryTest {
         val mockResponse = mockk<Response<BaseItemDtoQueryResult>> {
             every { content } returns mockQueryResult
         }
-        coEvery { mockStudiosApi.getStudios(parentId = libraryId, startIndex = 0, limit = 50) } returns mockResponse
+        coEvery { mockStudioApi.getStudios(any<GetStudiosRequest>()) } returns mockResponse
 
         val mockItemsQueryResult = mockk<BaseItemDtoQueryResult> {
             every { items } returns emptyList()
@@ -116,7 +117,7 @@ class StudioRepositoryTest {
         val mockItemsResponse = mockk<Response<BaseItemDtoQueryResult>> {
             every { content } returns mockItemsQueryResult
         }
-        coEvery { mockItemsApi.getItems(any<GetItemsRequest>()) } returns mockItemsResponse
+        coEvery { mockLibraryApi.getItems(any<GetItemsRequest>()) } returns mockItemsResponse
 
         val result = repository.getStudios(startIndex = 0, limit = 50, includeMovieCounts = true)
 

@@ -16,7 +16,7 @@ import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.withContext
 import org.jellyfin.sdk.api.client.extensions.mediaInfoApi
-import org.jellyfin.sdk.api.client.extensions.playStateApi
+import org.jellyfin.sdk.api.client.extensions.sessionApi
 import org.jellyfin.sdk.model.api.PlaybackOrder
 import org.jellyfin.sdk.model.api.PlaybackProgressInfo
 import org.jellyfin.sdk.model.api.PlaybackStartInfo
@@ -184,8 +184,8 @@ open class PlaybackRepository(
         val uuid = runCatching { UUID.fromString(itemId) }.getOrNull() ?: return@withContext Result.success(Unit)
         capturePlaybackResult {
             val api = clientManager.getApi()
-            api.playStateApi.reportPlaybackStart(
-                data = PlaybackStartInfo(
+            api.sessionApi.reportPlaybackStart(
+                PlaybackStartInfo(
                     itemId = uuid,
                     mediaSourceId = mediaSourceId,
                     positionTicks = positionTicks,
@@ -214,8 +214,8 @@ open class PlaybackRepository(
         val uuid = runCatching { UUID.fromString(itemId) }.getOrNull() ?: return@withContext Result.success(Unit)
         capturePlaybackResult {
             val api = clientManager.getApi()
-            api.playStateApi.reportPlaybackProgress(
-                data = PlaybackProgressInfo(
+            api.sessionApi.reportPlaybackProgress(
+                PlaybackProgressInfo(
                     itemId = uuid,
                     mediaSourceId = mediaSourceId,
                     positionTicks = positionTicks,
@@ -241,8 +241,8 @@ open class PlaybackRepository(
         val uuid = runCatching { UUID.fromString(itemId) }.getOrNull() ?: return@withContext Result.success(Unit)
         capturePlaybackResult {
             val api = clientManager.getApi()
-            api.playStateApi.reportPlaybackStopped(
-                data = PlaybackStopInfo(
+            api.sessionApi.reportPlaybackStopped(
+                PlaybackStopInfo(
                     itemId = uuid,
                     mediaSourceId = mediaSourceId,
                     positionTicks = positionTicks,

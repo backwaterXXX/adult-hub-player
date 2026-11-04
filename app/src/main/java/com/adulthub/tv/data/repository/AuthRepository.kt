@@ -16,12 +16,9 @@ import kotlinx.coroutines.sync.withLock
 import kotlinx.coroutines.withContext
 import kotlinx.coroutines.withTimeoutOrNull
 import com.adulthub.tv.diagnostics.AppLog as Log
-import org.jellyfin.sdk.api.client.extensions.authenticateUserByName
-import org.jellyfin.sdk.api.client.extensions.authenticateWithQuickConnect
-import org.jellyfin.sdk.api.client.extensions.quickConnectApi
+import org.jellyfin.sdk.api.client.extensions.authenticationApi
 import org.jellyfin.sdk.api.client.extensions.sessionApi
 import org.jellyfin.sdk.api.client.extensions.systemApi
-import org.jellyfin.sdk.api.client.extensions.userApi
 
 data class QuickConnectInitResult(
     val code: String,
@@ -87,7 +84,7 @@ open class AuthRepository(
         try {
             val normalizedUrl = settingsDataStore.requireAllowedServiceUrl(serverUrl).normalized
             val api = clientManager.createApi(baseUrl = normalizedUrl)
-            val response = api.userApi.authenticateUserByName(
+            val response = api.authenticationApi.authenticateUserByName(
                 org.jellyfin.sdk.model.api.AuthenticateUserByName(
                     username = username,
                     pw = password,
@@ -136,7 +133,7 @@ open class AuthRepository(
         try {
             val allowedUrl = settingsDataStore.requireAllowedServiceUrl(serverUrl).normalized
             val api = clientManager.createApi(baseUrl = allowedUrl)
-            val response = api.quickConnectApi.initiateQuickConnect()
+            val response = api.authenticationApi.initiateQuickConnect()
             val content = response.content
             Result.success(
                 QuickConnectInitResult(
@@ -155,7 +152,7 @@ open class AuthRepository(
         try {
             val allowedUrl = settingsDataStore.requireAllowedServiceUrl(serverUrl).normalized
             val api = clientManager.createApi(baseUrl = allowedUrl)
-            val response = api.quickConnectApi.getQuickConnectState(secret = secret)
+            val response = api.authenticationApi.getQuickConnectState(secret = secret)
             Result.success(response.content.authenticated)
         } catch (e: CancellationException) {
             throw e
@@ -168,7 +165,7 @@ open class AuthRepository(
         try {
             val normalizedUrl = settingsDataStore.requireAllowedServiceUrl(serverUrl).normalized
             val api = clientManager.createApi(baseUrl = normalizedUrl)
-            val response = api.userApi.authenticateWithQuickConnect(
+            val response = api.authenticationApi.authenticateWithQuickConnect(
                 org.jellyfin.sdk.model.api.QuickConnectDto(secret = secret)
             )
             val authResult = response.content

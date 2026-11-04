@@ -9,7 +9,7 @@ import com.adulthub.tv.data.resolver.ResolverApi
 import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.withContext
-import org.jellyfin.sdk.api.client.extensions.itemsApi
+import org.jellyfin.sdk.api.client.extensions.libraryApi
 import org.jellyfin.sdk.model.api.BaseItemKind
 import org.jellyfin.sdk.model.api.ImageType
 import org.jellyfin.sdk.model.api.ItemSortBy
@@ -49,9 +49,11 @@ open class PersonRepository(
             val api = clientManager.getApi()
             val targetParentId = parentId ?: settingsDataStore.getSelectedLibraryId()
             val parentUuid = targetParentId?.let { UUID.fromString(it) }
+            val userUuid = clientManager.currentUserId?.let { runCatching { UUID.fromString(it) }.getOrNull() }
 
-            val response = api.itemsApi.getItems(
+            val response = api.libraryApi.getItems(
                 GetItemsRequest(
+                    userId = userUuid,
                     parentId = parentUuid,
                     startIndex = startIndex,
                     recursive = true,
@@ -93,9 +95,11 @@ open class PersonRepository(
                 val api = clientManager.getApi()
                 val targetParentId = settingsDataStore.getSelectedLibraryId()
                 val parentUuid = targetParentId?.let { UUID.fromString(it) }
+                val userUuid = clientManager.currentUserId?.let { runCatching { UUID.fromString(it) }.getOrNull() }
                 val fetchLimit = (limit.coerceAtLeast(1) * 5).coerceAtMost(100)
-                val response = api.itemsApi.getItems(
+                val response = api.libraryApi.getItems(
                     GetItemsRequest(
+                        userId = userUuid,
                         parentId = parentUuid,
                         recursive = true,
                         limit = fetchLimit,
@@ -129,8 +133,14 @@ open class PersonRepository(
         try {
             val api = clientManager.getApi()
             val uuid = UUID.fromString(personId)
+            val userUuid = clientManager.currentUserId?.let { runCatching { UUID.fromString(it) }.getOrNull() }
             val jfPerson = try {
-                api.itemsApi.getItems(ids = listOf(uuid)).content.items.firstOrNull()
+                api.libraryApi.getItems(
+                    GetItemsRequest(
+                        userId = userUuid,
+                        ids = listOf(uuid),
+                    )
+                ).content.items.firstOrNull()
             } catch (cancelled: CancellationException) {
                 throw cancelled
             } catch (_: Exception) {
@@ -176,16 +186,20 @@ open class PersonRepository(
             val targetParentId = parentId ?: settingsDataStore.getSelectedLibraryId()
             val parentUuid = targetParentId?.let { UUID.fromString(it) }
             val personUuid = UUID.fromString(personId)
+            val userUuid = clientManager.currentUserId?.let { runCatching { UUID.fromString(it) }.getOrNull() }
 
-            val response = api.itemsApi.getItems(
-                parentId = parentUuid,
-                personIds = listOf(personUuid),
-                startIndex = startIndex,
-                limit = limit,
-                recursive = true,
-                includeItemTypes = setOf(BaseItemKind.MOVIE),
-                sortBy = setOf(ItemSortBy.DATE_CREATED),
-                sortOrder = setOf(SortOrder.DESCENDING),
+            val response = api.libraryApi.getItems(
+                GetItemsRequest(
+                    userId = userUuid,
+                    parentId = parentUuid,
+                    personIds = listOf(personUuid),
+                    startIndex = startIndex,
+                    limit = limit,
+                    recursive = true,
+                    includeItemTypes = setOf(BaseItemKind.MOVIE),
+                    sortBy = listOf(ItemSortBy.DATE_CREATED),
+                    sortOrder = listOf(SortOrder.DESCENDING),
+                ),
             )
             Result.success(response.content.items.map { it.toTvItem() })
         } catch (e: CancellationException) {

@@ -1,9 +1,27 @@
 package com.adulthub.tv.data.repository
 
+import com.adulthub.tv.data.jellyfin.JellyfinClientManager
+import com.adulthub.tv.data.local.SettingsDataStore
 import com.adulthub.tv.data.model.TvItem
+import io.mockk.coEvery
+import io.mockk.coVerify
+import io.mockk.every
+import io.mockk.mockk
+import io.mockk.slot
+import kotlinx.coroutines.test.runTest
+import org.jellyfin.sdk.api.client.ApiClient
+import org.jellyfin.sdk.api.client.Response
+import org.jellyfin.sdk.api.client.extensions.sessionApi
+import org.jellyfin.sdk.api.operations.SessionApi
+import org.jellyfin.sdk.model.api.PlaybackProgressInfo
+import org.jellyfin.sdk.model.api.PlaybackStartInfo
+import org.jellyfin.sdk.model.api.PlaybackStopInfo
+import org.jellyfin.sdk.model.api.PlayMethod
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertNull
+import org.junit.Assert.assertTrue
 import org.junit.Test
+import java.util.UUID
 
 class PlaybackRepositoryTest {
     @Test
@@ -263,5 +281,88 @@ class PlaybackRepositoryTest {
         )
 
         assertEquals(headers, result)
+    }
+
+    @Test
+    fun `playback reporting delegates to sessionApi for Jellyfin UUID items`() = runTest {
+        val clientManager = mockk<JellyfinClientManager>(relaxed = true)
+        val settingsDataStore = mockk<SettingsDataStore>(relaxed = true)
+        val mockApi = mockk<ApiClient>(relaxed = true)
+        val mockSessionApi = mockk<SessionApi>()
+
+        coEvery { clientManager.getApi() } returns mockApi
+        every { mockApi.sessionApi } returns mockSessionApi
+
+        val startSlot = slot<PlaybackStartInfo>()
+        val progressSlot = slot<PlaybackProgressInfo>()
+        val stopSlot = slot<PlaybackStopInfo>()
+
+        val unitResponse = mockk<Response<Unit>> { every { content } returns Unit }
+        coEvery { mockSessionApi.reportPlaybackStart(capture(startSlot)) } returns unitResponse
+        coEvery { mockSessionApi.reportPlaybackProgress(capture(progressSlot)) } returns unitResponse
+        coEvery { mockSessionApi.reportPlaybackStopped(capture(stopSlot)) } returns unitResponse
+
+        val repository = PlaybackRepository(
+            clientManager = clientManager,
+            settingsDataStore = settingsDataStore,
+        )
+
+        val itemUuid = UUID.randomUUID()
+        val startResult = repository.reportPlaybackStart(
+            itemId = itemUuid.toString(),
+            mediaSourceId = "ms-1",
+            positionTicks = 50000L,
+            playSessionId = "sess-1",
+            canSeek = true,
+            playMethod = PlayMethod.DIRECT_PLAY,
+        )
+        assertTrue(startResult.isSuccess)
+        assertEquals(itemUuid, startSlot.captured.itemId)
+        assertEquals("ms-1", startSlot.captured.mediaSourceId)
+        assertEquals(50000L, startSlot.captured.positionTicks)
+        assertEquals(PlayMethod.DIRECT_PLAY, startSlot.captured.playMethod)
+
+        val progressResult = repository.reportPlaybackProgress(
+            itemId = itemUuid.toString(),
+            mediaSourceId = "ms-1",
+            positionTicks = 120000L,
+            playSessionId = "sess-1",
+            isPaused = false,
+            canSeek = true,
+            playMethod = PlayMethod.DIRECT_PLAY,
+        )
+        assertTrue(progressResult.isSuccess)
+        assertEquals(itemUuid, progressSlot.captured.itemId)
+        assertEquals(120000L, progressSlot.captured.positionTicks)
+
+        val stopResult = repository.reportPlaybackStopped(
+            itemId = itemUuid.toString(),
+            mediaSourceId = "ms-1",
+            positionTicks = 200000L,
+            playSessionId = "sess-1",
+        )
+        assertTrue(stopResult.isSuccess)
+        assertEquals(itemUuid, stopSlot.captured.itemId)
+        assertEquals(200000L, stopSlot.captured.positionTicks)
+    }
+
+    @Test
+    fun `playback reporting is a no-op for non-UUID items`() = runTest {
+        val clientManager = mockk<JellyfinClientManager>(relaxed = true)
+        val settingsDataStore = mockk<SettingsDataStore>(relaxed = true)
+
+        val repository = PlaybackRepository(
+            clientManager = clientManager,
+            settingsDataStore = settingsDataStore,
+        )
+
+        val startResult = repository.reportPlaybackStart(
+            itemId = "telegram:-100:1:2",
+            mediaSourceId = null,
+            canSeek = false,
+            playMethod = PlayMethod.DIRECT_PLAY,
+        )
+        assertTrue(startResult.isSuccess)
+        coVerify(exactly = 0) { clientManager.getApi() }
     }
 }

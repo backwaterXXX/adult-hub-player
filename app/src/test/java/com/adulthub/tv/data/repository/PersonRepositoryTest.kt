@@ -2,6 +2,7 @@ package com.adulthub.tv.data.repository
 
 import com.adulthub.tv.data.jellyfin.JellyfinClientManager
 import com.adulthub.tv.data.local.SettingsDataStore
+import com.adulthub.tv.data.resolver.PerformerBioDto
 import com.adulthub.tv.data.resolver.ResolverApi
 import io.mockk.coEvery
 import io.mockk.every
@@ -11,8 +12,8 @@ import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.test.runTest
 import org.jellyfin.sdk.api.client.ApiClient
 import org.jellyfin.sdk.api.client.Response
-import org.jellyfin.sdk.api.client.extensions.itemsApi
-import org.jellyfin.sdk.api.operations.ItemsApi
+import org.jellyfin.sdk.api.client.extensions.libraryApi
+import org.jellyfin.sdk.api.operations.LibraryApi
 import org.jellyfin.sdk.model.api.BaseItemDto
 import org.jellyfin.sdk.model.api.BaseItemDtoQueryResult
 import org.jellyfin.sdk.model.api.BaseItemKind
@@ -32,7 +33,7 @@ class PersonRepositoryTest {
     private val resolverApi: ResolverApi = mockk(relaxed = true)
     private val settingsDataStore: SettingsDataStore = mockk(relaxed = true)
     private val mockApi: ApiClient = mockk(relaxed = true)
-    private val mockItemsApi: ItemsApi = mockk()
+    private val mockLibraryApi: LibraryApi = mockk()
 
     private val repository = PersonRepository(
         clientManager = clientManager,
@@ -42,13 +43,15 @@ class PersonRepositoryTest {
 
     init {
         coEvery { clientManager.getApi() } returns mockApi
-        every { mockApi.itemsApi } returns mockItemsApi
+        every { mockApi.libraryApi } returns mockLibraryApi
     }
 
     @Test
     fun `getPersonsPage forwards pagination, filter, and alphabetical sort parameters`() = runTest {
         val libraryId = UUID.randomUUID()
         val personId = UUID.randomUUID()
+        val userId = UUID.randomUUID()
+        every { clientManager.currentUserId } returns userId.toString()
         coEvery { settingsDataStore.getSelectedLibraryId() } returns libraryId.toString()
 
         val slot = slot<GetItemsRequest>()
@@ -65,7 +68,7 @@ class PersonRepositoryTest {
         val mockResponse = mockk<Response<BaseItemDtoQueryResult>> {
             every { content } returns mockQueryResult
         }
-        coEvery { mockItemsApi.getItems(capture(slot)) } returns mockResponse
+        coEvery { mockLibraryApi.getItems(capture(slot)) } returns mockResponse
 
         val result = repository.getPersonsPage(
             startIndex = 20,
@@ -84,6 +87,7 @@ class PersonRepositoryTest {
         assertEquals(15, page.persons[0].movieCount)
 
         val captured = slot.captured
+        assertEquals(userId, captured.userId)
         assertEquals(libraryId, captured.parentId)
         assertEquals(20, captured.startIndex)
         assertEquals(60, captured.limit)
@@ -96,9 +100,87 @@ class PersonRepositoryTest {
     }
 
     @Test
+    fun `getPersonMovies requests items filtered by personId and sorted by date created`() = runTest {
+        val libraryId = UUID.randomUUID()
+        val personId = UUID.randomUUID()
+        val movieId = UUID.randomUUID()
+        val userId = UUID.randomUUID()
+        every { clientManager.currentUserId } returns userId.toString()
+        coEvery { settingsDataStore.getSelectedLibraryId() } returns libraryId.toString()
+
+        val slot = slot<GetItemsRequest>()
+        val mockMovieDto = mockk<BaseItemDto>(relaxed = true) {
+            every { id } returns movieId
+            every { name } returns "Test Movie"
+        }
+        val mockQueryResult = mockk<BaseItemDtoQueryResult> {
+            every { items } returns listOf(mockMovieDto)
+        }
+        val mockResponse = mockk<Response<BaseItemDtoQueryResult>> {
+            every { content } returns mockQueryResult
+        }
+        coEvery { mockLibraryApi.getItems(capture(slot)) } returns mockResponse
+
+        val result = repository.getPersonMovies(personId = personId.toString())
+
+        assertTrue(result.isSuccess)
+        val items = result.getOrThrow()
+        assertEquals(1, items.size)
+        assertEquals(movieId.toString(), items[0].id)
+        assertEquals("Test Movie", items[0].title)
+
+        val captured = slot.captured
+        assertEquals(userId, captured.userId)
+        assertEquals(libraryId, captured.parentId)
+        assertEquals(listOf(personId), captured.personIds)
+        assertEquals(setOf(BaseItemKind.MOVIE), captured.includeItemTypes)
+        assertEquals(listOf(ItemSortBy.DATE_CREATED), captured.sortBy)
+        assertEquals(listOf(SortOrder.DESCENDING), captured.sortOrder)
+    }
+
+    @Test
+    fun `getPersonDetails combines Jellyfin metadata with Resolver bio`() = runTest {
+        val personId = UUID.randomUUID()
+        val mockPersonDto = mockk<BaseItemDto> {
+            every { id } returns personId
+            every { name } returns "Jane Doe"
+            every { imageTags } returns mapOf(ImageType.PRIMARY to "img-123")
+            every { overview } returns "JF Overview"
+            every { childCount } returns 10
+        }
+        val mockQueryResult = mockk<BaseItemDtoQueryResult> {
+            every { items } returns listOf(mockPersonDto)
+        }
+        val mockResponse = mockk<Response<BaseItemDtoQueryResult>> {
+            every { content } returns mockQueryResult
+        }
+        coEvery { mockLibraryApi.getItems(any<GetItemsRequest>()) } returns mockResponse
+        coEvery { resolverApi.getPerformerBio("Jane Doe") } returns PerformerBioDto(
+            name = "Jane Doe",
+            bio = "Resolver Bio",
+            birth = "1990-01-01",
+            nationality = "US",
+            aliases = listOf("JD"),
+            photoUrl = "https://example.com/photo.jpg",
+        )
+
+        val result = repository.getPersonDetails(personId = personId.toString(), personName = "Jane Doe")
+
+        assertTrue(result.isSuccess)
+        val person = result.getOrThrow()
+        assertEquals("Jane Doe", person.name)
+        assertEquals("Resolver Bio", person.bio)
+        assertEquals("1990-01-01", person.birthDate)
+        assertEquals("US", person.nationality)
+        assertEquals(listOf("JD"), person.aliases)
+        assertEquals("https://example.com/photo.jpg", person.photoUrl)
+        assertEquals(10, person.movieCount)
+    }
+
+    @Test
     fun `getPersonsPage rethrows CancellationException`() = runTest {
         coEvery { settingsDataStore.getSelectedLibraryId() } returns UUID.randomUUID().toString()
-        coEvery { mockItemsApi.getItems(any<GetItemsRequest>()) } throws CancellationException("Job was cancelled")
+        coEvery { mockLibraryApi.getItems(any<GetItemsRequest>()) } throws CancellationException("Job was cancelled")
 
         try {
             repository.getPersonsPage()

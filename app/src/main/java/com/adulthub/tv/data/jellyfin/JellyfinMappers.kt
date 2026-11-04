@@ -20,7 +20,7 @@ fun BaseItemDto.toTvItem(): TvItem {
                 id = person.id.toString(),
                 name = person.name ?: "",
                 role = person.role,
-                type = person.type?.name,
+                type = person.type.name,
                 primaryImageTag = person.primaryImageTag,
             )
         } ?: emptyList(),

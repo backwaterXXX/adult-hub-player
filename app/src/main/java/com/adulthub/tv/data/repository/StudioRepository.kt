@@ -13,8 +13,8 @@ import kotlinx.coroutines.coroutineScope
 import kotlinx.coroutines.sync.Semaphore
 import kotlinx.coroutines.sync.withPermit
 import kotlinx.coroutines.withContext
-import org.jellyfin.sdk.api.client.extensions.itemsApi
-import org.jellyfin.sdk.api.client.extensions.studiosApi
+import org.jellyfin.sdk.api.client.extensions.libraryApi
+import org.jellyfin.sdk.api.client.extensions.studioApi
 import org.jellyfin.sdk.model.api.BaseItemDto
 import org.jellyfin.sdk.model.api.BaseItemKind
 import org.jellyfin.sdk.model.api.ImageType
@@ -22,6 +22,7 @@ import org.jellyfin.sdk.model.api.ItemFields
 import org.jellyfin.sdk.model.api.ItemSortBy
 import org.jellyfin.sdk.model.api.SortOrder
 import org.jellyfin.sdk.model.api.request.GetItemsRequest
+import org.jellyfin.sdk.model.api.request.GetStudiosRequest
 import java.util.UUID
 
 open class StudioRepository(
@@ -38,11 +39,15 @@ open class StudioRepository(
             val api = clientManager.getApi()
             val targetParentId = parentId ?: settingsDataStore.getSelectedLibraryId()
             val parentUuid = targetParentId?.let { UUID.fromString(it) }
+            val userUuid = clientManager.currentUserId?.let { runCatching { UUID.fromString(it) }.getOrNull() }
 
-            val response = api.studiosApi.getStudios(
-                parentId = parentUuid,
-                startIndex = startIndex,
-                limit = limit,
+            val response = api.studioApi.getStudios(
+                GetStudiosRequest(
+                    userId = userUuid,
+                    parentId = parentUuid,
+                    startIndex = startIndex,
+                    limit = limit,
+                ),
             )
             val items = response.content.items
             val movieCounts = if (includeMovieCounts) fetchMovieCounts(items, targetParentId) else emptyMap()
@@ -109,11 +114,13 @@ open class StudioRepository(
             val api = clientManager.getApi()
             val targetParentId = parentId ?: settingsDataStore.getSelectedLibraryId()
             val parentUuid = targetParentId?.let { UUID.fromString(it) }
+            val userUuid = clientManager.currentUserId?.let { runCatching { UUID.fromString(it) }.getOrNull() }
 
-            val response = api.itemsApi.getItems(
+            val response = api.libraryApi.getItems(
                 GetItemsRequest(
+                    userId = userUuid,
                     parentId = parentUuid,
-                    studios = setOf(studioName),
+                    studios = listOf(studioName),
                     startIndex = startIndex,
                     limit = limit,
                     recursive = true,
@@ -127,7 +134,7 @@ open class StudioRepository(
             val page = TvItemsPage(
                 items = response.content.items.map { it.toTvItem() },
                 totalRecordCount = response.content.totalRecordCount,
-                startIndex = response.content.startIndex ?: startIndex,
+                startIndex = response.content.startIndex,
             )
             Result.success(page)
         } catch (e: CancellationException) {
