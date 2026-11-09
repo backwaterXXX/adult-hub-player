@@ -1,7 +1,6 @@
 package com.adulthub.tv.ui.library
 
-import android.annotation.SuppressLint
-import android.content.Context
+import android.app.Application
 import androidx.annotation.StringRes
 import androidx.lifecycle.SavedStateHandle
 import androidx.lifecycle.ViewModel
@@ -171,7 +170,6 @@ sealed interface LibraryNavEvent {
     data class NavigateToPlayer(val itemId: String) : LibraryNavEvent
 }
 
-@SuppressLint("StaticFieldLeak")
 class LibraryViewModel(
     private val libraryRepository: LibraryRepository,
     private val personRepository: PersonRepository,
@@ -180,7 +178,7 @@ class LibraryViewModel(
     private val clientManager: JellyfinClientManager,
     private val settingsDataStore: SettingsDataStore? = null,
     private val savedStateHandle: SavedStateHandle = SavedStateHandle(),
-    private val context: Context
+    private val context: Application
 ) : ViewModel() {
 
     private val _uiState = MutableStateFlow(LibraryUiState())

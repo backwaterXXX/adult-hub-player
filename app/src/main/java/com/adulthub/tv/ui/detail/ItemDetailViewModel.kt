@@ -1,7 +1,6 @@
 package com.adulthub.tv.ui.detail
 
-import android.annotation.SuppressLint
-import android.content.Context
+import android.app.Application
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import com.adulthub.tv.R
@@ -38,12 +37,11 @@ sealed interface ItemDetailNavEvent {
     data object NavigateBack : ItemDetailNavEvent
 }
 
-@SuppressLint("StaticFieldLeak")
 class ItemDetailViewModel(
     private val libraryRepository: LibraryRepository,
     private val clientManager: JellyfinClientManager,
     private val settingsDataStore: SettingsDataStore? = null,
-    private val context: Context
+    private val context: Application
 ) : ViewModel() {
 
     private val _uiState = MutableStateFlow(ItemDetailUiState())

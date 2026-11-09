@@ -1,6 +1,6 @@
 package com.adulthub.tv.ui.search
 
-import android.content.Context
+import android.app.Application
 import com.adulthub.tv.data.local.AccountKeyProvider
 import com.adulthub.tv.data.local.SearchHistoryStore
 import com.adulthub.tv.data.local.SettingsDataStore
@@ -39,7 +39,7 @@ class SearchViewModelTest {
     private val fakePersonRepository = FakeSearchPersonRepo()
     private val fakeChannelRepository = FakeSearchChannelRepo()
     private val settingsDataStore: SettingsDataStore = mockk(relaxed = true)
-    private val context: Context = mockk(relaxed = true)
+    private val context: Application = mockk(relaxed = true)
 
     private val sampleMovie = TvItem(
         id = "movie-1",

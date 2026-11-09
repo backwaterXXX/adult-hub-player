@@ -1,7 +1,6 @@
 package com.adulthub.tv.ui.home
 
-import android.annotation.SuppressLint
-import android.content.Context
+import android.app.Application
 import androidx.compose.runtime.Immutable
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
@@ -75,7 +74,6 @@ sealed interface HomeNavEvent {
     data object NavigateToSettings : HomeNavEvent
 }
 
-@SuppressLint("StaticFieldLeak")
 class HomeViewModel(
     private val libraryRepository: LibraryRepository,
     private val personRepository: PersonRepository,
@@ -83,7 +81,7 @@ class HomeViewModel(
     private val clientManager: JellyfinClientManager,
     private val telegramProgressStore: TelegramProgressStore? = null,
     private val watchHistoryStore: WatchHistoryStore? = null,
-    private val context: Context
+    private val context: Application
 ) : ViewModel() {
 
     companion object {

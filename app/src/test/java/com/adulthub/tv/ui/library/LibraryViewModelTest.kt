@@ -1,6 +1,6 @@
 package com.adulthub.tv.ui.library
 
-import android.content.Context
+import android.app.Application
 import androidx.lifecycle.SavedStateHandle
 import com.adulthub.tv.data.jellyfin.JellyfinClientManager
 import com.adulthub.tv.data.model.ChannelSortMode
@@ -48,7 +48,7 @@ class LibraryViewModelTest {
     private val fakeStudioRepository = FakeStudioRepository()
     private val fakeChannelRepository = FakeChannelRepository()
     private val clientManager: JellyfinClientManager = mockk(relaxed = true)
-    private val context: Context = mockk(relaxed = true)
+    private val context: Application = mockk(relaxed = true)
 
     private val sampleMovie1 = TvItem(id = "movie-1", title = "Alpha Movie", isFavorite = true)
     private val sampleMovie2 = TvItem(id = "movie-2", title = "Beta Movie", isFavorite = false)

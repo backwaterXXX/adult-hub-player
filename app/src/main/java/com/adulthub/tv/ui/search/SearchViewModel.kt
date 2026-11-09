@@ -1,7 +1,6 @@
 package com.adulthub.tv.ui.search
 
-import android.annotation.SuppressLint
-import android.content.Context
+import android.app.Application
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import com.adulthub.tv.R
@@ -42,7 +41,6 @@ data class SearchUiState(
     val recentQueries: List<String> = emptyList()
 )
 
-@SuppressLint("StaticFieldLeak")
 @OptIn(FlowPreview::class)
 class SearchViewModel(
     private val libraryRepository: LibraryRepository,
@@ -51,7 +49,7 @@ class SearchViewModel(
     private val channelRepository: ChannelRepository? = null,
     private val searchHistoryStore: SearchHistoryStore? = null,
     private val accountScope: com.adulthub.tv.data.local.AccountScope? = null,
-    private val context: Context
+    private val context: Application
 ) : ViewModel() {
 
     private val _query = MutableStateFlow("")

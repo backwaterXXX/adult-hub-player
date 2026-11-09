@@ -1,6 +1,6 @@
 package com.adulthub.tv.ui.auth
 
-import android.content.Context
+import android.app.Application
 import com.adulthub.tv.R
 import com.adulthub.tv.data.local.SettingsDataStore
 import com.adulthub.tv.data.model.AuthState
@@ -31,7 +31,7 @@ class AuthViewModelTest {
     private val authRepository: AuthRepository = mockk(relaxed = true)
     private val libraryRepository: LibraryRepository = mockk(relaxed = true)
     private val settingsDataStore: SettingsDataStore = mockk(relaxed = true)
-    private val context: Context = mockk(relaxed = true)
+    private val context: Application = mockk(relaxed = true)
 
     @Before
     fun setUp() {

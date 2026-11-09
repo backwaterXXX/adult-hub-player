@@ -1,6 +1,6 @@
 package com.adulthub.tv.ui.player
 
-import android.content.Context
+import android.app.Application
 import com.adulthub.tv.data.local.SettingsDataStore
 import com.adulthub.tv.data.local.TelegramProgressRecord
 import com.adulthub.tv.data.local.TelegramProgressStore
@@ -40,7 +40,7 @@ class PlayerViewModelTest {
     private val fakeLibraryRepo = FakeLibraryRepository()
     private val fakePlaybackRepo = FakePlaybackRepository()
     private val settingsDataStore: SettingsDataStore = mockk(relaxed = true)
-    private val context: Context = mockk(relaxed = true)
+    private val context: Application = mockk(relaxed = true)
 
     private val sampleItem = TvItem(
         id = "movie-1",

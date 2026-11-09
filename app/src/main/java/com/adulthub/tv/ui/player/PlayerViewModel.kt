@@ -1,7 +1,6 @@
 package com.adulthub.tv.ui.player
 
-import android.annotation.SuppressLint
-import android.content.Context
+import android.app.Application
 import android.os.SystemClock
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
@@ -44,7 +43,6 @@ sealed interface PlayerUiState {
     data class Error(val message: String) : PlayerUiState
 }
 
-@SuppressLint("StaticFieldLeak")
 class PlayerViewModel(
     private val libraryRepository: LibraryRepository,
     private val playbackRepository: PlaybackRepository,
@@ -55,7 +53,7 @@ class PlayerViewModel(
     internal val watchHistoryStore: WatchHistoryStore? = null,
     private val persistenceScope: CoroutineScope? = null,
     private val accountScope: AccountScope? = null,
-    private val context: Context
+    private val context: Application
 ) : ViewModel() {
 
     companion object {

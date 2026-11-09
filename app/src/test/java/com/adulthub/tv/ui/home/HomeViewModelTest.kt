@@ -1,6 +1,6 @@
 package com.adulthub.tv.ui.home
 
-import android.content.Context
+import android.app.Application
 import com.adulthub.tv.data.jellyfin.JellyfinClientManager
 import com.adulthub.tv.data.local.SettingsDataStore
 import com.adulthub.tv.data.model.TvCategory
@@ -37,7 +37,7 @@ class HomeViewModelTest {
     private val fakePersonRepository = FakePersonRepository()
     private val settingsDataStore: SettingsDataStore = mockk(relaxed = true)
     private val clientManager: JellyfinClientManager = mockk(relaxed = true)
-    private val context: Context = mockk(relaxed = true)
+    private val context: Application = mockk(relaxed = true)
 
     private val sampleItem = TvItem(
         id = "movie-1",

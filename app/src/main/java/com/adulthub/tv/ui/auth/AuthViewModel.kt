@@ -1,7 +1,6 @@
 package com.adulthub.tv.ui.auth
 
-import android.annotation.SuppressLint
-import android.content.Context
+import android.app.Application
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import com.adulthub.tv.R
@@ -70,13 +69,12 @@ sealed interface AuthNavEvent {
     data object NavigateToServer : AuthNavEvent
 }
 
-@SuppressLint("StaticFieldLeak")
 class AuthViewModel(
     private val authRepository: AuthRepository,
     private val libraryRepository: LibraryRepository,
     private val settingsDataStore: SettingsDataStore,
     private val sessionRestoreRetry: SessionRestoreRetryPolicy = SessionRestoreRetryPolicy(),
-    private val context: Context
+    private val context: Application
 ) : ViewModel() {
 
     private val _serverState = MutableStateFlow(ServerUiState())
