@@ -86,6 +86,7 @@ fun ServerScreen(
                         hint = stringResource(R.string.server_url_hint),
                         keyboardOptions = KeyboardOptions(
                             keyboardType = KeyboardType.Uri,
+                            autoCorrectEnabled = false,
                             imeAction = ImeAction.Done
                         ),
                         keyboardActions = KeyboardActions(

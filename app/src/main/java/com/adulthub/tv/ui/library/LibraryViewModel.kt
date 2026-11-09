@@ -1,7 +1,6 @@
 package com.adulthub.tv.ui.library
 
 import android.app.Application
-import androidx.annotation.StringRes
 import androidx.lifecycle.SavedStateHandle
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
@@ -21,9 +20,7 @@ import com.adulthub.tv.data.repository.PersonRepository
 import com.adulthub.tv.data.repository.StudioRepository
 import com.adulthub.tv.data.resolver.VideoDto
 import com.adulthub.tv.data.resolver.resolveResolverUrl
-import java.util.UUID
 import kotlinx.coroutines.Job
-import kotlinx.coroutines.delay
 import kotlinx.coroutines.flow.MutableSharedFlow
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.SharedFlow
@@ -37,139 +34,11 @@ import kotlinx.coroutines.launch
 import org.jellyfin.sdk.model.api.ItemFilter
 import org.jellyfin.sdk.model.api.SortOrder
 
-enum class LibraryTab(@StringRes val titleRes: Int) {
-    ALL(R.string.library_tab_movies),
-    CATEGORIES(R.string.library_tab_categories),
-    ACTORS(R.string.library_tab_actors),
-    STUDIOS(R.string.library_tab_studios),
-    CHANNELS(R.string.library_tab_channels)
-}
-
-data class AllItemsTabState(
-    val items: List<TvItem> = emptyList(),
-    val rawItems: List<TvItem> = emptyList(),
-    val durationFilter: DurationFilter = DurationFilter.ALL,
-    val hdOnly: Boolean = false,
-    val excludedTags: Set<String> = emptySet(),
-    val totalCount: Int = 0,
-    val startIndex: Int = 0,
-    val pageSize: Int = 40,
-    val isLoading: Boolean = false,
-    val isLoadingMore: Boolean = false,
-    val hasMore: Boolean = true,
-    val errorMessage: String? = null,
-    val sortBy: String = "DateCreated",
-    val sortOrder: SortOrder = SortOrder.DESCENDING,
-    val favoritesOnly: Boolean = false,
-    val unwatchedOnly: Boolean = false,
-    val genres: List<TvCategory> = emptyList(),
-    val areGenresLoaded: Boolean = false,
-    val isLoadingGenres: Boolean = false,
-    val studios: List<TvStudio> = emptyList(),
-    val areStudiosLoaded: Boolean = false,
-    val isLoadingStudios: Boolean = false,
-    val performers: List<TvPerson> = emptyList(),
-    val arePerformersLoaded: Boolean = false,
-    val isLoadingPerformers: Boolean = false,
-    val selectedGenre: TvCategory? = null,
-    val selectedStudio: TvStudio? = null,
-    val selectedPerformer: TvPerson? = null,
-    val lastSelectedItemId: String? = null
-) {
-    val isEmpty: Boolean get() = !isLoading && errorMessage == null && items.isEmpty()
-}
-
-data class CategoriesTabState(
-    val categories: List<TvCategory> = emptyList(),
-    val isLoading: Boolean = false,
-    val errorMessage: String? = null,
-    val selectedCategory: TvCategory? = null,
-    val categoryMovies: List<TvItem> = emptyList(),
-    val isLoadingCategoryMovies: Boolean = false,
-    val isLoadingMoreCategoryMovies: Boolean = false,
-    val hasMoreCategoryMovies: Boolean = false,
-    val totalCount: Int = 0,
-    val categoryMoviesOffset: Int = 0,
-    val categoryMoviesError: String? = null,
-    val lastSelectedCategoryId: String? = null,
-    val lastSelectedMovieId: String? = null
-) {
-    val isEmpty: Boolean get() = !isLoading && errorMessage == null && categories.isEmpty()
-}
-
-data class ActorsTabState(
-    val allPersons: List<TvPerson> = emptyList(),
-    val filteredPersons: List<TvPerson> = emptyList(),
-    val isLoading: Boolean = false,
-    val isLoadingMore: Boolean = false,
-    val hasMore: Boolean = false,
-    val totalCount: Int = 0,
-    val errorMessage: String? = null,
-    val selectedLetter: Char? = null,
-    val onlyWithPhoto: Boolean = false,
-    val searchQuery: String = "",
-    val lastSelectedPersonId: String? = null
-) {
-    val isEmpty: Boolean get() = !isLoading && errorMessage == null && filteredPersons.isEmpty()
-}
-
-data class StudiosTabState(
-    val studios: List<TvStudio> = emptyList(),
-    val isLoading: Boolean = false,
-    val errorMessage: String? = null,
-    val selectedStudio: TvStudio? = null,
-    val studioMovies: List<TvItem> = emptyList(),
-    val isLoadingStudioMovies: Boolean = false,
-    val isLoadingMoreStudioMovies: Boolean = false,
-    val hasMoreStudioMovies: Boolean = false,
-    val totalCount: Int = 0,
-    val studioMoviesOffset: Int = 0,
-    val studioMoviesError: String? = null,
-    val lastSelectedStudioId: String? = null,
-    val lastSelectedMovieId: String? = null
-) {
-    val isEmpty: Boolean get() = !isLoading && errorMessage == null && studios.isEmpty()
-}
-
-data class ChannelsTabState(
-    val channels: List<TvChannel> = emptyList(),
-    val isLoading: Boolean = false,
-    val errorMessage: String? = null,
-    val selectedChannel: TvChannel? = null,
-    val sortMode: ChannelSortMode = ChannelSortMode.LATEST,
-    val durationFilter: DurationFilter = DurationFilter.ALL,
-    val excludedTags: Set<String> = emptySet(),
-    val hiddenChannelIds: Set<String> = emptySet(),
-    val rawChannelVideos: List<VideoDto> = emptyList(),
-    val channelVideos: List<VideoDto> = emptyList(),
-    val isLoadingVideos: Boolean = false,
-    val isLoadingMoreVideos: Boolean = false,
-    val hasMoreVideos: Boolean = false,
-    val nextOffsetId: Long? = null,
-    val totalMessageCount: Int = 0,
-    val channelVideosError: String? = null,
-    val resolverBaseUrl: String = SettingsDataStore.DEFAULT_RESOLVER_URL,
-    val lastSelectedChannelId: String? = null,
-    val lastSelectedVideoId: String? = null
-) {
-    val isEmpty: Boolean get() = !isLoading && errorMessage == null && channels.isEmpty()
-}
-
-data class LibraryUiState(
-    val selectedTab: LibraryTab = LibraryTab.ALL,
-    val allState: AllItemsTabState = AllItemsTabState(),
-    val categoriesState: CategoriesTabState = CategoriesTabState(),
-    val actorsState: ActorsTabState = ActorsTabState(),
-    val studiosState: StudiosTabState = StudiosTabState(),
-    val channelsState: ChannelsTabState = ChannelsTabState()
-)
-
-sealed interface LibraryNavEvent {
-    data class NavigateToItemDetail(val itemId: String) : LibraryNavEvent
-    data class NavigateToPersonDetail(val personId: String, val personName: String) : LibraryNavEvent
-    data class NavigateToPlayer(val itemId: String) : LibraryNavEvent
-}
-
+/**
+ * State and actions of the library screen. Each tab with paging or a search of its own
+ * is delegated to a controller; this class keeps the shared state, the All tab, and
+ * the navigation events.
+ */
 class LibraryViewModel(
     private val libraryRepository: LibraryRepository,
     private val personRepository: PersonRepository,
@@ -186,19 +55,43 @@ class LibraryViewModel(
 
     private val _navEvents = MutableSharedFlow<LibraryNavEvent>()
     val navEvents: SharedFlow<LibraryNavEvent> = _navEvents.asSharedFlow()
-    private var actorsLoadJob: Job? = null
-    private var actorSearchJob: Job? = null
-    private var categoryMoviesJob: Job? = null
-    private var studioMoviesJob: Job? = null
+
+    private val categoriesTab = CategoriesTabController(
+        scope = viewModelScope,
+        uiState = _uiState,
+        libraryRepository = libraryRepository,
+        context = context
+    )
+    private val studiosTab = StudiosTabController(
+        scope = viewModelScope,
+        uiState = _uiState,
+        studioRepository = studioRepository,
+        context = context
+    )
+    private val actorsTab = ActorsTabController(
+        scope = viewModelScope,
+        uiState = _uiState,
+        personRepository = personRepository,
+        context = context
+    )
+    private val channelsTab = ChannelsTabController(
+        scope = viewModelScope,
+        uiState = _uiState,
+        channelRepository = channelRepository,
+        settingsDataStore = settingsDataStore,
+        context = context
+    )
+    private val savedFilters = LibrarySavedFilters(savedStateHandle)
+
     private var allItemsLoadJob: Job? = null
     private var allItemsGeneration = 0L
     private var allItemsRequestInFlight = false
 
     init {
-        restoreSavedFilters()
+        _uiState.value = savedFilters.restore(_uiState.value)
         loadAllItems(reset = true)
         viewModelScope.launch {
-            _uiState.collect { state -> persistSavedFilters(state) }
+            _uiState.collect { state -> savedFilters.save(state) }
         }
         settingsDataStore?.let { settings ->
             viewModelScope.launch {
@@ -320,153 +213,17 @@ class LibraryViewModel(
         }
     }
 
-    fun openCategory(categoryId: String) {
-        _uiState.update { it.copy(selectedTab = LibraryTab.CATEGORIES) }
-        viewModelScope.launch {
-            val categories = libraryRepository.getGenres().getOrDefault(emptyList())
-            _uiState.update { state ->
-                state.copy(
-                    categoriesState = state.categoriesState.copy(
-                        categories = categories.sortedBy { it.name.lowercase() },
-                        isLoading = false,
-                        errorMessage = null
-                    )
-                )
-            }
-            categories.firstOrNull { it.id == categoryId }?.let(::selectCategory)
-        }
-    }
+    // --- CATEGORIES TAB (see CategoriesTabController) ---
 
-    // --- CATEGORIES TAB ---
+    fun openCategory(categoryId: String) = categoriesTab.openCategory(categoryId)
 
-    fun loadCategories() {
-        viewModelScope.launch {
-            _uiState.update { state ->
-                state.copy(categoriesState = state.categoriesState.copy(isLoading = true, errorMessage = null))
-            }
-            val result = libraryRepository.getGenres()
-            _uiState.update { state ->
-                result.fold(
-                    onSuccess = { categories ->
-                        state.copy(
-                            categoriesState = state.categoriesState.copy(
-                                categories = categories.sortedBy { it.name.lowercase() },
-                                isLoading = false
-                            )
-                        )
-                    },
-                    onFailure = { error ->
-                        state.copy(
-                            categoriesState = state.categoriesState.copy(
-                                isLoading = false,
-                                errorMessage = error.localizedMessage ?: context.getString(R.string.library_error_categories)
-                            )
-                        )
-                    }
-                )
-            }
-        }
-    }
+    fun loadCategories() = categoriesTab.loadCategories()
 
-    fun selectCategory(category: TvCategory?) {
-        categoryMoviesJob?.cancel()
-        _uiState.update { state ->
-            state.copy(
-                categoriesState = state.categoriesState.copy(
-                    selectedCategory = category,
-                    lastSelectedCategoryId = category?.id ?: state.categoriesState.lastSelectedCategoryId,
-                    categoryMovies = emptyList(),
-                    categoryMoviesError = null,
-                    isLoadingCategoryMovies = false,
-                    isLoadingMoreCategoryMovies = false,
-                    hasMoreCategoryMovies = false,
-                    totalCount = 0,
-                    categoryMoviesOffset = 0
-                )
-            )
-        }
-        category?.let { loadCategoryMovies(it, reset = true) }
-    }
+    fun selectCategory(category: TvCategory?) = categoriesTab.selectCategory(category)
 
-    fun loadMoreCategoryMovies() {
-        val catState = _uiState.value.categoriesState
-        val category = catState.selectedCategory ?: return
-        if (!catState.hasMoreCategoryMovies || catState.isLoadingMoreCategoryMovies || catState.isLoadingCategoryMovies || categoryMoviesJob?.isActive == true) return
-        loadCategoryMovies(category, reset = false)
-    }
+    fun loadMoreCategoryMovies() = categoriesTab.loadMoreCategoryMovies()
 
-    fun retrySelectedCategoryMovies() {
-        val catState = _uiState.value.categoriesState
-        val category = catState.selectedCategory ?: return
-        val isFirstPage = catState.categoryMovies.isEmpty()
-        loadCategoryMovies(category, reset = isFirstPage)
-    }
-
-    private fun loadCategoryMovies(category: TvCategory, reset: Boolean = true) {
-        val currentState = _uiState.value.categoriesState
-        if (!reset && (!currentState.hasMoreCategoryMovies || currentState.isLoadingMoreCategoryMovies || categoryMoviesJob?.isActive == true)) return
-        if (reset) categoryMoviesJob?.cancel()
-
-        categoryMoviesJob = viewModelScope.launch {
-            _uiState.update { state ->
-                if (state.categoriesState.selectedCategory?.id == category.id) {
-                    state.copy(
-                        categoriesState = state.categoriesState.copy(
-                            isLoadingCategoryMovies = reset,
-                            isLoadingMoreCategoryMovies = !reset,
-                            categoryMoviesError = if (reset) null else state.categoriesState.categoryMoviesError
-                        )
-                    )
-                } else {
-                    state
-                }
-            }
-
-            val startIndex = if (reset) 0 else _uiState.value.categoriesState.categoryMoviesOffset
-            val pageSize = 60
-            val result = libraryRepository.getGenreMoviesPage(
-                genreName = category.name,
-                genreId = category.id,
-                startIndex = startIndex,
-                limit = pageSize
-            )
-
-            _uiState.update { state ->
-                if (state.categoriesState.selectedCategory?.id != category.id) return@update state
-                result.fold(
-                    onSuccess = { page ->
-                        val combined = if (reset) {
-                            page.items
-                        } else {
-                            state.categoriesState.categoryMovies + page.items
-                        }.distinctBy { it.providerVideoId?.ifBlank { null } ?: it.id }
-
-                        val hasMore = page.items.isNotEmpty() && (startIndex + page.items.size < page.totalRecordCount)
-                        state.copy(
-                            categoriesState = state.categoriesState.copy(
-                                categoryMovies = combined,
-                                totalCount = page.totalRecordCount,
-                                categoryMoviesOffset = page.startIndex + page.items.size,
-                                isLoadingCategoryMovies = false,
-                                isLoadingMoreCategoryMovies = false,
-                                categoryMoviesError = null,
-                                hasMoreCategoryMovies = hasMore
-                            )
-                        )
-                    },
-                    onFailure = { error ->
-                        state.copy(
-                            categoriesState = state.categoriesState.copy(
-                                isLoadingCategoryMovies = false,
-                                isLoadingMoreCategoryMovies = false,
-                                categoryMoviesError = error.localizedMessage ?: context.getString(R.string.library_error_category_movies)
-                            )
-                        )
-                    }
-                )
-            }
-        }
-    }
+    fun retrySelectedCategoryMovies() = categoriesTab.retrySelectedCategoryMovies()
 
     // --- ALL ITEMS TAB ---
 
@@ -574,31 +331,6 @@ class LibraryViewModel(
         }
     }
 
-    private fun applyAllItemsFilters(
-        items: List<TvItem>,
-        durationFilter: DurationFilter,
-        hdOnly: Boolean,
-        excludedTags: Set<String>
-    ): List<TvItem> {
-        return items.filter { item ->
-            if (excludedTags.isNotEmpty()) {
-                val hasExcludedGenre = item.genres.any { g -> excludedTags.any { it.equals(g, ignoreCase = true) } }
-                val hasExcludedTag = item.tags.any { t -> excludedTags.any { it.equals(t, ignoreCase = true) } }
-                if (hasExcludedGenre || hasExcludedTag) return@filter false
-            }
-            if (hdOnly && !item.isHd) {
-                return@filter false
-            }
-            val durationMinutes = item.runtimeMinutes ?: (item.runtimeTicks?.div(10_000_000L * 60L)?.toInt()) ?: 0
-            when (durationFilter) {
-                DurationFilter.ALL -> true
-                DurationFilter.SHORT -> durationMinutes in 1..14
-                DurationFilter.MEDIUM -> durationMinutes in 15..40
-                DurationFilter.LONG -> durationMinutes > 40
-            }
-        }
-    }
-
     fun setSort(sortBy: String, sortOrder: SortOrder) {
         _uiState.update { state ->
             state.copy(allState = state.allState.copy(sortBy = sortBy, sortOrder = sortOrder))
@@ -651,538 +383,43 @@ class LibraryViewModel(
         }
     }
 
-    // --- ACTORS TAB ---
+    // --- ACTORS TAB (see ActorsTabController) ---
 
-    fun loadActors(reset: Boolean = true) {
-        val current = _uiState.value.actorsState
-        if (!reset && (!current.hasMore || current.isLoadingMore || actorsLoadJob?.isActive == true)) return
-        if (reset) actorsLoadJob?.cancel()
-        actorsLoadJob = viewModelScope.launch {
-            _uiState.update { state ->
-                state.copy(
-                    actorsState = state.actorsState.copy(
-                        isLoading = reset,
-                        isLoadingMore = !reset,
-                        errorMessage = null,
-                        allPersons = if (reset) emptyList() else state.actorsState.allPersons,
-                        filteredPersons = if (reset) emptyList() else state.actorsState.filteredPersons,
-                        hasMore = if (reset) true else state.actorsState.hasMore,
-                        totalCount = if (reset) 0 else state.actorsState.totalCount
-                    )
-                )
-            }
-            val requestState = _uiState.value.actorsState
-            val startIndex = if (reset) 0 else requestState.allPersons.size
-            val pageSize = 100
-            val result = personRepository.getPersonsPage(
-                startIndex = startIndex,
-                limit = pageSize,
-                searchTerm = requestState.searchQuery.takeIf(String::isNotBlank),
-                nameStartsWith = requestState.selectedLetter?.toString()
-            )
-            _uiState.update { state ->
-                val actors = state.actorsState
-                result.fold(
-                    onSuccess = { page ->
-                        val combined = (if (reset) emptyList() else actors.allPersons)
-                            .plus(page.persons)
-                            .distinctBy(TvPerson::id)
-                            .sortedBy { it.name.lowercase() }
-                        val filtered = filterActors(
-                            combined,
-                            actors.selectedLetter,
-                            actors.onlyWithPhoto,
-                            actors.searchQuery
-                        )
-                        state.copy(
-                            actorsState = actors.copy(
-                                allPersons = combined,
-                                filteredPersons = filtered,
-                                totalCount = page.totalRecordCount,
-                                isLoading = false,
-                                isLoadingMore = false,
-                                hasMore = startIndex + page.persons.size < page.totalRecordCount,
-                                errorMessage = null
-                            )
-                        )
-                    },
-                    onFailure = { error ->
-                        state.copy(
-                            actorsState = actors.copy(
-                                isLoading = false,
-                                isLoadingMore = false,
-                                errorMessage = error.localizedMessage ?: context.getString(R.string.library_error_actors)
-                            )
-                        )
-                    }
-                )
-            }
-        }
-    }
+    fun loadActors(reset: Boolean = true) = actorsTab.loadActors(reset)
 
-    fun loadMoreActors() = loadActors(reset = false)
+    fun loadMoreActors() = actorsTab.loadMoreActors()
 
-    fun selectAlphabetLetter(letter: Char?) {
-        _uiState.update { state ->
-            val updatedLetter = if (state.actorsState.selectedLetter == letter) null else letter
-            val filtered = filterActors(state.actorsState.allPersons, updatedLetter, state.actorsState.onlyWithPhoto, state.actorsState.searchQuery)
-            state.copy(
-                actorsState = state.actorsState.copy(
-                    selectedLetter = updatedLetter,
-                    filteredPersons = filtered
-                )
-            )
-        }
-        loadActors(reset = true)
-    }
+    fun selectAlphabetLetter(letter: Char?) = actorsTab.selectAlphabetLetter(letter)
 
-    fun toggleOnlyWithPhoto() {
-        _uiState.update { state ->
-            val newOnly = !state.actorsState.onlyWithPhoto
-            val filtered = filterActors(state.actorsState.allPersons, state.actorsState.selectedLetter, newOnly, state.actorsState.searchQuery)
-            state.copy(
-                actorsState = state.actorsState.copy(
-                    onlyWithPhoto = newOnly,
-                    filteredPersons = filtered
-                )
-            )
-        }
-    }
+    fun toggleOnlyWithPhoto() = actorsTab.toggleOnlyWithPhoto()
 
-    fun setActorSearchQuery(query: String) {
-        _uiState.update { state ->
-            val filtered = filterActors(state.actorsState.allPersons, state.actorsState.selectedLetter, state.actorsState.onlyWithPhoto, query)
-            state.copy(
-                actorsState = state.actorsState.copy(
-                    searchQuery = query,
-                    filteredPersons = filtered
-                )
-            )
-        }
-        // The query is a server side filter, so one request per keystroke would cancel the
-        // previous page for a result that is already obsolete.
-        actorSearchJob?.cancel()
-        actorSearchJob = viewModelScope.launch {
-            delay(ACTOR_SEARCH_DEBOUNCE_MS)
-            loadActors(reset = true)
-        }
-    }
+    fun setActorSearchQuery(query: String) = actorsTab.setActorSearchQuery(query)
 
-    private fun filterActors(
-        all: List<TvPerson>,
-        letter: Char?,
-        onlyWithPhoto: Boolean,
-        query: String
-    ): List<TvPerson> = all.filter { person ->
-        val matchesLetter = letter == null || person.name.startsWith(letter, ignoreCase = true)
-        val matchesPhoto = !onlyWithPhoto || !person.primaryImageTag.isNullOrBlank()
-        val matchesSearch = query.isBlank() || person.name.contains(query, ignoreCase = true)
-        matchesLetter && matchesPhoto && matchesSearch
-    }
+    // --- STUDIOS TAB (see StudiosTabController) ---
 
-    // --- STUDIOS TAB ---
+    fun loadStudios() = studiosTab.loadStudios()
 
-    fun loadStudios() {
-        viewModelScope.launch {
-            _uiState.update { state ->
-                state.copy(studiosState = state.studiosState.copy(isLoading = true, errorMessage = null))
-            }
-            val result = studioRepository.getStudios(limit = 100, includeMovieCounts = true)
-            _uiState.update { state ->
-                result.fold(
-                    onSuccess = { studios ->
-                        state.copy(
-                            studiosState = state.studiosState.copy(
-                                studios = studios.sortedBy { it.name.lowercase() },
-                                isLoading = false
-                            )
-                        )
-                    },
-                    onFailure = { error ->
-                        state.copy(
-                            studiosState = state.studiosState.copy(
-                                isLoading = false,
-                                errorMessage = error.localizedMessage ?: context.getString(R.string.library_error_studios)
-                            )
-                        )
-                    }
-                )
-            }
-        }
-    }
+    fun selectStudio(studio: TvStudio?) = studiosTab.selectStudio(studio)
 
-    fun selectStudio(studio: TvStudio?) {
-        studioMoviesJob?.cancel()
-        _uiState.update { state ->
-            state.copy(
-                studiosState = state.studiosState.copy(
-                    selectedStudio = studio,
-                    lastSelectedStudioId = studio?.id ?: state.studiosState.lastSelectedStudioId,
-                    studioMovies = emptyList(),
-                    studioMoviesError = null,
-                    isLoadingStudioMovies = false,
-                    isLoadingMoreStudioMovies = false,
-                    hasMoreStudioMovies = false,
-                    totalCount = 0,
-                    studioMoviesOffset = 0
-                )
-            )
-        }
-        studio?.let { loadStudioMovies(it, reset = true) }
-    }
+    fun loadMoreStudioMovies() = studiosTab.loadMoreStudioMovies()
 
-    fun loadMoreStudioMovies() {
-        val stdState = _uiState.value.studiosState
-        val studio = stdState.selectedStudio ?: return
-        if (!stdState.hasMoreStudioMovies || stdState.isLoadingMoreStudioMovies || stdState.isLoadingStudioMovies || studioMoviesJob?.isActive == true) return
-        loadStudioMovies(studio, reset = false)
-    }
+    fun retrySelectedStudioMovies() = studiosTab.retrySelectedStudioMovies()
 
-    fun retrySelectedStudioMovies() {
-        val stdState = _uiState.value.studiosState
-        val studio = stdState.selectedStudio ?: return
-        val isFirstPage = stdState.studioMovies.isEmpty()
-        loadStudioMovies(studio, reset = isFirstPage)
-    }
+    // --- CHANNELS TAB (see ChannelsTabController) ---
 
-    private fun loadStudioMovies(studio: TvStudio, reset: Boolean = true) {
-        val currentState = _uiState.value.studiosState
-        if (!reset && (!currentState.hasMoreStudioMovies || currentState.isLoadingMoreStudioMovies || studioMoviesJob?.isActive == true)) return
-        if (reset) studioMoviesJob?.cancel()
+    fun loadChannels() = channelsTab.loadChannels()
 
-        studioMoviesJob = viewModelScope.launch {
-            _uiState.update { state ->
-                if (state.studiosState.selectedStudio?.id == studio.id) {
-                    state.copy(
-                        studiosState = state.studiosState.copy(
-                            isLoadingStudioMovies = reset,
-                            isLoadingMoreStudioMovies = !reset,
-                            studioMoviesError = if (reset) null else state.studiosState.studioMoviesError
-                        )
-                    )
-                } else {
-                    state
-                }
-            }
+    fun hideCurrentChannel() = channelsTab.hideCurrentChannel()
 
-            val startIndex = if (reset) 0 else _uiState.value.studiosState.studioMoviesOffset
-            val pageSize = 50
-            val result = studioRepository.getStudioMoviesPage(
-                studioName = studio.name,
-                startIndex = startIndex,
-                limit = pageSize
-            )
+    fun setChannelDurationFilter(filter: DurationFilter) = channelsTab.setChannelDurationFilter(filter)
 
-            _uiState.update { state ->
-                if (state.studiosState.selectedStudio?.id != studio.id) return@update state
-                result.fold(
-                    onSuccess = { page ->
-                        val combined = if (reset) {
-                            page.items
-                        } else {
-                            state.studiosState.studioMovies + page.items
-                        }.distinctBy { it.providerVideoId?.ifBlank { null } ?: it.id }
+    fun selectChannel(channel: TvChannel?) = channelsTab.selectChannel(channel)
 
-                        val hasMore = page.items.isNotEmpty() && (startIndex + page.items.size < page.totalRecordCount)
-                        state.copy(
-                            studiosState = state.studiosState.copy(
-                                studioMovies = combined,
-                                totalCount = page.totalRecordCount,
-                                studioMoviesOffset = page.startIndex + page.items.size,
-                                isLoadingStudioMovies = false,
-                                isLoadingMoreStudioMovies = false,
-                                studioMoviesError = null,
-                                hasMoreStudioMovies = hasMore
-                            )
-                        )
-                    },
-                    onFailure = { error ->
-                        state.copy(
-                            studiosState = state.studiosState.copy(
-                                isLoadingStudioMovies = false,
-                                isLoadingMoreStudioMovies = false,
-                                studioMoviesError = error.localizedMessage ?: context.getString(R.string.library_error_studio_movies)
-                            )
-                        )
-                    }
-                )
-            }
-        }
-    }
+    fun setChannelSortMode(mode: ChannelSortMode) = channelsTab.setChannelSortMode(mode)
 
-    // --- CHANNELS TAB ---
+    fun retrySelectedChannelVideos() = channelsTab.retrySelectedChannelVideos()
 
-    fun loadChannels() {
-        viewModelScope.launch {
-            _uiState.update { state ->
-                state.copy(channelsState = state.channelsState.copy(isLoading = true, errorMessage = null))
-            }
-            val result = channelRepository.getCategories()
-            _uiState.update { state ->
-                val hidden = state.channelsState.hiddenChannelIds
-                result.fold(
-                    onSuccess = { channels ->
-                        val visible = channels.filter { it.id !in hidden }
-                        state.copy(
-                            channelsState = state.channelsState.copy(
-                                channels = visible,
-                                isLoading = false
-                            )
-                        )
-                    },
-                    onFailure = { error ->
-                        state.copy(
-                            channelsState = state.channelsState.copy(
-                                isLoading = false,
-                                errorMessage = error.localizedMessage ?: context.getString(R.string.library_error_channels)
-                            )
-                        )
-                    }
-                )
-            }
-        }
-    }
-
-    fun hideCurrentChannel() {
-        val currentChannel = _uiState.value.channelsState.selectedChannel ?: return
-        viewModelScope.launch {
-            settingsDataStore?.hideChannel(currentChannel.id)
-            selectChannel(null)
-            loadChannels()
-        }
-    }
-
-    fun setChannelDurationFilter(filter: DurationFilter) {
-        _uiState.update { state ->
-            val cs = state.channelsState
-            val filtered = applyChannelFilters(cs.rawChannelVideos, filter, cs.excludedTags, cs.sortMode)
-            state.copy(
-                channelsState = cs.copy(
-                    durationFilter = filter,
-                    channelVideos = filtered
-                )
-            )
-        }
-    }
-
-    private var channelVideosJob: Job? = null
-
-    fun selectChannel(channel: TvChannel?) {
-        channelVideosJob?.cancel()
-        _uiState.update { state ->
-            state.copy(
-                channelsState = state.channelsState.copy(
-                    selectedChannel = channel,
-                    lastSelectedChannelId = channel?.id ?: state.channelsState.lastSelectedChannelId,
-                    rawChannelVideos = emptyList(),
-                    channelVideos = emptyList(),
-                    channelVideosError = null,
-                    isLoadingVideos = false,
-                    isLoadingMoreVideos = false,
-                    hasMoreVideos = false,
-                    nextOffsetId = null,
-                    totalMessageCount = 0
-                )
-            )
-        }
-        channel?.let { loadChannelVideos(it, reset = true) }
-    }
-
-    fun setChannelSortMode(mode: ChannelSortMode) {
-        _uiState.update { state ->
-            val cs = state.channelsState
-            val sorted = applyChannelFilters(cs.rawChannelVideos, cs.durationFilter, cs.excludedTags, mode)
-            state.copy(
-                channelsState = cs.copy(
-                    sortMode = mode,
-                    channelVideos = sorted
-                )
-            )
-        }
-        viewModelScope.launch {
-            settingsDataStore?.setChannelSortMode(mode)
-        }
-    }
-
-    private fun sortChannelVideos(videos: List<VideoDto>, mode: ChannelSortMode): List<VideoDto> = when (mode) {
-        ChannelSortMode.LATEST -> videos
-
-        ChannelSortMode.LONGEST -> videos.sortedWith(
-            compareByDescending<VideoDto> { it.duration }
-                .thenByDescending { it.id }
-        )
-
-        ChannelSortMode.SHORTEST -> videos.sortedWith(
-            compareBy<VideoDto> { if (it.duration <= 0.0) Double.MAX_VALUE else it.duration }
-                .thenBy { it.id }
-        )
-    }
-
-    private fun applyChannelFilters(
-        videos: List<VideoDto>,
-        durationFilter: DurationFilter,
-        excludedTags: Set<String>,
-        mode: ChannelSortMode
-    ): List<VideoDto> {
-        val filtered = videos.filter { video ->
-            if (excludedTags.isNotEmpty()) {
-                val hasExcludedCat = video.categories.any { cat -> excludedTags.any { it.equals(cat, ignoreCase = true) } }
-                val hasExcludedTitle = excludedTags.any { video.title.contains(it, ignoreCase = true) }
-                val hasExcludedPerformer = video.performers.any { p -> excludedTags.any { it.equals(p, ignoreCase = true) } }
-                if (hasExcludedCat || hasExcludedTitle || hasExcludedPerformer) return@filter false
-            }
-            val minutes = (video.duration / 60.0).toInt()
-            when (durationFilter) {
-                DurationFilter.ALL -> true
-                DurationFilter.SHORT -> minutes in 1..14
-                DurationFilter.MEDIUM -> minutes in 15..40
-                DurationFilter.LONG -> minutes > 40
-            }
-        }
-        return sortChannelVideos(filtered, mode)
-    }
-
-    fun retrySelectedChannelVideos() {
-        val channel = _uiState.value.channelsState.selectedChannel ?: return
-        val isFirstPage = _uiState.value.channelsState.channelVideos.isEmpty()
-        loadChannelVideos(channel, reset = isFirstPage)
-    }
-
-    fun loadMoreChannelVideos() {
-        val channelsState = _uiState.value.channelsState
-        val channel = channelsState.selectedChannel ?: return
-        if (!channelsState.hasMoreVideos || channelsState.isLoadingMoreVideos || channelsState.isLoadingVideos || channelVideosJob?.isActive == true) return
-        loadChannelVideos(channel, reset = false)
-    }
-
-    private fun loadChannelVideos(channel: TvChannel, reset: Boolean = true, autoFetchEmptyAttempts: Int = 0) {
-        val currentState = _uiState.value.channelsState
-        if (!reset && (!currentState.hasMoreVideos || currentState.isLoadingMoreVideos || channelVideosJob?.isActive == true)) return
-        if (reset) channelVideosJob?.cancel()
-
-        channelVideosJob = viewModelScope.launch {
-            _uiState.update { state ->
-                if (state.channelsState.selectedChannel?.id == channel.id) {
-                    state.copy(
-                        channelsState = state.channelsState.copy(
-                            isLoadingVideos = reset,
-                            isLoadingMoreVideos = !reset,
-                            channelVideosError = if (reset) null else state.channelsState.channelVideosError
-                        )
-                    )
-                } else {
-                    state
-                }
-            }
-
-            val currentOffset = if (reset) null else _uiState.value.channelsState.nextOffsetId
-            val historyResult = channelRepository.getChannelHistory(
-                channelId = channel.id,
-                offsetId = currentOffset,
-                limit = 100
-            )
-
-            // The fallback is a network call, so it is resolved before the state update:
-            // update{} re-runs its whole lambda whenever another writer wins the
-            // compare-and-set, which would repeat the request.
-            val fallbackResult = historyResult.exceptionOrNull()
-                ?.takeIf { reset && _uiState.value.channelsState.selectedChannel?.id == channel.id }
-                ?.let { channelRepository.getCategoryVideos(channelId = channel.id) }
-
-            var shouldAutoFetch = false
-            _uiState.update { state ->
-                if (state.channelsState.selectedChannel?.id != channel.id) return@update state
-                historyResult.fold(
-                    onSuccess = { page ->
-                        val combined = if (reset) {
-                            page.videos.distinctBy { it.providerVideoId.ifBlank { it.id } }
-                        } else {
-                            (state.channelsState.rawChannelVideos + page.videos).distinctBy { it.providerVideoId.ifBlank { it.id } }
-                        }
-                        val filtered = applyChannelFilters(
-                            combined,
-                            state.channelsState.durationFilter,
-                            state.channelsState.excludedTags,
-                            state.channelsState.sortMode
-                        )
-                        val hasMore = page.hasMore && page.nextOffsetId != null && page.nextOffsetId != currentOffset
-                        if (filtered.isEmpty() && hasMore && autoFetchEmptyAttempts < 3) {
-                            shouldAutoFetch = true
-                        }
-                        state.copy(
-                            channelsState = state.channelsState.copy(
-                                rawChannelVideos = combined,
-                                channelVideos = filtered,
-                                isLoadingVideos = false,
-                                isLoadingMoreVideos = false,
-                                channelVideosError = null,
-                                hasMoreVideos = hasMore,
-                                nextOffsetId = page.nextOffsetId,
-                                totalMessageCount = page.messageCount
-                            )
-                        )
-                    },
-                    onFailure = { error ->
-                        if (reset) {
-                            fallbackResult?.fold(
-                                onSuccess = { fallbackVideos ->
-                                    val distinct = fallbackVideos.distinctBy { it.providerVideoId.ifBlank { it.id } }
-                                    val sortedFallback = applyChannelFilters(
-                                        distinct,
-                                        state.channelsState.durationFilter,
-                                        state.channelsState.excludedTags,
-                                        state.channelsState.sortMode
-                                    )
-                                    state.copy(
-                                        channelsState = state.channelsState.copy(
-                                            rawChannelVideos = distinct,
-                                            channelVideos = sortedFallback,
-                                            isLoadingVideos = false,
-                                            isLoadingMoreVideos = false,
-                                            channelVideosError = null,
-                                            hasMoreVideos = false,
-                                            nextOffsetId = null,
-                                            totalMessageCount = distinct.size
-                                        )
-                                    )
-                                },
-                                onFailure = { fallbackError ->
-                                    state.copy(
-                                        channelsState = state.channelsState.copy(
-                                            rawChannelVideos = emptyList(),
-                                            channelVideos = emptyList(),
-                                            isLoadingVideos = false,
-                                            isLoadingMoreVideos = false,
-                                            channelVideosError = fallbackError.localizedMessage ?: error.localizedMessage ?: context.getString(R.string.library_error_channel_videos),
-                                            hasMoreVideos = false,
-                                            nextOffsetId = null
-                                        )
-                                    )
-                                }
-                            ) ?: state.copy(
-                                channelsState = state.channelsState.copy(
-                                    isLoadingVideos = false,
-                                    isLoadingMoreVideos = false,
-                                    channelVideosError = error.localizedMessage ?: context.getString(R.string.library_error_channel_videos)
-                                )
-                            )
-                        } else {
-                            state.copy(
-                                channelsState = state.channelsState.copy(
-                                    isLoadingMoreVideos = false,
-                                    channelVideosError = error.localizedMessage ?: context.getString(R.string.library_error_more_channel_videos)
-                                )
-                            )
-                        }
-                    }
-                )
-            }
-            if (shouldAutoFetch) {
-                channelVideosJob = null
-                loadChannelVideos(channel, reset = false, autoFetchEmptyAttempts = autoFetchEmptyAttempts + 1)
-            }
-        }
-    }
+    fun loadMoreChannelVideos() = channelsTab.loadMoreChannelVideos()
 
     // --- NAVIGATION & IMAGES ---
 
@@ -1231,96 +468,4 @@ class LibraryViewModel(
             _navEvents.emit(LibraryNavEvent.NavigateToPlayer(playId))
         }
     }
-
-    /**
-     * Keeps the library filters in the saved state, so that they survive a process death.
-     */
-    private fun persistSavedFilters(state: LibraryUiState) {
-        savedStateHandle[KEY_SELECTED_TAB] = state.selectedTab.name
-        savedStateHandle[KEY_SORT_BY] = state.allState.sortBy
-        savedStateHandle[KEY_SORT_ORDER] = state.allState.sortOrder.name
-        savedStateHandle[KEY_FAVORITES_ONLY] = state.allState.favoritesOnly
-        savedStateHandle[KEY_UNWATCHED_ONLY] = state.allState.unwatchedOnly
-        savedStateHandle[KEY_HD_ONLY] = state.allState.hdOnly
-        savedStateHandle[KEY_DURATION_FILTER] = state.allState.durationFilter.name
-        savedStateHandle[KEY_GENRE_ID] = state.allState.selectedGenre?.id
-        savedStateHandle[KEY_GENRE_NAME] = state.allState.selectedGenre?.name
-        savedStateHandle[KEY_STUDIO_ID] = state.allState.selectedStudio?.id
-        savedStateHandle[KEY_STUDIO_NAME] = state.allState.selectedStudio?.name
-        savedStateHandle[KEY_PERFORMER_ID] = state.allState.selectedPerformer?.id
-        savedStateHandle[KEY_PERFORMER_NAME] = state.allState.selectedPerformer?.name
-        savedStateHandle[KEY_ACTOR_LETTER] = state.actorsState.selectedLetter?.toString()
-        savedStateHandle[KEY_ONLY_WITH_PHOTO] = state.actorsState.onlyWithPhoto
-        savedStateHandle[KEY_CHANNEL_DURATION_FILTER] = state.channelsState.durationFilter.name
-        savedStateHandle[KEY_HIDDEN_CHANNELS] = ArrayList(state.channelsState.hiddenChannelIds)
-    }
-
-    private fun restoreSavedFilters() {
-        val current = _uiState.value
-        val restoredTab = savedStateHandle.get<String>(KEY_SELECTED_TAB)
-            ?.let { name -> LibraryTab.entries.firstOrNull { it.name == name } }
-            ?: current.selectedTab
-        val restoredAll = current.allState.copy(
-            sortBy = savedStateHandle.get<String>(KEY_SORT_BY) ?: current.allState.sortBy,
-            sortOrder = savedStateHandle.get<String>(KEY_SORT_ORDER)
-                ?.let { name -> SortOrder.entries.firstOrNull { it.name == name } }
-                ?: current.allState.sortOrder,
-            favoritesOnly = savedStateHandle.get<Boolean>(KEY_FAVORITES_ONLY) ?: current.allState.favoritesOnly,
-            unwatchedOnly = savedStateHandle.get<Boolean>(KEY_UNWATCHED_ONLY) ?: current.allState.unwatchedOnly,
-            hdOnly = savedStateHandle.get<Boolean>(KEY_HD_ONLY) ?: current.allState.hdOnly,
-            durationFilter = savedStateHandle.get<String>(KEY_DURATION_FILTER)
-                ?.let { name -> DurationFilter.entries.firstOrNull { it.name == name } }
-                ?: current.allState.durationFilter,
-            selectedGenre = restoreSelection(KEY_GENRE_ID, KEY_GENRE_NAME) { id, name -> TvCategory(id, name) },
-            selectedStudio = restoreSelection(KEY_STUDIO_ID, KEY_STUDIO_NAME) { id, name -> TvStudio(id, name) },
-            selectedPerformer = restoreSelection(KEY_PERFORMER_ID, KEY_PERFORMER_NAME) { id, name -> TvPerson(id, name) }
-        )
-        val restoredActors = current.actorsState.copy(
-            selectedLetter = savedStateHandle.get<String>(KEY_ACTOR_LETTER)?.firstOrNull(),
-            onlyWithPhoto = savedStateHandle.get<Boolean>(KEY_ONLY_WITH_PHOTO) ?: current.actorsState.onlyWithPhoto
-        )
-        val restoredChannels = current.channelsState.copy(
-            durationFilter = savedStateHandle.get<String>(KEY_CHANNEL_DURATION_FILTER)
-                ?.let { name -> DurationFilter.entries.firstOrNull { it.name == name } }
-                ?: current.channelsState.durationFilter,
-            hiddenChannelIds = savedStateHandle.get<ArrayList<String>>(KEY_HIDDEN_CHANNELS)?.toSet()
-                ?: current.channelsState.hiddenChannelIds
-        )
-        _uiState.value = current.copy(
-            selectedTab = restoredTab,
-            allState = restoredAll,
-            actorsState = restoredActors,
-            channelsState = restoredChannels
-        )
-    }
-
-    private fun <T> restoreSelection(idKey: String, nameKey: String, factory: (String, String) -> T): T? {
-        val id = savedStateHandle.get<String>(idKey) ?: return null
-        val name = savedStateHandle.get<String>(nameKey) ?: return null
-        return factory(id, name)
-    }
-
-    companion object {
-        private const val KEY_SELECTED_TAB = "library_tab"
-        private const val KEY_SORT_BY = "library_sort_by"
-        private const val KEY_SORT_ORDER = "library_sort_order"
-        private const val KEY_FAVORITES_ONLY = "library_favorites_only"
-        private const val KEY_UNWATCHED_ONLY = "library_unwatched_only"
-        private const val KEY_HD_ONLY = "library_hd_only"
-        private const val KEY_DURATION_FILTER = "library_duration_filter"
-        private const val KEY_GENRE_ID = "library_genre_id"
-        private const val KEY_GENRE_NAME = "library_genre_name"
-        private const val KEY_STUDIO_ID = "library_studio_id"
-        private const val KEY_STUDIO_NAME = "library_studio_name"
-        private const val KEY_PERFORMER_ID = "library_performer_id"
-        private const val KEY_PERFORMER_NAME = "library_performer_name"
-        private const val KEY_ACTOR_LETTER = "library_actor_letter"
-        private const val KEY_ONLY_WITH_PHOTO = "library_only_with_photo"
-        private const val KEY_CHANNEL_DURATION_FILTER = "library_channel_duration_filter"
-        private const val KEY_HIDDEN_CHANNELS = "library_hidden_channels"
-
-        private const val ACTOR_SEARCH_DEBOUNCE_MS = 300L
-    }
 }
-
-private fun String.toUuidOrNull(): UUID? = runCatching { UUID.fromString(this) }.getOrNull()
