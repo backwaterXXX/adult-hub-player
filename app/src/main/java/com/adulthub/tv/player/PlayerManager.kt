@@ -75,10 +75,11 @@ class PlayerManager(
     private val context: Context,
     private val coroutineScope: CoroutineScope,
     private val bufferProfile: BufferProfile = BufferProfile.STANDARD,
-    sharedHttpClient: OkHttpClient? = null
+    // Must be the application-wide client that carries CleartextOriginInterceptor and
+    // PlaybackPolicyInterceptor. The manager never builds its own client, so a stream
+    // cannot bypass the cleartext policy.
+    private val httpClient: OkHttpClient
 ) {
-    // A manager without an injected client owns it and releases its threads.
-    private val ownsHttpClient = sharedHttpClient == null
     val exoPlayer: ExoPlayer
     private var mediaSession: MediaSession? = null
     private var positionPollJob: Job? = null
@@ -90,17 +91,6 @@ class PlayerManager(
     private var pendingQualitySwitch: PendingQualitySwitch? = null
     private var qualitySwitchTimeoutJob: Job? = null
     private var released = false
-    private val httpClientLazy = lazy {
-        sharedHttpClient ?: OkHttpClient.Builder()
-            .connectTimeout(15, java.util.concurrent.TimeUnit.SECONDS)
-            // A proxy or transcode stream can hold the socket quiet while the resolver
-            // pulls the file from Telegram; a short read timeout turns that stall into a
-            // spurious network error and an unnecessary retry.
-            .readTimeout(60, java.util.concurrent.TimeUnit.SECONDS)
-            .addNetworkInterceptor(PlaybackPolicyInterceptor())
-            .build()
-    }
-    private val httpClient: OkHttpClient get() = httpClientLazy.value
     private var preparingStartedAt: Long? = null
     private var readyLoggedForCurrentMedia = false
     private var videoDecoderName: String? = null
@@ -797,15 +787,6 @@ class PlayerManager(
         }
         mediaSession = null
         exoPlayer.release()
-        // A client that this manager created owns its dispatcher and connection pool, and
-        // a screen is entered and left many times per session; without this each visit
-        // keeps threads and idle connections alive until the process dies. A shared
-        // client belongs to the application scope and must stay usable.
-        if (ownsHttpClient && httpClientLazy.isInitialized()) {
-            val client = httpClientLazy.value
-            client.dispatcher.executorService.shutdown()
-            client.connectionPool.evictAll()
-        }
     }
 
     fun getTechnicalInfo(

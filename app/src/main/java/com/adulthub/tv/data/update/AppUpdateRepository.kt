@@ -57,10 +57,12 @@ class AppUpdateRepository(
         .followRedirects(false)
         .followSslRedirects(false)
         .build(),
-    cleartextInterceptor: Interceptor? = null
+    // Required: the cleartext policy must cover every update request, so no caller can
+    // construct the repository without it.
+    cleartextInterceptor: Interceptor
 ) {
     private val httpClient = client.newBuilder()
-        .apply { cleartextInterceptor?.let(::addNetworkInterceptor) }
+        .addNetworkInterceptor(cleartextInterceptor)
         .build()
     private val json = Json { ignoreUnknownKeys = true }
 

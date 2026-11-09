@@ -52,7 +52,7 @@ class PlayerManagerInstrumentedTest {
     }
 
     private fun createPlayerManager(): PlayerManager = onMain {
-        PlayerManager(context, scope, BufferProfile.STANDARD)
+        PlayerManager(context, scope, BufferProfile.STANDARD, okhttp3.OkHttpClient())
     }
 
     @Test

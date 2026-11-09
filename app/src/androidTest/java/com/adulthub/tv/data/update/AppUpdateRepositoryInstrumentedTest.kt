@@ -4,6 +4,7 @@ import android.content.Context
 import androidx.test.core.app.ApplicationProvider
 import androidx.test.ext.junit.runners.AndroidJUnit4
 import com.adulthub.tv.data.local.SettingsDataStore
+import com.adulthub.tv.data.network.CleartextOriginInterceptor
 import java.io.File
 import kotlinx.coroutines.runBlocking
 import org.junit.Assert.assertNull
@@ -20,9 +21,11 @@ class AppUpdateRepositoryInstrumentedTest {
 
     @Before
     fun setUp() {
+        val settings = SettingsDataStore(context)
         repository = AppUpdateRepository(
             context = context,
-            settingsDataStore = SettingsDataStore(context)
+            settingsDataStore = settings,
+            cleartextInterceptor = CleartextOriginInterceptor(settings)
         )
         File(context.filesDir, "updates").listFiles()?.forEach(File::delete)
     }
