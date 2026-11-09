@@ -4,6 +4,7 @@ import android.app.Application
 import com.adulthub.tv.R
 import com.adulthub.tv.data.model.TvStudio
 import com.adulthub.tv.data.repository.StudioRepository
+import com.adulthub.tv.data.repository.TvItemsPage
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Job
 import kotlinx.coroutines.flow.MutableStateFlow
@@ -91,19 +92,7 @@ internal class StudiosTabController(
         if (reset) studioMoviesJob?.cancel()
 
         studioMoviesJob = scope.launch {
-            uiState.update { state ->
-                if (state.studiosState.selectedStudio?.id == studio.id) {
-                    state.copy(
-                        studiosState = state.studiosState.copy(
-                            isLoadingStudioMovies = reset,
-                            isLoadingMoreStudioMovies = !reset,
-                            studioMoviesError = if (reset) null else state.studiosState.studioMoviesError
-                        )
-                    )
-                } else {
-                    state
-                }
-            }
+            uiState.update { state -> state.withStudioMoviesLoading(studio, reset) }
 
             val startIndex = if (reset) 0 else uiState.value.studiosState.studioMoviesOffset
             val pageSize = 50
@@ -113,40 +102,58 @@ internal class StudiosTabController(
                 limit = pageSize
             )
 
-            uiState.update { state ->
-                if (state.studiosState.selectedStudio?.id != studio.id) return@update state
-                result.fold(
-                    onSuccess = { page ->
-                        val combined = if (reset) {
-                            page.items
-                        } else {
-                            state.studiosState.studioMovies + page.items
-                        }.distinctBy { it.providerVideoId?.ifBlank { null } ?: it.id }
+            uiState.update { state -> state.withStudioMoviesResult(studio, result, reset, startIndex) }
+        }
+    }
 
-                        val hasMore = page.items.isNotEmpty() && (startIndex + page.items.size < page.totalRecordCount)
-                        state.copy(
-                            studiosState = state.studiosState.copy(
-                                studioMovies = combined,
-                                totalCount = page.totalRecordCount,
-                                studioMoviesOffset = page.startIndex + page.items.size,
-                                isLoadingStudioMovies = false,
-                                isLoadingMoreStudioMovies = false,
-                                studioMoviesError = null,
-                                hasMoreStudioMovies = hasMore
-                            )
-                        )
-                    },
-                    onFailure = { error ->
-                        state.copy(
-                            studiosState = state.studiosState.copy(
-                                isLoadingStudioMovies = false,
-                                isLoadingMoreStudioMovies = false,
-                                studioMoviesError = error.localizedMessage ?: context.getString(R.string.library_error_studio_movies)
-                            )
-                        )
-                    }
+    private fun LibraryUiState.withStudioMoviesLoading(studio: TvStudio, reset: Boolean): LibraryUiState {
+        if (studiosState.selectedStudio?.id != studio.id) return this
+        return copy(
+            studiosState = studiosState.copy(
+                isLoadingStudioMovies = reset,
+                isLoadingMoreStudioMovies = !reset,
+                studioMoviesError = if (reset) null else studiosState.studioMoviesError
+            )
+        )
+    }
+
+    private fun LibraryUiState.withStudioMoviesResult(
+        studio: TvStudio,
+        result: Result<TvItemsPage>,
+        reset: Boolean,
+        startIndex: Int
+    ): LibraryUiState {
+        if (studiosState.selectedStudio?.id != studio.id) return this
+        return result.fold(
+            onSuccess = { page ->
+                val combined = if (reset) {
+                    page.items
+                } else {
+                    studiosState.studioMovies + page.items
+                }.distinctBy { it.providerVideoId?.ifBlank { null } ?: it.id }
+
+                val hasMore = page.items.isNotEmpty() && (startIndex + page.items.size < page.totalRecordCount)
+                copy(
+                    studiosState = studiosState.copy(
+                        studioMovies = combined,
+                        totalCount = page.totalRecordCount,
+                        studioMoviesOffset = page.startIndex + page.items.size,
+                        isLoadingStudioMovies = false,
+                        isLoadingMoreStudioMovies = false,
+                        studioMoviesError = null,
+                        hasMoreStudioMovies = hasMore
+                    )
+                )
+            },
+            onFailure = { error ->
+                copy(
+                    studiosState = studiosState.copy(
+                        isLoadingStudioMovies = false,
+                        isLoadingMoreStudioMovies = false,
+                        studioMoviesError = error.localizedMessage ?: context.getString(R.string.library_error_studio_movies)
+                    )
                 )
             }
-        }
+        )
     }
 }

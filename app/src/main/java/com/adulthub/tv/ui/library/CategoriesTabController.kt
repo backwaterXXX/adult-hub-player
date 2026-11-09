@@ -4,6 +4,7 @@ import android.app.Application
 import com.adulthub.tv.R
 import com.adulthub.tv.data.model.TvCategory
 import com.adulthub.tv.data.repository.LibraryRepository
+import com.adulthub.tv.data.repository.TvItemsPage
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Job
 import kotlinx.coroutines.flow.MutableStateFlow
@@ -108,19 +109,7 @@ internal class CategoriesTabController(
         if (reset) categoryMoviesJob?.cancel()
 
         categoryMoviesJob = scope.launch {
-            uiState.update { state ->
-                if (state.categoriesState.selectedCategory?.id == category.id) {
-                    state.copy(
-                        categoriesState = state.categoriesState.copy(
-                            isLoadingCategoryMovies = reset,
-                            isLoadingMoreCategoryMovies = !reset,
-                            categoryMoviesError = if (reset) null else state.categoriesState.categoryMoviesError
-                        )
-                    )
-                } else {
-                    state
-                }
-            }
+            uiState.update { state -> state.withCategoryMoviesLoading(category, reset) }
 
             val startIndex = if (reset) 0 else uiState.value.categoriesState.categoryMoviesOffset
             val pageSize = 60
@@ -131,40 +120,58 @@ internal class CategoriesTabController(
                 limit = pageSize
             )
 
-            uiState.update { state ->
-                if (state.categoriesState.selectedCategory?.id != category.id) return@update state
-                result.fold(
-                    onSuccess = { page ->
-                        val combined = if (reset) {
-                            page.items
-                        } else {
-                            state.categoriesState.categoryMovies + page.items
-                        }.distinctBy { it.providerVideoId?.ifBlank { null } ?: it.id }
+            uiState.update { state -> state.withCategoryMoviesResult(category, result, reset, startIndex) }
+        }
+    }
 
-                        val hasMore = page.items.isNotEmpty() && (startIndex + page.items.size < page.totalRecordCount)
-                        state.copy(
-                            categoriesState = state.categoriesState.copy(
-                                categoryMovies = combined,
-                                totalCount = page.totalRecordCount,
-                                categoryMoviesOffset = page.startIndex + page.items.size,
-                                isLoadingCategoryMovies = false,
-                                isLoadingMoreCategoryMovies = false,
-                                categoryMoviesError = null,
-                                hasMoreCategoryMovies = hasMore
-                            )
-                        )
-                    },
-                    onFailure = { error ->
-                        state.copy(
-                            categoriesState = state.categoriesState.copy(
-                                isLoadingCategoryMovies = false,
-                                isLoadingMoreCategoryMovies = false,
-                                categoryMoviesError = error.localizedMessage ?: context.getString(R.string.library_error_category_movies)
-                            )
-                        )
-                    }
+    private fun LibraryUiState.withCategoryMoviesLoading(category: TvCategory, reset: Boolean): LibraryUiState {
+        if (categoriesState.selectedCategory?.id != category.id) return this
+        return copy(
+            categoriesState = categoriesState.copy(
+                isLoadingCategoryMovies = reset,
+                isLoadingMoreCategoryMovies = !reset,
+                categoryMoviesError = if (reset) null else categoriesState.categoryMoviesError
+            )
+        )
+    }
+
+    private fun LibraryUiState.withCategoryMoviesResult(
+        category: TvCategory,
+        result: Result<TvItemsPage>,
+        reset: Boolean,
+        startIndex: Int
+    ): LibraryUiState {
+        if (categoriesState.selectedCategory?.id != category.id) return this
+        return result.fold(
+            onSuccess = { page ->
+                val combined = if (reset) {
+                    page.items
+                } else {
+                    categoriesState.categoryMovies + page.items
+                }.distinctBy { it.providerVideoId?.ifBlank { null } ?: it.id }
+
+                val hasMore = page.items.isNotEmpty() && (startIndex + page.items.size < page.totalRecordCount)
+                copy(
+                    categoriesState = categoriesState.copy(
+                        categoryMovies = combined,
+                        totalCount = page.totalRecordCount,
+                        categoryMoviesOffset = page.startIndex + page.items.size,
+                        isLoadingCategoryMovies = false,
+                        isLoadingMoreCategoryMovies = false,
+                        categoryMoviesError = null,
+                        hasMoreCategoryMovies = hasMore
+                    )
+                )
+            },
+            onFailure = { error ->
+                copy(
+                    categoriesState = categoriesState.copy(
+                        isLoadingCategoryMovies = false,
+                        isLoadingMoreCategoryMovies = false,
+                        categoryMoviesError = error.localizedMessage ?: context.getString(R.string.library_error_category_movies)
+                    )
                 )
             }
-        }
+        )
     }
 }

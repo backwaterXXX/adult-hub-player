@@ -4,6 +4,7 @@ import android.app.Application
 import com.adulthub.tv.R
 import com.adulthub.tv.data.model.TvPerson
 import com.adulthub.tv.data.repository.PersonRepository
+import com.adulthub.tv.data.repository.TvPersonPage
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Job
 import kotlinx.coroutines.delay
@@ -30,19 +31,7 @@ internal class ActorsTabController(
         if (!reset && (!current.hasMore || current.isLoadingMore || actorsLoadJob?.isActive == true)) return
         if (reset) actorsLoadJob?.cancel()
         actorsLoadJob = scope.launch {
-            uiState.update { state ->
-                state.copy(
-                    actorsState = state.actorsState.copy(
-                        isLoading = reset,
-                        isLoadingMore = !reset,
-                        errorMessage = null,
-                        allPersons = if (reset) emptyList() else state.actorsState.allPersons,
-                        filteredPersons = if (reset) emptyList() else state.actorsState.filteredPersons,
-                        hasMore = if (reset) true else state.actorsState.hasMore,
-                        totalCount = if (reset) 0 else state.actorsState.totalCount
-                    )
-                )
-            }
+            uiState.update { state -> state.withActorsLoading(reset) }
             val requestState = uiState.value.actorsState
             val startIndex = if (reset) 0 else requestState.allPersons.size
             val pageSize = 100
@@ -52,43 +41,7 @@ internal class ActorsTabController(
                 searchTerm = requestState.searchQuery.takeIf(String::isNotBlank),
                 nameStartsWith = requestState.selectedLetter?.toString()
             )
-            uiState.update { state ->
-                val actors = state.actorsState
-                result.fold(
-                    onSuccess = { page ->
-                        val combined = (if (reset) emptyList() else actors.allPersons)
-                            .plus(page.persons)
-                            .distinctBy(TvPerson::id)
-                            .sortedBy { it.name.lowercase() }
-                        val filtered = filterActors(
-                            combined,
-                            actors.selectedLetter,
-                            actors.onlyWithPhoto,
-                            actors.searchQuery
-                        )
-                        state.copy(
-                            actorsState = actors.copy(
-                                allPersons = combined,
-                                filteredPersons = filtered,
-                                totalCount = page.totalRecordCount,
-                                isLoading = false,
-                                isLoadingMore = false,
-                                hasMore = startIndex + page.persons.size < page.totalRecordCount,
-                                errorMessage = null
-                            )
-                        )
-                    },
-                    onFailure = { error ->
-                        state.copy(
-                            actorsState = actors.copy(
-                                isLoading = false,
-                                isLoadingMore = false,
-                                errorMessage = error.localizedMessage ?: context.getString(R.string.library_error_actors)
-                            )
-                        )
-                    }
-                )
-            }
+            uiState.update { state -> state.withActorsResult(result, reset, startIndex) }
         }
     }
 
@@ -138,6 +91,60 @@ internal class ActorsTabController(
             delay(ACTOR_SEARCH_DEBOUNCE_MS)
             loadActors(reset = true)
         }
+    }
+
+    private fun LibraryUiState.withActorsLoading(reset: Boolean): LibraryUiState = copy(
+        actorsState = actorsState.copy(
+            isLoading = reset,
+            isLoadingMore = !reset,
+            errorMessage = null,
+            allPersons = if (reset) emptyList() else actorsState.allPersons,
+            filteredPersons = if (reset) emptyList() else actorsState.filteredPersons,
+            hasMore = if (reset) true else actorsState.hasMore,
+            totalCount = if (reset) 0 else actorsState.totalCount
+        )
+    )
+
+    private fun LibraryUiState.withActorsResult(
+        result: Result<TvPersonPage>,
+        reset: Boolean,
+        startIndex: Int
+    ): LibraryUiState {
+        val actors = actorsState
+        return result.fold(
+            onSuccess = { page ->
+                val combined = (if (reset) emptyList() else actors.allPersons)
+                    .plus(page.persons)
+                    .distinctBy(TvPerson::id)
+                    .sortedBy { it.name.lowercase() }
+                val filtered = filterActors(
+                    combined,
+                    actors.selectedLetter,
+                    actors.onlyWithPhoto,
+                    actors.searchQuery
+                )
+                copy(
+                    actorsState = actors.copy(
+                        allPersons = combined,
+                        filteredPersons = filtered,
+                        totalCount = page.totalRecordCount,
+                        isLoading = false,
+                        isLoadingMore = false,
+                        hasMore = startIndex + page.persons.size < page.totalRecordCount,
+                        errorMessage = null
+                    )
+                )
+            },
+            onFailure = { error ->
+                copy(
+                    actorsState = actors.copy(
+                        isLoading = false,
+                        isLoadingMore = false,
+                        errorMessage = error.localizedMessage ?: context.getString(R.string.library_error_actors)
+                    )
+                )
+            }
+        )
     }
 
     private companion object {

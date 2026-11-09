@@ -45,51 +45,61 @@ internal fun SettingsBufferProfileCard(uiState: SettingsUiState, viewModel: Sett
             Spacer(modifier = Modifier.height(14.dp))
 
             if (isMobile) {
-                Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
-                    BufferProfile.entries.forEach { profile ->
-                        val selected = uiState.bufferProfile == profile
-                        Row(
-                            modifier = Modifier.fillMaxWidth()
-                                .clip(RoundedCornerShape(10.dp))
-                                .background(if (selected) NeonPink.copy(alpha = 0.14f) else SurfaceDark)
-                                .border(1.dp, if (selected) NeonPink else Color.White.copy(alpha = 0.14f), RoundedCornerShape(10.dp))
-                                .clickable { viewModel.setBufferProfile(profile) }
-                                .padding(horizontal = 14.dp, vertical = 10.dp),
-                            verticalAlignment = Alignment.CenterVertically
-                        ) {
-                            Column(Modifier.weight(1f)) {
-                                Text(stringResource(profile.labelRes).substringBefore(" ("), color = TextPrimary, fontWeight = FontWeight.SemiBold)
-                                Text(
-                                    text = stringResource(
-                                        R.string.settings_buffer_range,
-                                        profile.minBufferMs / 1000,
-                                        profile.maxBufferMs / 1000
-                                    ),
-                                    color = TextSecondary,
-                                    fontSize = 12.sp
-                                )
-                            }
-                            Text(if (selected) "✓" else "", color = NeonPink, fontWeight = FontWeight.Bold)
-                        }
-                    }
-                }
+                BufferProfileList(uiState, viewModel)
             } else {
-                Row(
-                    horizontalArrangement = Arrangement.spacedBy(10.dp),
-                    modifier = Modifier.fillMaxWidth()
-                ) {
-                    BufferProfile.entries.forEach { profile ->
-                        val isSelected = uiState.bufferProfile == profile
-                        TvChoiceChip(
-                            label = stringResource(profile.labelRes),
-                            isSelected = isSelected,
-                            onClick = { viewModel.setBufferProfile(profile) },
-                            height = 38.dp,
-                            fontSize = 13.sp
-                        )
-                    }
-                }
+                BufferProfileChips(uiState, viewModel)
             }
+        }
+    }
+}
+
+@Composable
+private fun BufferProfileList(uiState: SettingsUiState, viewModel: SettingsViewModel) {
+    Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
+        BufferProfile.entries.forEach { profile ->
+            val selected = uiState.bufferProfile == profile
+            Row(
+                modifier = Modifier.fillMaxWidth()
+                    .clip(RoundedCornerShape(10.dp))
+                    .background(if (selected) NeonPink.copy(alpha = 0.14f) else SurfaceDark)
+                    .border(1.dp, if (selected) NeonPink else Color.White.copy(alpha = 0.14f), RoundedCornerShape(10.dp))
+                    .clickable { viewModel.setBufferProfile(profile) }
+                    .padding(horizontal = 14.dp, vertical = 10.dp),
+                verticalAlignment = Alignment.CenterVertically
+            ) {
+                Column(Modifier.weight(1f)) {
+                    Text(stringResource(profile.labelRes).substringBefore(" ("), color = TextPrimary, fontWeight = FontWeight.SemiBold)
+                    Text(
+                        text = stringResource(
+                            R.string.settings_buffer_range,
+                            profile.minBufferMs / 1000,
+                            profile.maxBufferMs / 1000
+                        ),
+                        color = TextSecondary,
+                        fontSize = 12.sp
+                    )
+                }
+                Text(if (selected) "✓" else "", color = NeonPink, fontWeight = FontWeight.Bold)
+            }
+        }
+    }
+}
+
+@Composable
+private fun BufferProfileChips(uiState: SettingsUiState, viewModel: SettingsViewModel) {
+    Row(
+        horizontalArrangement = Arrangement.spacedBy(10.dp),
+        modifier = Modifier.fillMaxWidth()
+    ) {
+        BufferProfile.entries.forEach { profile ->
+            val isSelected = uiState.bufferProfile == profile
+            TvChoiceChip(
+                label = stringResource(profile.labelRes),
+                isSelected = isSelected,
+                onClick = { viewModel.setBufferProfile(profile) },
+                height = 38.dp,
+                fontSize = 13.sp
+            )
         }
     }
 }

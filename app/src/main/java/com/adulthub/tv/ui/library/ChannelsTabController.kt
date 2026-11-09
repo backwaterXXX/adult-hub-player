@@ -6,7 +6,9 @@ import com.adulthub.tv.data.local.SettingsDataStore
 import com.adulthub.tv.data.model.ChannelSortMode
 import com.adulthub.tv.data.model.DurationFilter
 import com.adulthub.tv.data.model.TvChannel
+import com.adulthub.tv.data.repository.ChannelHistoryPage
 import com.adulthub.tv.data.repository.ChannelRepository
+import com.adulthub.tv.data.resolver.VideoDto
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Job
 import kotlinx.coroutines.flow.MutableStateFlow
@@ -136,19 +138,7 @@ internal class ChannelsTabController(
         if (reset) channelVideosJob?.cancel()
 
         channelVideosJob = scope.launch {
-            uiState.update { state ->
-                if (state.channelsState.selectedChannel?.id == channel.id) {
-                    state.copy(
-                        channelsState = state.channelsState.copy(
-                            isLoadingVideos = reset,
-                            isLoadingMoreVideos = !reset,
-                            channelVideosError = if (reset) null else state.channelsState.channelVideosError
-                        )
-                    )
-                } else {
-                    state
-                }
-            }
+            uiState.update { state -> state.withChannelVideosLoading(channel, reset) }
 
             val currentOffset = if (reset) null else uiState.value.channelsState.nextOffsetId
             val historyResult = channelRepository.getChannelHistory(
@@ -169,86 +159,10 @@ internal class ChannelsTabController(
                 if (state.channelsState.selectedChannel?.id != channel.id) return@update state
                 historyResult.fold(
                     onSuccess = { page ->
-                        val combined = if (reset) {
-                            page.videos.distinctBy { it.providerVideoId.ifBlank { it.id } }
-                        } else {
-                            (state.channelsState.rawChannelVideos + page.videos).distinctBy { it.providerVideoId.ifBlank { it.id } }
-                        }
-                        val filtered = applyChannelFilters(
-                            combined,
-                            state.channelsState.durationFilter,
-                            state.channelsState.excludedTags,
-                            state.channelsState.sortMode
-                        )
-                        val hasMore = page.hasMore && page.nextOffsetId != null && page.nextOffsetId != currentOffset
-                        if (filtered.isEmpty() && hasMore && autoFetchEmptyAttempts < 3) {
-                            shouldAutoFetch = true
-                        }
-                        state.copy(
-                            channelsState = state.channelsState.copy(
-                                rawChannelVideos = combined,
-                                channelVideos = filtered,
-                                isLoadingVideos = false,
-                                isLoadingMoreVideos = false,
-                                channelVideosError = null,
-                                hasMoreVideos = hasMore,
-                                nextOffsetId = page.nextOffsetId,
-                                totalMessageCount = page.messageCount
-                            )
-                        )
+                        state.withHistoryPage(page, reset, currentOffset, autoFetchEmptyAttempts) { shouldAutoFetch = true }
                     },
                     onFailure = { error ->
-                        if (reset) {
-                            fallbackResult?.fold(
-                                onSuccess = { fallbackVideos ->
-                                    val distinct = fallbackVideos.distinctBy { it.providerVideoId.ifBlank { it.id } }
-                                    val sortedFallback = applyChannelFilters(
-                                        distinct,
-                                        state.channelsState.durationFilter,
-                                        state.channelsState.excludedTags,
-                                        state.channelsState.sortMode
-                                    )
-                                    state.copy(
-                                        channelsState = state.channelsState.copy(
-                                            rawChannelVideos = distinct,
-                                            channelVideos = sortedFallback,
-                                            isLoadingVideos = false,
-                                            isLoadingMoreVideos = false,
-                                            channelVideosError = null,
-                                            hasMoreVideos = false,
-                                            nextOffsetId = null,
-                                            totalMessageCount = distinct.size
-                                        )
-                                    )
-                                },
-                                onFailure = { fallbackError ->
-                                    state.copy(
-                                        channelsState = state.channelsState.copy(
-                                            rawChannelVideos = emptyList(),
-                                            channelVideos = emptyList(),
-                                            isLoadingVideos = false,
-                                            isLoadingMoreVideos = false,
-                                            channelVideosError = fallbackError.localizedMessage ?: error.localizedMessage ?: context.getString(R.string.library_error_channel_videos),
-                                            hasMoreVideos = false,
-                                            nextOffsetId = null
-                                        )
-                                    )
-                                }
-                            ) ?: state.copy(
-                                channelsState = state.channelsState.copy(
-                                    isLoadingVideos = false,
-                                    isLoadingMoreVideos = false,
-                                    channelVideosError = error.localizedMessage ?: context.getString(R.string.library_error_channel_videos)
-                                )
-                            )
-                        } else {
-                            state.copy(
-                                channelsState = state.channelsState.copy(
-                                    isLoadingMoreVideos = false,
-                                    channelVideosError = error.localizedMessage ?: context.getString(R.string.library_error_more_channel_videos)
-                                )
-                            )
-                        }
+                        state.withHistoryFailure(error, reset, fallbackResult)
                     }
                 )
             }
@@ -258,4 +172,121 @@ internal class ChannelsTabController(
             }
         }
     }
+
+    private fun LibraryUiState.withChannelVideosLoading(channel: TvChannel, reset: Boolean): LibraryUiState {
+        if (channelsState.selectedChannel?.id != channel.id) return this
+        return copy(
+            channelsState = channelsState.copy(
+                isLoadingVideos = reset,
+                isLoadingMoreVideos = !reset,
+                channelVideosError = if (reset) null else channelsState.channelVideosError
+            )
+        )
+    }
+
+    /**
+     * Adds a history page. [onNeedsMore] is called when the page produced no visible
+     * videos but more pages exist, so the caller can request the next one.
+     */
+    private fun LibraryUiState.withHistoryPage(
+        page: ChannelHistoryPage,
+        reset: Boolean,
+        currentOffset: Long?,
+        autoFetchEmptyAttempts: Int,
+        onNeedsMore: () -> Unit
+    ): LibraryUiState {
+        val combined = if (reset) {
+            page.videos.distinctBy { it.providerVideoId.ifBlank { it.id } }
+        } else {
+            (channelsState.rawChannelVideos + page.videos).distinctBy { it.providerVideoId.ifBlank { it.id } }
+        }
+        val filtered = applyChannelFilters(
+            combined,
+            channelsState.durationFilter,
+            channelsState.excludedTags,
+            channelsState.sortMode
+        )
+        val hasMore = page.hasMore && page.nextOffsetId != null && page.nextOffsetId != currentOffset
+        if (filtered.isEmpty() && hasMore && autoFetchEmptyAttempts < 3) {
+            onNeedsMore()
+        }
+        return copy(
+            channelsState = channelsState.copy(
+                rawChannelVideos = combined,
+                channelVideos = filtered,
+                isLoadingVideos = false,
+                isLoadingMoreVideos = false,
+                channelVideosError = null,
+                hasMoreVideos = hasMore,
+                nextOffsetId = page.nextOffsetId,
+                totalMessageCount = page.messageCount
+            )
+        )
+    }
+
+    /**
+     * A failed first page falls back to the category listing when that listing was
+     * fetched. Later pages only report the error.
+     */
+    private fun LibraryUiState.withHistoryFailure(
+        error: Throwable,
+        reset: Boolean,
+        fallbackResult: Result<List<VideoDto>>?
+    ): LibraryUiState {
+        if (!reset) {
+            return copy(
+                channelsState = channelsState.copy(
+                    isLoadingMoreVideos = false,
+                    channelVideosError = error.localizedMessage ?: context.getString(R.string.library_error_more_channel_videos)
+                )
+            )
+        }
+        if (fallbackResult == null) {
+            return copy(
+                channelsState = channelsState.copy(
+                    isLoadingVideos = false,
+                    isLoadingMoreVideos = false,
+                    channelVideosError = error.localizedMessage ?: context.getString(R.string.library_error_channel_videos)
+                )
+            )
+        }
+        return fallbackResult.fold(
+            onSuccess = { fallbackVideos -> withFallbackVideos(fallbackVideos) },
+            onFailure = { fallbackError -> withFallbackFailure(fallbackError, error) }
+        )
+    }
+
+    private fun LibraryUiState.withFallbackVideos(fallbackVideos: List<VideoDto>): LibraryUiState {
+        val distinct = fallbackVideos.distinctBy { it.providerVideoId.ifBlank { it.id } }
+        val sortedFallback = applyChannelFilters(
+            distinct,
+            channelsState.durationFilter,
+            channelsState.excludedTags,
+            channelsState.sortMode
+        )
+        return copy(
+            channelsState = channelsState.copy(
+                rawChannelVideos = distinct,
+                channelVideos = sortedFallback,
+                isLoadingVideos = false,
+                isLoadingMoreVideos = false,
+                channelVideosError = null,
+                hasMoreVideos = false,
+                nextOffsetId = null,
+                totalMessageCount = distinct.size
+            )
+        )
+    }
+
+    private fun LibraryUiState.withFallbackFailure(fallbackError: Throwable, error: Throwable): LibraryUiState = copy(
+        channelsState = channelsState.copy(
+            rawChannelVideos = emptyList(),
+            channelVideos = emptyList(),
+            isLoadingVideos = false,
+            isLoadingMoreVideos = false,
+            channelVideosError = fallbackError.localizedMessage ?: error.localizedMessage ?: context.getString(R.string.library_error_channel_videos),
+            hasMoreVideos = false,
+            nextOffsetId = null
+        )
+    )
 }
