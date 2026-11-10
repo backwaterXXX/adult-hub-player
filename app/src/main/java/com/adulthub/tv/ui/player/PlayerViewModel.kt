@@ -250,19 +250,7 @@ class PlayerViewModel(
             val playbackInfo: PlaybackInfo
             val randomResolverLatencyMs: Long
             try {
-                val currentItem = (_uiState.value as? PlayerUiState.Ready)?.item
-                if (currentItem != null) persistTelegramProgress(currentItem, currentPositionMs, isEnded = false)
-                // Stop the reporting session of this playback. The session this view
-                // model knows is preferred, so a caller without an id cannot stop the
-                // session of another player.
-                val stoppedSessionId = reportingSessionId ?: _reportingSessionId.value
-                playbackReporter.stopSession(currentPositionMs, stoppedSessionId)
-                // The session is gone, so nothing may report into it any more. A session
-                // that the next playback starts replaces this value.
-                if (stoppedSessionId != null && _reportingSessionId.value == stoppedSessionId) {
-                    _reportingSessionId.value = null
-                }
-
+                val currentItem = stopCurrentPlayback(currentPositionMs, reportingSessionId)
                 val currentId = currentItem?.id
                 val libraryId = settingsDataStore.selectedLibraryId.firstOrNull()
                 if (playbackRequestId != playbackRequestCounter) return@launch
@@ -270,57 +258,7 @@ class PlayerViewModel(
                 // to the account of the video that is being replaced.
                 playbackOwner = accountScope?.currentOwner()
 
-                var resolvedRandomItem = currentItem?.genres?.firstOrNull()?.let { genre ->
-                    libraryRepository.getRandomItemFiltered(
-                        parentId = libraryId,
-                        excludeItemId = currentId,
-                        genres = listOf(genre)
-                    ).getOrNull()
-                }
-                if (resolvedRandomItem == null) {
-                    val performerId = currentItem?.people?.firstOrNull()?.id
-                        ?.let { runCatching { java.util.UUID.fromString(it) }.getOrNull() }
-                    if (performerId != null) {
-                        resolvedRandomItem = libraryRepository.getRandomItemFiltered(
-                            parentId = libraryId,
-                            excludeItemId = currentId,
-                            personIds = listOf(performerId)
-                        ).getOrNull()
-                    }
-                }
-                if (resolvedRandomItem == null) {
-                    currentItem?.studios?.firstOrNull()?.let { studio ->
-                        resolvedRandomItem = libraryRepository.getRandomItemFiltered(
-                            parentId = libraryId,
-                            excludeItemId = currentId,
-                            studios = listOf(studio)
-                        ).getOrNull()
-                    }
-                }
-                if (resolvedRandomItem == null) {
-                    resolvedRandomItem = libraryRepository.getRandomItem(
-                        parentId = libraryId,
-                        excludeItemId = currentId
-                    ).getOrNull()
-                }
-
-                if (resolvedRandomItem == null) {
-                    val cached = channelRepository?.getRandomCachedVideo(excludeId = currentId)
-                    if (cached != null) {
-                        resolvedRandomItem = TvItem(
-                            id = cached.id,
-                            title = cached.title.ifBlank { context.getString(R.string.player_channel_video) },
-                            overview = cached.description,
-                            runtimeTicks = (cached.duration * 10_000_000).toLong(),
-                            genres = cached.categories,
-                            providerVideoId = cached.providerVideoId.ifBlank {
-                                cached.id.removePrefix("telegram:")
-                            },
-                            fileSizeBytes = cached.fileSizeBytes
-                        )
-                    }
-                }
-
+                val resolvedRandomItem = resolveRandomItem(currentItem, libraryId, currentId)
                 if (resolvedRandomItem == null) {
                     if (playbackRequestId != playbackRequestCounter) return@launch
                     _isLoadingRandom.value = false
@@ -374,6 +312,71 @@ class PlayerViewModel(
             runCatching { recordWatchHistory(randomItem) }
                 .onFailure { Log.w(PERF_TAG, "Optional watch history failed", it) }
         }
+    }
+
+    private suspend fun stopCurrentPlayback(currentPositionMs: Long, reportingSessionId: Long?): TvItem? {
+        val currentItem = (_uiState.value as? PlayerUiState.Ready)?.item
+        if (currentItem != null) persistTelegramProgress(currentItem, currentPositionMs, isEnded = false)
+        val stoppedSessionId = reportingSessionId ?: _reportingSessionId.value
+        playbackReporter.stopSession(currentPositionMs, stoppedSessionId)
+        if (stoppedSessionId != null && _reportingSessionId.value == stoppedSessionId) {
+            _reportingSessionId.value = null
+        }
+        return currentItem
+    }
+
+    private suspend fun resolveRandomItem(
+        currentItem: TvItem?,
+        libraryId: String?,
+        currentId: String?
+    ): TvItem? {
+        val byGenre = currentItem?.genres?.firstOrNull()?.let { genre ->
+            libraryRepository.getRandomItemFiltered(
+                parentId = libraryId,
+                excludeItemId = currentId,
+                genres = listOf(genre)
+            ).getOrNull()
+        }
+        if (byGenre != null) return byGenre
+
+        val performerId = currentItem?.people?.firstOrNull()?.id
+            ?.let { runCatching { java.util.UUID.fromString(it) }.getOrNull() }
+        if (performerId != null) {
+            val byPerformer = libraryRepository.getRandomItemFiltered(
+                parentId = libraryId,
+                excludeItemId = currentId,
+                personIds = listOf(performerId)
+            ).getOrNull()
+            if (byPerformer != null) return byPerformer
+        }
+
+        val byStudio = currentItem?.studios?.firstOrNull()?.let { studio ->
+            libraryRepository.getRandomItemFiltered(
+                parentId = libraryId,
+                excludeItemId = currentId,
+                studios = listOf(studio)
+            ).getOrNull()
+        }
+        if (byStudio != null) return byStudio
+
+        val fallback = libraryRepository.getRandomItem(
+            parentId = libraryId,
+            excludeItemId = currentId
+        ).getOrNull()
+        if (fallback != null) return fallback
+
+        val cached = channelRepository?.getRandomCachedVideo(excludeId = currentId) ?: return null
+        return TvItem(
+            id = cached.id,
+            title = cached.title.ifBlank { context.getString(R.string.player_channel_video) },
+            overview = cached.description,
+            runtimeTicks = (cached.duration * 10_000_000).toLong(),
+            genres = cached.categories,
+            providerVideoId = cached.providerVideoId.ifBlank {
+                cached.id.removePrefix("telegram:")
+            },
+            fileSizeBytes = cached.fileSizeBytes
+        )
     }
 
     /**
