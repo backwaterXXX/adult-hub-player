@@ -19,11 +19,9 @@ import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.rounded.ArrowBack
-import androidx.compose.material.icons.rounded.Close
 import androidx.compose.material.icons.rounded.PlayArrow
 import androidx.compose.material.icons.rounded.Refresh
 import androidx.compose.material.icons.rounded.Replay
-import androidx.compose.material.icons.rounded.Shuffle
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.remember
@@ -164,133 +162,6 @@ fun ResumePlaybackDialog(
                         )
                         Text(
                             text = stringResource(R.string.player_start_over),
-                            fontWeight = FontWeight.Medium
-                        )
-                    }
-                }
-            }
-        }
-    }
-}
-
-@Composable
-fun EndOfMovieDialog(
-    onNextRandom: () -> Unit,
-    onBackToDetails: () -> Unit,
-    modifier: Modifier = Modifier,
-    countdownSeconds: Int? = null,
-    onCancelCountdown: () -> Unit = {}
-) {
-    val nextButtonFocusRequester = remember { FocusRequester() }
-
-    LaunchedEffect(Unit) {
-        nextButtonFocusRequester.requestFocus()
-    }
-
-    val isCountingDown = countdownSeconds != null && countdownSeconds > 0
-    val countdownSec = countdownSeconds ?: 0
-
-    Box(
-        modifier = modifier
-            .fillMaxSize()
-            .background(Color.Black.copy(alpha = 0.85f)),
-        contentAlignment = Alignment.Center
-    ) {
-        Column(
-            modifier = Modifier
-                .width(480.dp)
-                .clip(RoundedCornerShape(16.dp))
-                .background(SurfaceDark)
-                .border(2.dp, NeonPink, RoundedCornerShape(16.dp))
-                .padding(32.dp),
-            horizontalAlignment = Alignment.CenterHorizontally
-        ) {
-            Text(
-                text = if (isCountingDown) stringResource(R.string.player_next_in_seconds, countdownSec) else stringResource(R.string.player_scene_finished),
-                style = MaterialTheme.typography.headlineMedium.copy(
-                    fontWeight = FontWeight.Bold,
-                    color = Color.White
-                ),
-                textAlign = TextAlign.Center
-            )
-
-            Spacer(modifier = Modifier.height(12.dp))
-
-            Text(
-                text = if (isCountingDown) stringResource(R.string.player_autoplay_hint) else stringResource(R.string.player_next_question),
-                style = MaterialTheme.typography.bodyLarge.copy(
-                    color = Color.White.copy(alpha = 0.8f)
-                ),
-                textAlign = TextAlign.Center
-            )
-
-            Spacer(modifier = Modifier.height(28.dp))
-
-            Row(
-                modifier = Modifier.fillMaxWidth(),
-                horizontalArrangement = Arrangement.Center
-            ) {
-                Button(
-                    onClick = onNextRandom,
-                    colors = ButtonDefaults.colors(
-                        containerColor = NeonPink,
-                        focusedContainerColor = NeonPink,
-                        contentColor = Color.White,
-                        focusedContentColor = Color.White
-                    ),
-                    shape = ButtonDefaults.shape(RoundedCornerShape(12.dp)),
-                    modifier = Modifier
-                        .focusRequester(nextButtonFocusRequester)
-                        .height(44.dp)
-                ) {
-                    Row(
-                        verticalAlignment = Alignment.CenterVertically,
-                        horizontalArrangement = Arrangement.spacedBy(8.dp)
-                    ) {
-                        Icon(
-                            imageVector = if (isCountingDown) Icons.Rounded.PlayArrow else Icons.Rounded.Shuffle,
-                            contentDescription = null,
-                            modifier = Modifier.size(20.dp)
-                        )
-                        Text(
-                            text = if (isCountingDown) stringResource(R.string.player_play_now) else stringResource(R.string.player_next_movie),
-                            fontWeight = FontWeight.Bold
-                        )
-                    }
-                }
-
-                Spacer(modifier = Modifier.width(16.dp))
-
-                OutlinedButton(
-                    onClick = if (isCountingDown) onCancelCountdown else onBackToDetails,
-                    colors = OutlinedButtonDefaults.colors(
-                        containerColor = Color.Transparent,
-                        focusedContainerColor = SurfaceDark,
-                        contentColor = Color.White,
-                        focusedContentColor = Color.White
-                    ),
-                    border = OutlinedButtonDefaults.border(
-                        border = androidx.tv.material3.Border(
-                            border = androidx.compose.foundation.BorderStroke(1.dp, Color.White.copy(alpha = 0.4f))
-                        ),
-                        focusedBorder = androidx.tv.material3.Border(
-                            border = androidx.compose.foundation.BorderStroke(2.dp, NeonPink)
-                        )
-                    ),
-                    shape = OutlinedButtonDefaults.shape(RoundedCornerShape(12.dp)),
-                    modifier = Modifier.height(44.dp)
-                ) {
-                    Row(
-                        verticalAlignment = Alignment.CenterVertically,
-                        horizontalArrangement = Arrangement.spacedBy(8.dp)
-                    ) {
-                        Icon(
-                            imageVector = if (isCountingDown) Icons.Rounded.Close else Icons.Rounded.ArrowBack,
-                            contentDescription = null,
-                            modifier = Modifier.size(18.dp)
-                        )
-                        Text(
-                            text = if (isCountingDown) stringResource(R.string.player_cancel) else stringResource(R.string.player_back_to_details),
                             fontWeight = FontWeight.Medium
                         )
                     }

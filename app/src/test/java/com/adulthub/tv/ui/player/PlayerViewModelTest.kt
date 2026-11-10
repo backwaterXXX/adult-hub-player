@@ -231,6 +231,64 @@ class PlayerViewModelTest {
     }
 
     @Test
+    fun `onPlaybackEnded is idempotent for the same playback request`() = runTest(testDispatcher) {
+        fakeLibraryRepo.itemResult = Result.success(sampleItem)
+        val playbackReporter = PlaybackReporter(fakePlaybackRepo, CoroutineScope(testDispatcher))
+        val viewModel = PlayerViewModel(
+            libraryRepository = fakeLibraryRepo,
+            playbackRepository = fakePlaybackRepo,
+            settingsDataStore = settingsDataStore,
+            playbackReporter = playbackReporter,
+            context = context
+        )
+
+        viewModel.loadItem("movie-1")
+        advanceUntilIdle()
+
+        val firstEnded = viewModel.onPlaybackEnded(45_000L)
+        val secondEnded = viewModel.onPlaybackEnded(45_000L)
+        advanceUntilIdle()
+
+        assertTrue(firstEnded)
+        assertFalse(secondEnded)
+        assertTrue(viewModel.isPlaybackEnded.value)
+    }
+
+    @Test
+    fun `playRandomMovie handles lookup failure and recovery`() = runTest(testDispatcher) {
+        fakeLibraryRepo.itemResult = Result.success(sampleItem)
+        fakeLibraryRepo.randomItemResult = Result.success(null)
+        val playbackReporter = PlaybackReporter(fakePlaybackRepo, CoroutineScope(testDispatcher))
+        val viewModel = PlayerViewModel(
+            libraryRepository = fakeLibraryRepo,
+            playbackRepository = fakePlaybackRepo,
+            settingsDataStore = settingsDataStore,
+            playbackReporter = playbackReporter,
+            context = context
+        )
+
+        viewModel.loadItem("movie-1")
+        advanceUntilIdle()
+
+        viewModel.onPlaybackEnded(45_000L)
+        viewModel.playRandomMovie()
+        advanceUntilIdle()
+
+        assertFalse(viewModel.isLoadingRandom.value)
+        assertTrue(viewModel.uiState.value is PlayerUiState.Error)
+
+        val secondItem = TvItem(id = "movie-2", title = "Movie 2")
+        fakeLibraryRepo.randomItemResult = Result.success(secondItem)
+        viewModel.playRandomMovie()
+        advanceUntilIdle()
+
+        assertFalse(viewModel.isLoadingRandom.value)
+        val ready = viewModel.uiState.value as? PlayerUiState.Ready
+        assertEquals("movie-2", ready?.item?.id)
+        assertFalse(viewModel.isPlaybackEnded.value)
+    }
+
+    @Test
     fun `loadItem with channel video loads from channelRepository and plays`() = runTest(testDispatcher) {
         fakeLibraryRepo.itemResult = Result.failure(RuntimeException("Not in Jellyfin"))
         val channelRepo = ChannelRepository(mockk(relaxed = true))

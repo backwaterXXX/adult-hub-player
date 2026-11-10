@@ -56,7 +56,6 @@ data class SettingsUiState(
     val bufferProfile: BufferProfile = BufferProfile.STANDARD,
     val lowRamMode: Boolean = false,
     val seekStepSec: Int = 15,
-    val autoplayNext: Boolean = false,
     val availableHomeCategories: List<TvCategory> = emptyList(),
     val selectedHomeCategoryIds: Set<String> = emptySet(),
     val hiddenChannelIds: Set<String> = emptySet(),
@@ -142,7 +141,6 @@ class SettingsViewModel(
         val bufferProfile = settingsDataStore.bufferProfile.firstOrNull() ?: BufferProfile.STANDARD
         val lowRamMode = settingsDataStore.lowRamMode.firstOrNull() ?: false
         val seekStepSec = settingsDataStore.seekStepSec.firstOrNull() ?: SettingsDataStore.DEFAULT_SEEK_STEP_SEC
-        val autoplayNext = settingsDataStore.autoplayNext.firstOrNull() ?: false
         val savedHomeCategoryIds = settingsDataStore.selectedHomeCategoryIds.firstOrNull()
         val hiddenChannels = settingsDataStore.hiddenChannelIds.firstOrNull().orEmpty()
         val excluded = settingsDataStore.excludedTags.firstOrNull().orEmpty()
@@ -182,7 +180,6 @@ class SettingsViewModel(
                 bufferProfile = bufferProfile,
                 lowRamMode = lowRamMode,
                 seekStepSec = seekStepSec,
-                autoplayNext = autoplayNext,
                 availableHomeCategories = homeCategories,
                 selectedHomeCategoryIds = selectedHomeCategoryIds,
                 hiddenChannelIds = hiddenChannels,
@@ -328,22 +325,6 @@ class SettingsViewModel(
                         seconds,
                         seconds
                     )
-                )
-            }
-        }
-    }
-
-    fun setAutoplayNext(enabled: Boolean) {
-        viewModelScope.launch {
-            if (!persist { settingsDataStore.setAutoplayNext(enabled) }) return@launch
-            _uiState.update {
-                it.copy(
-                    autoplayNext = enabled,
-                    statusMessage = if (enabled) {
-                        context.getString(R.string.settings_autoplay_enabled)
-                    } else {
-                        context.getString(R.string.settings_autoplay_disabled)
-                    }
                 )
             }
         }

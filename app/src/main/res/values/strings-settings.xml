@@ -57,8 +57,6 @@
         <item quantity="other">%1$d sec</item>
     </plurals>
     <string name="settings_seek_step_default">15 sec (Default)</string>
-    <string name="settings_autoplay_desc">Automatically play the next video with a 10-second countdown when a video ends.</string>
-    <string name="settings_option_autoplay_on">On (Auto-next)</string>
 
     <!-- Resolver API -->
     <string name="settings_resolver_title">Resolver API</string>
@@ -143,8 +141,6 @@
         <item quantity="one">Seek step set to %1$d second</item>
         <item quantity="other">Seek step set to %1$d seconds</item>
     </plurals>
-    <string name="settings_autoplay_enabled">Auto-play next enabled</string>
-    <string name="settings_autoplay_disabled">Auto-play next disabled</string>
     <string name="settings_home_categories_saved">Home category selection saved</string>
     <string name="settings_error_http_consent">Could not save HTTP consent: %1$s</string>
     <string name="settings_http_consent_removed">HTTP consent removed for %1$s</string>

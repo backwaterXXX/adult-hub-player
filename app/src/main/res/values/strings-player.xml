@@ -19,16 +19,6 @@
     <string name="player_resume_action">Resume (%1$s)</string>
     <string name="player_start_over">Start Over</string>
 
-    <!-- End of movie dialog -->
-    <string name="player_next_in_seconds">Next Movie in %1$ds</string>
-    <string name="player_scene_finished">Scene Finished</string>
-    <string name="player_autoplay_hint">Playing next movie automatically or cancel to stay.</string>
-    <string name="player_next_question">What would you like to watch next?</string>
-    <string name="player_play_now">Play now</string>
-    <string name="player_next_movie">Next movie</string>
-    <string name="player_cancel">Cancel</string>
-    <string name="player_back_to_details">Back to Details</string>
-
     <!-- Playback error dialog -->
     <string name="player_error_title">Playback Error</string>
     <string name="player_error_prepare">Could not prepare this video</string>

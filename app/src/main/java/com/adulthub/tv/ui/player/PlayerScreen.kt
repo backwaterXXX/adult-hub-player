@@ -130,7 +130,6 @@ fun PlayerScreen(
     }
     val playerManager = requireNotNull(playerManagerState)
     val seekStepSec by settingsDataStore.seekStepSec.collectAsStateWithLifecycle(initialValue = 15)
-    val autoplayNext by settingsDataStore.autoplayNext.collectAsStateWithLifecycle(initialValue = false)
     val reportingSessionId by viewModel.reportingSessionId.collectAsStateWithLifecycle()
     // PlayerManager callbacks outlive a single playback request, so they read the
     // session through a state holder instead of capturing the value at composition.
@@ -164,7 +163,6 @@ fun PlayerScreen(
     var showInfoDialog by rememberSaveable { mutableStateOf(false) }
     var resizeMode by rememberSaveable { mutableIntStateOf(AspectRatioFrameLayout.RESIZE_MODE_FIT) }
     var playbackSpeed by rememberSaveable { mutableFloatStateOf(1.0f) }
-    var autoplayCountdownSec by remember { mutableStateOf<Int?>(null) }
     val playPauseFocusRequester = remember { FocusRequester() }
     val rootFocusRequester = remember { FocusRequester() }
 
@@ -216,7 +214,10 @@ fun PlayerScreen(
             )
         }
         playerManager.onPlaybackEnded = {
-            viewModel.onPlaybackEnded(playerManager.currentPositionMs.value, currentReportingSessionId)
+            val session = currentReportingSessionId
+            if (viewModel.onPlaybackEnded(playerManager.currentPositionMs.value, session)) {
+                viewModel.playRandomMovie(currentPositionMs = 0L, reportingSessionId = session)
+            }
         }
     }
 
@@ -318,26 +319,6 @@ fun PlayerScreen(
         }
     }
 
-    // Auto-play next countdown when scene ends
-    LaunchedEffect(isPlaybackEnded, autoplayNext) {
-        if (isPlaybackEnded && autoplayNext) {
-            autoplayCountdownSec = 10
-            while ((autoplayCountdownSec ?: 0) > 0) {
-                delay(1000L)
-                val current = autoplayCountdownSec ?: break
-                if (current <= 1) {
-                    autoplayCountdownSec = null
-                    viewModel.playRandomMovie(currentPositionMs = 0L, reportingSessionId = reportingSessionId)
-                    break
-                } else {
-                    autoplayCountdownSec = current - 1
-                }
-            }
-        } else {
-            autoplayCountdownSec = null
-        }
-    }
-
     LaunchedEffect(readyState?.playbackRequestId, playerManager) {
         val state = readyState ?: return@LaunchedEffect
         delay(8_000L)
@@ -387,14 +368,11 @@ fun PlayerScreen(
     BackHandler {
         when (
             resolvePlayerBackAction(
-                autoplayCountdownSec = autoplayCountdownSec,
                 showInfoDialog = showInfoDialog,
                 hasPendingResumeDialog = pendingResumeDialogPosition != null,
                 isOsdVisible = isOsdVisible
             )
         ) {
-            PlayerBackAction.CANCEL_AUTOPLAY -> autoplayCountdownSec = null
-
             PlayerBackAction.CLOSE_INFO_DIALOG -> showInfoDialog = false
 
             PlayerBackAction.DISMISS_RESUME_DIALOG -> viewModel.onResumeDialogHandled()
@@ -547,7 +525,15 @@ fun PlayerScreen(
             is PlayerUiState.Error -> {
                 PlaybackErrorDialog(
                     errorMessage = state.message,
-                    onRetry = { viewModel.loadItem(itemId, resume) },
+                    onRetry = {
+                        if (!isLoadingRandom) {
+                            if (isPlaybackEnded) {
+                                viewModel.playRandomMovie(currentPositionMs = 0L, reportingSessionId = reportingSessionId)
+                            } else {
+                                viewModel.loadItem(itemId, resume)
+                            }
+                        }
+                    },
                     onBack = {
                         viewModel.onExitPlayer(0L, reportingSessionId)
                         onBack()
@@ -718,21 +704,18 @@ fun PlayerScreen(
                     )
                 }
 
-                // End of Movie Dialog
-                if (isPlaybackEnded) {
-                    EndOfMovieDialog(
-                        onNextRandom = {
-                            autoplayCountdownSec = null
-                            viewModel.playRandomMovie(currentPositionMs = 0L, reportingSessionId = reportingSessionId)
+                // Fallback if playback ended and next random movie could not be started or resolved
+                if (isPlaybackEnded && !isLoadingRandom) {
+                    PlaybackErrorDialog(
+                        errorMessage = stringResource(R.string.player_error_no_random),
+                        onRetry = {
+                            if (!isLoadingRandom) {
+                                viewModel.playRandomMovie(currentPositionMs = 0L, reportingSessionId = reportingSessionId)
+                            }
                         },
-                        onBackToDetails = {
-                            autoplayCountdownSec = null
+                        onBack = {
                             viewModel.onExitPlayer(playerManager.currentPositionMs.value, reportingSessionId)
                             onBack()
-                        },
-                        countdownSeconds = autoplayCountdownSec,
-                        onCancelCountdown = {
-                            autoplayCountdownSec = null
                         }
                     )
                 }

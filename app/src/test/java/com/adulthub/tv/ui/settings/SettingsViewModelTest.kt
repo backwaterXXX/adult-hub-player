@@ -356,23 +356,6 @@ class SettingsViewModelTest {
     }
 
     @Test
-    fun `setAutoplayNext updates DataStore and state`() = runTest(testDispatcher) {
-        val viewModel = SettingsViewModel(
-            authRepository = fakeAuthRepo,
-            libraryRepository = fakeLibraryRepo,
-            settingsDataStore = fakeDataStore,
-            context = context
-        )
-        advanceUntilIdle()
-
-        viewModel.setAutoplayNext(true)
-        advanceUntilIdle()
-
-        assertTrue(fakeDataStore.lastSavedAutoplayNext)
-        assertTrue(viewModel.uiState.value.autoplayNext)
-    }
-
-    @Test
     fun `clearWatchHistory delegates to store and updates statusMessage`() = runTest(testDispatcher) {
         val fakeWatchHistoryStore = FakeWatchHistoryStore()
         val viewModel = SettingsViewModel(
@@ -548,7 +531,6 @@ private class FakeSettingsDataStore : SettingsDataStore(mockk(relaxed = true)) {
     var lastSavedBufferProfile: com.adulthub.tv.data.local.BufferProfile = com.adulthub.tv.data.local.BufferProfile.STANDARD
     var lastSavedLowRamMode: Boolean = false
     var lastSavedSeekStepSec: Int = 15
-    var lastSavedAutoplayNext: Boolean = false
 
     override val selectedLibraryId = MutableStateFlow<String?>("lib-1")
     override val selectedLibraryName = MutableStateFlow<String?>("Adult Movies")
@@ -560,7 +542,6 @@ private class FakeSettingsDataStore : SettingsDataStore(mockk(relaxed = true)) {
     override val bufferProfile = MutableStateFlow(com.adulthub.tv.data.local.BufferProfile.STANDARD)
     override val lowRamMode = MutableStateFlow(false)
     override val seekStepSec = MutableStateFlow(15)
-    override val autoplayNext = MutableStateFlow(false)
     override val selectedHomeCategoryIds = MutableStateFlow<Set<String>?>(null)
     override val hiddenChannelIds = MutableStateFlow<Set<String>>(emptySet())
     override val excludedTags = MutableStateFlow<Set<String>>(emptySet())
@@ -622,11 +603,6 @@ private class FakeSettingsDataStore : SettingsDataStore(mockk(relaxed = true)) {
     override suspend fun setSeekStepSec(seconds: Int) {
         lastSavedSeekStepSec = seconds
         seekStepSec.value = seconds
-    }
-
-    override suspend fun setAutoplayNext(enabled: Boolean) {
-        lastSavedAutoplayNext = enabled
-        autoplayNext.value = enabled
     }
 
     var homeCategorySaveGate: CompletableDeferred<Unit>? = null

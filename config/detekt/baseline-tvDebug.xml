@@ -29,7 +29,6 @@
     <ID>CognitiveComplexMethod:PhashSampling.kt:PhashCoordinator$private suspend fun poll</ID>
     <ID>CognitiveComplexMethod:PhashSampling.kt:PhashCoordinator$private suspend fun process</ID>
     <ID>CognitiveComplexMethod:PlaybackRepository.kt:PlaybackRepository$open suspend fun resolvePlaybackInfo: Result&lt;PlaybackInfo&gt;</ID>
-    <ID>CognitiveComplexMethod:PlayerDialogs.kt:@Composable fun EndOfMovieDialog</ID>
     <ID>CognitiveComplexMethod:PlayerDialogs.kt:@Composable fun PlaybackInfoOverlay</ID>
     <ID>CognitiveComplexMethod:PlayerManager.kt:PlayerManager$fun getTechnicalInfo: PlaybackTechnicalInfo</ID>
     <ID>CognitiveComplexMethod:PlayerOverlay.kt:@Composable fun PlayerOverlay</ID>
@@ -93,7 +92,6 @@
     <ID>LongMethod:PersonDetailScreen.kt:@Composable @OptIn(ExperimentalComposeUiApi::class) fun PersonDetailScreen</ID>
     <ID>LongMethod:PhashSampling.kt:PhashCoordinator$private suspend fun process</ID>
     <ID>LongMethod:PlaybackRepository.kt:PlaybackRepository$open suspend fun resolvePlaybackInfo: Result&lt;PlaybackInfo&gt;</ID>
-    <ID>LongMethod:PlayerDialogs.kt:@Composable fun EndOfMovieDialog</ID>
     <ID>LongMethod:PlayerDialogs.kt:@Composable fun PlaybackErrorDialog</ID>
     <ID>LongMethod:PlayerDialogs.kt:@Composable fun PlaybackInfoOverlay</ID>
     <ID>LongMethod:PlayerDialogs.kt:@Composable fun ResumePlaybackDialog</ID>

@@ -4,7 +4,6 @@ package com.adulthub.tv.ui.player
  * Actions the back gesture can trigger on the player screen.
  */
 internal enum class PlayerBackAction {
-    CANCEL_AUTOPLAY,
     CLOSE_INFO_DIALOG,
     DISMISS_RESUME_DIALOG,
     HIDE_OSD,
@@ -18,12 +17,10 @@ internal enum class PlayerBackAction {
  * the player while a dialog is waiting for a decision.
  */
 internal fun resolvePlayerBackAction(
-    autoplayCountdownSec: Int?,
     showInfoDialog: Boolean,
     hasPendingResumeDialog: Boolean,
     isOsdVisible: Boolean
 ): PlayerBackAction = when {
-    autoplayCountdownSec != null -> PlayerBackAction.CANCEL_AUTOPLAY
     showInfoDialog -> PlayerBackAction.CLOSE_INFO_DIALOG
     hasPendingResumeDialog -> PlayerBackAction.DISMISS_RESUME_DIALOG
     isOsdVisible -> PlayerBackAction.HIDE_OSD

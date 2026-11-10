@@ -148,7 +148,7 @@ internal fun SettingsPerformanceCard(uiState: SettingsUiState, viewModel: Settin
     }
 }
 
-/** Seek step and autoplay of the next episode. */
+/** Seek step. */
 @Composable
 internal fun SettingsPlaybackControlsCard(uiState: SettingsUiState, viewModel: SettingsViewModel) {
     SettingsCard(title = stringResource(R.string.settings_playback_controls_title)) {
@@ -178,35 +178,6 @@ internal fun SettingsPlaybackControlsCard(uiState: SettingsUiState, viewModel: S
                         fontSize = 13.sp
                     )
                 }
-            }
-
-            Spacer(modifier = Modifier.height(18.dp))
-
-            Text(
-                text = stringResource(R.string.settings_autoplay_desc),
-                style = MaterialTheme.typography.bodyMedium.copy(color = TextSecondary)
-            )
-
-            Spacer(modifier = Modifier.height(10.dp))
-
-            Row(
-                horizontalArrangement = Arrangement.spacedBy(10.dp),
-                modifier = Modifier.fillMaxWidth()
-            ) {
-                TvChoiceChip(
-                    label = stringResource(R.string.settings_option_off_default),
-                    isSelected = !uiState.autoplayNext,
-                    onClick = { viewModel.setAutoplayNext(false) },
-                    height = 38.dp,
-                    fontSize = 13.sp
-                )
-                TvChoiceChip(
-                    label = stringResource(R.string.settings_option_autoplay_on),
-                    isSelected = uiState.autoplayNext,
-                    onClick = { viewModel.setAutoplayNext(true) },
-                    height = 38.dp,
-                    fontSize = 13.sp
-                )
             }
         }
     }
