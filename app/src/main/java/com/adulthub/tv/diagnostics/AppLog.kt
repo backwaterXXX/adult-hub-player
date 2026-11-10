@@ -6,11 +6,18 @@ import java.time.Instant
 import java.time.ZoneOffset
 import java.time.format.DateTimeFormatter
 import java.util.ArrayDeque
+import java.util.Collections
+import java.util.IdentityHashMap
 
 /** App-owned logs with a bounded, content-redacted buffer for user-requested exports. */
 object AppLog {
     private const val MAX_ENTRIES = 500
-    private const val MAX_MESSAGE_LENGTH = 1_000
+    private const val MAX_MESSAGE_LENGTH = 2_000
+    private const val MAX_ROOT_CAUSE_MESSAGE_LENGTH = 150
+    private const val MAX_CAUSE_DEPTH = 5
+    private const val MAX_TOP_FRAMES = 3
+    private const val MAX_FRAMES_PER_THROWABLE = 8
+    private const val APP_PACKAGE_PREFIX = "com.adulthub."
     private val lock = Any()
     private val entries = ArrayDeque<String>(MAX_ENTRIES)
     private val timestampFormatter = DateTimeFormatter.ISO_OFFSET_DATE_TIME.withZone(ZoneOffset.UTC)
@@ -23,13 +30,22 @@ object AppLog {
     private val identifierPattern = Regex("(?i)\\b(item|video|user|session|media[_-]?source)[_-]?id\\b[\\\"']?\\s*[:=]\\s*[\\\"']?[^\\s,;\\\"'}]+")
     private val titlePattern = Regex("(?i)\\b(title|filename|file[_-]?name)\\b[\\\"']?\\s*[:=]\\s*[^,;\\n]+")
 
-    fun d(tag: String, message: String): Int = write(Log.DEBUG, tag, message)
-    fun i(tag: String, message: String): Int = write(Log.INFO, tag, message)
-    fun w(tag: String, message: String): Int = write(Log.WARN, tag, message)
-    fun e(tag: String, message: String): Int = write(Log.ERROR, tag, message)
+    fun d(tag: String, message: String): Int = write(Log.DEBUG, tag, message, null)
+    fun d(tag: String, message: String, throwable: Throwable?): Int = write(Log.DEBUG, tag, message, throwable)
+    fun i(tag: String, message: String): Int = write(Log.INFO, tag, message, null)
+    fun i(tag: String, message: String, throwable: Throwable?): Int = write(Log.INFO, tag, message, throwable)
+    fun w(tag: String, message: String): Int = write(Log.WARN, tag, message, null)
+    fun w(tag: String, message: String, throwable: Throwable?): Int = write(Log.WARN, tag, message, throwable)
+    fun e(tag: String, message: String): Int = write(Log.ERROR, tag, message, null)
+    fun e(tag: String, message: String, throwable: Throwable?): Int = write(Log.ERROR, tag, message, throwable)
 
-    private fun write(priority: Int, tag: String, message: String): Int {
-        val safeMessage = redact(message).take(MAX_MESSAGE_LENGTH)
+    private fun write(priority: Int, tag: String, message: String, throwable: Throwable? = null): Int {
+        val rawMessage = if (throwable != null) {
+            if (message.isBlank()) formatThrowable(throwable) else "$message\n${formatThrowable(throwable)}"
+        } else {
+            message
+        }
+        val safeMessage = truncateSafely(redact(rawMessage), throwable)
         val level = when (priority) {
             Log.DEBUG -> "D"
             Log.INFO -> "I"
@@ -43,6 +59,79 @@ object AppLog {
             entries.addLast(line)
         }
         return Log.println(priority, tag, safeMessage)
+    }
+
+    internal fun truncateSafely(redacted: String, throwable: Throwable? = null): String {
+        if (redacted.length <= MAX_MESSAGE_LENGTH) return redacted
+
+        val rootCause = throwable?.let(::findRootCause)
+        val marker = if (rootCause != null) {
+            val rootClass = rootCause.javaClass.name
+            val rootMsg = rootCause.message?.let(::redact)?.replace('\n', ' ')?.trim()
+            if (rootMsg.isNullOrBlank()) {
+                "\n[TRUNCATED; root cause: $rootClass]"
+            } else {
+                "\n[TRUNCATED; root cause: $rootClass: ${rootMsg.take(MAX_ROOT_CAUSE_MESSAGE_LENGTH)}]"
+            }
+        } else {
+            "\n[TRUNCATED]"
+        }
+
+        val prefixLength = (MAX_MESSAGE_LENGTH - marker.length).coerceAtLeast(0)
+        val prefix = redacted.take(prefixLength).trimEnd()
+        return prefix + marker
+    }
+
+    internal fun findRootCause(throwable: Throwable): Throwable? {
+        var current: Throwable? = throwable.cause ?: return null
+        var root: Throwable = current
+        var depth = 0
+        val visited = Collections.newSetFromMap(IdentityHashMap<Throwable, Boolean>())
+        visited.add(throwable)
+
+        while (current != null && depth < MAX_CAUSE_DEPTH && visited.add(current)) {
+            root = current
+            current = current.cause
+            depth++
+        }
+        return root
+    }
+
+    internal fun formatThrowable(throwable: Throwable): String = buildString {
+        var current: Throwable? = throwable
+        var depth = 0
+        val visited = Collections.newSetFromMap(IdentityHashMap<Throwable, Boolean>())
+
+        while (current != null && depth < MAX_CAUSE_DEPTH && visited.add(current)) {
+            if (depth > 0) {
+                append("\nCaused by: ")
+            }
+            val className = current.javaClass.name
+            val message = current.message
+            if (message.isNullOrBlank()) {
+                append(className)
+            } else {
+                append(className).append(": ").append(message)
+            }
+
+            val frames = current.stackTrace
+            if (!frames.isNullOrEmpty()) {
+                val usefulFrames = frames.filterIndexed { index, frame ->
+                    index < MAX_TOP_FRAMES || frame.className.startsWith(APP_PACKAGE_PREFIX)
+                }.take(MAX_FRAMES_PER_THROWABLE)
+
+                for (frame in usefulFrames) {
+                    append("\n\tat ").append(frame)
+                }
+                val omitted = frames.size - usefulFrames.size
+                if (omitted > 0) {
+                    append("\n\t... ").append(omitted).append(" more")
+                }
+            }
+
+            current = current.cause
+            depth++
+        }
     }
 
     fun exportText(): String {
