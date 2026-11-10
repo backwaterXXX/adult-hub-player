@@ -83,15 +83,14 @@ object AppLog {
     }
 
     internal fun findRootCause(throwable: Throwable): Throwable? {
-        var current: Throwable? = throwable.cause ?: return null
-        var root: Throwable = current
+        var root: Throwable = throwable.cause ?: return null
         var depth = 0
         val visited = Collections.newSetFromMap(IdentityHashMap<Throwable, Boolean>())
         visited.add(throwable)
 
-        while (current != null && depth < MAX_CAUSE_DEPTH && visited.add(current)) {
-            root = current
-            current = current.cause
+        while (depth < MAX_CAUSE_DEPTH && visited.add(root)) {
+            val next = root.cause ?: break
+            root = next
             depth++
         }
         return root
