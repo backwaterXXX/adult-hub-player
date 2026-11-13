@@ -145,7 +145,7 @@ class PhashCoordinator(
                 setStatus(videoId, PhashUiStatus(context.getString(R.string.phash_sign_in_to_check)))
                 return
             }
-            poll(videoId, stored.jobId!!, owner, resolverUrl, token, startedAt, stored.durationUs)
+            poll(videoId, stored.jobId, owner, resolverUrl, token, startedAt, stored.durationUs)
             return
         }
         if (stored != null && stored.state in TERMINAL_STATES) {

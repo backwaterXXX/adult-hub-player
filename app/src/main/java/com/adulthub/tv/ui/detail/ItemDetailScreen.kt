@@ -447,7 +447,7 @@ fun ItemDetailScreen(
                                 )
                                 Spacer(modifier = Modifier.height(6.dp))
                                 Text(
-                                    text = item.overview ?: "",
+                                    text = item.overview,
                                     style = MaterialTheme.typography.bodyMedium,
                                     color = TextSecondary,
                                     lineHeight = 22.sp,
