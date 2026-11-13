@@ -17,7 +17,9 @@ import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.rounded.ArrowBack
+import androidx.compose.material.icons.automirrored.rounded.ArrowBack
+import androidx.compose.material.icons.automirrored.rounded.VolumeOff
+import androidx.compose.material.icons.automirrored.rounded.VolumeUp
 import androidx.compose.material.icons.rounded.AspectRatio
 import androidx.compose.material.icons.rounded.FastForward
 import androidx.compose.material.icons.rounded.FastRewind
@@ -29,8 +31,6 @@ import androidx.compose.material.icons.rounded.MoreHoriz
 import androidx.compose.material.icons.rounded.Pause
 import androidx.compose.material.icons.rounded.PlayArrow
 import androidx.compose.material.icons.rounded.Shuffle
-import androidx.compose.material.icons.rounded.VolumeOff
-import androidx.compose.material.icons.rounded.VolumeUp
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
@@ -152,7 +152,7 @@ fun MobilePlayerOverlay(
                         .padding(start = 8.dp, end = 8.dp, top = 8.dp, bottom = 28.dp),
                     verticalAlignment = Alignment.CenterVertically
                 ) {
-                    IconButton(onClick = onBackClick) { Icon(Icons.Rounded.ArrowBack, stringResource(R.string.player_back), tint = Color.White) }
+                    IconButton(onClick = onBackClick) { Icon(Icons.AutoMirrored.Rounded.ArrowBack, stringResource(R.string.player_back), tint = Color.White) }
                     Text(
                         title,
                         Modifier.weight(1f).padding(horizontal = 8.dp),
@@ -310,7 +310,7 @@ fun MobilePlayerOverlay(
                         IconButton(onClick = {
                             onMuteClick()
                             onInteraction()
-                        }) { Icon(if (isMuted) Icons.Rounded.VolumeOff else Icons.Rounded.VolumeUp, stringResource(if (isMuted) R.string.player_cd_unmute else R.string.player_cd_mute), tint = Color.White) }
+                        }) { Icon(if (isMuted) Icons.AutoMirrored.Rounded.VolumeOff else Icons.AutoMirrored.Rounded.VolumeUp, stringResource(if (isMuted) R.string.player_cd_unmute else R.string.player_cd_mute), tint = Color.White) }
                         IconButton(onClick = {
                             expanded = !expanded
                             onInteraction()
