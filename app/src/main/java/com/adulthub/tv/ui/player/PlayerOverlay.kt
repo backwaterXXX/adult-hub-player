@@ -52,6 +52,7 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.focus.FocusRequester
+import androidx.compose.ui.focus.focusProperties
 import androidx.compose.ui.focus.focusRequester
 import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
@@ -318,6 +319,13 @@ fun PlayerOverlay(
                             onSeekRight = {
                                 seekWithAcceleration(1)
                             },
+                            onTogglePlayPause = {
+                                if (!isBuffering) {
+                                    onPlayPauseClick()
+                                }
+                                onResetOsdTimer()
+                            },
+                            playPauseFocusRequester = playPauseFocusRequester,
                             modifier = Modifier.weight(1f)
                         )
 
@@ -652,6 +660,8 @@ private fun FocusableProgressBar(
     progress: Float,
     onSeekLeft: () -> Unit,
     onSeekRight: () -> Unit,
+    onTogglePlayPause: () -> Unit,
+    playPauseFocusRequester: FocusRequester,
     modifier: Modifier = Modifier
 ) {
     val interactionSource = remember { MutableInteractionSource() }
@@ -668,7 +678,14 @@ private fun FocusableProgressBar(
                 color = if (isFocused) NeonPink else Color.Transparent,
                 shape = RoundedCornerShape(14.dp)
             )
-            .focusable(interactionSource = interactionSource)
+            .focusProperties {
+                down = playPauseFocusRequester
+            }
+            .clickable(
+                interactionSource = interactionSource,
+                indication = null,
+                onClick = onTogglePlayPause
+            )
             .semantics {
                 contentDescription = seekBarDescription
                 progressBarRangeInfo = ProgressBarRangeInfo(clampedProgress, 0f..1f)
@@ -683,6 +700,18 @@ private fun FocusableProgressBar(
 
                         Key.DirectionRight -> {
                             onSeekRight()
+                            true
+                        }
+
+                        Key.DirectionDown -> {
+                            runCatching { playPauseFocusRequester.requestFocus() }
+                            true
+                        }
+
+                        Key.DirectionCenter, Key.Enter, Key.NumPadEnter -> {
+                            if (event.nativeKeyEvent.repeatCount == 0) {
+                                onTogglePlayPause()
+                            }
                             true
                         }
 
