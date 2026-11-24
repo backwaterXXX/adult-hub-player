@@ -84,8 +84,11 @@ open class PersonRepository(
             if (items.isEmpty()) {
                 items = api.getPerformers(offset = 0, limit = fetchLimit, photoOnly = true).items
             }
+            // Artwork is optional: when the catalogue has no servable performer photo the row
+            // still lists people instead of collapsing into an empty section.
             val persons = items
                 .filter { !it.photoUrl.isNullOrBlank() }
+                .ifEmpty { items }
                 .shuffled()
                 .take(take)
                 .map { item ->
