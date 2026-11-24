@@ -38,9 +38,11 @@ open class PlaybackRepository(
         variantId: String? = null
     ): Result<PlaybackInfo> = withContext(Dispatchers.IO) {
         try {
-            if (item.id.isBlank() || item.id.startsWith("telegram:") || item.id.contains(":") || item.id.startsWith("-100")) {
+            // Canonical catalog ids are provider ids ("telegram:<channel>:<msg>:<file>"), so the
+            // only id this cannot resolve is an empty one.
+            if (item.id.isBlank()) {
                 return@withContext Result.failure(
-                    IllegalArgumentException("Cannot query playback descriptor for provider/Telegram ID: ${item.id}")
+                    IllegalArgumentException("Cannot start playback without a video id")
                 )
             }
             if (item.isPlayed) {
@@ -111,11 +113,7 @@ open class PlaybackRepository(
     }
 
     open suspend fun fetchVideoVariants(resolverVideoId: String?): VideoVariantsResult {
-        if (resolverVideoId.isNullOrBlank() ||
-            resolverVideoId.startsWith("telegram:") ||
-            resolverVideoId.contains(":") ||
-            resolverVideoId.startsWith("-100")
-        ) {
+        if (resolverVideoId.isNullOrBlank()) {
             return VideoVariantsResult.OriginalOnly
         }
         return try {
@@ -173,9 +171,8 @@ open class PlaybackRepository(
         isPlayed: Boolean? = null
     ): Result<Unit> = withContext(Dispatchers.IO) {
         capturePlaybackResult {
-            if (itemId.isBlank() || itemId.startsWith("telegram:") || itemId.contains(":") || itemId.startsWith("-100")) {
-                // Telegram-only IDs are not valid catalog video IDs for Adult Hub progress endpoint.
-                // Preserve local progress without sending invalid IDs to server.
+            if (itemId.isBlank()) {
+                // Without a video id there is nothing to report; local progress is still kept.
                 return@capturePlaybackResult
             }
             val api = clientManager.getApiOrNull() ?: return@capturePlaybackResult
@@ -207,9 +204,8 @@ open class PlaybackRepository(
         isPlayed: Boolean? = null
     ): Result<Unit> = withContext(Dispatchers.IO) {
         capturePlaybackResult {
-            if (itemId.isBlank() || itemId.startsWith("telegram:") || itemId.contains(":") || itemId.startsWith("-100")) {
-                // Telegram-only IDs are not valid catalog video IDs for Adult Hub progress endpoint.
-                // Preserve local progress without sending invalid IDs to server.
+            if (itemId.isBlank()) {
+                // Without a video id there is nothing to report; local progress is still kept.
                 return@capturePlaybackResult
             }
             val api = clientManager.getApiOrNull() ?: return@capturePlaybackResult

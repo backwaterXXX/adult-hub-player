@@ -30,6 +30,29 @@ data class AuthLoginResponseDto(
 )
 
 @Serializable
+data class PairingInitRequestDto(
+    @SerialName("device_name") val deviceName: String? = null,
+    @SerialName("device_id") val deviceId: String? = null
+)
+
+@Serializable
+data class PairingInitResponseDto(
+    @SerialName("pairing_code") val pairingCode: String,
+    @SerialName("secret") val secret: String,
+    @SerialName("expires_in") val expiresIn: Int = 300,
+    @SerialName("poll_interval_seconds") val pollIntervalSeconds: Int = 2
+)
+
+@Serializable
+data class PairingStatusResponseDto(
+    @SerialName("status") val status: String = "pending",
+    @SerialName("expires_in") val expiresIn: Int? = null,
+    @SerialName("access_token") val accessToken: String? = null,
+    @SerialName("refresh_token") val refreshToken: String? = null,
+    @SerialName("user") val user: AuthUserDto? = null
+)
+
+@Serializable
 data class AuthUserDto(
     @SerialName("id") val id: String,
     @SerialName("username") val username: String

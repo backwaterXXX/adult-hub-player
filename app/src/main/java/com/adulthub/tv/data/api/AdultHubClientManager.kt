@@ -369,6 +369,6 @@ class AdultHubClientManager(
                 "$base/${photo.trimStart('/')}"
             }
         }
-        return if (base.isNotEmpty()) "$base/api/v1/artwork/performer/$personId/poster" else ""
+        return if (base.isNotEmpty()) "$base/api/v1/artwork/performer/$personId/photo" else ""
     }
 }

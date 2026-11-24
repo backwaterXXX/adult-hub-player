@@ -148,9 +148,7 @@ open class LibraryRepository(
                 !record.isPlayed &&
                     record.progressFraction > 0.01f &&
                     record.progressFraction < 0.90f &&
-                    !record.itemId.startsWith("telegram:") &&
-                    !record.itemId.contains(":") &&
-                    !record.itemId.startsWith("-100")
+                    record.itemId.isNotBlank()
             }.take(limit)
 
             val api = clientManager.getApiOrNull()
@@ -305,9 +303,9 @@ open class LibraryRepository(
 
     open suspend fun getItemDetails(itemId: String): Result<TvItem> = withContext(Dispatchers.IO) {
         try {
-            if (itemId.isBlank() || itemId.startsWith("telegram:") || itemId.contains(":") || itemId.startsWith("-100")) {
+            if (itemId.isBlank()) {
                 return@withContext Result.failure(
-                    IllegalArgumentException("Cannot query catalog detail for provider/Telegram ID: $itemId")
+                    IllegalArgumentException("Cannot query catalog detail without a video id")
                 )
             }
             val api = clientManager.getApi()
@@ -331,9 +329,9 @@ open class LibraryRepository(
 
     open suspend fun toggleFavorite(itemId: String, markFavorite: Boolean): Result<Boolean> = withContext(Dispatchers.IO) {
         try {
-            if (itemId.isBlank() || itemId.startsWith("telegram:") || itemId.contains(":") || itemId.startsWith("-100")) {
+            if (itemId.isBlank()) {
                 return@withContext Result.failure(
-                    IllegalArgumentException("Cannot toggle favorite for provider/Telegram ID: $itemId")
+                    IllegalArgumentException("Cannot toggle favorite without a video id")
                 )
             }
             val api = clientManager.getApi()

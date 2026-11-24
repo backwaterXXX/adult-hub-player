@@ -90,16 +90,40 @@ class PlaybackRepositoryTest {
     }
 
     @Test
-    fun `resolvePlaybackInfo rejects Telegram-only IDs`() = runTest {
+    fun `resolvePlaybackInfo resolves canonical Telegram catalogue ids`() = runTest {
         val clientManager = mockk<AdultHubClientManager>(relaxed = true)
         val settingsDataStore = mockk<SettingsDataStore>(relaxed = true)
+        val mockApi = mockk<AdultHubApi>(relaxed = true)
+
+        // Adult Hub v1 catalogue ids are provider ids; they must reach the descriptor endpoint.
+        val canonicalId = "telegram:-100123:456:789"
+        val serverOrigin = "https://adulthub.example.com"
+        every { clientManager.getApi() } returns mockApi
+        every { clientManager.getSessionSnapshot() } returns com.adulthub.tv.data.api.ClientSession(
+            serverUrl = serverOrigin,
+            accessToken = "test-token",
+            userId = "user-123",
+            username = "testuser"
+        )
+        every { clientManager.currentServerUrl } returns serverOrigin
+        every { clientManager.currentAccessToken } returns "test-token"
+        coEvery { settingsDataStore.requireAllowedServiceUrl(any(), any()) } returns ServiceUrl(
+            normalized = serverOrigin,
+            origin = serverOrigin,
+            usesCleartext = false
+        )
+        coEvery { mockApi.getPlaybackDescriptor(canonicalId) } returns PlaybackDescriptorDto(
+            videoId = canonicalId,
+            streamPath = "api/v1/playback/stream/telegram:-100123:456:789",
+            mimeType = "video/mp4",
+            durationSeconds = 60.0
+        )
 
         val repository = PlaybackRepository(clientManager, settingsDataStore)
-        val result = repository.resolvePlaybackInfo(TvItem(id = "telegram:-100123:456:789", title = "Tg"))
+        val result = repository.resolvePlaybackInfo(TvItem(id = canonicalId, title = "Tg"))
 
-        assertTrue(result.isFailure)
-        assertTrue(result.exceptionOrNull() is IllegalArgumentException)
-        coVerify(exactly = 0) { clientManager.getApi() }
+        assertTrue(result.isSuccess)
+        coVerify(exactly = 1) { mockApi.getPlaybackDescriptor(canonicalId) }
     }
 
     @Test
@@ -146,7 +170,7 @@ class PlaybackRepositoryTest {
     }
 
     @Test
-    fun `reportPlaybackProgress ignores Telegram-only ID without sending to server`() = runTest {
+    fun `reportPlaybackProgress reports canonical Telegram catalogue ids`() = runTest {
         val clientManager = mockk<AdultHubClientManager>(relaxed = true)
         val settingsDataStore = mockk<SettingsDataStore>(relaxed = true)
         val mockApi = mockk<AdultHubApi>(relaxed = true)
@@ -154,8 +178,9 @@ class PlaybackRepositoryTest {
         every { clientManager.getApiOrNull() } returns mockApi
 
         val repository = PlaybackRepository(clientManager, settingsDataStore)
+        val canonicalId = "telegram:-100123:456:789"
         val result = repository.reportPlaybackProgress(
-            itemId = "telegram:-100123:456:789",
+            itemId = canonicalId,
             mediaSourceId = null,
             positionTicks = 10_000_000L,
             canSeek = true,
@@ -163,7 +188,9 @@ class PlaybackRepositoryTest {
         )
 
         assertTrue(result.isSuccess)
-        coVerify(exactly = 0) { mockApi.putWatchProgress(any(), any()) }
+        coVerify(exactly = 1) {
+            mockApi.putWatchProgress(videoId = canonicalId, body = any())
+        }
     }
 
     @Test

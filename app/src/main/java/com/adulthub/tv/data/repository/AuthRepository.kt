@@ -3,6 +3,7 @@ package com.adulthub.tv.data.repository
 import com.adulthub.tv.data.api.AdultHubClientManager
 import com.adulthub.tv.data.api.AuthLoginRequestDto
 import com.adulthub.tv.data.api.AuthRevokeRequestDto
+import com.adulthub.tv.data.api.PairingInitRequestDto
 import com.adulthub.tv.data.local.AuthDataStore
 import com.adulthub.tv.data.local.SettingsDataStore
 import com.adulthub.tv.data.model.AuthState
@@ -122,14 +123,114 @@ open class AuthRepository(
         }
     }
 
+    /**
+     * Session handed over by an approved pairing poll. The backend exchanges an approved
+     * code for tokens exactly once, on the poll that observes the approval, so the poll
+     * result is kept here until the screen asks to finish the pairing.
+     */
+    @Volatile
+    private var pendingPairingSession: AuthState.Authenticated? = null
+
     suspend fun initiateQuickConnect(serverUrl: String): Result<QuickConnectInitResult> =
-        Result.failure(UnsupportedOperationException("Pairing is not supported; please use password login"))
+        withContext(Dispatchers.IO) {
+            try {
+                val normalizedUrl = settingsDataStore.requireAllowedServiceUrl(serverUrl).normalized
+                val api = clientManager.createApi(baseUrl = normalizedUrl)
+                val response = api.pairInit(
+                    PairingInitRequestDto(
+                        deviceName = "Adult Hub TV",
+                        deviceId = clientManager.deviceId
+                    )
+                )
+                pendingPairingSession = null
+                Result.success(QuickConnectInitResult(code = response.pairingCode, secret = response.secret))
+            } catch (e: CancellationException) {
+                throw e
+            } catch (e: Exception) {
+                Result.failure(e)
+            }
+        }
 
     suspend fun checkQuickConnectState(serverUrl: String, secret: String): Result<Boolean> =
-        Result.failure(UnsupportedOperationException("Pairing is not supported; please use password login"))
+        withContext(Dispatchers.IO) {
+            try {
+                val normalizedUrl = settingsDataStore.requireAllowedServiceUrl(serverUrl).normalized
+                val api = clientManager.createApi(baseUrl = normalizedUrl)
+                val response = api.pairStatus(secretHeader = "Bearer $secret")
+                when (response.status.lowercase()) {
+                    "approved" -> {
+                        val accessToken = response.accessToken
+                        val refreshToken = response.refreshToken
+                        if (accessToken.isNullOrBlank() || refreshToken.isNullOrBlank()) {
+                            return@withContext Result.failure(
+                                IllegalStateException("Pairing was approved without a usable session")
+                            )
+                        }
+                        pendingPairingSession = AuthState.Authenticated(
+                            serverUrl = normalizedUrl,
+                            userId = response.user?.id.orEmpty(),
+                            accessToken = accessToken,
+                            username = response.user?.username?.takeIf(String::isNotBlank) ?: "owner",
+                            serverName = "Adult Hub",
+                            refreshToken = refreshToken
+                        )
+                        Result.success(true)
+                    }
+                    "expired", "revoked" -> Result.failure(
+                        IllegalStateException("Pairing code expired. Start pairing again.")
+                    )
+                    else -> Result.success(false)
+                }
+            } catch (e: CancellationException) {
+                throw e
+            } catch (e: Exception) {
+                Result.failure(e)
+            }
+        }
 
     suspend fun authenticateQuickConnect(serverUrl: String, secret: String): Result<AuthState.Authenticated> =
-        Result.failure(UnsupportedOperationException("Pairing is not supported; please use password login"))
+        withContext(Dispatchers.IO) {
+            try {
+                val approved = pendingPairingSession ?: run {
+                    // Approval can land between the last poll and this call, so poll once more.
+                    val polled = checkQuickConnectState(serverUrl, secret)
+                    if (polled.isFailure) {
+                        return@withContext Result.failure(
+                            polled.exceptionOrNull() ?: IllegalStateException("Pairing failed")
+                        )
+                    }
+                    pendingPairingSession
+                } ?: return@withContext Result.failure(
+                    IllegalStateException("Pairing has not been approved yet")
+                )
+
+                val authenticated = sessionMutex.withLock {
+                    authDataStore.saveSession(
+                        serverUrl = approved.serverUrl,
+                        userId = approved.userId,
+                        username = approved.username,
+                        accessToken = approved.accessToken,
+                        serverName = approved.serverName,
+                        refreshToken = approved.refreshToken
+                    )
+
+                    clientManager.updateSession(
+                        serverUrl = approved.serverUrl,
+                        accessToken = approved.accessToken,
+                        userId = approved.userId,
+                        username = approved.username,
+                        refreshToken = approved.refreshToken
+                    )
+                    approved
+                }
+                pendingPairingSession = null
+                Result.success(authenticated)
+            } catch (e: CancellationException) {
+                throw e
+            } catch (e: Exception) {
+                Result.failure(e)
+            }
+        }
 
     suspend fun restoreSession(): AuthState = withContext(Dispatchers.IO) {
         authDataStore.migrateSensitiveValues()

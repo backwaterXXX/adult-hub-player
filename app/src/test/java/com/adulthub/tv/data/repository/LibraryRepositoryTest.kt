@@ -190,23 +190,21 @@ class LibraryRepositoryTest {
     }
 
     @Test
-    fun `getItemDetails rejects Telegram-only ID without network request`() = runTest {
+    fun `getItemDetails queries the catalog for canonical Telegram ids`() = runTest {
         val result = repository.getItemDetails("telegram:-100123:456:789")
-        assertTrue(result.isFailure)
-        assertTrue(result.exceptionOrNull() is IllegalArgumentException)
-        coVerify(exactly = 0) { mockApi.getVideoDetail(any()) }
+        assertTrue(result.isSuccess)
+        coVerify(exactly = 1) { mockApi.getVideoDetail("telegram:-100123:456:789") }
     }
 
     @Test
-    fun `toggleFavorite rejects Telegram-only ID without network request`() = runTest {
+    fun `toggleFavorite sends canonical Telegram ids to the server`() = runTest {
         val result = repository.toggleFavorite("telegram:-100123:456:789", true)
-        assertTrue(result.isFailure)
-        assertTrue(result.exceptionOrNull() is IllegalArgumentException)
-        coVerify(exactly = 0) { mockApi.putFavorite(any()) }
+        assertTrue(result.isSuccess)
+        coVerify(exactly = 1) { mockApi.putFavorite("telegram:-100123:456:789") }
     }
 
     @Test
-    fun `getResumeItems returns catalog items with server progress when available and ignores Telegram-only IDs`() = runTest {
+    fun `getResumeItems returns catalog items with server progress for canonical Telegram ids`() = runTest {
         val watchHistoryStore = mockk<com.adulthub.tv.data.local.WatchHistoryStore>(relaxed = true)
         val repoWithHistory = LibraryRepository(
             clientManager = clientManager,
@@ -241,13 +239,21 @@ class LibraryRepositoryTest {
             playedPercentage = 45.0
         )
 
+        coEvery { mockApi.getWatchProgress("telegram:-100:999:1") } returns com.adulthub.tv.data.api.WatchProgressDto(
+            videoId = "telegram:-100:999:1",
+            positionSeconds = 30,
+            durationSeconds = 100,
+            isPlayed = false,
+            playedPercentage = 30.0
+        )
+
         val result = repoWithHistory.getResumeItems(limit = 10)
         assertTrue(result.isSuccess)
         val items = result.getOrThrow()
-        assertEquals(1, items.size)
-        assertEquals("cat-movie-1", items[0].id)
-        assertEquals(450_000_000L, items[0].playbackPositionTicks)
-        coVerify(exactly = 0) { mockApi.getWatchProgress("telegram:-100:999:1") }
+        // Both records are canonical catalogue ids, so both stay resumable.
+        assertEquals(2, items.size)
+        assertEquals(450_000_000L, items.first { it.id == "cat-movie-1" }.playbackPositionTicks)
+        coVerify(exactly = 1) { mockApi.getWatchProgress("telegram:-100:999:1") }
     }
 
     @Test

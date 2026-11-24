@@ -170,11 +170,7 @@ class HomeViewModel(
                 result.fold(
                     onSuccess = { items ->
                         val validCatalogItems = filterExcluded(
-                            items.filter {
-                                !it.id.startsWith("telegram:") &&
-                                    !it.id.contains(":") &&
-                                    !it.id.startsWith("-100")
-                            }.distinctBy { it.id }
+                            items.filter { it.id.isNotBlank() }.distinctBy { it.id }
                         )
                         state.copy(resumeSection = SectionState(items = validCatalogItems, isLoading = false))
                     },
@@ -196,11 +192,7 @@ class HomeViewModel(
         watchHistoryJob = viewModelScope.launch {
             _uiState.update { it.copy(watchHistorySection = it.watchHistorySection.copy(isLoading = true, errorMessage = null)) }
             val records = watchHistoryStore?.history?.firstOrNull().orEmpty()
-            val validRecords = records.filter {
-                !it.itemId.startsWith("telegram:") &&
-                    !it.itemId.contains(":") &&
-                    !it.itemId.startsWith("-100")
-            }
+            val validRecords = records.filter { it.itemId.isNotBlank() }
             val api = clientManager.getApiOrNull()
             val items = validRecords.map { record ->
                 var item = record.toTvItem()

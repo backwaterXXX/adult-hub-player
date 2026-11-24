@@ -136,10 +136,19 @@ class AuthRepositoryTest {
     }
 
     @Test
-    fun `quickConnect returns failure as unsupported on Adult Hub`() = runTest {
+    fun `initiateQuickConnect returns the pairing code issued by Adult Hub`() = runTest {
+        every { clientManager.createApi(any<String>()) } returns mockApi
+        coEvery { mockApi.pairInit(any()) } returns com.adulthub.tv.data.api.PairingInitResponseDto(
+            pairingCode = "123-456",
+            secret = "pair_sec_test"
+        )
+
         val result = repository.initiateQuickConnect("http://192.168.1.10:8096")
-        assertTrue(result.isFailure)
-        assertTrue(result.exceptionOrNull() is UnsupportedOperationException)
+
+        assertTrue(result.isSuccess)
+        assertEquals("123-456", result.getOrThrow().code)
+        assertEquals("pair_sec_test", result.getOrThrow().secret)
+        coVerify(exactly = 1) { mockApi.pairInit(any()) }
     }
 
     @Test

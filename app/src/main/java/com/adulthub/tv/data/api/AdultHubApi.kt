@@ -3,6 +3,7 @@ package com.adulthub.tv.data.api
 import retrofit2.http.Body
 import retrofit2.http.DELETE
 import retrofit2.http.GET
+import retrofit2.http.Header
 import retrofit2.http.POST
 import retrofit2.http.PUT
 import retrofit2.http.Path
@@ -62,6 +63,17 @@ interface AdultHubApi {
         @Query("limit") limit: Int = 100,
         @Query("q") q: String? = null
     ): CatalogTaxonomyListResponseDto
+
+    @POST("api/v1/auth/pair/init")
+    suspend fun pairInit(@Body body: PairingInitRequestDto): PairingInitResponseDto
+
+    /**
+     * Polls a TV pairing session. The private pairing secret travels in the Authorization
+     * header because the backend rejects any query parameter on auth routes, and the
+     * first successful poll after approval is also the one-time token exchange.
+     */
+    @POST("api/v1/auth/pair/status")
+    suspend fun pairStatus(@Header("Authorization") secretHeader: String): PairingStatusResponseDto
 
     @GET("api/v1/catalog/performers")
     suspend fun getPerformers(
