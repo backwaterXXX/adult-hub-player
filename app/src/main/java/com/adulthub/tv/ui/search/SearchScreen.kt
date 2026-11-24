@@ -19,6 +19,7 @@ import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.lazy.grid.GridCells
 import androidx.compose.foundation.lazy.grid.GridItemSpan
+import androidx.compose.foundation.lazy.grid.LazyGridState
 import androidx.compose.foundation.lazy.grid.LazyVerticalGrid
 import androidx.compose.foundation.lazy.grid.items
 import androidx.compose.foundation.lazy.grid.rememberLazyGridState
@@ -34,6 +35,7 @@ import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.runtime.setValue
+import androidx.compose.runtime.snapshotFlow
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.ExperimentalComposeUiApi
 import androidx.compose.ui.Modifier
@@ -77,6 +79,7 @@ import com.adulthub.tv.ui.theme.SurfaceDark
 import com.adulthub.tv.ui.theme.TextPrimary
 import com.adulthub.tv.ui.theme.TextSecondary
 import kotlinx.coroutines.delay
+import kotlinx.coroutines.flow.distinctUntilChanged
 import org.koin.androidx.compose.koinViewModel
 import org.koin.compose.koinInject
 
@@ -272,10 +275,8 @@ fun SearchScreen(
 
             else -> {
                 SearchResultsList(
-                    movies = uiState.movies,
-                    actors = uiState.actors,
-                    channelVideos = uiState.channelVideos,
-                    isLoading = uiState.isSearching,
+                    uiState = uiState,
+                    onLoadMoreMovies = { viewModel.loadMoreMovies() },
                     resolverBaseUrl = uiState.resolverBaseUrl,
                     resultsFocusRequester = resultsFocusRequester,
                     onNavigateToItemDetail = { id ->
@@ -385,12 +386,49 @@ private fun SearchInputField(
 }
 
 @Composable
+private fun SearchSectionHeader(text: String) {
+    Text(
+        text = text,
+        style = MaterialTheme.typography.titleLarge.copy(
+            fontWeight = FontWeight.Bold,
+            color = TextPrimary
+        ),
+        modifier = Modifier.padding(vertical = 4.dp)
+    )
+}
+
+/** True while the movies grid can still append another page. */
+private fun canAppendMovies(uiState: SearchUiState): Boolean = uiState.movies.isNotEmpty() &&
+    uiState.hasMoreMovies && !uiState.isLoadingMoreMovies
+
+/** Ask for the next page once the last cards of the grid are close to view. */
+@Composable
+private fun MoviesPagingEffect(
+    gridState: LazyGridState,
+    movies: List<TvItem>,
+    hasMoreMovies: Boolean,
+    isLoadingMoreMovies: Boolean,
+    onLoadMoreMovies: () -> Unit
+) {
+    LaunchedEffect(gridState, movies.size, hasMoreMovies, isLoadingMoreMovies) {
+        snapshotFlow { gridState.layoutInfo.visibleItemsInfo.lastOrNull()?.index }
+            .distinctUntilChanged()
+            .collect { lastVisibleIndex ->
+                val lastItemIndex = gridState.layoutInfo.totalItemsCount - 1
+                if (hasMoreMovies && !isLoadingMoreMovies &&
+                    lastVisibleIndex != null && lastVisibleIndex >= lastItemIndex - 6
+                ) {
+                    onLoadMoreMovies()
+                }
+            }
+    }
+}
+
+@Composable
 @OptIn(ExperimentalComposeUiApi::class)
 private fun SearchResultsList(
-    movies: List<TvItem>,
-    actors: List<TvPerson>,
-    channelVideos: List<VideoDto>,
-    isLoading: Boolean,
+    uiState: SearchUiState,
+    onLoadMoreMovies: () -> Unit,
     resolverBaseUrl: String,
     resultsFocusRequester: FocusRequester,
     onNavigateToItemDetail: (itemId: String) -> Unit,
@@ -399,7 +437,19 @@ private fun SearchResultsList(
     modifier: Modifier = Modifier,
     clientManager: AdultHubClientManager = koinInject()
 ) {
+    val movies = uiState.movies
+    val actors = uiState.actors
+    val channelVideos = uiState.channelVideos
+    val isLoading = uiState.isSearching
     val gridState = rememberLazyGridState()
+
+    MoviesPagingEffect(
+        gridState = gridState,
+        movies = movies,
+        hasMoreMovies = canAppendMovies(uiState),
+        isLoadingMoreMovies = uiState.isLoadingMoreMovies,
+        onLoadMoreMovies = onLoadMoreMovies
+    )
 
     LazyVerticalGrid(
         columns = GridCells.Adaptive(minSize = 250.dp),
@@ -414,13 +464,11 @@ private fun SearchResultsList(
         // Movies Section
         if (movies.isNotEmpty()) {
             item(key = "section_movies_header", span = { GridItemSpan(maxLineSpan) }) {
-                Text(
-                    text = stringResource(R.string.library_section_movies, movies.size),
-                    style = MaterialTheme.typography.titleLarge.copy(
-                        fontWeight = FontWeight.Bold,
-                        color = TextPrimary
-                    ),
-                    modifier = Modifier.padding(vertical = 4.dp)
+                SearchSectionHeader(
+                    stringResource(
+                        R.string.library_section_movies,
+                        if (uiState.moviesTotalCount > movies.size) uiState.moviesTotalCount else movies.size
+                    )
                 )
             }
 

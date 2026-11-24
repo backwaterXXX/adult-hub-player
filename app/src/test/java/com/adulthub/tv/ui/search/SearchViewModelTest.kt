@@ -116,6 +116,68 @@ class SearchViewModelTest {
     }
 
     @Test
+    fun `loadMoreMovies appends the next page without duplicates`() = runTest(testDispatcher) {
+        val first = TvItem(id = "movie-1", title = "First")
+        val second = TvItem(id = "movie-2", title = "Second")
+        fakeLibraryRepository.itemsResult = Result.success(
+            TvItemsPage(items = listOf(first, second), totalRecordCount = 4, startIndex = 0)
+        )
+        fakeLibraryRepository.itemsPages = mapOf(
+            2 to Result.success(
+                TvItemsPage(
+                    items = listOf(second, TvItem(id = "movie-3", title = "Third")),
+                    totalRecordCount = 4,
+                    startIndex = 2
+                )
+            )
+        )
+
+        val viewModel = SearchViewModel(
+            libraryRepository = fakeLibraryRepository,
+            personRepository = fakePersonRepository,
+            settingsDataStore = settingsDataStore,
+            context = context
+        )
+        viewModel.onQueryChanged("Action")
+        advanceTimeBy(300L)
+        advanceUntilIdle()
+        assertEquals(2, viewModel.uiState.value.movies.size)
+        assertTrue(viewModel.uiState.value.hasMoreMovies)
+
+        viewModel.loadMoreMovies()
+        advanceUntilIdle()
+
+        val state = viewModel.uiState.value
+        assertEquals(listOf("movie-1", "movie-2", "movie-3"), state.movies.map { it.id })
+        assertEquals(4, state.moviesTotalCount)
+        assertFalse(state.isLoadingMoreMovies)
+        assertEquals(listOf(0, 2), fakeLibraryRepository.requestedOffsets)
+    }
+
+    @Test
+    fun `loadMoreMovies does nothing once every match is loaded`() = runTest(testDispatcher) {
+        fakeLibraryRepository.itemsResult = Result.success(
+            TvItemsPage(items = listOf(sampleMovie), totalRecordCount = 1, startIndex = 0)
+        )
+
+        val viewModel = SearchViewModel(
+            libraryRepository = fakeLibraryRepository,
+            personRepository = fakePersonRepository,
+            settingsDataStore = settingsDataStore,
+            context = context
+        )
+        viewModel.onQueryChanged("Action")
+        advanceTimeBy(300L)
+        advanceUntilIdle()
+
+        viewModel.loadMoreMovies()
+        advanceUntilIdle()
+
+        assertEquals(1, viewModel.uiState.value.movies.size)
+        assertEquals(listOf(0), fakeLibraryRepository.requestedOffsets)
+    }
+
+    @Test
     fun `clearQuery resets search state immediately`() = runTest(testDispatcher) {
         fakeLibraryRepository.itemsResult = Result.success(
             TvItemsPage(items = listOf(sampleMovie), totalRecordCount = 1, startIndex = 0)
@@ -284,6 +346,8 @@ private class FakeSearchHistoryStore :
 
 private class FakeSearchLibraryRepo : LibraryRepository(mockk(relaxed = true), mockk(relaxed = true)) {
     var itemsResult: Result<TvItemsPage> = Result.success(TvItemsPage(emptyList(), 0, 0))
+    var itemsPages: Map<Int, Result<TvItemsPage>> = emptyMap()
+    var requestedOffsets: MutableList<Int> = mutableListOf()
 
     override suspend fun getItems(
         parentId: String?,
@@ -302,7 +366,10 @@ private class FakeSearchLibraryRepo : LibraryRepository(mockk(relaxed = true), m
         performer: String?,
         performerId: String?,
         minDuration: Int?
-    ): Result<TvItemsPage> = itemsResult
+    ): Result<TvItemsPage> {
+        requestedOffsets += startIndex
+        return itemsPages[startIndex] ?: itemsResult
+    }
 }
 
 private class FakeSearchPersonRepo : PersonRepository(mockk(relaxed = true), mockk(relaxed = true), mockk(relaxed = true)) {
