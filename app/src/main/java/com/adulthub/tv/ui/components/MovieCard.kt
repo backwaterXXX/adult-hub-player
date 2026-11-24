@@ -72,11 +72,11 @@ fun MovieCard(
         ?: item.id.takeIf { it.startsWith("telegram:") }?.removePrefix("telegram:")
     var phashThumbnailUrl by remember(item.id) { mutableStateOf<String?>(null) }
     var phashThumbnailFailed by remember(item.id) { mutableStateOf(false) }
-    var usePhashThumbnail by remember(item.id, imageUrl, item.progressFraction) {
-        mutableStateOf(
-            item.progressFraction > 0f ||
-                (item.primaryImageTag.isNullOrBlank() && item.thumbImageTag.isNullOrBlank() && item.backdropImageTag.isNullOrBlank())
-        )
+    // Artwork from the catalogue is the primary source. The phash thumbnail endpoint is an
+    // admin route, so a client token only gets a 401 from it; asking for it first left every
+    // in-progress card without a poster. It is now only a last resort when there is no artwork.
+    var usePhashThumbnail by remember(item.id, imageUrl) {
+        mutableStateOf(imageUrl.isBlank())
     }
 
     LaunchedEffect(item.id, telegramVideoId, usePhashThumbnail) {

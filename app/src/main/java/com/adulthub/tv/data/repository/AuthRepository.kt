@@ -131,106 +131,105 @@ open class AuthRepository(
     @Volatile
     private var pendingPairingSession: AuthState.Authenticated? = null
 
-    suspend fun initiateQuickConnect(serverUrl: String): Result<QuickConnectInitResult> =
-        withContext(Dispatchers.IO) {
-            try {
-                val normalizedUrl = settingsDataStore.requireAllowedServiceUrl(serverUrl).normalized
-                val api = clientManager.createApi(baseUrl = normalizedUrl)
-                val response = api.pairInit(
-                    PairingInitRequestDto(
-                        deviceName = "Adult Hub TV",
-                        deviceId = clientManager.deviceId
-                    )
+    suspend fun initiateQuickConnect(serverUrl: String): Result<QuickConnectInitResult> = withContext(Dispatchers.IO) {
+        try {
+            val normalizedUrl = settingsDataStore.requireAllowedServiceUrl(serverUrl).normalized
+            val api = clientManager.createApi(baseUrl = normalizedUrl)
+            val response = api.pairInit(
+                PairingInitRequestDto(
+                    deviceName = "Adult Hub TV",
+                    deviceId = clientManager.deviceId
                 )
-                pendingPairingSession = null
-                Result.success(QuickConnectInitResult(code = response.pairingCode, secret = response.secret))
-            } catch (e: CancellationException) {
-                throw e
-            } catch (e: Exception) {
-                Result.failure(e)
-            }
+            )
+            pendingPairingSession = null
+            Result.success(QuickConnectInitResult(code = response.pairingCode, secret = response.secret))
+        } catch (e: CancellationException) {
+            throw e
+        } catch (e: Exception) {
+            Result.failure(e)
         }
+    }
 
-    suspend fun checkQuickConnectState(serverUrl: String, secret: String): Result<Boolean> =
-        withContext(Dispatchers.IO) {
-            try {
-                val normalizedUrl = settingsDataStore.requireAllowedServiceUrl(serverUrl).normalized
-                val api = clientManager.createApi(baseUrl = normalizedUrl)
-                val response = api.pairStatus(secretHeader = "Bearer $secret")
-                when (response.status.lowercase()) {
-                    "approved" -> {
-                        val accessToken = response.accessToken
-                        val refreshToken = response.refreshToken
-                        if (accessToken.isNullOrBlank() || refreshToken.isNullOrBlank()) {
-                            return@withContext Result.failure(
-                                IllegalStateException("Pairing was approved without a usable session")
-                            )
-                        }
-                        pendingPairingSession = AuthState.Authenticated(
-                            serverUrl = normalizedUrl,
-                            userId = response.user?.id.orEmpty(),
-                            accessToken = accessToken,
-                            username = response.user?.username?.takeIf(String::isNotBlank) ?: "owner",
-                            serverName = "Adult Hub",
-                            refreshToken = refreshToken
-                        )
-                        Result.success(true)
-                    }
-                    "expired", "revoked" -> Result.failure(
-                        IllegalStateException("Pairing code expired. Start pairing again.")
-                    )
-                    else -> Result.success(false)
-                }
-            } catch (e: CancellationException) {
-                throw e
-            } catch (e: Exception) {
-                Result.failure(e)
-            }
-        }
-
-    suspend fun authenticateQuickConnect(serverUrl: String, secret: String): Result<AuthState.Authenticated> =
-        withContext(Dispatchers.IO) {
-            try {
-                val approved = pendingPairingSession ?: run {
-                    // Approval can land between the last poll and this call, so poll once more.
-                    val polled = checkQuickConnectState(serverUrl, secret)
-                    if (polled.isFailure) {
+    suspend fun checkQuickConnectState(serverUrl: String, secret: String): Result<Boolean> = withContext(Dispatchers.IO) {
+        try {
+            val normalizedUrl = settingsDataStore.requireAllowedServiceUrl(serverUrl).normalized
+            val api = clientManager.createApi(baseUrl = normalizedUrl)
+            val response = api.pairStatus(secretHeader = "Bearer $secret")
+            when (response.status.lowercase()) {
+                "approved" -> {
+                    val accessToken = response.accessToken
+                    val refreshToken = response.refreshToken
+                    if (accessToken.isNullOrBlank() || refreshToken.isNullOrBlank()) {
                         return@withContext Result.failure(
-                            polled.exceptionOrNull() ?: IllegalStateException("Pairing failed")
+                            IllegalStateException("Pairing was approved without a usable session")
                         )
                     }
-                    pendingPairingSession
-                } ?: return@withContext Result.failure(
-                    IllegalStateException("Pairing has not been approved yet")
+                    pendingPairingSession = AuthState.Authenticated(
+                        serverUrl = normalizedUrl,
+                        userId = response.user?.id.orEmpty(),
+                        accessToken = accessToken,
+                        username = response.user?.username?.takeIf(String::isNotBlank) ?: "owner",
+                        serverName = "Adult Hub",
+                        refreshToken = refreshToken
+                    )
+                    Result.success(true)
+                }
+
+                "expired", "revoked" -> Result.failure(
+                    IllegalStateException("Pairing code expired. Start pairing again.")
                 )
 
-                val authenticated = sessionMutex.withLock {
-                    authDataStore.saveSession(
-                        serverUrl = approved.serverUrl,
-                        userId = approved.userId,
-                        username = approved.username,
-                        accessToken = approved.accessToken,
-                        serverName = approved.serverName,
-                        refreshToken = approved.refreshToken
-                    )
-
-                    clientManager.updateSession(
-                        serverUrl = approved.serverUrl,
-                        accessToken = approved.accessToken,
-                        userId = approved.userId,
-                        username = approved.username,
-                        refreshToken = approved.refreshToken
-                    )
-                    approved
-                }
-                pendingPairingSession = null
-                Result.success(authenticated)
-            } catch (e: CancellationException) {
-                throw e
-            } catch (e: Exception) {
-                Result.failure(e)
+                else -> Result.success(false)
             }
+        } catch (e: CancellationException) {
+            throw e
+        } catch (e: Exception) {
+            Result.failure(e)
         }
+    }
+
+    suspend fun authenticateQuickConnect(serverUrl: String, secret: String): Result<AuthState.Authenticated> = withContext(Dispatchers.IO) {
+        try {
+            val approved = pendingPairingSession ?: run {
+                // Approval can land between the last poll and this call, so poll once more.
+                val polled = checkQuickConnectState(serverUrl, secret)
+                if (polled.isFailure) {
+                    return@withContext Result.failure(
+                        polled.exceptionOrNull() ?: IllegalStateException("Pairing failed")
+                    )
+                }
+                pendingPairingSession
+            } ?: return@withContext Result.failure(
+                IllegalStateException("Pairing has not been approved yet")
+            )
+
+            val authenticated = sessionMutex.withLock {
+                authDataStore.saveSession(
+                    serverUrl = approved.serverUrl,
+                    userId = approved.userId,
+                    username = approved.username,
+                    accessToken = approved.accessToken,
+                    serverName = approved.serverName,
+                    refreshToken = approved.refreshToken
+                )
+
+                clientManager.updateSession(
+                    serverUrl = approved.serverUrl,
+                    accessToken = approved.accessToken,
+                    userId = approved.userId,
+                    username = approved.username,
+                    refreshToken = approved.refreshToken
+                )
+                approved
+            }
+            pendingPairingSession = null
+            Result.success(authenticated)
+        } catch (e: CancellationException) {
+            throw e
+        } catch (e: Exception) {
+            Result.failure(e)
+        }
+    }
 
     suspend fun restoreSession(): AuthState = withContext(Dispatchers.IO) {
         authDataStore.migrateSensitiveValues()

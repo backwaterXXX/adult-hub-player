@@ -5,9 +5,12 @@ import androidx.lifecycle.SavedStateHandle
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import com.adulthub.tv.R
+import com.adulthub.tv.data.api.AdultHubClientManager
 import com.adulthub.tv.data.local.SettingsDataStore
 import com.adulthub.tv.data.model.ChannelSortMode
 import com.adulthub.tv.data.model.DurationFilter
+import com.adulthub.tv.data.model.ItemFilter
+import com.adulthub.tv.data.model.SortOrder
 import com.adulthub.tv.data.model.TvCategory
 import com.adulthub.tv.data.model.TvChannel
 import com.adulthub.tv.data.model.TvItem
@@ -19,6 +22,7 @@ import com.adulthub.tv.data.repository.PersonRepository
 import com.adulthub.tv.data.repository.StudioRepository
 import com.adulthub.tv.data.resolver.VideoDto
 import com.adulthub.tv.data.resolver.resolveResolverUrl
+import com.adulthub.tv.ui.components.userFacingMessage
 import kotlinx.coroutines.Job
 import kotlinx.coroutines.flow.MutableSharedFlow
 import kotlinx.coroutines.flow.MutableStateFlow
@@ -30,9 +34,6 @@ import kotlinx.coroutines.flow.collect
 import kotlinx.coroutines.flow.distinctUntilChanged
 import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.launch
-import com.adulthub.tv.data.api.AdultHubClientManager
-import com.adulthub.tv.data.model.ItemFilter
-import com.adulthub.tv.data.model.SortOrder
 
 /**
  * State and actions of the library screen. Each tab with paging or a search of its own
@@ -312,7 +313,7 @@ class LibraryViewModel(
                             allState = state.allState.copy(
                                 isLoading = false,
                                 isLoadingMore = false,
-                                errorMessage = error.localizedMessage ?: context.getString(R.string.library_error_movies)
+                                errorMessage = error.userFacingMessage(context, R.string.library_error_movies)
                             )
                         )
                     }

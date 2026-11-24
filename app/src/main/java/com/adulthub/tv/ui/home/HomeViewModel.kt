@@ -5,14 +5,17 @@ import androidx.compose.runtime.Immutable
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import com.adulthub.tv.R
+import com.adulthub.tv.data.api.AdultHubClientManager
 import com.adulthub.tv.data.local.SettingsDataStore
 import com.adulthub.tv.data.local.TelegramProgressStore
 import com.adulthub.tv.data.local.WatchHistoryStore
+import com.adulthub.tv.data.model.ItemFilter
 import com.adulthub.tv.data.model.TvItem
 import com.adulthub.tv.data.model.TvPerson
 import com.adulthub.tv.data.repository.LibraryRepository
 import com.adulthub.tv.data.repository.PersonRepository
 import com.adulthub.tv.diagnostics.AppLog as Log
+import com.adulthub.tv.ui.components.userFacingMessage
 import kotlinx.coroutines.async
 import kotlinx.coroutines.awaitAll
 import kotlinx.coroutines.coroutineScope
@@ -30,8 +33,6 @@ import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.sync.Semaphore
 import kotlinx.coroutines.sync.withPermit
-import com.adulthub.tv.data.api.AdultHubClientManager
-import com.adulthub.tv.data.model.ItemFilter
 
 @Immutable
 data class SectionState<T>(
@@ -177,7 +178,7 @@ class HomeViewModel(
                     onFailure = { err ->
                         state.copy(
                             resumeSection = SectionState(
-                                errorMessage = err.localizedMessage ?: context.getString(R.string.home_error_resume),
+                                errorMessage = err.userFacingMessage(context, R.string.home_error_resume),
                                 isLoading = false
                             )
                         )
@@ -225,7 +226,7 @@ class HomeViewModel(
                         state.copy(latestSection = SectionState(items = filtered, isLoading = false))
                     },
                     onFailure = { err ->
-                        state.copy(latestSection = SectionState(errorMessage = err.localizedMessage ?: context.getString(R.string.home_error_latest), isLoading = false))
+                        state.copy(latestSection = SectionState(errorMessage = err.userFacingMessage(context, R.string.home_error_latest), isLoading = false))
                     }
                 )
             }
@@ -245,7 +246,7 @@ class HomeViewModel(
                         state.copy(randomSection = SectionState(items = filtered, isLoading = false))
                     },
                     onFailure = { err ->
-                        state.copy(randomSection = SectionState(errorMessage = err.localizedMessage ?: context.getString(R.string.home_error_random), isLoading = false))
+                        state.copy(randomSection = SectionState(errorMessage = err.userFacingMessage(context, R.string.home_error_random), isLoading = false))
                     }
                 )
             }
@@ -275,7 +276,7 @@ class HomeViewModel(
             _uiState.update {
                 it.copy(
                     categoryRowsLoading = false,
-                    categoryRowsErrorMessage = error.localizedMessage ?: context.getString(R.string.home_error_categories)
+                    categoryRowsErrorMessage = error.userFacingMessage(context, R.string.home_error_categories)
                 )
             }
             return
@@ -306,7 +307,7 @@ class HomeViewModel(
             it.copy(
                 categoryRows = rows,
                 categoryRowsLoading = false,
-                categoryRowsErrorMessage = firstFailure?.localizedMessage
+                categoryRowsErrorMessage = firstFailure?.userFacingMessage(context, R.string.home_error_categories)
             )
         }
     }
@@ -328,7 +329,7 @@ class HomeViewModel(
                         state.copy(performersSection = SectionState(items = items, isLoading = false))
                     },
                     onFailure = { err ->
-                        state.copy(performersSection = SectionState(errorMessage = err.localizedMessage ?: context.getString(R.string.home_error_performers), isLoading = false))
+                        state.copy(performersSection = SectionState(errorMessage = err.userFacingMessage(context, R.string.home_error_performers), isLoading = false))
                     }
                 )
             }

@@ -51,6 +51,7 @@ import androidx.tv.material3.MaterialTheme
 import androidx.tv.material3.Text
 import com.adulthub.tv.R
 import com.adulthub.tv.data.model.DurationFilter
+import com.adulthub.tv.data.model.SortOrder
 import com.adulthub.tv.data.model.TvCategory
 import com.adulthub.tv.data.model.TvItem
 import com.adulthub.tv.data.model.TvPerson
@@ -65,7 +66,6 @@ import com.adulthub.tv.ui.theme.NeonPink
 import com.adulthub.tv.ui.theme.SurfaceDark
 import com.adulthub.tv.ui.theme.TextSecondary
 import kotlinx.coroutines.delay
-import com.adulthub.tv.data.model.SortOrder
 
 @Composable
 @OptIn(ExperimentalComposeUiApi::class)

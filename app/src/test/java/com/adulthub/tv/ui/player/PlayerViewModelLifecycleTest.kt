@@ -5,6 +5,7 @@ import androidx.lifecycle.ViewModelStore
 import com.adulthub.tv.data.local.SettingsDataStore
 import com.adulthub.tv.data.local.TelegramProgressRecord
 import com.adulthub.tv.data.local.TelegramProgressStore
+import com.adulthub.tv.data.model.PlayMethod
 import com.adulthub.tv.data.model.PlaybackInfo
 import com.adulthub.tv.data.model.TvItem
 import com.adulthub.tv.data.repository.LibraryRepository
@@ -23,7 +24,6 @@ import kotlinx.coroutines.test.advanceUntilIdle
 import kotlinx.coroutines.test.resetMain
 import kotlinx.coroutines.test.runTest
 import kotlinx.coroutines.test.setMain
-import com.adulthub.tv.data.model.PlayMethod
 import org.junit.After
 import org.junit.Assert.assertTrue
 import org.junit.Before

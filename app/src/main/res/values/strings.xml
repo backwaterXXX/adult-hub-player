@@ -177,4 +177,10 @@
     </plurals>
     <string name="licenses_title">Third-Party Licenses</string>
     <string name="licenses_subtitle">Open-source software licenses and LGPL-3.0 copyleft disclosures</string>
+    <string name="error_timeout">The server took too long to respond. Try again in a moment.</string>
+    <string name="error_network">The network is unavailable. Check the connection to the server.</string>
+    <string name="error_unreachable">Cannot reach the server. Check its address in Settings.</string>
+    <string name="error_not_authorized">The server rejected the request. Check the access token in Settings.</string>
+    <string name="error_server">The server hit an internal error. Try again in a moment.</string>
+    <string name="error_request_failed">The server rejected the request (HTTP %1$d).</string>
 </resources>

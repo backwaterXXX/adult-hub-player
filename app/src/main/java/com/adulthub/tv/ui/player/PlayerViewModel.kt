@@ -20,6 +20,7 @@ import com.adulthub.tv.data.resolver.VideoVariant
 import com.adulthub.tv.data.resolver.VideoVariantsResult
 import com.adulthub.tv.diagnostics.AppLog as Log
 import com.adulthub.tv.player.PlaybackReporter
+import com.adulthub.tv.ui.components.userFacingMessage
 import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Job
@@ -169,7 +170,7 @@ class PlayerViewModel(
 
             if (item == null) {
                 _uiState.value = PlayerUiState.Error(
-                    itemResult.exceptionOrNull()?.message ?: context.getString(R.string.player_error_load_details)
+                    itemResult.exceptionOrNull()?.userFacingMessage(context, R.string.player_error_load_details) ?: context.getString(R.string.player_error_load_details)
                 )
                 return@launch
             }
@@ -182,7 +183,7 @@ class PlayerViewModel(
             val playbackInfo = playbackResult.getOrNull()
             if (playbackInfo == null) {
                 _uiState.value = PlayerUiState.Error(
-                    playbackResult.exceptionOrNull()?.message ?: context.getString(R.string.player_error_resolve_stream)
+                    playbackResult.exceptionOrNull()?.userFacingMessage(context, R.string.player_error_resolve_stream) ?: context.getString(R.string.player_error_resolve_stream)
                 )
                 return@launch
             }
@@ -280,7 +281,7 @@ class PlayerViewModel(
                 _isLoadingRandom.value = false
                 if (resolvedPlaybackInfo == null) {
                     _uiState.value = PlayerUiState.Error(
-                        playbackResult.exceptionOrNull()?.message ?: context.getString(R.string.player_error_random_resolve)
+                        playbackResult.exceptionOrNull()?.userFacingMessage(context, R.string.player_error_random_resolve) ?: context.getString(R.string.player_error_random_resolve)
                     )
                     return@launch
                 }

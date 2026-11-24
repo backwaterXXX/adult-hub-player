@@ -8,6 +8,7 @@ import com.adulthub.tv.data.api.AdultHubClientManager
 import com.adulthub.tv.data.model.TvItem
 import com.adulthub.tv.data.model.TvPerson
 import com.adulthub.tv.data.repository.PersonRepository
+import com.adulthub.tv.ui.components.userFacingMessage
 import kotlinx.coroutines.flow.MutableSharedFlow
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.SharedFlow
@@ -66,7 +67,7 @@ class PersonDetailViewModel(
                     onFailure = { error ->
                         state.copy(
                             isLoading = false,
-                            errorMessage = error.localizedMessage ?: context.getString(R.string.library_error_performer_details)
+                            errorMessage = error.userFacingMessage(context, R.string.library_error_performer_details)
                         )
                     }
                 )
@@ -97,7 +98,7 @@ class PersonDetailViewModel(
                     // The profile loaded, so a filmography failure is reported next to
                     // the section it belongs to instead of replacing the whole screen.
                     state.copy(
-                        moviesErrorMessage = error.localizedMessage ?: context.getString(R.string.library_failed_to_load_filmography)
+                        moviesErrorMessage = error.userFacingMessage(context, R.string.library_failed_to_load_filmography)
                     )
                 }
             )

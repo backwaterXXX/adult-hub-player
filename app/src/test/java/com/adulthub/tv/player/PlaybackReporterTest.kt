@@ -1,5 +1,6 @@
 package com.adulthub.tv.player
 
+import com.adulthub.tv.data.model.PlayMethod
 import com.adulthub.tv.data.model.PlaybackInfo
 import com.adulthub.tv.data.model.TvItem
 import com.adulthub.tv.data.repository.PlaybackRepository
@@ -15,7 +16,6 @@ import kotlinx.coroutines.test.resetMain
 import kotlinx.coroutines.test.runCurrent
 import kotlinx.coroutines.test.runTest
 import kotlinx.coroutines.test.setMain
-import com.adulthub.tv.data.model.PlayMethod
 import org.junit.After
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertNotNull

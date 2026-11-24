@@ -1,5 +1,6 @@
 package com.adulthub.tv.data.repository
 
+import com.adulthub.tv.data.api.AdultHubApi
 import com.adulthub.tv.data.api.AdultHubClientManager
 import com.adulthub.tv.data.api.WatchProgressUpdateDto
 import com.adulthub.tv.data.api.toTvItem
@@ -33,6 +34,21 @@ internal fun itemSortBy(sortBy: String): String = when (sortBy.lowercase()) {
     "runtime", "duration" -> "duration"
     else -> "latest"
 }
+
+/** Below this a viewer barely started; above it there is nothing left to resume. */
+private const val RESUME_MIN_FRACTION = 0.01f
+private const val RESUME_MAX_FRACTION = 0.90f
+private const val RESUME_CANDIDATE_FACTOR = 3
+private const val MAX_RESUME_CANDIDATES = 30
+private const val TICKS_PER_SECOND = 10_000_000L
+
+private const val RANDOM_POOL_SIZE = 50
+
+private data class RandomVideoPool(
+    val sampled: List<TvItem>,
+    val firstPage: List<TvItem>,
+    val totalCount: Int
+)
 
 open class LibraryRepository(
     private val clientManager: AdultHubClientManager,
@@ -144,28 +160,30 @@ open class LibraryRepository(
     open suspend fun getResumeItems(limit: Int = 12): Result<List<TvItem>> = withContext(Dispatchers.IO) {
         try {
             val records = watchHistoryStore?.history?.firstOrNull().orEmpty()
-            val candidateRecords = records.filter { record ->
-                !record.isPlayed &&
-                    record.progressFraction > 0.01f &&
-                    record.progressFraction < 0.90f &&
-                    record.itemId.isNotBlank()
-            }.take(limit)
+            // The local store only knows what a caller handed it, so its progress fraction is
+            // usually zero and cannot decide what is resumable. Every unfinished record is a
+            // candidate and the server's watch progress is the source of truth.
+            val candidates = records
+                .filter { record -> !record.isPlayed && record.itemId.isNotBlank() }
+                .take((limit * RESUME_CANDIDATE_FACTOR).coerceAtMost(MAX_RESUME_CANDIDATES))
 
             val api = clientManager.getApiOrNull()
-            val items = candidateRecords.map { record ->
+            val items = candidates.mapNotNull { record ->
                 var item = record.toTvItem()
                 if (api != null) {
                     val serverProgress = runCatching { api.getWatchProgress(record.itemId) }.getOrNull()
                     if (serverProgress != null) {
                         item = item.copy(
-                            playbackPositionTicks = serverProgress.positionSeconds * 10_000_000L,
+                            playbackPositionTicks = serverProgress.positionSeconds * TICKS_PER_SECOND,
+                            runtimeTicks = item.runtimeTicks
+                                ?: serverProgress.durationSeconds.takeIf { it > 0 }?.times(TICKS_PER_SECOND),
                             isPlayed = serverProgress.isPlayed,
                             playedPercentage = serverProgress.playedPercentage
                         )
                     }
                 }
-                item
-            }.filter { !it.isPlayed && it.playbackPositionTicks > 15_000_0000L }
+                item.takeIf { !it.isPlayed && it.progressFraction in RESUME_MIN_FRACTION..RESUME_MAX_FRACTION }
+            }.take(limit)
 
             Result.success(items)
         } catch (e: CancellationException) {
@@ -191,53 +209,24 @@ open class LibraryRepository(
         studios: List<String> = emptyList()
     ): Result<TvItem?> = withContext(Dispatchers.IO) {
         try {
-            val api = clientManager.getApi()
-            val baseUrl = clientManager.currentServerUrl ?: ""
-            val isFavorite = if (filters.contains(ItemFilter.IS_FAVORITE)) true else null
-            val category = genres.firstOrNull()
-            val studio = studios.firstOrNull()
-
-            val initial = api.getVideos(
-                offset = 0,
-                limit = 50,
-                sort = "latest",
-                category = category,
-                studio = studio,
-                isFavorite = isFavorite
+            val pool = fetchRandomVideoPool(
+                api = clientManager.getApi(),
+                baseUrl = clientManager.currentServerUrl ?: "",
+                category = genres.firstOrNull(),
+                studio = studios.firstOrNull(),
+                isFavorite = if (filters.contains(ItemFilter.IS_FAVORITE)) true else null
             )
-            val totalCount = initial.totalCount
-            val pool = if (totalCount <= 50) {
-                initial.items.map { it.toTvItem(baseUrl) }
-            } else {
-                val maxOffset = (totalCount - 50).coerceAtLeast(0)
-                val randomOffset = kotlin.random.Random.nextInt(maxOffset + 1)
-                val sampled = api.getVideos(
-                    offset = randomOffset,
-                    limit = 50,
-                    sort = "latest",
-                    category = category,
-                    studio = studio,
-                    isFavorite = isFavorite
-                )
-                sampled.items.map { it.toTvItem(baseUrl) }
-            }
 
-            var eligible = pool
+            var eligible = pool.sampled.filterByPlayedState(filters)
             if (excludeItemId != null) {
                 eligible = eligible.filter { it.id != excludeItemId }
             }
-            if (filters.contains(ItemFilter.IS_UNPLAYED)) {
-                eligible = eligible.filter { !it.isPlayed }
-            } else if (filters.contains(ItemFilter.IS_PLAYED)) {
-                eligible = eligible.filter { it.isPlayed }
-            }
-
-            if (eligible.isEmpty() && totalCount > 50) {
-                val fallback = initial.items.map { it.toTvItem(baseUrl) }
-                    .filter { it.id != excludeItemId }
-                eligible = if (filters.contains(ItemFilter.IS_UNPLAYED)) {
-                    fallback.filter { !it.isPlayed }
-                } else fallback
+            if (eligible.isEmpty() && pool.totalCount > RANDOM_POOL_SIZE) {
+                // The random window can land on played items only, so fall back to the first page.
+                eligible = pool.firstPage.filterByPlayedState(filters)
+                if (excludeItemId != null) {
+                    eligible = eligible.filter { it.id != excludeItemId }
+                }
             }
 
             Result.success(eligible.shuffled().firstOrNull())
@@ -246,6 +235,52 @@ open class LibraryRepository(
         } catch (e: Exception) {
             Result.failure(e)
         }
+    }
+
+    /**
+     * Samples the catalogue at a random offset so repeated calls do not return the same title.
+     * The first page is kept as a fallback pool for callers that filter the sample down to nothing.
+     */
+    private suspend fun fetchRandomVideoPool(
+        api: AdultHubApi,
+        baseUrl: String,
+        category: String?,
+        studio: String?,
+        isFavorite: Boolean?
+    ): RandomVideoPool {
+        val firstPage = api.getVideos(
+            offset = 0,
+            limit = RANDOM_POOL_SIZE,
+            sort = "latest",
+            category = category,
+            studio = studio,
+            isFavorite = isFavorite
+        )
+        val totalCount = firstPage.totalCount
+        if (totalCount <= RANDOM_POOL_SIZE) {
+            val page = firstPage.items.map { it.toTvItem(baseUrl) }
+            return RandomVideoPool(sampled = page, firstPage = page, totalCount = totalCount)
+        }
+        val maxOffset = (totalCount - RANDOM_POOL_SIZE).coerceAtLeast(0)
+        val sampled = api.getVideos(
+            offset = kotlin.random.Random.nextInt(maxOffset + 1),
+            limit = RANDOM_POOL_SIZE,
+            sort = "latest",
+            category = category,
+            studio = studio,
+            isFavorite = isFavorite
+        )
+        return RandomVideoPool(
+            sampled = sampled.items.map { it.toTvItem(baseUrl) },
+            firstPage = firstPage.items.map { it.toTvItem(baseUrl) },
+            totalCount = totalCount
+        )
+    }
+
+    private fun List<TvItem>.filterByPlayedState(filters: Set<ItemFilter>): List<TvItem> = when {
+        filters.contains(ItemFilter.IS_UNPLAYED) -> filter { !it.isPlayed }
+        filters.contains(ItemFilter.IS_PLAYED) -> filter { it.isPlayed }
+        else -> this
     }
 
     open suspend fun getRandomItems(
@@ -290,7 +325,9 @@ open class LibraryRepository(
                 val fallback = initial.items.map { it.toTvItem(baseUrl) }
                 items = if (filters.contains(ItemFilter.IS_UNPLAYED)) {
                     fallback.filter { !it.isPlayed }
-                } else fallback
+                } else {
+                    fallback
+                }
             }
 
             Result.success(items.shuffled().take(limit))

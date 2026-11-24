@@ -5,6 +5,7 @@ import com.adulthub.tv.R
 import com.adulthub.tv.data.model.TvStudio
 import com.adulthub.tv.data.repository.StudioRepository
 import com.adulthub.tv.data.repository.TvItemsPage
+import com.adulthub.tv.ui.components.userFacingMessage
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Job
 import kotlinx.coroutines.flow.MutableStateFlow
@@ -43,7 +44,7 @@ internal class StudiosTabController(
                         state.copy(
                             studiosState = state.studiosState.copy(
                                 isLoading = false,
-                                errorMessage = error.localizedMessage ?: context.getString(R.string.library_error_studios)
+                                errorMessage = error.userFacingMessage(context, R.string.library_error_studios)
                             )
                         )
                     }
@@ -150,7 +151,7 @@ internal class StudiosTabController(
                     studiosState = studiosState.copy(
                         isLoadingStudioMovies = false,
                         isLoadingMoreStudioMovies = false,
-                        studioMoviesError = error.localizedMessage ?: context.getString(R.string.library_error_studio_movies)
+                        studioMoviesError = error.userFacingMessage(context, R.string.library_error_studio_movies)
                     )
                 )
             }

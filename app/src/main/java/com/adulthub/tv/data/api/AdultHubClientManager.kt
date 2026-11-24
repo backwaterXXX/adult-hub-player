@@ -69,27 +69,27 @@ class AdultHubClientManager(
     val sessionRejections: Flow<String> = sessionRejectionStream.asSharedFlow()
 
     @Volatile
-    private var _session: ClientSession? = null
+    private var sessionRef: ClientSession? = null
 
     val currentSession: ClientSession?
-        get() = _session
+        get() = sessionRef
 
-    fun getSessionSnapshot(): ClientSession? = _session
+    fun getSessionSnapshot(): ClientSession? = sessionRef
 
     val currentAccessToken: String?
-        get() = _session?.accessToken
+        get() = sessionRef?.accessToken
 
     val currentRefreshToken: String?
-        get() = _session?.refreshToken
+        get() = sessionRef?.refreshToken
 
     val currentUserId: String?
-        get() = _session?.userId
+        get() = sessionRef?.userId
 
     val currentUsername: String?
-        get() = _session?.username
+        get() = sessionRef?.username
 
     val currentServerUrl: String?
-        get() = _session?.serverUrl
+        get() = sessionRef?.serverUrl
 
     private val json = Json {
         ignoreUnknownKeys = true
@@ -115,7 +115,7 @@ class AdultHubClientManager(
             return@Authenticator null
         }
 
-        val snapshot = _session ?: return@Authenticator null
+        val snapshot = sessionRef ?: return@Authenticator null
         val activeOrigin = snapshot.serverUrl
         if (activeOrigin.isBlank() || !ImageTokenOriginPolicy.allows(response.request.url.toString(), listOf(activeOrigin))) {
             return@Authenticator null
@@ -124,7 +124,7 @@ class AdultHubClientManager(
         synchronized(tokenRefreshLock) {
             val sentAuth = response.request.header("Authorization")
             val sentToken = sentAuth?.removePrefix("Bearer ")?.trim()
-            val latest = _session
+            val latest = sessionRef
 
             if (latest != null && sentToken != null && latest.accessToken != sentToken) {
                 return@Authenticator response.request.newBuilder()
@@ -206,7 +206,7 @@ class AdultHubClientManager(
         .addNetworkInterceptor(CleartextOriginInterceptor(settingsDataStore))
         .addInterceptor { chain ->
             val request = chain.request()
-            val session = _session
+            val session = sessionRef
             val token = session?.accessToken
             val activeOrigin = session?.serverUrl
             val requestUrl = request.url.toString()
@@ -221,7 +221,7 @@ class AdultHubClientManager(
             val response = chain.proceed(reqBuilder.build())
             if (response.code == 401) {
                 val sentAuth = request.header("Authorization")
-                val activeToken = _session?.accessToken
+                val activeToken = sessionRef?.accessToken
                 val isAuthEndpoint = request.url.encodedPath.contains("/auth/")
                 if (isAuthEndpoint && sentAuth != null && activeToken != null && sentAuth.contains(activeToken)) {
                     sessionRejectionStream.tryEmit(activeToken)
@@ -285,7 +285,7 @@ class AdultHubClientManager(
         refreshToken: String? = null
     ) {
         val cleanUrl = serverUrl.trim().trimEnd('/')
-        _session = ClientSession(
+        sessionRef = ClientSession(
             serverUrl = cleanUrl,
             accessToken = accessToken,
             userId = userId,
@@ -300,9 +300,9 @@ class AdultHubClientManager(
         newAccessToken: String,
         newRefreshToken: String
     ): Boolean {
-        val current = _session ?: return false
+        val current = sessionRef ?: return false
         if (current.accessToken != expectedAccessToken) return false
-        _session = current.copy(
+        sessionRef = current.copy(
             accessToken = newAccessToken,
             refreshToken = newRefreshToken
         )
@@ -316,13 +316,13 @@ class AdultHubClientManager(
 
     @Synchronized
     fun clearSessionIfTokenMatches(accessToken: String): Boolean {
-        if (_session?.accessToken != accessToken) return false
+        if (sessionRef?.accessToken != accessToken) return false
         clearSessionState()
         return true
     }
 
     private fun clearSessionState() {
-        _session = null
+        sessionRef = null
         synchronized(apiCache) {
             apiCache.clear()
         }

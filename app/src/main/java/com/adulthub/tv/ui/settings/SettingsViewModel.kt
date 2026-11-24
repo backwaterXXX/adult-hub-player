@@ -25,6 +25,7 @@ import com.adulthub.tv.data.repository.ChannelRepository
 import com.adulthub.tv.data.repository.LibraryRepository
 import com.adulthub.tv.data.repository.TvLibrary
 import com.adulthub.tv.diagnostics.AppLog
+import com.adulthub.tv.ui.components.userFacingMessage
 import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.async
@@ -110,7 +111,7 @@ class SettingsViewModel(
                     it.copy(
                         statusMessage = context.getString(
                             R.string.settings_error_load,
-                            error.localizedMessage ?: context.getString(R.string.error_storage)
+                            error.userFacingMessage(context, R.string.error_storage)
                         )
                     )
                 }
@@ -220,7 +221,7 @@ class SettingsViewModel(
                     it.copy(
                         statusMessage = context.getString(
                             R.string.settings_import_failed,
-                            error.localizedMessage ?: context.getString(R.string.error_storage)
+                            error.userFacingMessage(context, R.string.error_storage)
                         )
                     )
                 }
@@ -382,7 +383,7 @@ class SettingsViewModel(
                     it.copy(
                         statusMessage = context.getString(
                             R.string.settings_error_http_consent,
-                            error.localizedMessage ?: context.getString(R.string.error_storage)
+                            error.userFacingMessage(context, R.string.error_storage)
                         )
                     )
                 }
@@ -630,7 +631,7 @@ class SettingsViewModel(
                         isLoggedOut = false,
                         statusMessage = context.getString(
                             R.string.settings_error_sign_out,
-                            error.localizedMessage ?: context.getString(R.string.error_storage)
+                            error.userFacingMessage(context, R.string.error_storage)
                         )
                     )
                 }
@@ -656,7 +657,7 @@ class SettingsViewModel(
             it.copy(
                 statusMessage = context.getString(
                     R.string.settings_error_save,
-                    error.localizedMessage ?: context.getString(R.string.error_storage)
+                    error.userFacingMessage(context, R.string.error_storage)
                 )
             )
         }
@@ -681,7 +682,7 @@ class SettingsViewModel(
                 statusMessage = context.getString(
                     R.string.settings_error_clear,
                     label,
-                    error.localizedMessage ?: context.getString(R.string.error_storage)
+                    error.userFacingMessage(context, R.string.error_storage)
                 )
             )
         }
@@ -700,7 +701,7 @@ class SettingsViewModel(
         onFailure = { error ->
             context.getString(
                 R.string.settings_connection_unavailable,
-                error.localizedMessage ?: context.getString(R.string.settings_error_request_failed)
+                error.userFacingMessage(context, R.string.settings_error_request_failed)
             ).take(100)
         }
     )

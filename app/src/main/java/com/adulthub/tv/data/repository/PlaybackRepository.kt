@@ -64,14 +64,16 @@ open class PlaybackRepository(
             val streamPath = selectedRendition?.streamPath ?: descriptor.streamPath
 
             val session = clientManager.getSessionSnapshot()
-                ?: (clientManager.currentServerUrl?.let { url ->
-                    com.adulthub.tv.data.api.ClientSession(
-                        serverUrl = url,
-                        accessToken = clientManager.currentAccessToken.orEmpty(),
-                        userId = clientManager.currentUserId.orEmpty(),
-                        username = clientManager.currentUsername.orEmpty()
+                ?: (
+                    clientManager.currentServerUrl?.let { url ->
+                        com.adulthub.tv.data.api.ClientSession(
+                            serverUrl = url,
+                            accessToken = clientManager.currentAccessToken.orEmpty(),
+                            userId = clientManager.currentUserId.orEmpty(),
+                            username = clientManager.currentUsername.orEmpty()
+                        )
+                    }
                     )
-                })
                 ?: return@withContext Result.failure(IllegalStateException("No authenticated server session for playback"))
 
             val origin = session.serverUrl

@@ -12,6 +12,7 @@ import com.adulthub.tv.data.repository.ChannelRepository
 import com.adulthub.tv.data.repository.LibraryRepository
 import com.adulthub.tv.data.repository.PersonRepository
 import com.adulthub.tv.data.resolver.VideoDto
+import com.adulthub.tv.ui.components.userFacingMessage
 import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.FlowPreview
 import kotlinx.coroutines.Job
@@ -192,7 +193,7 @@ class SearchViewModel(
 
             val totalSections = 2 + if (channelRepository != null) 1 else 0
             val error = if (successfulSections == 0 && failures.size == totalSections) {
-                failures.firstOrNull()?.message ?: context.getString(R.string.library_search_failed_retry)
+                failures.firstOrNull()?.userFacingMessage(context, R.string.library_search_failed_retry)
             } else {
                 null
             }

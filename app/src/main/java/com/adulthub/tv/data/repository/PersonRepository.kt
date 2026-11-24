@@ -6,6 +6,7 @@ import com.adulthub.tv.data.local.SettingsDataStore
 import com.adulthub.tv.data.model.TvItem
 import com.adulthub.tv.data.model.TvPerson
 import com.adulthub.tv.data.resolver.ResolverApi
+import kotlin.random.Random
 import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.withContext
@@ -70,16 +71,23 @@ open class PersonRepository(
     open suspend fun getRandomPersonsWithPhotos(limit: Int = 20): Result<List<TvPerson>> = withContext(Dispatchers.IO) {
         try {
             val api = clientManager.getApi()
-            val fetchLimit = (limit.coerceAtLeast(1) * 3).coerceAtMost(100)
-            val response = api.getPerformers(
-                offset = 0,
+            val take = limit.coerceAtLeast(1)
+            val fetchLimit = (take * 3).coerceAtMost(100)
+            // A fixed offset always returned the same first page, so the "random" row was the
+            // same people on every launch. A random offset inside a bounded window fixes that
+            // without an extra request; an empty page falls back to the beginning of the list.
+            var items = api.getPerformers(
+                offset = Random.nextInt(0, RANDOM_PERFORMERS_OFFSET_WINDOW),
                 limit = fetchLimit,
                 photoOnly = true
-            )
-            val persons = response.items
+            ).items
+            if (items.isEmpty()) {
+                items = api.getPerformers(offset = 0, limit = fetchLimit, photoOnly = true).items
+            }
+            val persons = items
                 .filter { !it.photoUrl.isNullOrBlank() }
                 .shuffled()
-                .take(limit.coerceAtLeast(1))
+                .take(take)
                 .map { item ->
                     TvPerson(
                         id = item.id,
@@ -174,3 +182,6 @@ open class PersonRepository(
         }
     }
 }
+
+/** How far into the performer list a random row may start. */
+private const val RANDOM_PERFORMERS_OFFSET_WINDOW = 400

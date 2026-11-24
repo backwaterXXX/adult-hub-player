@@ -4,11 +4,14 @@ import android.app.Application
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import com.adulthub.tv.R
+import com.adulthub.tv.data.api.AdultHubClientManager
 import com.adulthub.tv.data.local.SettingsDataStore
+import com.adulthub.tv.data.model.ItemFilter
 import com.adulthub.tv.data.model.ShuffleContextMode
 import com.adulthub.tv.data.model.TvItem
 import com.adulthub.tv.data.model.TvPersonRole
 import com.adulthub.tv.data.repository.LibraryRepository
+import com.adulthub.tv.ui.components.userFacingMessage
 import java.util.UUID
 import kotlinx.coroutines.flow.MutableSharedFlow
 import kotlinx.coroutines.flow.MutableStateFlow
@@ -18,8 +21,6 @@ import kotlinx.coroutines.flow.asSharedFlow
 import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.launch
-import com.adulthub.tv.data.api.AdultHubClientManager
-import com.adulthub.tv.data.model.ItemFilter
 
 data class ItemDetailUiState(
     val item: TvItem? = null,
@@ -73,7 +74,7 @@ class ItemDetailViewModel(
                     onFailure = { error ->
                         state.copy(
                             isLoading = false,
-                            errorMessage = error.localizedMessage ?: context.getString(R.string.library_error_movie_details)
+                            errorMessage = error.userFacingMessage(context, R.string.library_error_movie_details)
                         )
                     }
                 )

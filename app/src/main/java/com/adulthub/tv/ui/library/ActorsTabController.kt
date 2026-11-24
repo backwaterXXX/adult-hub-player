@@ -6,6 +6,7 @@ import com.adulthub.tv.data.model.TvPerson
 import com.adulthub.tv.data.repository.PersonRepository
 import com.adulthub.tv.data.repository.TvPersonPage
 import com.adulthub.tv.diagnostics.AppLog
+import com.adulthub.tv.ui.components.userFacingMessage
 import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Job
@@ -27,6 +28,7 @@ internal class ActorsTabController(
 
     private var actorsLoadJob: Job? = null
     private var actorSearchJob: Job? = null
+
     /** Guards against a cancelled load leaving the tab in its loading state for good. */
     private var actorsLoadGeneration = 0
 
@@ -154,7 +156,7 @@ internal class ActorsTabController(
                     actorsState = actors.copy(
                         isLoading = false,
                         isLoadingMore = false,
-                        errorMessage = error.localizedMessage ?: context.getString(R.string.library_error_actors)
+                        errorMessage = error.userFacingMessage(context, R.string.library_error_actors)
                     )
                 )
             }

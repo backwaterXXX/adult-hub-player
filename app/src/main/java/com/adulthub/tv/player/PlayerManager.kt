@@ -27,6 +27,7 @@ import com.adulthub.tv.data.resolver.VideoVariant
 import com.adulthub.tv.data.resolver.formatBitrate
 import com.adulthub.tv.data.resolver.formatQualityDescriptor
 import com.adulthub.tv.diagnostics.AppLog as Log
+import com.adulthub.tv.ui.components.userFacingMessage
 import java.util.concurrent.atomic.AtomicLong
 import kotlin.coroutines.resume
 import kotlinx.coroutines.CancellableContinuation
@@ -309,7 +310,7 @@ class PlayerManager(
                 PlaybackException.ERROR_CODE_AUDIO_TRACK_WRITE_FAILED ->
                     context.getString(R.string.player_error_audio_output)
 
-                else -> error.localizedMessage ?: context.getString(R.string.player_error_unknown)
+                else -> error.userFacingMessage(context, R.string.player_error_unknown)
             }
             val failureStage = when {
                 error.errorCode == PlaybackException.ERROR_CODE_IO_BAD_HTTP_STATUS ->
