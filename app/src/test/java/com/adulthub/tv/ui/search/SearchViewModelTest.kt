@@ -365,7 +365,8 @@ private class FakeSearchLibraryRepo : LibraryRepository(mockk(relaxed = true), m
         studio: String?,
         performer: String?,
         performerId: String?,
-        minDuration: Int?
+        minDuration: Int?,
+        maxDuration: Int?
     ): Result<TvItemsPage> {
         requestedOffsets += startIndex
         return itemsPages[startIndex] ?: itemsResult
