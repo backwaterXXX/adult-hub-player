@@ -411,12 +411,15 @@ private fun MoviesPagingEffect(
     onLoadMoreMovies: () -> Unit
 ) {
     LaunchedEffect(gridState, movies.size, hasMoreMovies, isLoadingMoreMovies) {
+        // Movies are the first grid items, so the last card sits at index
+        // ``movies.size`` (the section header occupies index 0). Comparing
+        // against the whole grid would wait for the performer rows below.
+        val lastMovieIndex = movies.size
         snapshotFlow { gridState.layoutInfo.visibleItemsInfo.lastOrNull()?.index }
             .distinctUntilChanged()
             .collect { lastVisibleIndex ->
-                val lastItemIndex = gridState.layoutInfo.totalItemsCount - 1
                 if (hasMoreMovies && !isLoadingMoreMovies &&
-                    lastVisibleIndex != null && lastVisibleIndex >= lastItemIndex - 6
+                    lastVisibleIndex != null && lastVisibleIndex >= lastMovieIndex - 6
                 ) {
                     onLoadMoreMovies()
                 }
