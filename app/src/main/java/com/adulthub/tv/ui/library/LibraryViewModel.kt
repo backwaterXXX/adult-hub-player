@@ -5,7 +5,6 @@ import androidx.lifecycle.SavedStateHandle
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import com.adulthub.tv.R
-import com.adulthub.tv.data.jellyfin.JellyfinClientManager
 import com.adulthub.tv.data.local.SettingsDataStore
 import com.adulthub.tv.data.model.ChannelSortMode
 import com.adulthub.tv.data.model.DurationFilter
@@ -31,8 +30,9 @@ import kotlinx.coroutines.flow.collect
 import kotlinx.coroutines.flow.distinctUntilChanged
 import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.launch
-import org.jellyfin.sdk.model.api.ItemFilter
-import org.jellyfin.sdk.model.api.SortOrder
+import com.adulthub.tv.data.api.AdultHubClientManager
+import com.adulthub.tv.data.model.ItemFilter
+import com.adulthub.tv.data.model.SortOrder
 
 /**
  * State and actions of the library screen. Each tab with paging or a search of its own
@@ -44,7 +44,7 @@ class LibraryViewModel(
     private val personRepository: PersonRepository,
     private val studioRepository: StudioRepository,
     private val channelRepository: ChannelRepository,
-    private val clientManager: JellyfinClientManager,
+    private val clientManager: AdultHubClientManager,
     private val settingsDataStore: SettingsDataStore? = null,
     private val savedStateHandle: SavedStateHandle = SavedStateHandle(),
     private val context: Application
@@ -126,7 +126,7 @@ class LibraryViewModel(
                     _uiState.update { state ->
                         val allState = state.allState
                         val cs = state.channelsState
-                        val allFiltered = applyAllItemsFilters(allState.rawItems, allState.durationFilter, allState.hdOnly, excluded)
+                        val allFiltered = applyAllItemsFilters(allState.rawItems, allState.durationFilter, allState.hdOnly, excluded, allState.unwatchedOnly)
                         val chFiltered = applyChannelFilters(cs.rawChannelVideos, cs.durationFilter, excluded, cs.sortMode)
                         state.copy(
                             allState = allState.copy(excludedTags = excluded, items = allFiltered),
@@ -256,6 +256,11 @@ class LibraryViewModel(
                 if (currentState.favoritesOnly) add(ItemFilter.IS_FAVORITE)
                 if (currentState.unwatchedOnly) add(ItemFilter.IS_UNPLAYED)
             }
+            val minDuration = when (currentState.durationFilter) {
+                DurationFilter.MEDIUM -> 15 * 60
+                DurationFilter.LONG -> 40 * 60
+                else -> null
+            }
             val result = libraryRepository.getItems(
                 startIndex = startIndex,
                 limit = currentState.pageSize,
@@ -264,7 +269,11 @@ class LibraryViewModel(
                 filters = filters,
                 genreIds = listOfNotNull(currentState.selectedGenre?.id?.toUuidOrNull()),
                 studioIds = listOfNotNull(currentState.selectedStudio?.id?.toUuidOrNull()),
-                personIds = listOfNotNull(currentState.selectedPerformer?.id?.toUuidOrNull())
+                personIds = listOfNotNull(currentState.selectedPerformer?.id?.toUuidOrNull()),
+                category = currentState.selectedGenre?.name,
+                studio = currentState.selectedStudio?.name,
+                performerId = currentState.selectedPerformer?.id,
+                minDuration = minDuration
             )
 
             if (generation != allItemsGeneration) return@launch
@@ -279,7 +288,8 @@ class LibraryViewModel(
                             rawCombined,
                             state.allState.durationFilter,
                             state.allState.hdOnly,
-                            state.allState.excludedTags
+                            state.allState.excludedTags,
+                            state.allState.unwatchedOnly
                         )
                         val hasMore = rawCombined.size < page.totalRecordCount
                         if (filtered.isEmpty() && hasMore && autoFetchEmptyAttempts < 3) {
@@ -317,7 +327,7 @@ class LibraryViewModel(
     fun setDurationFilter(filter: DurationFilter) {
         _uiState.update { state ->
             val allState = state.allState
-            val filtered = applyAllItemsFilters(allState.rawItems, filter, allState.hdOnly, allState.excludedTags)
+            val filtered = applyAllItemsFilters(allState.rawItems, filter, allState.hdOnly, allState.excludedTags, allState.unwatchedOnly)
             state.copy(allState = allState.copy(durationFilter = filter, items = filtered))
         }
     }
@@ -326,7 +336,7 @@ class LibraryViewModel(
         _uiState.update { state ->
             val allState = state.allState
             val newHd = !allState.hdOnly
-            val filtered = applyAllItemsFilters(allState.rawItems, allState.durationFilter, newHd, allState.excludedTags)
+            val filtered = applyAllItemsFilters(allState.rawItems, allState.durationFilter, newHd, allState.excludedTags, allState.unwatchedOnly)
             state.copy(allState = allState.copy(hdOnly = newHd, items = filtered))
         }
     }
@@ -425,12 +435,10 @@ class LibraryViewModel(
 
     fun getItemImageUrl(item: TvItem): String = clientManager.getItemImageUrl(item)
 
-    fun getPersonImageUrl(person: TvPerson): String = if (!person.primaryImageTag.isNullOrBlank()) {
-        clientManager.getPersonImageUrl(person.id, person.primaryImageTag, maxWidth = 300)
-    } else if (!person.photoUrl.isNullOrBlank()) {
-        person.photoUrl
+    fun getPersonImageUrl(person: TvPerson): String = if (!person.photoUrl.isNullOrBlank()) {
+        clientManager.getPersonImageUrl(person.id, photoUrl = person.photoUrl, maxWidth = 300)
     } else {
-        clientManager.getPersonImageUrl(person.id, null, maxWidth = 300)
+        clientManager.getPersonImageUrl(person.id, maxWidth = 300)
     }
 
     fun getChannelVideoThumbnailUrl(thumbnail: String?): String = resolveResolverUrl(thumbnail, _uiState.value.channelsState.resolverBaseUrl)

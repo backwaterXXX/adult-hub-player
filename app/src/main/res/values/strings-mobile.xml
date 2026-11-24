@@ -12,7 +12,7 @@
     <!-- Auth: login / quick connect / library select -->
     <string name="mobile_login_title">Sign in</string>
     <string name="mobile_change_server">Change server</string>
-    <string name="mobile_quick_connect_subtitle">Enter this code in Jellyfin account settings</string>
+    <string name="mobile_quick_connect_subtitle">Enter this code in account settings</string>
     <string name="mobile_preparing_code">Preparing code…</string>
     <string name="mobile_code_expired">The code expired. Start Quick Connect again.</string>
     <string name="mobile_library_select_title">Choose a library</string>

@@ -5,7 +5,7 @@ import com.adulthub.tv.data.model.DurationFilter
 import com.adulthub.tv.data.model.TvCategory
 import com.adulthub.tv.data.model.TvPerson
 import com.adulthub.tv.data.model.TvStudio
-import org.jellyfin.sdk.model.api.SortOrder
+import com.adulthub.tv.data.model.SortOrder
 
 /**
  * Stores the library filters in the saved state, so that they survive a process death.

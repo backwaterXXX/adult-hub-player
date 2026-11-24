@@ -24,7 +24,7 @@ import kotlinx.coroutines.test.advanceUntilIdle
 import kotlinx.coroutines.test.resetMain
 import kotlinx.coroutines.test.runTest
 import kotlinx.coroutines.test.setMain
-import org.jellyfin.sdk.model.api.PlayMethod
+import com.adulthub.tv.data.model.PlayMethod
 import org.junit.After
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertFalse
@@ -451,7 +451,9 @@ private class FakePlaybackRepository : PlaybackRepository(mockk(relaxed = true),
         playSessionId: String?,
         isPaused: Boolean,
         canSeek: Boolean,
-        playMethod: PlayMethod
+        playMethod: PlayMethod,
+        durationSeconds: Int?,
+        isPlayed: Boolean?
     ): Result<Unit> {
         lastReportedProgressTicks = positionTicks
         return Result.success(Unit)
@@ -461,7 +463,9 @@ private class FakePlaybackRepository : PlaybackRepository(mockk(relaxed = true),
         itemId: String,
         mediaSourceId: String?,
         positionTicks: Long,
-        playSessionId: String?
+        playSessionId: String?,
+        durationSeconds: Int?,
+        isPlayed: Boolean?
     ): Result<Unit> {
         lastReportedStoppedTicks = positionTicks
         return Result.success(Unit)

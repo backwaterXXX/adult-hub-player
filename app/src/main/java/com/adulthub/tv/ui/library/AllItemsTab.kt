@@ -65,7 +65,7 @@ import com.adulthub.tv.ui.theme.NeonPink
 import com.adulthub.tv.ui.theme.SurfaceDark
 import com.adulthub.tv.ui.theme.TextSecondary
 import kotlinx.coroutines.delay
-import org.jellyfin.sdk.model.api.SortOrder
+import com.adulthub.tv.data.model.SortOrder
 
 @Composable
 @OptIn(ExperimentalComposeUiApi::class)

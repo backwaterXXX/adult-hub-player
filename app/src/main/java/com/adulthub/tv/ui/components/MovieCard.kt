@@ -45,7 +45,7 @@ import androidx.tv.material3.Text
 import coil.compose.AsyncImage
 import coil.request.ImageRequest
 import com.adulthub.tv.R
-import com.adulthub.tv.data.jellyfin.JellyfinClientManager
+import com.adulthub.tv.data.api.AdultHubClientManager
 import com.adulthub.tv.data.local.SettingsDataStore
 import com.adulthub.tv.data.model.TvItem
 import com.adulthub.tv.ui.theme.CardSurface
@@ -66,7 +66,7 @@ fun MovieCard(
 ) {
     val context = LocalContext.current
     val settingsDataStore: SettingsDataStore = koinInject()
-    val jellyfinClientManager: JellyfinClientManager = koinInject()
+    val clientManager: AdultHubClientManager = koinInject()
     val lowRamMode by settingsDataStore.lowRamMode.collectAsStateWithLifecycle(initialValue = false)
     val telegramVideoId = item.providerVideoId?.takeIf { it.isNotBlank() }
         ?: item.id.takeIf { it.startsWith("telegram:") }?.removePrefix("telegram:")
@@ -101,8 +101,8 @@ fun MovieCard(
             val request = ImageRequest.Builder(context)
                 .data(selectedUrl)
                 .size(targetWidth, targetHeight)
-            jellyfinClientManager.getApiOrNull()?.accessToken?.takeIf { it.isNotBlank() }?.let {
-                request.addHeader("X-Emby-Token", it)
+            clientManager.currentAccessToken?.takeIf { it.isNotBlank() }?.let {
+                request.addHeader("Authorization", "Bearer $it")
             }
             request.build()
         }

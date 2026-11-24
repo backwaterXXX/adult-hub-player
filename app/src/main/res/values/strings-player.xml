@@ -121,7 +121,7 @@
     <string name="phash_rejected_task">Resolver rejected the video matching task</string>
     <string name="phash_complete">Video matching complete</string>
     <string name="phash_no_task_id">Resolver returned no task ID</string>
-    <string name="phash_jellyfin_rejected">Jellyfin authorization was rejected</string>
+    <string name="phash_jellyfin_rejected">Adult Hub authorization was rejected</string>
     <string name="phash_earlier_task_failed">This video matching task failed earlier; retry it from Resolver tasks</string>
     <string name="phash_rejected_http">Resolver rejected the task (HTTP %1$d)</string>
     <string name="phash_unavailable_retry">Resolver unavailable; task will retry when opened again</string>
@@ -132,7 +132,7 @@
     <string name="phash_unsupported_decoder">Resolver task uses an unsupported decoder profile</string>
     <string name="phash_unsupported_state">Unsupported Resolver task state: %1$s</string>
     <string name="phash_status_retrying">Resolver unavailable; retrying status check</string>
-    <string name="phash_jellyfin_rejected_again">Jellyfin authorization was rejected; sign in again</string>
+    <string name="phash_jellyfin_rejected_again">Adult Hub authorization was rejected; sign in again</string>
     <string name="phash_task_gone">Resolver task is no longer available</string>
     <string name="phash_check_failed_http">Could not check Resolver task (HTTP %1$d)</string>
     <string name="phash_queued">Video matching queued on Resolver</string>

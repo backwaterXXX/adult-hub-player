@@ -11,7 +11,7 @@ import com.adulthub.tv.data.model.TvItem
 import com.adulthub.tv.data.model.TvPerson
 import com.adulthub.tv.data.model.TvStudio
 import com.adulthub.tv.data.resolver.VideoDto
-import org.jellyfin.sdk.model.api.SortOrder
+import com.adulthub.tv.data.model.SortOrder
 
 enum class LibraryTab(@StringRes val titleRes: Int) {
     ALL(R.string.library_tab_movies),

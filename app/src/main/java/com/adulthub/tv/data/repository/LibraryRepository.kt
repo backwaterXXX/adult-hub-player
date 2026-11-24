@@ -1,32 +1,20 @@
 package com.adulthub.tv.data.repository
 
-import com.adulthub.tv.data.jellyfin.JellyfinClientManager
-import com.adulthub.tv.data.jellyfin.toTvItem
+import com.adulthub.tv.data.api.AdultHubClientManager
+import com.adulthub.tv.data.api.WatchProgressUpdateDto
+import com.adulthub.tv.data.api.toTvItem
 import com.adulthub.tv.data.local.AccountKeyProvider
 import com.adulthub.tv.data.local.SettingsDataStore
 import com.adulthub.tv.data.local.TelegramProgressStore
+import com.adulthub.tv.data.model.ItemFilter
+import com.adulthub.tv.data.model.SortOrder
 import com.adulthub.tv.data.model.TvCategory
 import com.adulthub.tv.data.model.TvItem
 import java.util.UUID
 import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.flow.firstOrNull
 import kotlinx.coroutines.withContext
-import org.jellyfin.sdk.api.client.extensions.genreApi
-import org.jellyfin.sdk.api.client.extensions.libraryApi
-import org.jellyfin.sdk.api.client.extensions.userDataApi
-import org.jellyfin.sdk.api.client.extensions.userViewApi
-import org.jellyfin.sdk.model.api.BaseItemKind
-import org.jellyfin.sdk.model.api.ImageType
-import org.jellyfin.sdk.model.api.ItemFields
-import org.jellyfin.sdk.model.api.ItemFilter
-import org.jellyfin.sdk.model.api.ItemSortBy
-import org.jellyfin.sdk.model.api.MediaType
-import org.jellyfin.sdk.model.api.SortOrder
-import org.jellyfin.sdk.model.api.request.GetGenresRequest
-import org.jellyfin.sdk.model.api.request.GetItemsRequest
-import org.jellyfin.sdk.model.api.request.GetLatestMediaRequest
-import org.jellyfin.sdk.model.api.request.GetResumeItemsRequest
-import org.jellyfin.sdk.model.api.request.GetSimilarItemsRequest
 
 data class TvLibrary(
     val id: String,
@@ -40,32 +28,29 @@ data class TvItemsPage(
     val startIndex: Int
 )
 
-internal fun itemSortBy(sortBy: String): ItemSortBy = when (sortBy.lowercase()) {
-    "sortname", "name" -> ItemSortBy.SORT_NAME
-    "communityrating" -> ItemSortBy.COMMUNITY_RATING
-    "datecreated", "latest" -> ItemSortBy.DATE_CREATED
-    "random" -> ItemSortBy.RANDOM
-    "runtime" -> ItemSortBy.RUNTIME
-    else -> ItemSortBy.DATE_CREATED
+internal fun itemSortBy(sortBy: String): String = when (sortBy.lowercase()) {
+    "sortname", "name", "title" -> "title"
+    "runtime", "duration" -> "duration"
+    else -> "latest"
 }
 
 open class LibraryRepository(
-    private val clientManager: JellyfinClientManager,
+    private val clientManager: AdultHubClientManager,
     private val settingsDataStore: SettingsDataStore,
     private val telegramProgressStore: TelegramProgressStore? = null,
-    private val accountKeyProvider: AccountKeyProvider? = null
+    private val accountKeyProvider: AccountKeyProvider? = null,
+    private val watchHistoryStore: com.adulthub.tv.data.local.WatchHistoryStore? = null
 ) {
     open suspend fun getLibraries(): Result<List<TvLibrary>> = withContext(Dispatchers.IO) {
         try {
-            val api = clientManager.getApi()
-            val response = api.userViewApi.getUserViews()
-            val libraries = response.content.items.map { item ->
+            // Adult Hub operates on a canonical catalog rather than partitioned Jellyfin libraries.
+            val libraries = listOf(
                 TvLibrary(
-                    id = item.id.toString(),
-                    name = item.name.orEmpty(),
-                    collectionType = item.collectionType?.toString()
+                    id = "catalog",
+                    name = "Adult Hub",
+                    collectionType = "movies"
                 )
-            }
+            )
             Result.success(libraries)
         } catch (e: CancellationException) {
             throw e
@@ -84,40 +69,47 @@ open class LibraryRepository(
         searchTerm: String? = null,
         genreIds: List<UUID> = emptyList(),
         studioIds: List<UUID> = emptyList(),
-        personIds: List<UUID> = emptyList()
+        personIds: List<UUID> = emptyList(),
+        category: String? = null,
+        tag: String? = null,
+        studio: String? = null,
+        performer: String? = null,
+        performerId: String? = null,
+        minDuration: Int? = null
     ): Result<TvItemsPage> = withContext(Dispatchers.IO) {
         try {
             val api = clientManager.getApi()
-            val targetParentId = parentId ?: settingsDataStore.getSelectedLibraryId()
-            val parentUuid = targetParentId?.let { UUID.fromString(it) }
-            val userUuid = clientManager.currentUserId?.let { runCatching { UUID.fromString(it) }.getOrNull() }
+            val baseUrl = clientManager.currentServerUrl ?: ""
+            val sortKey = itemSortBy(sortBy)
+            val direction = if (sortOrder == SortOrder.ASCENDING) "asc" else "desc"
+            val isFavorite = if (filters.contains(ItemFilter.IS_FAVORITE)) true else null
 
-            val sortByItem = itemSortBy(sortBy)
-
-            val response = api.libraryApi.getItems(
-                GetItemsRequest(
-                    userId = userUuid,
-                    parentId = parentUuid,
-                    startIndex = startIndex,
-                    limit = limit,
-                    recursive = true,
-                    includeItemTypes = setOf(BaseItemKind.MOVIE),
-                    fields = setOf(ItemFields.PROVIDER_IDS),
-                    sortBy = listOf(sortByItem),
-                    sortOrder = listOf(sortOrder),
-                    filters = filters,
-                    searchTerm = searchTerm,
-                    genreIds = genreIds,
-                    studioIds = studioIds,
-                    personIds = personIds,
-                    enableTotalRecordCount = true
-                )
+            val response = api.getVideos(
+                offset = startIndex,
+                limit = limit.coerceAtMost(100),
+                sort = sortKey,
+                direction = direction,
+                q = searchTerm?.takeIf { it.isNotBlank() },
+                category = category,
+                tag = tag,
+                studio = studio,
+                performer = performer,
+                performerId = performerId,
+                minDuration = minDuration,
+                isFavorite = isFavorite
             )
 
+            var items = response.items.map { it.toTvItem(baseUrl) }
+            if (filters.contains(ItemFilter.IS_UNPLAYED)) {
+                items = items.filter { !it.isPlayed }
+            } else if (filters.contains(ItemFilter.IS_PLAYED)) {
+                items = items.filter { it.isPlayed }
+            }
+
             val page = TvItemsPage(
-                items = response.content.items.map { it.toTvItem() },
-                totalRecordCount = response.content.totalRecordCount,
-                startIndex = response.content.startIndex
+                items = items,
+                totalRecordCount = response.totalCount,
+                startIndex = response.offset
             )
             Result.success(page)
         } catch (e: CancellationException) {
@@ -133,19 +125,14 @@ open class LibraryRepository(
     ): Result<List<TvItem>> = withContext(Dispatchers.IO) {
         try {
             val api = clientManager.getApi()
-            val targetParentId = parentId ?: settingsDataStore.getSelectedLibraryId()
-            val parentUuid = targetParentId?.let { UUID.fromString(it) }
-            val userUuid = clientManager.currentUserId?.let { runCatching { UUID.fromString(it) }.getOrNull() }
-
-            val response = api.libraryApi.getLatestMedia(
-                GetLatestMediaRequest(
-                    userId = userUuid,
-                    parentId = parentUuid,
-                    limit = limit,
-                    fields = setOf(ItemFields.PROVIDER_IDS)
-                )
+            val baseUrl = clientManager.currentServerUrl ?: ""
+            val response = api.getVideos(
+                offset = 0,
+                limit = limit.coerceAtMost(100),
+                sort = "latest",
+                direction = "desc"
             )
-            val items = response.content.map { it.toTvItem() }
+            val items = response.items.map { it.toTvItem(baseUrl) }
             Result.success(items)
         } catch (e: CancellationException) {
             throw e
@@ -156,17 +143,32 @@ open class LibraryRepository(
 
     open suspend fun getResumeItems(limit: Int = 12): Result<List<TvItem>> = withContext(Dispatchers.IO) {
         try {
-            val api = clientManager.getApi()
-            val userUuid = clientManager.currentUserId?.let { runCatching { UUID.fromString(it) }.getOrNull() }
-            val response = api.libraryApi.getResumeItems(
-                GetResumeItemsRequest(
-                    userId = userUuid,
-                    limit = limit,
-                    mediaTypes = setOf(MediaType.VIDEO),
-                    fields = setOf(ItemFields.PROVIDER_IDS)
-                )
-            )
-            val items = response.content.items.map { it.toTvItem() }
+            val records = watchHistoryStore?.history?.firstOrNull().orEmpty()
+            val candidateRecords = records.filter { record ->
+                !record.isPlayed &&
+                    record.progressFraction > 0.01f &&
+                    record.progressFraction < 0.90f &&
+                    !record.itemId.startsWith("telegram:") &&
+                    !record.itemId.contains(":") &&
+                    !record.itemId.startsWith("-100")
+            }.take(limit)
+
+            val api = clientManager.getApiOrNull()
+            val items = candidateRecords.map { record ->
+                var item = record.toTvItem()
+                if (api != null) {
+                    val serverProgress = runCatching { api.getWatchProgress(record.itemId) }.getOrNull()
+                    if (serverProgress != null) {
+                        item = item.copy(
+                            playbackPositionTicks = serverProgress.positionSeconds * 10_000_000L,
+                            isPlayed = serverProgress.isPlayed,
+                            playedPercentage = serverProgress.playedPercentage
+                        )
+                    }
+                }
+                item
+            }.filter { !it.isPlayed && it.playbackPositionTicks > 15_000_0000L }
+
             Result.success(items)
         } catch (e: CancellationException) {
             throw e
@@ -192,33 +194,55 @@ open class LibraryRepository(
     ): Result<TvItem?> = withContext(Dispatchers.IO) {
         try {
             val api = clientManager.getApi()
-            val targetParentId = parentId ?: settingsDataStore.getSelectedLibraryId()
-            val parentUuid = targetParentId?.let { UUID.fromString(it) }
-            val userUuid = clientManager.currentUserId?.let { runCatching { UUID.fromString(it) }.getOrNull() }
+            val baseUrl = clientManager.currentServerUrl ?: ""
+            val isFavorite = if (filters.contains(ItemFilter.IS_FAVORITE)) true else null
+            val category = genres.firstOrNull()
+            val studio = studios.firstOrNull()
 
-            val response = api.libraryApi.getItems(
-                GetItemsRequest(
-                    userId = userUuid,
-                    parentId = parentUuid,
-                    limit = 5,
-                    recursive = true,
-                    includeItemTypes = setOf(BaseItemKind.MOVIE),
-                    fields = setOf(ItemFields.PROVIDER_IDS),
-                    sortBy = listOf(ItemSortBy.RANDOM),
-                    filters = filters,
-                    genreIds = genreIds,
-                    studioIds = studioIds,
-                    personIds = personIds,
-                    genres = genres,
-                    studios = studios
-                )
+            val initial = api.getVideos(
+                offset = 0,
+                limit = 50,
+                sort = "latest",
+                category = category,
+                studio = studio,
+                isFavorite = isFavorite
             )
-            val excludeUuid = excludeItemId?.let { runCatching { UUID.fromString(it) }.getOrNull() }
-            val item = response.content.items
-                .firstOrNull { excludeUuid == null || it.id != excludeUuid }
-                ?.toTvItem()
+            val totalCount = initial.totalCount
+            val pool = if (totalCount <= 50) {
+                initial.items.map { it.toTvItem(baseUrl) }
+            } else {
+                val maxOffset = (totalCount - 50).coerceAtLeast(0)
+                val randomOffset = kotlin.random.Random.nextInt(maxOffset + 1)
+                val sampled = api.getVideos(
+                    offset = randomOffset,
+                    limit = 50,
+                    sort = "latest",
+                    category = category,
+                    studio = studio,
+                    isFavorite = isFavorite
+                )
+                sampled.items.map { it.toTvItem(baseUrl) }
+            }
 
-            Result.success(item)
+            var eligible = pool
+            if (excludeItemId != null) {
+                eligible = eligible.filter { it.id != excludeItemId }
+            }
+            if (filters.contains(ItemFilter.IS_UNPLAYED)) {
+                eligible = eligible.filter { !it.isPlayed }
+            } else if (filters.contains(ItemFilter.IS_PLAYED)) {
+                eligible = eligible.filter { it.isPlayed }
+            }
+
+            if (eligible.isEmpty() && totalCount > 50) {
+                val fallback = initial.items.map { it.toTvItem(baseUrl) }
+                    .filter { it.id != excludeItemId }
+                eligible = if (filters.contains(ItemFilter.IS_UNPLAYED)) {
+                    fallback.filter { !it.isPlayed }
+                } else fallback
+            }
+
+            Result.success(eligible.shuffled().firstOrNull())
         } catch (e: CancellationException) {
             throw e
         } catch (e: Exception) {
@@ -233,24 +257,45 @@ open class LibraryRepository(
     ): Result<List<TvItem>> = withContext(Dispatchers.IO) {
         try {
             val api = clientManager.getApi()
-            val targetParentId = parentId ?: settingsDataStore.getSelectedLibraryId()
-            val parentUuid = targetParentId?.let { UUID.fromString(it) }
-            val userUuid = clientManager.currentUserId?.let { runCatching { UUID.fromString(it) }.getOrNull() }
+            val baseUrl = clientManager.currentServerUrl ?: ""
+            val isFavorite = if (filters.contains(ItemFilter.IS_FAVORITE)) true else null
 
-            val response = api.libraryApi.getItems(
-                GetItemsRequest(
-                    userId = userUuid,
-                    parentId = parentUuid,
-                    limit = limit,
-                    recursive = true,
-                    includeItemTypes = setOf(BaseItemKind.MOVIE),
-                    fields = setOf(ItemFields.PROVIDER_IDS),
-                    sortBy = listOf(ItemSortBy.RANDOM),
-                    filters = filters
-                )
+            val initial = api.getVideos(
+                offset = 0,
+                limit = 50,
+                sort = "latest",
+                isFavorite = isFavorite
             )
-            val items = response.content.items.map { it.toTvItem() }
-            Result.success(items)
+            val totalCount = initial.totalCount
+            val pool = if (totalCount <= 50) {
+                initial.items.map { it.toTvItem(baseUrl) }
+            } else {
+                val maxOffset = (totalCount - 50).coerceAtLeast(0)
+                val randomOffset = kotlin.random.Random.nextInt(maxOffset + 1)
+                val sampled = api.getVideos(
+                    offset = randomOffset,
+                    limit = 50,
+                    sort = "latest",
+                    isFavorite = isFavorite
+                )
+                sampled.items.map { it.toTvItem(baseUrl) }
+            }
+
+            var items = pool
+            if (filters.contains(ItemFilter.IS_UNPLAYED)) {
+                items = items.filter { !it.isPlayed }
+            } else if (filters.contains(ItemFilter.IS_PLAYED)) {
+                items = items.filter { it.isPlayed }
+            }
+
+            if (items.isEmpty() && totalCount > 50) {
+                val fallback = initial.items.map { it.toTvItem(baseUrl) }
+                items = if (filters.contains(ItemFilter.IS_UNPLAYED)) {
+                    fallback.filter { !it.isPlayed }
+                } else fallback
+            }
+
+            Result.success(items.shuffled().take(limit))
         } catch (e: CancellationException) {
             throw e
         } catch (e: Exception) {
@@ -260,11 +305,15 @@ open class LibraryRepository(
 
     open suspend fun getItemDetails(itemId: String): Result<TvItem> = withContext(Dispatchers.IO) {
         try {
+            if (itemId.isBlank() || itemId.startsWith("telegram:") || itemId.contains(":") || itemId.startsWith("-100")) {
+                return@withContext Result.failure(
+                    IllegalArgumentException("Cannot query catalog detail for provider/Telegram ID: $itemId")
+                )
+            }
             val api = clientManager.getApi()
-            val uuid = UUID.fromString(itemId)
-            val userUuid = clientManager.currentUserId?.let { runCatching { UUID.fromString(it) }.getOrNull() }
-            val response = api.libraryApi.getItem(itemId = uuid, userId = userUuid)
-            Result.success(response.content.toTvItem())
+            val baseUrl = clientManager.currentServerUrl ?: ""
+            val response = api.getVideoDetail(itemId)
+            Result.success(response.toTvItem(baseUrl))
         } catch (e: CancellationException) {
             throw e
         } catch (e: Exception) {
@@ -272,36 +321,26 @@ open class LibraryRepository(
         }
     }
 
+    /**
+     * Adult Hub backend does not currently have a dedicated /similar catalog endpoint.
+     * Retains build compatibility and safe fallback to empty list without mocking backend contracts.
+     */
     open suspend fun getSimilarItems(itemId: String, limit: Int = 12): Result<List<TvItem>> = withContext(Dispatchers.IO) {
-        try {
-            val api = clientManager.getApi()
-            val uuid = UUID.fromString(itemId)
-            val userUuid = clientManager.currentUserId?.let { runCatching { UUID.fromString(it) }.getOrNull() }
-            val response = api.libraryApi.getSimilarItems(
-                GetSimilarItemsRequest(
-                    itemId = uuid,
-                    userId = userUuid,
-                    limit = limit,
-                    fields = setOf(ItemFields.PROVIDER_IDS)
-                )
-            )
-            Result.success(response.content.items.map { it.toTvItem() })
-        } catch (e: CancellationException) {
-            throw e
-        } catch (e: Exception) {
-            Result.failure(e)
-        }
+        Result.success(emptyList())
     }
 
     open suspend fun toggleFavorite(itemId: String, markFavorite: Boolean): Result<Boolean> = withContext(Dispatchers.IO) {
         try {
+            if (itemId.isBlank() || itemId.startsWith("telegram:") || itemId.contains(":") || itemId.startsWith("-100")) {
+                return@withContext Result.failure(
+                    IllegalArgumentException("Cannot toggle favorite for provider/Telegram ID: $itemId")
+                )
+            }
             val api = clientManager.getApi()
-            val uuid = UUID.fromString(itemId)
-            val userUuid = clientManager.currentUserId?.let { runCatching { UUID.fromString(it) }.getOrNull() }
             if (markFavorite) {
-                api.userDataApi.markFavoriteItem(itemId = uuid, userId = userUuid)
+                api.putFavorite(itemId)
             } else {
-                api.userDataApi.unmarkFavoriteItem(itemId = uuid, userId = userUuid)
+                api.deleteFavorite(itemId)
             }
             Result.success(markFavorite)
         } catch (e: CancellationException) {
@@ -312,26 +351,22 @@ open class LibraryRepository(
     }
 
     open suspend fun markAsPlayed(itemId: String, isPlayed: Boolean): Result<Boolean> = withContext(Dispatchers.IO) {
-        // The account of the request is captured before the network call, so a late
-        // write cannot land in the account that signed in meanwhile.
         val accountKey = runCatching { accountKeyProvider?.currentKey() }.getOrNull()
         try {
-            val uuid = runCatching { UUID.fromString(itemId) }.getOrNull()
-            if (uuid != null) {
-                val api = clientManager.getApi()
-                val userId = clientManager.currentUserId?.let { runCatching { UUID.fromString(it) }.getOrNull() }
-                if (isPlayed) {
-                    api.userDataApi.markPlayedItem(itemId = uuid, userId = userId)
-                } else {
-                    api.userDataApi.markUnplayedItem(itemId = uuid, userId = userId)
-                }
-            } else {
-                telegramProgressStore?.markPlayed(
-                    providerVideoId = itemId,
-                    isPlayed = isPlayed,
-                    accountKey = accountKey
+            val api = clientManager.getApiOrNull()
+            api?.putWatchProgress(
+                videoId = itemId,
+                body = WatchProgressUpdateDto(
+                    positionSeconds = 0,
+                    durationSeconds = 0,
+                    isPlayed = isPlayed
                 )
-            }
+            )
+            telegramProgressStore?.markPlayed(
+                providerVideoId = itemId,
+                isPlayed = isPlayed,
+                accountKey = accountKey
+            )
             Result.success(isPlayed)
         } catch (e: CancellationException) {
             throw e
@@ -346,28 +381,15 @@ open class LibraryRepository(
     ): Result<List<TvCategory>> = withContext(Dispatchers.IO) {
         try {
             val api = clientManager.getApi()
-            val targetParentId = parentId ?: settingsDataStore.getSelectedLibraryId()
-            val parentUuid = targetParentId?.let { UUID.fromString(it) }
-            val userUuid = clientManager.currentUserId?.let { runCatching { UUID.fromString(it) }.getOrNull() }
-
-            val response = api.genreApi.getGenres(
-                GetGenresRequest(
-                    userId = userUuid,
-                    parentId = parentUuid,
-                    limit = limit,
-                    sortBy = listOf(ItemSortBy.SORT_NAME),
-                    sortOrder = listOf(SortOrder.ASCENDING)
-                )
-            )
-            val genres = response.content.items.map { item ->
+            val response = api.getCategories(offset = 0, limit = limit.coerceAtMost(200))
+            val categories = response.items.map { item ->
                 TvCategory(
-                    id = item.id.toString(),
-                    name = item.name.orEmpty(),
-                    primaryImageTag = item.imageTags?.get(ImageType.PRIMARY),
-                    movieCount = item.childCount ?: 0
+                    id = item.name,
+                    name = item.name,
+                    movieCount = item.count
                 )
             }
-            Result.success(genres)
+            Result.success(categories)
         } catch (e: CancellationException) {
             throw e
         } catch (e: Exception) {
@@ -384,31 +406,18 @@ open class LibraryRepository(
     ): Result<TvItemsPage> = withContext(Dispatchers.IO) {
         try {
             val api = clientManager.getApi()
-            val targetParentId = parentId ?: settingsDataStore.getSelectedLibraryId()
-            val parentUuid = targetParentId?.let { UUID.fromString(it) }
-            val genreUuid = genreId?.let { runCatching { UUID.fromString(it) }.getOrNull() }
-            val userUuid = clientManager.currentUserId?.let { runCatching { UUID.fromString(it) }.getOrNull() }
-
-            val response = api.libraryApi.getItems(
-                GetItemsRequest(
-                    userId = userUuid,
-                    parentId = parentUuid,
-                    startIndex = startIndex,
-                    limit = limit,
-                    recursive = true,
-                    includeItemTypes = setOf(BaseItemKind.MOVIE),
-                    fields = setOf(ItemFields.PROVIDER_IDS),
-                    genreIds = if (genreUuid != null) listOf(genreUuid) else emptyList(),
-                    genres = if (genreUuid == null) listOf(genreName) else emptyList(),
-                    sortBy = listOf(ItemSortBy.DATE_CREATED),
-                    sortOrder = listOf(SortOrder.DESCENDING),
-                    enableTotalRecordCount = true
-                )
+            val baseUrl = clientManager.currentServerUrl ?: ""
+            val response = api.getVideos(
+                category = genreName,
+                offset = startIndex,
+                limit = limit.coerceAtMost(100),
+                sort = "latest",
+                direction = "desc"
             )
             val page = TvItemsPage(
-                items = response.content.items.map { it.toTvItem() },
-                totalRecordCount = response.content.totalRecordCount,
-                startIndex = response.content.startIndex
+                items = response.items.map { it.toTvItem(baseUrl) },
+                totalRecordCount = response.totalCount,
+                startIndex = response.offset
             )
             Result.success(page)
         } catch (e: CancellationException) {

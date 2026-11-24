@@ -7,7 +7,7 @@ import coil.ImageLoaderFactory
 import coil.disk.DiskCache
 import coil.memory.MemoryCache
 import coil.request.CachePolicy
-import com.adulthub.tv.data.jellyfin.JellyfinClientManager
+import com.adulthub.tv.data.api.AdultHubClientManager
 import com.adulthub.tv.data.local.SettingsDataStore
 import com.adulthub.tv.data.network.ImageTokenOriginPolicy
 import com.adulthub.tv.data.update.AppUpdateManager
@@ -81,7 +81,7 @@ class AdultHubTvApp :
 
     override fun newImageLoader(): ImageLoader {
         val cacheLimitMb = imageCacheLimitMb.get()
-        val clientManager = GlobalContext.get().get<JellyfinClientManager>()
+        val clientManager = GlobalContext.get().get<AdultHubClientManager>()
         val cleartextInterceptor = GlobalContext.get().get<com.adulthub.tv.data.network.CleartextOriginInterceptor>()
         val imageHttpClient = OkHttpClient.Builder()
             .addNetworkInterceptor(cleartextInterceptor)
@@ -93,18 +93,15 @@ class AdultHubTvApp :
                 } catch (error: Exception) {
                     throw IOException("Blocked image request to an unapproved HTTP origin", error)
                 }
-                val token = clientManager.getApiOrNull()?.accessToken
-                // The token may reach the Jellyfin server and the Resolver only. The
-                // Resolver serves the thumbnails of the video matching, and Coil asks
-                // for them itself, so the header is decided here for every request.
+                val token = clientManager.currentAccessToken
                 val mayCarryToken = ImageTokenOriginPolicy.allows(
                     urlString,
                     listOf(clientManager.currentServerUrl, settingsDataStore.resolverBaseUrlSnapshot())
                 )
                 val authenticatedRequest = if (mayCarryToken && !token.isNullOrBlank()) {
-                    request.newBuilder().header("X-Emby-Token", token).build()
+                    request.newBuilder().header("Authorization", "Bearer $token").build()
                 } else {
-                    request.newBuilder().removeHeader("X-Emby-Token").build()
+                    request.newBuilder().removeHeader("Authorization").build()
                 }
                 chain.proceed(authenticatedRequest)
             }

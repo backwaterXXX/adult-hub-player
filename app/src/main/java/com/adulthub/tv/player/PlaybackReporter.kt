@@ -14,7 +14,7 @@ import kotlinx.coroutines.isActive
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
 import kotlinx.coroutines.withTimeoutOrNull
-import org.jellyfin.sdk.model.api.PlayMethod
+import com.adulthub.tv.data.model.PlayMethod
 
 private const val TAG = "PlaybackReporter"
 private const val REPORTING_INTERVAL_MS = 10_000L

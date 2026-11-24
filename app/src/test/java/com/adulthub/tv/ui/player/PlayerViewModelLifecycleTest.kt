@@ -23,7 +23,7 @@ import kotlinx.coroutines.test.advanceUntilIdle
 import kotlinx.coroutines.test.resetMain
 import kotlinx.coroutines.test.runTest
 import kotlinx.coroutines.test.setMain
-import org.jellyfin.sdk.model.api.PlayMethod
+import com.adulthub.tv.data.model.PlayMethod
 import org.junit.After
 import org.junit.Assert.assertTrue
 import org.junit.Before

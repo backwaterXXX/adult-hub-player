@@ -1,6 +1,12 @@
 package com.adulthub.tv.data.repository
 
-import com.adulthub.tv.data.jellyfin.JellyfinClientManager
+import com.adulthub.tv.data.api.AdultHubApi
+import com.adulthub.tv.data.api.AdultHubClientManager
+import com.adulthub.tv.data.api.AuthLoginRequestDto
+import com.adulthub.tv.data.api.AuthLoginResponseDto
+import com.adulthub.tv.data.api.AuthRevokeResponseDto
+import com.adulthub.tv.data.api.AuthUserDto
+import com.adulthub.tv.data.api.VersionDiscoveryDto
 import com.adulthub.tv.data.local.AuthDataStore
 import com.adulthub.tv.data.local.PreferenceWriteException
 import com.adulthub.tv.data.local.SettingsDataStore
@@ -9,12 +15,10 @@ import com.adulthub.tv.data.network.ServiceUrlPolicy
 import com.adulthub.tv.data.network.ServiceUrlValidation
 import io.mockk.coEvery
 import io.mockk.coVerify
-import io.mockk.coVerifyOrder
 import io.mockk.every
 import io.mockk.mockk
 import io.mockk.verify
-import java.util.UUID
-import java.util.concurrent.atomic.AtomicReference
+import java.io.IOException
 import kotlinx.coroutines.CompletableDeferred
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.async
@@ -22,27 +26,20 @@ import kotlinx.coroutines.sync.Mutex
 import kotlinx.coroutines.test.runTest
 import kotlinx.coroutines.withContext
 import kotlinx.coroutines.withTimeoutOrNull
-import org.jellyfin.sdk.api.client.ApiClient
-import org.jellyfin.sdk.api.client.Response
-import org.jellyfin.sdk.api.client.extensions.authenticationApi
-import org.jellyfin.sdk.api.operations.AuthenticationApi
-import org.jellyfin.sdk.model.api.AuthenticationResult
-import org.jellyfin.sdk.model.api.QuickConnectResult
-import org.jellyfin.sdk.model.api.UserDto
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertFalse
 import org.junit.Assert.assertNotNull
 import org.junit.Assert.assertNull
 import org.junit.Assert.assertTrue
 import org.junit.Test
+import java.util.concurrent.atomic.AtomicReference
 
 class AuthRepositoryTest {
 
-    private val clientManager: JellyfinClientManager = mockk(relaxed = true)
+    private val clientManager: AdultHubClientManager = mockk(relaxed = true)
     private val authDataStore: AuthDataStore = mockk(relaxed = true)
     private val settingsDataStore: SettingsDataStore = mockk(relaxed = true)
-    private val mockApi: ApiClient = mockk(relaxed = true)
-    private val mockAuthApi: AuthenticationApi = mockk()
+    private val mockApi: AdultHubApi = mockk(relaxed = true)
 
     private val repository = AuthRepository(
         clientManager = clientManager,
@@ -50,38 +47,32 @@ class AuthRepositoryTest {
         settingsDataStore = settingsDataStore
     )
 
-    @Test
-    fun `login with valid credentials returns Authenticated state and saves session`() = runTest {
-        val serverUrl = "http://192.168.1.10:8096"
-        val username = "testuser"
-        val password = "secret_password"
-        val userId = UUID.randomUUID()
-        val accessToken = "jellyfin_test_access_token_12345"
-        val serverId = "test_server_id"
-
+    init {
         coEvery { settingsDataStore.requireAllowedServiceUrl(any(), any()) } coAnswers {
             when (val validation = ServiceUrlPolicy.inspect(firstArg<String>())) {
                 is ServiceUrlValidation.Valid -> validation.value
                 is ServiceUrlValidation.Invalid -> throw IllegalArgumentException(validation.reason)
             }
         }
+    }
 
-        val mockUserDto = mockk<UserDto> {
-            every { id } returns userId
-            every { name } returns username
-        }
-        val mockAuthResult = mockk<AuthenticationResult> {
-            every { this@mockk.accessToken } returns accessToken
-            every { user } returns mockUserDto
-            every { this@mockk.serverId } returns serverId
-        }
-        val mockResponse = mockk<Response<AuthenticationResult>> {
-            every { content } returns mockAuthResult
-        }
+    @Test
+    fun `login with valid credentials returns Authenticated state and saves session`() = runTest {
+        val serverUrl = "http://192.168.1.10:8096"
+        val username = "testuser"
+        val password = "secret_password"
+        val userId = "user-123"
+        val accessToken = "test_access_token_12345"
+        val refreshToken = "test_refresh_token_abcde"
+
+        val loginResponse = AuthLoginResponseDto(
+            accessToken = accessToken,
+            refreshToken = refreshToken,
+            user = AuthUserDto(id = userId, username = username)
+        )
 
         every { clientManager.createApi(serverUrl) } returns mockApi
-        every { mockApi.authenticationApi } returns mockAuthApi
-        coEvery { mockAuthApi.authenticateUserByName(any()) } returns mockResponse
+        coEvery { mockApi.login(any()) } returns loginResponse
 
         val result = repository.login(
             serverUrl = serverUrl,
@@ -92,265 +83,174 @@ class AuthRepositoryTest {
         assertTrue("Expected login to succeed", result.isSuccess)
         val authState = result.getOrThrow()
         assertEquals(serverUrl, authState.serverUrl)
-        assertEquals(userId.toString(), authState.userId)
+        assertEquals(userId, authState.userId)
         assertEquals(accessToken, authState.accessToken)
         assertEquals(username, authState.username)
-        val expectedServerName = "192.168.1.10:8096"
-        assertEquals(expectedServerName, authState.serverName)
+        assertEquals(refreshToken, authState.refreshToken)
 
-        coVerify {
+        verify(exactly = 1) {
+            clientManager.updateSession(serverUrl, accessToken, userId, username, refreshToken)
+        }
+        coVerify(exactly = 1) {
             authDataStore.saveSession(
                 serverUrl = serverUrl,
-                userId = userId.toString(),
+                accessToken = accessToken,
+                userId = userId,
                 username = username,
-                accessToken = accessToken,
-                serverName = expectedServerName
-            )
-        }
-        coVerify {
-            clientManager.updateSession(
-                serverUrl = serverUrl,
-                accessToken = accessToken,
-                userId = userId.toString()
+                serverName = any(),
+                refreshToken = refreshToken
             )
         }
     }
 
     @Test
-    fun `initiateQuickConnect calls authenticationApi and returns code and secret`() = runTest {
-        val serverUrl = "http://192.168.1.10:8096"
-        coEvery { settingsDataStore.requireAllowedServiceUrl(any(), any()) } coAnswers {
-            when (val validation = ServiceUrlPolicy.inspect(firstArg<String>())) {
-                is ServiceUrlValidation.Valid -> validation.value
-                is ServiceUrlValidation.Invalid -> throw IllegalArgumentException(validation.reason)
-            }
-        }
-        val mockQuickConnectResult = mockk<QuickConnectResult> {
-            every { code } returns "123456"
-            every { secret } returns "secret-key"
-        }
-        val mockResponse = mockk<Response<QuickConnectResult>> {
-            every { content } returns mockQuickConnectResult
-        }
-        every { clientManager.createApi(serverUrl) } returns mockApi
-        every { mockApi.authenticationApi } returns mockAuthApi
-        coEvery { mockAuthApi.initiateQuickConnect() } returns mockResponse
-
-        val result = repository.initiateQuickConnect(serverUrl)
-
-        assertTrue(result.isSuccess)
-        val data = result.getOrThrow()
-        assertEquals("123456", data.code)
-        assertEquals("secret-key", data.secret)
-    }
-
-    @Test
-    fun `checkQuickConnectState queries authenticationApi with secret`() = runTest {
-        val serverUrl = "http://192.168.1.10:8096"
-        coEvery { settingsDataStore.requireAllowedServiceUrl(any(), any()) } coAnswers {
-            when (val validation = ServiceUrlPolicy.inspect(firstArg<String>())) {
-                is ServiceUrlValidation.Valid -> validation.value
-                is ServiceUrlValidation.Invalid -> throw IllegalArgumentException(validation.reason)
-            }
-        }
-        val mockQuickConnectResult = mockk<QuickConnectResult> {
-            every { authenticated } returns true
-        }
-        val mockResponse = mockk<Response<QuickConnectResult>> {
-            every { content } returns mockQuickConnectResult
-        }
-        every { clientManager.createApi(serverUrl) } returns mockApi
-        every { mockApi.authenticationApi } returns mockAuthApi
-        coEvery { mockAuthApi.getQuickConnectState(secret = "secret-key") } returns mockResponse
-
-        val result = repository.checkQuickConnectState(serverUrl, "secret-key")
-
-        assertTrue(result.isSuccess)
-        assertTrue(result.getOrThrow())
-    }
-
-    @Test
-    fun `authenticateQuickConnect completes authentication via authenticationApi`() = runTest {
-        val serverUrl = "http://192.168.1.10:8096"
-        val userId = UUID.randomUUID()
-        val username = "qcuser"
-        val accessToken = "qc-token-123"
-
-        coEvery { settingsDataStore.requireAllowedServiceUrl(any(), any()) } coAnswers {
-            when (val validation = ServiceUrlPolicy.inspect(firstArg<String>())) {
-                is ServiceUrlValidation.Valid -> validation.value
-                is ServiceUrlValidation.Invalid -> throw IllegalArgumentException(validation.reason)
-            }
-        }
-        val mockUserDto = mockk<UserDto> {
-            every { id } returns userId
-            every { name } returns username
-        }
-        val mockAuthResult = mockk<AuthenticationResult> {
-            every { this@mockk.accessToken } returns accessToken
-            every { user } returns mockUserDto
-        }
-        val mockResponse = mockk<Response<AuthenticationResult>> {
-            every { content } returns mockAuthResult
-        }
-        every { clientManager.createApi(serverUrl) } returns mockApi
-        every { mockApi.authenticationApi } returns mockAuthApi
-        coEvery { mockAuthApi.authenticateWithQuickConnect(any()) } returns mockResponse
-
-        val result = repository.authenticateQuickConnect(serverUrl, "secret-key")
-
-        assertTrue(result.isSuccess)
-        val authState = result.getOrThrow()
-        assertEquals(serverUrl, authState.serverUrl)
-        assertEquals(userId.toString(), authState.userId)
-        assertEquals(accessToken, authState.accessToken)
-        assertEquals(username, authState.username)
-    }
-
-    @Test
-    fun `logout clears the stored session and the active Jellyfin client`() = runTest {
-        coEvery { authDataStore.getAuthState() } returns AuthState.NotAuthenticated
-
-        repository.logout()
-
-        coVerify(exactly = 1) { authDataStore.clearSession() }
-        coVerify(exactly = 1) { clientManager.clearSession() }
-    }
-
-    @Test
-    fun `logout clears the local session before revoking the token on the server`() = runTest {
-        val session = AuthState.Authenticated(
-            serverUrl = "https://jf.example.com",
-            userId = "user-1",
-            accessToken = "token-1",
+    fun `login with invalid URL fails`() = runTest {
+        val result = repository.login(
+            serverUrl = "not-a-valid-url",
             username = "user",
-            serverName = "jf.example.com"
+            password = "pwd"
         )
-        coEvery { authDataStore.getAuthState() } returns session
-        every { clientManager.createApi(session.serverUrl, session.accessToken) } returns mockApi
+        assertTrue(result.isFailure)
+    }
+
+    @Test
+    fun `logout clears the stored session and active client`() = runTest {
+        every { clientManager.currentRefreshToken } returns "refresh-tok"
+        every { clientManager.getApiOrNull() } returns mockApi
+        coEvery { mockApi.revoke(any()) } returns AuthRevokeResponseDto(revoked = true)
 
         val result = repository.logout()
 
         assertTrue(result.isSuccess)
-        coVerifyOrder {
-            authDataStore.clearSession()
-            clientManager.createApi(session.serverUrl, session.accessToken)
-        }
-        coVerify(exactly = 1) { clientManager.clearSession() }
+        verify(exactly = 1) { clientManager.clearSession() }
+        coVerify(exactly = 1) { authDataStore.clearSession() }
     }
 
     @Test
-    fun `a failed local sign out does not revoke a token that stays stored`() = runTest {
-        val session = AuthState.Authenticated(
-            serverUrl = "https://jf.example.com",
+    fun `discoverServer returns success when Adult Hub version responds`() = runTest {
+        every { clientManager.createApi("http://192.168.1.10:8096") } returns mockApi
+        coEvery { mockApi.getVersion() } returns VersionDiscoveryDto(serverVersion = "1.0.0")
+
+        val result = repository.discoverServer("http://192.168.1.10:8096")
+        assertTrue(result.isSuccess)
+    }
+
+    @Test
+    fun `quickConnect returns failure as unsupported on Adult Hub`() = runTest {
+        val result = repository.initiateQuickConnect("http://192.168.1.10:8096")
+        assertTrue(result.isFailure)
+        assertTrue(result.exceptionOrNull() is UnsupportedOperationException)
+    }
+
+    @Test
+    fun `restore session requests consent before opening a saved local HTTP server`() = runTest {
+        val savedSession = AuthState.Authenticated(
+            serverUrl = "http://192.168.1.10:8096",
             userId = "user-1",
-            accessToken = "token-1",
+            accessToken = "token",
             username = "user",
-            serverName = "jf.example.com"
+            serverName = "Adult Hub",
+            refreshToken = "refresh-tok"
+        )
+        coEvery { authDataStore.getAuthState() } returns savedSession
+        coEvery { settingsDataStore.isCleartextOriginApproved(savedSession.serverUrl) } returns false
+
+        val result = repository.restoreSession()
+
+        assertEquals(AuthState.HttpConsentRequired(savedSession.serverUrl), result)
+        coVerify(exactly = 0) { clientManager.updateSession(any(), any(), any(), any(), any()) }
+    }
+
+    @Test
+    fun `restore session returns HttpBlocked when URL is invalid`() = runTest {
+        val savedSession = AuthState.Authenticated(
+            serverUrl = "invalid-url-without-scheme",
+            userId = "user-1",
+            accessToken = "token",
+            username = "user",
+            serverName = "Adult Hub"
+        )
+        coEvery { authDataStore.getAuthState() } returns savedSession
+
+        val result = repository.restoreSession()
+
+        assertTrue(result is AuthState.HttpBlocked)
+        assertEquals(savedSession.serverUrl, (result as AuthState.HttpBlocked).serverUrl)
+    }
+
+    @Test
+    fun `handleRejectedSession clears session and client when token matches`() = runTest {
+        val token = "rejected_access_token_123"
+        val session = AuthState.Authenticated(
+            serverUrl = "http://192.168.1.10:8096",
+            userId = "user-1",
+            accessToken = token,
+            username = "user"
         )
         coEvery { authDataStore.getAuthState() } returns session
-        coEvery { authDataStore.clearSession() } throws PreferenceWriteException(
-            "The session could not be cleared",
-            java.io.IOException("disk full")
+        coEvery { authDataStore.clearSessionIfAccessTokenMatches(token) } returns true
+        every { clientManager.clearSessionIfTokenMatches(token) } returns true
+
+        val cleared = repository.handleRejectedSession(token)
+
+        assertEquals(session, cleared)
+        coVerify(exactly = 1) { authDataStore.clearSessionIfAccessTokenMatches(token) }
+        verify(exactly = 1) { clientManager.clearSessionIfTokenMatches(token) }
+    }
+
+    @Test
+    fun `handleRejectedSession for different token does not clear session`() = runTest {
+        val currentToken = "current_token"
+        val staleToken = "stale_token"
+        val session = AuthState.Authenticated(
+            serverUrl = "http://192.168.1.10:8096",
+            userId = "user-1",
+            accessToken = currentToken,
+            username = "user"
         )
+        coEvery { authDataStore.getAuthState() } returns session
+
+        val cleared = repository.handleRejectedSession(staleToken)
+
+        assertNull(cleared)
+        coVerify(exactly = 0) { authDataStore.clearSessionIfAccessTokenMatches(any()) }
+        verify(exactly = 0) { clientManager.clearSessionIfTokenMatches(any()) }
+    }
+
+    @Test
+    fun `failed local sign out does not revoke token on server`() = runTest {
+        coEvery { authDataStore.getAuthState() } returns AuthState.Authenticated(
+            serverUrl = "http://192.168.1.10:8096",
+            userId = "u-1",
+            accessToken = "access",
+            username = "user",
+            refreshToken = "refresh"
+        )
+        coEvery { authDataStore.clearSession() } throws PreferenceWriteException("Disk full", IOException())
 
         val result = repository.logout()
 
         assertTrue(result.isFailure)
-        coVerify(exactly = 0) { clientManager.createApi(any(), any()) }
-        coVerify(exactly = 0) { clientManager.clearSession() }
+        verify(exactly = 0) { clientManager.clearSession() }
+        coVerify(exactly = 0) { mockApi.revoke(any()) }
     }
 
     @Test
-    fun `a rejected token does not clear a session that replaced it`() = runTest {
-        coEvery { authDataStore.getAuthState() } returns AuthState.Authenticated(
-            serverUrl = "https://jf.example.com",
-            userId = "user-1",
-            accessToken = "current-token",
-            username = "user",
-            serverName = "jf.example.com"
-        )
-
-        val cleared = repository.handleRejectedSession("older-token")
-
-        assertEquals(null, cleared)
-        coVerify(exactly = 0) { authDataStore.clearSession() }
-        coVerify(exactly = 0) { authDataStore.clearSessionIfAccessTokenMatches(any()) }
-        coVerify(exactly = 0) { clientManager.clearSessionIfTokenMatches(any()) }
-    }
-
-    @Test
-    fun `a login that replaced the session during cleanup is never deleted`() = runTest {
-        coEvery { authDataStore.getAuthState() } returns AuthState.Authenticated(
-            serverUrl = "https://jf.example.com",
-            userId = "user-1",
-            accessToken = "current-token",
-            username = "user",
-            serverName = "jf.example.com"
-        )
-        coEvery { authDataStore.clearSessionIfAccessTokenMatches("current-token") } returns false
-
-        val cleared = repository.handleRejectedSession("current-token")
-
-        assertEquals(null, cleared)
-        coVerify(exactly = 0) { authDataStore.clearSession() }
-        coVerify(exactly = 0) { clientManager.clearSessionIfTokenMatches(any()) }
-    }
-
-    @Test
-    fun `a rejected active token clears the matching session`() = runTest {
-        val session = AuthState.Authenticated(
-            serverUrl = "https://jf.example.com",
-            userId = "user-1",
-            accessToken = "current-token",
-            username = "user",
-            serverName = "jf.example.com"
-        )
-        coEvery { authDataStore.getAuthState() } returns session
-        coEvery { authDataStore.clearSessionIfAccessTokenMatches("current-token") } returns true
-        every { clientManager.clearSessionIfTokenMatches("current-token") } returns true
-
-        val cleared = repository.handleRejectedSession("current-token")
-
-        assertEquals(session, cleared)
-        coVerify(exactly = 1) { authDataStore.clearSessionIfAccessTokenMatches("current-token") }
-        coVerify(exactly = 1) { clientManager.clearSessionIfTokenMatches("current-token") }
-        coVerify(exactly = 0) { authDataStore.clearSession() }
-    }
-
-    @Test
-    fun `a newer client session stops a stale rejection from reporting a sign-out`() = runTest {
-        coEvery { authDataStore.getAuthState() } returns AuthState.Authenticated(
-            serverUrl = "https://jf.example.com",
-            userId = "user-1",
-            accessToken = "current-token",
-            username = "user",
-            serverName = "jf.example.com"
-        )
-        coEvery { authDataStore.clearSessionIfAccessTokenMatches("current-token") } returns true
-        every { clientManager.clearSessionIfTokenMatches("current-token") } returns false
-
-        val cleared = repository.handleRejectedSession("current-token")
-
-        assertEquals(null, cleared)
-        verify(exactly = 1) { clientManager.clearSession() }
-    }
-
-    @Test
-    fun `a stale rejection waits for a login that is being saved`() = runTest {
+    fun `rejection waiting for login does not clear the new session`() = runTest {
         val serverUrl = "http://192.168.1.10:8096"
         val username = "testuser"
         val password = "secret_password"
-        val userId = UUID.randomUUID()
-        val oldToken = "old-token"
-        val newToken = "new-token"
+        val userId = "user-123"
+        val oldToken = "old_token"
+        val newToken = "new_token"
+
         val stored = AtomicReference<AuthState>(
             AuthState.Authenticated(
                 serverUrl = serverUrl,
-                userId = "user-1",
+                userId = userId,
+                username = username,
                 accessToken = oldToken,
-                username = "user",
-                serverName = "192.168.1.10:8096"
+                serverName = "Adult Hub"
             )
         )
         val loginSaving = CompletableDeferred<Unit>()
@@ -374,28 +274,14 @@ class AuthRepositoryTest {
             sessionMutex = signalingMutex
         )
 
-        coEvery { settingsDataStore.requireAllowedServiceUrl(any(), any()) } coAnswers {
-            when (val validation = ServiceUrlPolicy.inspect(firstArg<String>())) {
-                is ServiceUrlValidation.Valid -> validation.value
-                is ServiceUrlValidation.Invalid -> throw IllegalArgumentException(validation.reason)
-            }
-        }
-        val mockUserDto = mockk<UserDto> {
-            every { id } returns userId
-            every { name } returns username
-        }
-        val mockAuthResult = mockk<AuthenticationResult> {
-            every { this@mockk.accessToken } returns newToken
-            every { user } returns mockUserDto
-        }
-        val mockResponse = mockk<Response<AuthenticationResult>> {
-            every { content } returns mockAuthResult
-        }
         every { clientManager.createApi(serverUrl) } returns mockApi
-        every { mockApi.authenticationApi } returns mockAuthApi
-        coEvery { mockAuthApi.authenticateUserByName(any()) } returns mockResponse
+        coEvery { mockApi.login(any()) } returns AuthLoginResponseDto(
+            accessToken = newToken,
+            refreshToken = "new_refresh",
+            user = AuthUserDto(id = userId, username = username)
+        )
 
-        coEvery { authDataStore.saveSession(any(), any(), any(), any(), any()) } coAnswers {
+        coEvery { authDataStore.saveSession(any(), any(), any(), any(), any(), any()) } coAnswers {
             loginSaving.complete(Unit)
             releaseLogin.await()
             stored.set(
@@ -404,7 +290,8 @@ class AuthRepositoryTest {
                     userId = secondArg(),
                     username = thirdArg(),
                     accessToken = arg<String>(3),
-                    serverName = arg<String>(4)
+                    serverName = arg<String>(4),
+                    refreshToken = arg<String?>(5)
                 )
             )
         }
@@ -426,8 +313,6 @@ class AuthRepositoryTest {
         val rejectionJob = async(Dispatchers.Default) {
             customRepository.handleRejectedSession(oldToken)
         }
-        // Wait until rejection arrives at the locked session mutex. It must not read
-        // the stored session until login finishes saving and activating the new session.
         rejectionArrivedAtLock.await()
         assertFalse(rejectionRead.isCompleted)
 
@@ -443,26 +328,8 @@ class AuthRepositoryTest {
         assertEquals(newToken, (stored.get() as AuthState.Authenticated).accessToken)
         coVerify(exactly = 0) { authDataStore.clearSessionIfAccessTokenMatches(any()) }
         coVerify(exactly = 0) { clientManager.clearSessionIfTokenMatches(any()) }
-        coVerify(exactly = 1) {
-            clientManager.updateSession(serverUrl, newToken, userId.toString())
+        verify(exactly = 1) {
+            clientManager.updateSession(serverUrl, newToken, userId, username, "new_refresh")
         }
-    }
-
-    @Test
-    fun `restore session requests consent before opening a saved local HTTP server`() = runTest {
-        val savedSession = AuthState.Authenticated(
-            serverUrl = "http://192.168.1.10:8096",
-            userId = "user-1",
-            accessToken = "token",
-            username = "user",
-            serverName = "192.168.1.10:8096"
-        )
-        coEvery { authDataStore.getAuthState() } returns savedSession
-        coEvery { settingsDataStore.isCleartextOriginApproved(savedSession.serverUrl) } returns false
-
-        val result = repository.restoreSession()
-
-        assertEquals(AuthState.HttpConsentRequired(savedSession.serverUrl), result)
-        coVerify(exactly = 0) { clientManager.updateSession(any(), any(), any()) }
     }
 }

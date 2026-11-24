@@ -5,7 +5,6 @@ import androidx.compose.runtime.Immutable
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import com.adulthub.tv.R
-import com.adulthub.tv.data.jellyfin.JellyfinClientManager
 import com.adulthub.tv.data.local.SettingsDataStore
 import com.adulthub.tv.data.local.TelegramProgressStore
 import com.adulthub.tv.data.local.WatchHistoryStore
@@ -31,7 +30,8 @@ import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.sync.Semaphore
 import kotlinx.coroutines.sync.withPermit
-import org.jellyfin.sdk.model.api.ItemFilter
+import com.adulthub.tv.data.api.AdultHubClientManager
+import com.adulthub.tv.data.model.ItemFilter
 
 @Immutable
 data class SectionState<T>(
@@ -78,7 +78,7 @@ class HomeViewModel(
     private val libraryRepository: LibraryRepository,
     private val personRepository: PersonRepository,
     private val settingsDataStore: SettingsDataStore,
-    private val clientManager: JellyfinClientManager,
+    private val clientManager: AdultHubClientManager,
     private val telegramProgressStore: TelegramProgressStore? = null,
     private val watchHistoryStore: WatchHistoryStore? = null,
     private val context: Application
@@ -166,36 +166,25 @@ class HomeViewModel(
         resumeJob = viewModelScope.launch {
             _uiState.update { it.copy(resumeSection = it.resumeSection.copy(isLoading = true, errorMessage = null)) }
             val result = libraryRepository.getResumeItems(limit = 15)
-            val telegramItems = telegramProgressStore?.allProgress?.firstOrNull().orEmpty()
-                .filter { !it.isPlayed && it.positionMs > 15_000L && (it.durationMs <= 0 || it.positionMs < it.durationMs * 0.90f) }
-                .map { record ->
-                    TvItem(
-                        id = record.providerVideoId,
-                        title = record.title,
-                        posterUrl = record.thumbnailUrl,
-                        playbackPositionTicks = record.positionMs * 10_000L,
-                        runtimeTicks = record.durationMs * 10_000L,
-                        providerVideoId = record.providerVideoId,
-                        channelId = record.channelId,
-                        isPlayed = false
-                    )
-                }
-
             _uiState.update { state ->
                 result.fold(
                     onSuccess = { items ->
-                        val combined = filterExcluded(
-                            (telegramItems + items).distinctBy { it.providerVideoId?.ifBlank { null } ?: it.id }
+                        val validCatalogItems = filterExcluded(
+                            items.filter {
+                                !it.id.startsWith("telegram:") &&
+                                    !it.id.contains(":") &&
+                                    !it.id.startsWith("-100")
+                            }.distinctBy { it.id }
                         )
-                        state.copy(resumeSection = SectionState(items = combined, isLoading = false))
+                        state.copy(resumeSection = SectionState(items = validCatalogItems, isLoading = false))
                     },
                     onFailure = { err ->
-                        val filteredTelegram = filterExcluded(telegramItems)
-                        if (filteredTelegram.isNotEmpty()) {
-                            state.copy(resumeSection = SectionState(items = filteredTelegram, isLoading = false))
-                        } else {
-                            state.copy(resumeSection = SectionState(errorMessage = err.localizedMessage ?: context.getString(R.string.home_error_resume), isLoading = false))
-                        }
+                        state.copy(
+                            resumeSection = SectionState(
+                                errorMessage = err.localizedMessage ?: context.getString(R.string.home_error_resume),
+                                isLoading = false
+                            )
+                        )
                     }
                 )
             }
@@ -207,10 +196,28 @@ class HomeViewModel(
         watchHistoryJob = viewModelScope.launch {
             _uiState.update { it.copy(watchHistorySection = it.watchHistorySection.copy(isLoading = true, errorMessage = null)) }
             val records = watchHistoryStore?.history?.firstOrNull().orEmpty()
-            val items = filterExcluded(
-                records.map { it.toTvItem() }.distinctBy { it.providerVideoId?.ifBlank { null } ?: it.id }
-            )
-            _uiState.update { it.copy(watchHistorySection = SectionState(items = items, isLoading = false)) }
+            val validRecords = records.filter {
+                !it.itemId.startsWith("telegram:") &&
+                    !it.itemId.contains(":") &&
+                    !it.itemId.startsWith("-100")
+            }
+            val api = clientManager.getApiOrNull()
+            val items = validRecords.map { record ->
+                var item = record.toTvItem()
+                if (api != null) {
+                    val serverProgress = runCatching { api.getWatchProgress(record.itemId) }.getOrNull()
+                    if (serverProgress != null) {
+                        item = item.copy(
+                            playbackPositionTicks = serverProgress.positionSeconds * 10_000_000L,
+                            isPlayed = serverProgress.isPlayed,
+                            playedPercentage = serverProgress.playedPercentage
+                        )
+                    }
+                }
+                item
+            }
+            val filtered = filterExcluded(items).distinctBy { it.id }
+            _uiState.update { it.copy(watchHistorySection = SectionState(items = filtered, isLoading = false)) }
         }
     }
 
@@ -338,7 +345,7 @@ class HomeViewModel(
 
     fun getItemImageUrl(item: TvItem): String = clientManager.getItemImageUrl(item)
 
-    fun getPersonImageUrl(person: TvPerson): String = clientManager.getPersonImageUrl(person.id, person.primaryImageTag)
+    fun getPersonImageUrl(person: TvPerson): String = clientManager.getPersonImageUrl(person.id, photoUrl = person.photoUrl)
 
     fun onMovieClicked(item: TvItem) {
         viewModelScope.launch {

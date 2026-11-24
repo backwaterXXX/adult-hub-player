@@ -59,7 +59,7 @@ import androidx.tv.material3.MaterialTheme
 import androidx.tv.material3.Text
 import coil.compose.AsyncImage
 import com.adulthub.tv.R
-import com.adulthub.tv.data.jellyfin.JellyfinClientManager
+import com.adulthub.tv.data.api.AdultHubClientManager
 import com.adulthub.tv.data.model.TvItem
 import com.adulthub.tv.data.model.TvPerson
 import com.adulthub.tv.data.resolver.VideoDto
@@ -397,7 +397,7 @@ private fun SearchResultsList(
     onNavigateToPersonDetail: (personId: String, personName: String) -> Unit,
     onNavigateToPlayer: (itemId: String) -> Unit,
     modifier: Modifier = Modifier,
-    clientManager: JellyfinClientManager = koinInject()
+    clientManager: AdultHubClientManager = koinInject()
 ) {
     val gridState = rememberLazyGridState()
 
@@ -453,7 +453,7 @@ private fun SearchResultsList(
             }
 
             items(items = actors, key = { "person_${it.id}" }) { person ->
-                val imageUrl = clientManager.getPersonImageUrl(person.id, person.primaryImageTag)
+                val imageUrl = clientManager.getPersonImageUrl(person.id, photoUrl = person.photoUrl)
                 Box(modifier = Modifier.fillMaxWidth(), contentAlignment = Alignment.Center) {
                     PersonCard(
                         person = person,

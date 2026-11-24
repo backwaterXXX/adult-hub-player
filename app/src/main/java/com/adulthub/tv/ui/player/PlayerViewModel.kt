@@ -187,17 +187,21 @@ class PlayerViewModel(
                 return@launch
             }
 
-            // Check resume position (Telegram or Jellyfin)
+            // Check resume position (Telegram or Adult Hub)
             val provVideoId = item.providerVideoId
-            val isTelegram = !provVideoId.isNullOrBlank() && !runCatching { java.util.UUID.fromString(item.id) }.isSuccess
+            val isTelegram = !provVideoId.isNullOrBlank() && (item.id.contains(":") || item.id.startsWith("telegram:") || item.id.startsWith("-100"))
 
             val durationMs = item.runtimeTicks
                 ?.div(10_000L)
                 ?.takeIf { it > 0L }
                 ?: ((item.runtimeMinutes ?: 0) * 60_000L)
 
-            val resumeMs = if (isTelegram) {
-                val saved = telegramProgressStore?.getProgress(provVideoId)
+            val saved = telegramProgressStore?.getProgress(provVideoId ?: item.id)
+            val isPlayed = item.isPlayed || (saved != null && saved.isPlayed)
+
+            val resumeMs = if (isPlayed) {
+                0L
+            } else if (isTelegram) {
                 if (saved != null && !saved.isPlayed) saved.positionMs else 0L
             } else {
                 item.playbackPositionTicks / 10_000L
@@ -389,7 +393,7 @@ class PlayerViewModel(
         itemId: String,
         mediaSourceId: String?,
         playSessionId: String?,
-        playMethod: org.jellyfin.sdk.model.api.PlayMethod,
+        playMethod: com.adulthub.tv.data.model.PlayMethod,
         getCurrentPositionMs: () -> Long,
         getIsPaused: () -> Boolean
     ): Long {
@@ -692,11 +696,11 @@ class PlayerViewModel(
      * finished playback does not land in the account that signed in meanwhile.
      */
     private suspend fun persistTelegramProgress(item: TvItem, positionMs: Long, isEnded: Boolean) {
-        val provVideoId = item.providerVideoId ?: return
-        if (runCatching { java.util.UUID.fromString(item.id) }.isSuccess) return
+        val provVideoId = item.providerVideoId ?: item.id.takeIf { it.startsWith("telegram:") || it.contains(":") || it.startsWith("-100") } ?: return
 
         val accountKey = playbackOwner?.accountKey
         val durationMs = item.runtimeTicks?.div(10_000L) ?: 0L
+        val isAlreadyPlayed = item.isPlayed
         if (isEnded || (durationMs > 0L && positionMs >= durationMs * 0.90f)) {
             telegramProgressStore?.markPlayed(
                 providerVideoId = provVideoId,
@@ -714,7 +718,7 @@ class PlayerViewModel(
                 title = item.title,
                 thumbnailUrl = item.posterUrl,
                 channelId = item.channelId,
-                isPlayed = false,
+                isPlayed = isAlreadyPlayed,
                 accountKey = accountKey
             )
         }

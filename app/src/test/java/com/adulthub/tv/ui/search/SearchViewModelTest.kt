@@ -4,6 +4,8 @@ import android.app.Application
 import com.adulthub.tv.data.local.AccountKeyProvider
 import com.adulthub.tv.data.local.SearchHistoryStore
 import com.adulthub.tv.data.local.SettingsDataStore
+import com.adulthub.tv.data.model.ItemFilter
+import com.adulthub.tv.data.model.SortOrder
 import com.adulthub.tv.data.model.TvItem
 import com.adulthub.tv.data.model.TvPerson
 import com.adulthub.tv.data.repository.ChannelRepository
@@ -288,12 +290,18 @@ private class FakeSearchLibraryRepo : LibraryRepository(mockk(relaxed = true), m
         startIndex: Int,
         limit: Int,
         sortBy: String,
-        sortOrder: org.jellyfin.sdk.model.api.SortOrder,
-        filters: Set<org.jellyfin.sdk.model.api.ItemFilter>,
+        sortOrder: SortOrder,
+        filters: Set<ItemFilter>,
         searchTerm: String?,
         genreIds: List<java.util.UUID>,
         studioIds: List<java.util.UUID>,
-        personIds: List<java.util.UUID>
+        personIds: List<java.util.UUID>,
+        category: String?,
+        tag: String?,
+        studio: String?,
+        performer: String?,
+        performerId: String?,
+        minDuration: Int?
     ): Result<TvItemsPage> = itemsResult
 }
 

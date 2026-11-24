@@ -113,27 +113,13 @@ fun LoginScreen(
                 }
 
                 item {
-                    Row(
-                        modifier = Modifier.fillMaxWidth(),
-                        horizontalArrangement = Arrangement.Center
+                    TvPrimaryButton(
+                        onClick = {
+                            localNetwork.ensureGranted(state.serverUrl) { viewModel.signIn() }
+                        },
+                        modifier = Modifier.fillMaxWidth()
                     ) {
-                        TvPrimaryButton(
-                            onClick = {
-                                localNetwork.ensureGranted(state.serverUrl) { viewModel.signIn() }
-                            },
-                            modifier = Modifier.weight(1f)
-                        ) {
-                            Text(text = stringResource(R.string.action_sign_in))
-                        }
-                        Spacer(modifier = Modifier.width(16.dp))
-                        TvSecondaryButton(
-                            onClick = {
-                                localNetwork.ensureGranted(state.serverUrl) { viewModel.startQuickConnect() }
-                            },
-                            modifier = Modifier.weight(1f)
-                        ) {
-                            Text(text = stringResource(R.string.action_quick_connect))
-                        }
+                        Text(text = stringResource(R.string.action_sign_in))
                     }
                     Spacer(modifier = Modifier.height(16.dp))
                 }

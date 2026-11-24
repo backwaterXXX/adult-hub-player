@@ -2,9 +2,11 @@ package com.adulthub.tv.ui.library
 
 import android.app.Application
 import androidx.lifecycle.SavedStateHandle
-import com.adulthub.tv.data.jellyfin.JellyfinClientManager
+import com.adulthub.tv.data.api.AdultHubClientManager
 import com.adulthub.tv.data.model.ChannelSortMode
 import com.adulthub.tv.data.model.DurationFilter
+import com.adulthub.tv.data.model.ItemFilter
+import com.adulthub.tv.data.model.SortOrder
 import com.adulthub.tv.data.model.TvCategory
 import com.adulthub.tv.data.model.TvChannel
 import com.adulthub.tv.data.model.TvItem
@@ -28,8 +30,6 @@ import kotlinx.coroutines.test.advanceUntilIdle
 import kotlinx.coroutines.test.resetMain
 import kotlinx.coroutines.test.runTest
 import kotlinx.coroutines.test.setMain
-import org.jellyfin.sdk.model.api.ItemFilter
-import org.jellyfin.sdk.model.api.SortOrder
 import org.junit.After
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertFalse
@@ -47,7 +47,7 @@ class LibraryViewModelTest {
     private val fakePersonRepository = FakePersonRepository()
     private val fakeStudioRepository = FakeStudioRepository()
     private val fakeChannelRepository = FakeChannelRepository()
-    private val clientManager: JellyfinClientManager = mockk(relaxed = true)
+    private val clientManager: AdultHubClientManager = mockk(relaxed = true)
     private val context: Application = mockk(relaxed = true)
 
     private val sampleMovie1 = TvItem(id = "movie-1", title = "Alpha Movie", isFavorite = true)
@@ -781,7 +781,13 @@ class LibraryViewModelTest {
             searchTerm: String?,
             genreIds: List<UUID>,
             studioIds: List<UUID>,
-            personIds: List<UUID>
+            personIds: List<UUID>,
+            category: String?,
+            tag: String?,
+            studio: String?,
+            performer: String?,
+            performerId: String?,
+            minDuration: Int?
         ): Result<TvItemsPage> {
             lastGenreIds = genreIds
             lastFilters = filters

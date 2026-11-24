@@ -1,21 +1,14 @@
 package com.adulthub.tv.data.repository
 
-import com.adulthub.tv.data.jellyfin.JellyfinClientManager
-import com.adulthub.tv.data.jellyfin.toTvItem
+import com.adulthub.tv.data.api.AdultHubClientManager
+import com.adulthub.tv.data.api.toTvItem
 import com.adulthub.tv.data.local.SettingsDataStore
 import com.adulthub.tv.data.model.TvItem
 import com.adulthub.tv.data.model.TvPerson
 import com.adulthub.tv.data.resolver.ResolverApi
-import java.util.UUID
 import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.withContext
-import org.jellyfin.sdk.api.client.extensions.libraryApi
-import org.jellyfin.sdk.model.api.BaseItemKind
-import org.jellyfin.sdk.model.api.ImageType
-import org.jellyfin.sdk.model.api.ItemSortBy
-import org.jellyfin.sdk.model.api.SortOrder
-import org.jellyfin.sdk.model.api.request.GetItemsRequest
 
 data class TvPersonPage(
     val persons: List<TvPerson>,
@@ -23,7 +16,7 @@ data class TvPersonPage(
 )
 
 open class PersonRepository(
-    private val clientManager: JellyfinClientManager,
+    private val clientManager: AdultHubClientManager,
     private val resolverApi: ResolverApi,
     private val settingsDataStore: SettingsDataStore
 ) {
@@ -47,39 +40,24 @@ open class PersonRepository(
     ): Result<TvPersonPage> = withContext(Dispatchers.IO) {
         try {
             val api = clientManager.getApi()
-            val targetParentId = parentId ?: settingsDataStore.getSelectedLibraryId()
-            val parentUuid = targetParentId?.let { UUID.fromString(it) }
-            val userUuid = clientManager.currentUserId?.let { runCatching { UUID.fromString(it) }.getOrNull() }
-
-            val response = api.libraryApi.getItems(
-                GetItemsRequest(
-                    userId = userUuid,
-                    parentId = parentUuid,
-                    startIndex = startIndex,
-                    recursive = true,
-                    searchTerm = searchTerm,
-                    nameStartsWith = nameStartsWith,
-                    limit = limit,
-                    includeItemTypes = setOf(BaseItemKind.PERSON),
-                    personTypes = listOf("Actor"),
-                    sortBy = listOf(ItemSortBy.SORT_NAME),
-                    sortOrder = listOf(SortOrder.ASCENDING),
-                    enableImages = true,
-                    enableTotalRecordCount = true
-                )
+            val response = api.getPerformers(
+                offset = startIndex,
+                limit = limit.coerceAtMost(200),
+                q = searchTerm?.takeIf { it.isNotBlank() },
+                letter = nameStartsWith?.takeIf { it.isNotBlank() }
             )
-            val persons = response.content.items.map { item ->
+            val persons = response.items.map { item ->
                 TvPerson(
-                    id = item.id.toString(),
-                    name = item.name.orEmpty(),
-                    primaryImageTag = item.imageTags?.get(ImageType.PRIMARY),
-                    movieCount = item.childCount ?: 0
+                    id = item.id,
+                    name = item.name,
+                    photoUrl = item.photoUrl,
+                    movieCount = item.videoCount ?: 0
                 )
             }
             Result.success(
                 TvPersonPage(
                     persons = persons,
-                    totalRecordCount = response.content.totalRecordCount
+                    totalRecordCount = response.totalCount
                 )
             )
         } catch (e: CancellationException) {
@@ -92,34 +70,24 @@ open class PersonRepository(
     open suspend fun getRandomPersonsWithPhotos(limit: Int = 20): Result<List<TvPerson>> = withContext(Dispatchers.IO) {
         try {
             val api = clientManager.getApi()
-            val targetParentId = settingsDataStore.getSelectedLibraryId()
-            val parentUuid = targetParentId?.let { UUID.fromString(it) }
-            val userUuid = clientManager.currentUserId?.let { runCatching { UUID.fromString(it) }.getOrNull() }
-            val fetchLimit = (limit.coerceAtLeast(1) * 5).coerceAtMost(100)
-            val response = api.libraryApi.getItems(
-                GetItemsRequest(
-                    userId = userUuid,
-                    parentId = parentUuid,
-                    recursive = true,
-                    limit = fetchLimit,
-                    includeItemTypes = setOf(BaseItemKind.PERSON),
-                    personTypes = listOf("Actor"),
-                    sortBy = listOf(ItemSortBy.RANDOM),
-                    enableImages = true,
-                    enableTotalRecordCount = false
-                )
+            val fetchLimit = (limit.coerceAtLeast(1) * 3).coerceAtMost(100)
+            val response = api.getPerformers(
+                offset = 0,
+                limit = fetchLimit,
+                photoOnly = true
             )
-            val persons = response.content.items.mapNotNull { item ->
-                val imageTag = item.imageTags?.get(ImageType.PRIMARY)
-                    ?.takeIf(String::isNotBlank)
-                    ?: return@mapNotNull null
-                TvPerson(
-                    id = item.id.toString(),
-                    name = item.name.orEmpty(),
-                    primaryImageTag = imageTag,
-                    movieCount = item.childCount ?: 0
-                )
-            }.take(limit.coerceAtLeast(1))
+            val persons = response.items
+                .filter { !it.photoUrl.isNullOrBlank() }
+                .shuffled()
+                .take(limit.coerceAtLeast(1))
+                .map { item ->
+                    TvPerson(
+                        id = item.id,
+                        name = item.name,
+                        photoUrl = item.photoUrl,
+                        movieCount = item.videoCount ?: 0
+                    )
+                }
             Result.success(persons)
         } catch (e: CancellationException) {
             throw e
@@ -131,42 +99,49 @@ open class PersonRepository(
     open suspend fun getPersonDetails(personId: String, personName: String): Result<TvPerson> = withContext(Dispatchers.IO) {
         try {
             val api = clientManager.getApi()
-            val uuid = UUID.fromString(personId)
-            val userUuid = clientManager.currentUserId?.let { runCatching { UUID.fromString(it) }.getOrNull() }
-            val jfPerson = try {
-                api.libraryApi.getItems(
-                    GetItemsRequest(
-                        userId = userUuid,
-                        ids = listOf(uuid)
+            val detail = try {
+                api.getPerformerDetail(personId)
+            } catch (cancelled: CancellationException) {
+                throw cancelled
+            } catch (_: Exception) {
+                null
+            }
+
+            if (detail != null) {
+                Result.success(
+                    TvPerson(
+                        id = detail.id,
+                        name = detail.name,
+                        photoUrl = detail.photoUrl,
+                        bio = detail.bio,
+                        birthDate = detail.birth,
+                        nationality = detail.nationality,
+                        aliases = detail.aliases,
+                        movieCount = detail.videoCount
                     )
-                ).content.items.firstOrNull()
-            } catch (cancelled: CancellationException) {
-                throw cancelled
-            } catch (_: Exception) {
-                null
+                )
+            } else {
+                // Try fallback to resolver bio if performer detail route fails
+                val bioDto = try {
+                    resolverApi.getPerformerBio(personName)
+                } catch (cancelled: CancellationException) {
+                    throw cancelled
+                } catch (_: Exception) {
+                    null
+                }
+                Result.success(
+                    TvPerson(
+                        id = personId,
+                        name = personName,
+                        photoUrl = bioDto?.photoUrl,
+                        bio = bioDto?.bio,
+                        birthDate = bioDto?.birth,
+                        nationality = bioDto?.nationality,
+                        aliases = bioDto?.aliases ?: emptyList(),
+                        movieCount = 0
+                    )
+                )
             }
-
-            // Optionally enrich with bio from Resolver
-            val bioDto = try {
-                resolverApi.getPerformerBio(personName)
-            } catch (cancelled: CancellationException) {
-                throw cancelled
-            } catch (_: Exception) {
-                null
-            }
-
-            val person = TvPerson(
-                id = personId,
-                name = jfPerson?.name ?: personName,
-                primaryImageTag = jfPerson?.imageTags?.get(ImageType.PRIMARY),
-                bio = bioDto?.bio ?: jfPerson?.overview,
-                birthDate = bioDto?.birth,
-                nationality = bioDto?.nationality,
-                aliases = bioDto?.aliases ?: emptyList(),
-                photoUrl = bioDto?.photoUrl,
-                movieCount = jfPerson?.childCount ?: 0
-            )
-            Result.success(person)
         } catch (e: CancellationException) {
             throw e
         } catch (e: Exception) {
@@ -182,25 +157,16 @@ open class PersonRepository(
     ): Result<List<TvItem>> = withContext(Dispatchers.IO) {
         try {
             val api = clientManager.getApi()
-            val targetParentId = parentId ?: settingsDataStore.getSelectedLibraryId()
-            val parentUuid = targetParentId?.let { UUID.fromString(it) }
-            val personUuid = UUID.fromString(personId)
-            val userUuid = clientManager.currentUserId?.let { runCatching { UUID.fromString(it) }.getOrNull() }
-
-            val response = api.libraryApi.getItems(
-                GetItemsRequest(
-                    userId = userUuid,
-                    parentId = parentUuid,
-                    personIds = listOf(personUuid),
-                    startIndex = startIndex,
-                    limit = limit,
-                    recursive = true,
-                    includeItemTypes = setOf(BaseItemKind.MOVIE),
-                    sortBy = listOf(ItemSortBy.DATE_CREATED),
-                    sortOrder = listOf(SortOrder.DESCENDING)
-                )
+            val baseUrl = clientManager.currentServerUrl ?: ""
+            val response = api.getVideos(
+                performerId = personId,
+                offset = startIndex,
+                limit = limit.coerceAtMost(100),
+                sort = "latest",
+                direction = "desc"
             )
-            Result.success(response.content.items.map { it.toTvItem() })
+            val items = response.items.map { it.toTvItem(baseUrl) }
+            Result.success(items)
         } catch (e: CancellationException) {
             throw e
         } catch (e: Exception) {

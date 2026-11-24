@@ -4,7 +4,7 @@ import android.app.Application
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import com.adulthub.tv.R
-import com.adulthub.tv.data.jellyfin.JellyfinClientManager
+import com.adulthub.tv.data.api.AdultHubClientManager
 import com.adulthub.tv.data.model.TvItem
 import com.adulthub.tv.data.model.TvPerson
 import com.adulthub.tv.data.repository.PersonRepository
@@ -32,7 +32,7 @@ sealed interface PersonDetailNavEvent {
 
 class PersonDetailViewModel(
     private val personRepository: PersonRepository,
-    private val clientManager: JellyfinClientManager,
+    private val clientManager: AdultHubClientManager,
     private val context: Application
 ) : ViewModel() {
 
@@ -110,12 +110,10 @@ class PersonDetailViewModel(
         }
     }
 
-    fun getPersonImageUrl(person: TvPerson): String = if (!person.primaryImageTag.isNullOrBlank()) {
-        clientManager.getPersonImageUrl(person.id, person.primaryImageTag, maxWidth = 400)
-    } else if (!person.photoUrl.isNullOrBlank()) {
-        person.photoUrl
+    fun getPersonImageUrl(person: TvPerson): String = if (!person.photoUrl.isNullOrBlank()) {
+        clientManager.getPersonImageUrl(person.id, photoUrl = person.photoUrl, maxWidth = 400)
     } else {
-        clientManager.getPersonImageUrl(person.id, null, maxWidth = 400)
+        clientManager.getPersonImageUrl(person.id, maxWidth = 400)
     }
 
     fun getItemImageUrl(item: TvItem): String = clientManager.getItemImageUrl(item)

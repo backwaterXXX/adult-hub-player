@@ -404,6 +404,7 @@ class AuthViewModel(
                 if (generation != quickConnectGeneration) return@onFailure
                 _quickConnectState.update {
                     it.copy(
+                        isPolling = false,
                         errorMessage = context.getString(
                             R.string.auth_error_quick_connect,
                             error.localizedMessage ?: context.getString(R.string.auth_error_generic)
@@ -426,6 +427,18 @@ class AuthViewModel(
 
                 val checkResult = authRepository.checkQuickConnectState(serverUrl, secret)
                 if (generation != quickConnectGeneration) return@launch
+                if (checkResult.isFailure) {
+                    _quickConnectState.update {
+                        it.copy(
+                            isPolling = false,
+                            errorMessage = context.getString(
+                                R.string.auth_error_quick_connect,
+                                checkResult.exceptionOrNull()?.localizedMessage ?: context.getString(R.string.auth_error_generic)
+                            )
+                        )
+                    }
+                    return@launch
+                }
                 if (checkResult.getOrDefault(false)) {
                     _quickConnectState.update { it.copy(isAuthorized = true, isPolling = false) }
                     // Exchange secret for actual token
@@ -436,6 +449,8 @@ class AuthViewModel(
                     }.onFailure { error ->
                         _quickConnectState.update {
                             it.copy(
+                                isPolling = false,
+                                isAuthorized = false,
                                 errorMessage = context.getString(
                                     R.string.auth_error_quick_connect_exchange,
                                     error.localizedMessage.orEmpty()
