@@ -98,6 +98,25 @@ class LibraryRepositoryTest {
     }
 
     @Test
+    fun `getRandomItemFiltered keeps the selected performer in the request`() = runTest {
+        val performer = "11111111-1111-1111-1111-111111111111"
+        coEvery {
+            mockApi.getVideos(performerId = performer, limit = any())
+        } returns CatalogVideoListResponseDto(
+            items = listOf(CatalogVideoItemDto(id = "video-1", title = "Same Performer")),
+            totalCount = 1
+        )
+
+        val result = repository.getRandomItemFiltered(
+            personIds = listOf(java.util.UUID.fromString(performer))
+        )
+
+        assertTrue(result.isSuccess)
+        assertEquals("video-1", result.getOrThrow()?.id)
+        coVerify(exactly = 1) { mockApi.getVideos(performerId = performer) }
+    }
+
+    @Test
     fun `toggleFavorite delegates to putFavorite and deleteFavorite`() = runTest {
         val markResult = repository.toggleFavorite("video-1", markFavorite = true)
         assertTrue(markResult.isSuccess)

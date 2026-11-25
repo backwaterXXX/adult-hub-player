@@ -385,6 +385,8 @@ class LibraryViewModel(
                 genreIds = listOfNotNull(filters.selectedGenre?.id?.toUuidOrNull()),
                 studioIds = listOfNotNull(filters.selectedStudio?.id?.toUuidOrNull()),
                 personIds = listOfNotNull(filters.selectedPerformer?.id?.toUuidOrNull()),
+                genres = listOfNotNull(filters.selectedGenre?.name),
+                studios = listOfNotNull(filters.selectedStudio?.name),
                 filters = buildSet {
                     if (filters.favoritesOnly) add(ItemFilter.IS_FAVORITE)
                     if (filters.unwatchedOnly) add(ItemFilter.IS_UNPLAYED)

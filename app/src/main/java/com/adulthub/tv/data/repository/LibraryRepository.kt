@@ -216,6 +216,7 @@ open class LibraryRepository(
                 baseUrl = clientManager.currentServerUrl ?: "",
                 category = genres.firstOrNull(),
                 studio = studios.firstOrNull(),
+                performerId = personIds.firstOrNull()?.toString(),
                 isFavorite = if (filters.contains(ItemFilter.IS_FAVORITE)) true else null
             )
 
@@ -248,6 +249,7 @@ open class LibraryRepository(
         baseUrl: String,
         category: String?,
         studio: String?,
+        performerId: String? = null,
         isFavorite: Boolean?
     ): RandomVideoPool {
         val firstPage = api.getVideos(
@@ -256,6 +258,7 @@ open class LibraryRepository(
             sort = "latest",
             category = category,
             studio = studio,
+            performerId = performerId,
             isFavorite = isFavorite
         )
         val totalCount = firstPage.totalCount
@@ -270,6 +273,7 @@ open class LibraryRepository(
             sort = "latest",
             category = category,
             studio = studio,
+            performerId = performerId,
             isFavorite = isFavorite
         )
         return RandomVideoPool(
