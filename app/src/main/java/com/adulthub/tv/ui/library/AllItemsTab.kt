@@ -446,41 +446,18 @@ private fun AllItemsSideFilterPanel(
             }
         }
 
-        TvSecondaryButton(
-            onClick = { onOpenPicker(CatalogFilter.GENRE) },
-            modifier = Modifier.fillMaxWidth().height(36.dp)
-        ) {
-            Text(
-                stringResource(
-                    R.string.library_filter_genre,
-                    state.selectedGenre?.name ?: stringResource(R.string.library_filter_all)
-                ),
-                fontSize = 12.sp
-            )
-        }
-        TvSecondaryButton(
-            onClick = { onOpenPicker(CatalogFilter.STUDIO) },
-            modifier = Modifier.fillMaxWidth().height(36.dp)
-        ) {
-            Text(
-                stringResource(
-                    R.string.library_filter_studio,
-                    state.selectedStudio?.name ?: stringResource(R.string.library_filter_all)
-                ),
-                fontSize = 12.sp
-            )
-        }
-        TvSecondaryButton(
-            onClick = { onOpenPicker(CatalogFilter.PERFORMER) },
-            modifier = Modifier.fillMaxWidth().height(36.dp)
-        ) {
-            Text(
-                stringResource(
-                    R.string.library_filter_performer,
-                    state.selectedPerformer?.name ?: stringResource(R.string.library_filter_all)
-                ),
-                fontSize = 12.sp
-            )
+        val allLabel = stringResource(R.string.library_filter_all)
+        listOf(
+            Triple(CatalogFilter.GENRE, R.string.library_filter_genre, state.selectedGenre?.name),
+            Triple(CatalogFilter.STUDIO, R.string.library_filter_studio, state.selectedStudio?.name),
+            Triple(CatalogFilter.PERFORMER, R.string.library_filter_performer, state.selectedPerformer?.name)
+        ).forEach { (picker, labelRes, selectedName) ->
+            TvSecondaryButton(
+                onClick = { onOpenPicker(picker) },
+                modifier = Modifier.fillMaxWidth().height(36.dp)
+            ) {
+                Text(stringResource(labelRes, selectedName ?: allLabel), fontSize = 12.sp)
+            }
         }
     }
 }
