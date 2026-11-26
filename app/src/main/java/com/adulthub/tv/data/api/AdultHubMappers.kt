@@ -29,6 +29,7 @@ fun CatalogVideoItemDto.toTvItem(baseUrl: String = ""): TvItem {
         genres = categories,
         tags = tags,
         studios = listOfNotNull(studio?.takeIf { it.isNotBlank() }),
+        channelName = channelName?.trim()?.takeIf { it.isNotEmpty() },
         people = performers.map { p ->
             TvPersonRole(
                 id = p.id,

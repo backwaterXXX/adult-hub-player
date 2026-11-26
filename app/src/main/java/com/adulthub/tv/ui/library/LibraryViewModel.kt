@@ -257,11 +257,10 @@ class LibraryViewModel(
                 if (currentState.favoritesOnly) add(ItemFilter.IS_FAVORITE)
                 if (currentState.unwatchedOnly) add(ItemFilter.IS_UNPLAYED)
             }
-            val minDuration = when (currentState.durationFilter) {
-                DurationFilter.MEDIUM -> 15 * 60
-                DurationFilter.LONG -> 40 * 60
-                else -> null
-            }
+            // Send the whole range to the backend so "under 15 minutes" is not
+            // filtered down to whatever the first page happened to contain.
+            val minDuration = currentState.durationFilter.minMinutes?.takeIf { it > 0 }?.times(60)
+            val maxDuration = currentState.durationFilter.maxMinutes?.times(60)
             val result = libraryRepository.getItems(
                 startIndex = startIndex,
                 limit = currentState.pageSize,
@@ -274,7 +273,8 @@ class LibraryViewModel(
                 category = currentState.selectedGenre?.name,
                 studio = currentState.selectedStudio?.name,
                 performerId = currentState.selectedPerformer?.id,
-                minDuration = minDuration
+                minDuration = minDuration,
+                maxDuration = maxDuration
             )
 
             if (generation != allItemsGeneration) return@launch
@@ -326,11 +326,11 @@ class LibraryViewModel(
     }
 
     fun setDurationFilter(filter: DurationFilter) {
-        _uiState.update { state ->
-            val allState = state.allState
-            val filtered = applyAllItemsFilters(allState.rawItems, filter, allState.hdOnly, allState.excludedTags, allState.unwatchedOnly)
-            state.copy(allState = allState.copy(durationFilter = filter, items = filtered))
-        }
+        if (_uiState.value.allState.durationFilter == filter) return
+        // Duration bounds are applied by the backend, so the page has to be
+        // refetched instead of narrowing whatever page happens to be loaded.
+        _uiState.update { state -> state.copy(allState = state.allState.copy(durationFilter = filter)) }
+        loadAllItems(reset = true)
     }
 
     fun toggleHdOnly() {
@@ -385,6 +385,8 @@ class LibraryViewModel(
                 genreIds = listOfNotNull(filters.selectedGenre?.id?.toUuidOrNull()),
                 studioIds = listOfNotNull(filters.selectedStudio?.id?.toUuidOrNull()),
                 personIds = listOfNotNull(filters.selectedPerformer?.id?.toUuidOrNull()),
+                genres = listOfNotNull(filters.selectedGenre?.name),
+                studios = listOfNotNull(filters.selectedStudio?.name),
                 filters = buildSet {
                     if (filters.favoritesOnly) add(ItemFilter.IS_FAVORITE)
                     if (filters.unwatchedOnly) add(ItemFilter.IS_UNPLAYED)

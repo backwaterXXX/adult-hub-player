@@ -289,6 +289,13 @@ fun ItemDetailScreen(
                                             if (isNotEmpty()) append(" • ")
                                             append(studio)
                                         }
+                                        val channelName = item.channelName
+                                        if (!channelName.isNullOrBlank() &&
+                                            !channelName.equals(studio, ignoreCase = true)
+                                        ) {
+                                            if (isNotEmpty()) append(" • ")
+                                            append(channelName)
+                                        }
                                     }
 
                                     if (meta.isNotBlank()) {

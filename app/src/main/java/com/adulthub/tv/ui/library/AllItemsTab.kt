@@ -217,20 +217,35 @@ fun AllItemsTab(
             horizontalArrangement = Arrangement.spacedBy(10.dp),
             verticalAlignment = Alignment.CenterVertically
         ) {
-            TvSecondaryButton(
-                onClick = {
-                    val nextDuration = when (state.durationFilter) {
-                        DurationFilter.ALL -> DurationFilter.SHORT
-                        DurationFilter.SHORT -> DurationFilter.MEDIUM
-                        DurationFilter.MEDIUM -> DurationFilter.LONG
-                        DurationFilter.LONG -> DurationFilter.ALL
+            Text(
+                text = stringResource(
+                    R.string.library_filter_duration,
+                    stringResource(state.durationFilter.labelRes)
+                ),
+                fontSize = 12.sp,
+                color = TextSecondary,
+                modifier = Modifier.padding(end = 2.dp)
+            )
+            DurationFilter.entries.forEach { filter ->
+                val selected = state.durationFilter == filter
+                val onSelect = { onDurationFilterChange(filter) }
+                if (selected) {
+                    TvPrimaryButton(onClick = onSelect, modifier = Modifier.height(36.dp)) {
+                        Text(stringResource(filter.labelRes), fontSize = 12.sp)
                     }
-                    onDurationFilterChange(nextDuration)
-                },
-                modifier = Modifier.height(36.dp)
-            ) {
-                Text(stringResource(state.durationFilter.labelRes), fontSize = 12.sp)
+                } else {
+                    TvSecondaryButton(onClick = onSelect, modifier = Modifier.height(36.dp)) {
+                        Text(stringResource(filter.labelRes), fontSize = 12.sp)
+                    }
+                }
             }
+        }
+
+        Row(
+            modifier = Modifier.fillMaxWidth().padding(bottom = 8.dp),
+            horizontalArrangement = Arrangement.spacedBy(10.dp),
+            verticalAlignment = Alignment.CenterVertically
+        ) {
             TvSecondaryButton(onClick = {
                 filterPicker = CatalogFilter.GENRE
                 onLoadGenres()
