@@ -102,7 +102,7 @@ open class TelegramProgressStore(
                 title = title.ifBlank { existing?.title ?: "Telegram Video" },
                 thumbnailUrl = thumbnailUrl ?: existing?.thumbnailUrl,
                 channelId = channelId ?: existing?.channelId,
-                isPlayed = isPlayed
+                isPlayed = if (existing?.isPlayed == true) true else isPlayed
             )
             currentMap[providerVideoId] = record
 

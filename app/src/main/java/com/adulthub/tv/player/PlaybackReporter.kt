@@ -1,5 +1,6 @@
 package com.adulthub.tv.player
 
+import com.adulthub.tv.data.model.PlayMethod
 import com.adulthub.tv.data.repository.PlaybackRepository
 import com.adulthub.tv.diagnostics.AppLog as Log
 import java.util.concurrent.atomic.AtomicLong
@@ -14,7 +15,6 @@ import kotlinx.coroutines.isActive
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
 import kotlinx.coroutines.withTimeoutOrNull
-import org.jellyfin.sdk.model.api.PlayMethod
 
 private const val TAG = "PlaybackReporter"
 private const val REPORTING_INTERVAL_MS = 10_000L

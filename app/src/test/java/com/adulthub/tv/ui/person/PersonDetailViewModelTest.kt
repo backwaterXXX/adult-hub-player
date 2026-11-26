@@ -1,7 +1,7 @@
 package com.adulthub.tv.ui.person
 
 import android.app.Application
-import com.adulthub.tv.data.jellyfin.JellyfinClientManager
+import com.adulthub.tv.data.api.AdultHubClientManager
 import com.adulthub.tv.data.model.TvItem
 import com.adulthub.tv.data.model.TvPerson
 import com.adulthub.tv.data.repository.PersonRepository
@@ -27,7 +27,7 @@ class PersonDetailViewModelTest {
     private val testDispatcher = StandardTestDispatcher()
 
     private val fakePersonRepository = FakePersonRepository()
-    private val clientManager: JellyfinClientManager = mockk(relaxed = true)
+    private val clientManager: AdultHubClientManager = mockk(relaxed = true)
     private val context: Application = mockk(relaxed = true)
 
     private val samplePerson = TvPerson(

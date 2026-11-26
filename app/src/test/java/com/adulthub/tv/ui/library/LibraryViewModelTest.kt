@@ -2,9 +2,11 @@ package com.adulthub.tv.ui.library
 
 import android.app.Application
 import androidx.lifecycle.SavedStateHandle
-import com.adulthub.tv.data.jellyfin.JellyfinClientManager
+import com.adulthub.tv.data.api.AdultHubClientManager
 import com.adulthub.tv.data.model.ChannelSortMode
 import com.adulthub.tv.data.model.DurationFilter
+import com.adulthub.tv.data.model.ItemFilter
+import com.adulthub.tv.data.model.SortOrder
 import com.adulthub.tv.data.model.TvCategory
 import com.adulthub.tv.data.model.TvChannel
 import com.adulthub.tv.data.model.TvItem
@@ -28,12 +30,11 @@ import kotlinx.coroutines.test.advanceUntilIdle
 import kotlinx.coroutines.test.resetMain
 import kotlinx.coroutines.test.runTest
 import kotlinx.coroutines.test.setMain
-import org.jellyfin.sdk.model.api.ItemFilter
-import org.jellyfin.sdk.model.api.SortOrder
 import org.junit.After
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertFalse
 import org.junit.Assert.assertNotNull
+import org.junit.Assert.assertNull
 import org.junit.Assert.assertTrue
 import org.junit.Before
 import org.junit.Test
@@ -47,7 +48,7 @@ class LibraryViewModelTest {
     private val fakePersonRepository = FakePersonRepository()
     private val fakeStudioRepository = FakeStudioRepository()
     private val fakeChannelRepository = FakeChannelRepository()
-    private val clientManager: JellyfinClientManager = mockk(relaxed = true)
+    private val clientManager: AdultHubClientManager = mockk(relaxed = true)
     private val context: Application = mockk(relaxed = true)
 
     private val sampleMovie1 = TvItem(id = "movie-1", title = "Alpha Movie", isFavorite = true)
@@ -684,13 +685,16 @@ class LibraryViewModelTest {
 
         assertEquals(2, viewModel.uiState.value.allState.items.size)
 
-        // Filter short (<15m)
+        // Filter short (<15m): the range goes to the backend and the reloaded
+        // page is still narrowed to the same window client-side.
         viewModel.setDurationFilter(com.adulthub.tv.data.model.DurationFilter.SHORT)
+        advanceUntilIdle()
         assertEquals(1, viewModel.uiState.value.allState.items.size)
         assertEquals("m-short", viewModel.uiState.value.allState.items.first().id)
 
         // Filter HD only
         viewModel.setDurationFilter(com.adulthub.tv.data.model.DurationFilter.ALL)
+        advanceUntilIdle()
         viewModel.toggleHdOnly()
         assertEquals(1, viewModel.uiState.value.allState.items.size)
         assertEquals("m-short", viewModel.uiState.value.allState.items.first().id)
@@ -734,6 +738,8 @@ class LibraryViewModelTest {
         var genreRequestCount = 0
         var lastGenreIds: List<UUID> = emptyList()
         var lastFilters: Set<ItemFilter> = emptySet()
+        var lastMinDuration: Int? = null
+        var lastMaxDuration: Int? = null
         var randomGenreIds: List<UUID> = emptyList()
         var randomFilters: Set<ItemFilter> = emptySet()
         var randomResult: Result<TvItem?> = Result.success(null)
@@ -781,10 +787,19 @@ class LibraryViewModelTest {
             searchTerm: String?,
             genreIds: List<UUID>,
             studioIds: List<UUID>,
-            personIds: List<UUID>
+            personIds: List<UUID>,
+            category: String?,
+            tag: String?,
+            studio: String?,
+            performer: String?,
+            performerId: String?,
+            minDuration: Int?,
+            maxDuration: Int?
         ): Result<TvItemsPage> {
             lastGenreIds = genreIds
             lastFilters = filters
+            lastMinDuration = minDuration
+            lastMaxDuration = maxDuration
             return itemsPageResult
         }
 
@@ -854,6 +869,35 @@ class LibraryViewModelTest {
                 TvItemsPage(items = slice, totalRecordCount = items.size, startIndex = startIndex)
             }
         }
+    }
+
+    @Test
+    fun `duration filter sends the whole range to the backend`() = runTest(testDispatcher) {
+        val viewModel = LibraryViewModel(
+            libraryRepository = fakeLibraryRepository,
+            personRepository = fakePersonRepository,
+            studioRepository = fakeStudioRepository,
+            channelRepository = fakeChannelRepository,
+            clientManager = clientManager,
+            savedStateHandle = SavedStateHandle(),
+            context = context
+        )
+        advanceUntilIdle()
+
+        viewModel.setDurationFilter(DurationFilter.SHORT)
+        advanceUntilIdle()
+        assertNull(fakeLibraryRepository.lastMinDuration)
+        assertEquals(900, fakeLibraryRepository.lastMaxDuration)
+
+        viewModel.setDurationFilter(DurationFilter.MEDIUM)
+        advanceUntilIdle()
+        assertEquals(900, fakeLibraryRepository.lastMinDuration)
+        assertEquals(2400, fakeLibraryRepository.lastMaxDuration)
+
+        viewModel.setDurationFilter(DurationFilter.LONG)
+        advanceUntilIdle()
+        assertEquals(2400, fakeLibraryRepository.lastMinDuration)
+        assertNull(fakeLibraryRepository.lastMaxDuration)
     }
 
     @Test

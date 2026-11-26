@@ -33,7 +33,7 @@ import androidx.compose.ui.unit.dp
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import coil.compose.AsyncImage
 import com.adulthub.tv.R
-import com.adulthub.tv.data.jellyfin.JellyfinClientManager
+import com.adulthub.tv.data.api.AdultHubClientManager
 import com.adulthub.tv.data.model.*
 import com.adulthub.tv.data.resolver.resolveResolverUrl
 import com.adulthub.tv.ui.auth.AuthViewModel
@@ -115,7 +115,6 @@ fun MobileLoginScreen(vm: AuthViewModel, onBack: () -> Unit) {
         OutlinedTextField(state.password, vm::onPasswordChanged, Modifier.fillMaxWidth(), label = { Text(stringResource(R.string.login_password_label)) }, visualTransformation = PasswordVisualTransformation(), keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Password), singleLine = true)
         Spacer(Modifier.height(14.dp))
         Button(onClick = { localNetwork.ensureGranted(state.serverUrl) { vm.signIn() } }, enabled = !state.isSigningIn, modifier = Modifier.fillMaxWidth().heightIn(min = 48.dp)) { Text(if (state.isSigningIn) stringResource(R.string.login_signing_in) else stringResource(R.string.mobile_login_title)) }
-        OutlinedButton(onClick = { localNetwork.ensureGranted(state.serverUrl) { vm.startQuickConnect() } }, modifier = Modifier.fillMaxWidth().heightIn(min = 48.dp)) { Text(stringResource(R.string.quick_connect_title)) }
         TextButton(onClick = onBack) { Text(stringResource(R.string.mobile_change_server)) }
         MobileError(state.errorMessage)
     }
@@ -347,9 +346,9 @@ fun MobileLibraryScreen(vm: LibraryViewModel, initialCategoryId: String?, onItem
                     Box {
                         TextButton(onClick = { sortMenu = true }) { Text(stringResource(R.string.mobile_sort)) }
                         DropdownMenu(expanded = sortMenu, onDismissRequest = { sortMenu = false }) {
-                            listOf("DateCreated" to R.string.mobile_sort_newest, "SortName" to R.string.mobile_sort_title, "CommunityRating" to R.string.mobile_sort_rating).forEach { (key, label) ->
+                            listOf("DateCreated" to R.string.mobile_sort_newest, "SortName" to R.string.mobile_sort_title, "Runtime" to R.string.library_sort_by_duration).forEach { (key, label) ->
                                 DropdownMenuItem(text = { Text(stringResource(label)) }, onClick = {
-                                    vm.setSort(key, org.jellyfin.sdk.model.api.SortOrder.DESCENDING)
+                                    vm.setSort(key, SortOrder.DESCENDING)
                                     sortMenu = false
                                 })
                             }
@@ -530,7 +529,7 @@ fun MobileLibraryScreen(vm: LibraryViewModel, initialCategoryId: String?, onItem
 @Composable
 fun MobileSearchScreen(vm: SearchViewModel, initialQuery: String?, onItem: (String) -> Unit, onPlay: (String) -> Unit, onPerson: (String, String) -> Unit) {
     val state by vm.uiState.collectAsStateWithLifecycle()
-    val clientManager: JellyfinClientManager = koinInject()
+    val clientManager: AdultHubClientManager = koinInject()
     LaunchedEffect(initialQuery) { if (!initialQuery.isNullOrBlank()) vm.onQueryChanged(initialQuery) }
     MobilePage(stringResource(R.string.nav_search)) {
         OutlinedTextField(
@@ -572,7 +571,7 @@ fun MobileSearchScreen(vm: SearchViewModel, initialQuery: String?, onItem: (Stri
             if (state.actors.isNotEmpty()) {
                 item(key = "h_actors") { MobileSearchSectionHeader(stringResource(R.string.mobile_performers)) }
                 items(state.actors, key = { "p${it.id}" }) { person ->
-                    MobileMediaCard(person.name, clientManager.getPersonImageUrl(person.id, person.primaryImageTag)) {
+                    MobileMediaCard(person.name, clientManager.getPersonImageUrl(person.id, photoUrl = person.photoUrl)) {
                         onPerson(person.id, person.name)
                     }
                 }

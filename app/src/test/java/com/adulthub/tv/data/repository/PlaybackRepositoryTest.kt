@@ -1,368 +1,382 @@
 package com.adulthub.tv.data.repository
 
-import com.adulthub.tv.data.jellyfin.JellyfinClientManager
+import com.adulthub.tv.data.api.AdultHubApi
+import com.adulthub.tv.data.api.AdultHubClientManager
+import com.adulthub.tv.data.api.PlaybackDescriptorDto
+import com.adulthub.tv.data.api.PlaybackRenditionDto
 import com.adulthub.tv.data.local.SettingsDataStore
+import com.adulthub.tv.data.model.PlayMethod
 import com.adulthub.tv.data.model.TvItem
+import com.adulthub.tv.data.network.ServiceUrl
+import com.adulthub.tv.data.resolver.VideoVariantsResult
 import io.mockk.coEvery
 import io.mockk.coVerify
 import io.mockk.every
 import io.mockk.mockk
-import io.mockk.slot
-import java.util.UUID
+import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.test.runTest
-import org.jellyfin.sdk.api.client.ApiClient
-import org.jellyfin.sdk.api.client.Response
-import org.jellyfin.sdk.api.client.extensions.sessionApi
-import org.jellyfin.sdk.api.operations.SessionApi
-import org.jellyfin.sdk.model.api.PlayMethod
-import org.jellyfin.sdk.model.api.PlaybackProgressInfo
-import org.jellyfin.sdk.model.api.PlaybackStartInfo
-import org.jellyfin.sdk.model.api.PlaybackStopInfo
 import org.junit.Assert.assertEquals
-import org.junit.Assert.assertNull
 import org.junit.Assert.assertTrue
+import org.junit.Assert.fail
 import org.junit.Test
 
 class PlaybackRepositoryTest {
-    @Test
-    fun `resolver media source is routed through configured local origin`() {
-        val original = "https://resolver.example.com/admin/play/telegram:channel:42:0/stream?mode=proxy"
-
-        val result = rewriteResolverMediaSourceUrl(
-            mediaSourcePath = original,
-            resolverOrigin = "http://192.168.1.100:8099/"
-        )
-
-        assertEquals(
-            "http://192.168.1.100:8099/admin/play/telegram:channel:42:0/stream?mode=proxy",
-            result
-        )
-    }
 
     @Test
-    fun `non resolver media source is unchanged`() {
-        val original = "https://media.example.test/videos/42/stream.mp4?api_key=token"
-
-        val result = rewriteResolverMediaSourceUrl(
-            mediaSourcePath = original,
-            resolverOrigin = "http://192.168.1.100:8099"
-        )
-
-        assertEquals(original, result)
-    }
-
-    @Test
-    fun `provider video id is normalized to a telegram resolver reference`() {
-        assertEquals(
-            "telegram:-100:21406:5393323",
-            telegramResolverRef(TvItem(id = "jellyfin-uuid", title = "t", providerVideoId = "-100:21406:5393323"))
-        )
-        assertEquals(
-            "telegram:-100:21406:5393323",
-            telegramResolverRef(TvItem(id = "x", title = "t", providerVideoId = "telegram:-100:21406:5393323"))
-        )
-        assertEquals(
-            "telegram:-100:1:2",
-            telegramResolverRef(TvItem(id = "telegram:-100:1:2", title = "t"))
-        )
-        assertNull(telegramResolverRef(TvItem(id = "plain-id", title = "t")))
-    }
-
-    @Test
-    fun `original variant keeps the historic stream address`() {
-        val url = "http://resolver:8090/admin/play/telegram:-100:1:2/stream?mode=proxy"
-
-        assertEquals(url, appendVariantQuery(url, null))
-        assertEquals(url, appendVariantQuery(url, "original"))
-        assertEquals(url, appendVariantQuery(url, "  original  "))
-    }
-
-    @Test
-    fun `alternative variant is appended as query parameter`() {
-        val url = "http://resolver:8090/admin/play/telegram:-100:1:2/stream?mode=proxy"
-
-        assertEquals(
-            "$url&variant=alt_5393558434975097219",
-            appendVariantQuery(url, "alt_5393558434975097219")
-        )
-    }
-
-    @Test
-    fun `variant uses a question mark when the url has no query yet`() {
-        val url = "https://resolver.example/admin/play/telegram:-100:1:2/stream"
-
-        assertEquals(
-            "$url?variant=alt_7",
-            appendVariantQuery(url, "alt_7")
-        )
-    }
-
-    @Test
-    fun `unexpected characters in a variant id are percent encoded`() {
-        val url = "http://resolver/stream?mode=proxy"
-
-        assertEquals(
-            "$url&variant=a%26b",
-            appendVariantQuery(url, "a&b")
-        )
-    }
-
-    @Test
-    fun `non-ascii characters are encoded as utf-8 bytes when the url cannot be parsed`() {
-        val url = "/stream?mode=proxy"
-
-        assertEquals(
-            "$url&variant=%C5%BC%C3%B3%C5%82w",
-            appendVariantQuery(url, "żółw")
-        )
-    }
-
-    @Test
-    fun `existing variant parameter is replaced instead of duplicated`() {
-        val url = "http://resolver/stream?mode=proxy&variant=old_1"
-
-        assertEquals(
-            "http://resolver/stream?mode=proxy&variant=new_2",
-            appendVariantQuery(url, "new_2")
-        )
-    }
-
-    @Test
-    fun `original variant clears an existing variant parameter`() {
-        val url = "http://resolver/stream?mode=proxy&variant=old_1"
-
-        assertEquals(
-            "http://resolver/stream?mode=proxy",
-            appendVariantQuery(url, "original")
-        )
-    }
-
-    @Test
-    fun `an address without any variant choice is returned untouched`() {
-        // Rebuilding through HttpUrl would normalize escapes, ports and trailing slashes,
-        // which must never happen to a signed media source address.
-        val url = "https://media.example.test:443/videos/42/stream.mp4?api_key=Sig%2Fnature%2Bx"
-
-        assertEquals(url, appendVariantQuery(url, null))
-        assertEquals(url, appendVariantQuery(url, "   "))
-    }
-
-    @Test
-    fun `jellyfin headers are kept on the jellyfin origin`() {
-        val headers = mapOf(
-            "Authorization" to "MediaBrowser Token=\"token\"",
-            "X-Emby-Token" to "token",
-            "Referer" to "https://media.example.test"
-        )
-
-        val result = filterPlaybackHeaders(
-            headers = headers,
-            streamUrl = "https://media.example.test/videos/42/stream.mp4",
-            serverUrl = "https://media.example.test/",
-            accessToken = "token"
-        )
-
-        assertEquals(headers, result)
-    }
-
-    @Test
-    fun `jellyfin credentials never follow a stream to another origin`() {
-        val result = filterPlaybackHeaders(
-            headers = mapOf(
-                "Authorization" to "MediaBrowser Token=\"token\"",
-                "Cookie" to "jellyfin=token",
-                "X-Emby-Token" to "token",
-                "X-MediaBrowser-Token" to "token",
-                "X-Playback-Referer" to "https://media.example.test/?token",
-                "Referer" to "https://media.example.test"
-            ),
-            streamUrl = "http://192.168.1.100:8099/admin/play/telegram:1/stream?mode=proxy",
-            serverUrl = "http://192.168.1.50:8096",
-            accessToken = "token"
-        )
-
-        assertEquals(mapOf("Referer" to "https://media.example.test"), result)
-    }
-
-    @Test
-    fun `credentials of an external source survive a cross-origin stream`() {
-        // A CDN may authenticate with its own Basic credentials or cookie; neither
-        // belongs to Jellyfin, even when the header name matches a Jellyfin one.
-        val headers = mapOf(
-            "Authorization" to "Basic dXNlcjpwYXNz",
-            "Cookie" to "cdn_session=abc123",
-            "Proxy-Authorization" to "Basic cHJveHk=",
-            "X-Emby-Token" to "issued-by-the-source"
-        )
-
-        val result = filterPlaybackHeaders(
-            headers = headers,
-            streamUrl = "https://cdn.example.test/video.mp4",
-            serverUrl = "http://192.168.1.50:8096",
-            accessToken = "token"
-        )
-
-        assertEquals(headers, result)
-    }
-
-    @Test
-    fun `without a known server origin jellyfin credentials are dropped`() {
-        val result = filterPlaybackHeaders(
-            headers = mapOf("Authorization" to "Bearer token", "Accept" to "video/*"),
-            streamUrl = "https://cdn.example.test/video.mp4",
-            serverUrl = null,
-            accessToken = "token"
-        )
-
-        assertEquals(mapOf("Accept" to "video/*"), result)
-    }
-
-    @Test
-    fun `a stream address without an http origin sends no server headers`() {
-        val result = filterPlaybackHeaders(
-            headers = mapOf("Authorization" to "Bearer token"),
-            streamUrl = "not a url",
-            serverUrl = "https://media.example.test",
-            accessToken = "token"
-        )
-
-        assertEquals(emptyMap<String, String>(), result)
-    }
-
-    @Test
-    fun `without known access token cross-origin stream drops known credential headers`() {
-        val headers = mapOf(
-            "Authorization" to "MediaBrowser Client=\"test\", Token=\"secret\"",
-            "Cookie" to "session=secret",
-            "X-Emby-Token" to "secret",
-            "X-MediaBrowser-Token" to "secret",
-            "Accept" to "video/mp4",
-            "User-Agent" to "AdultHubTV/1.0"
-        )
-
-        val nullTokenResult = filterPlaybackHeaders(
-            headers = headers,
-            streamUrl = "http://192.168.1.100:8099/stream.mp4",
-            serverUrl = "http://192.168.1.50:8096",
-            accessToken = null
-        )
-
-        assertEquals(
-            mapOf("Accept" to "video/mp4", "User-Agent" to "AdultHubTV/1.0"),
-            nullTokenResult
-        )
-
-        val blankTokenResult = filterPlaybackHeaders(
-            headers = headers,
-            streamUrl = "http://192.168.1.100:8099/stream.mp4",
-            serverUrl = "http://192.168.1.50:8096",
-            accessToken = "   "
-        )
-
-        assertEquals(
-            mapOf("Accept" to "video/mp4", "User-Agent" to "AdultHubTV/1.0"),
-            blankTokenResult
-        )
-    }
-
-    @Test
-    fun `without known access token same-origin stream keeps all headers`() {
-        val headers = mapOf(
-            "Authorization" to "MediaBrowser Token=\"secret\"",
-            "X-Emby-Token" to "secret",
-            "Accept" to "video/mp4"
-        )
-
-        val result = filterPlaybackHeaders(
-            headers = headers,
-            streamUrl = "http://192.168.1.50:8096/stream.mp4",
-            serverUrl = "http://192.168.1.50:8096",
-            accessToken = null
-        )
-
-        assertEquals(headers, result)
-    }
-
-    @Test
-    fun `playback reporting delegates to sessionApi for Jellyfin UUID items`() = runTest {
-        val clientManager = mockk<JellyfinClientManager>(relaxed = true)
+    fun `resolvePlaybackInfo resolves descriptor into PlaybackInfo with same origin stream`() = runTest {
+        val clientManager = mockk<AdultHubClientManager>(relaxed = true)
         val settingsDataStore = mockk<SettingsDataStore>(relaxed = true)
-        val mockApi = mockk<ApiClient>(relaxed = true)
-        val mockSessionApi = mockk<SessionApi>()
+        val mockApi = mockk<AdultHubApi>(relaxed = true)
 
-        coEvery { clientManager.getApi() } returns mockApi
-        every { mockApi.sessionApi } returns mockSessionApi
+        val serverOrigin = "https://adulthub.example.com"
+        every { clientManager.getApi() } returns mockApi
+        every { clientManager.getSessionSnapshot() } returns com.adulthub.tv.data.api.ClientSession(
+            serverUrl = serverOrigin,
+            accessToken = "test-token",
+            userId = "user-123",
+            username = "testuser"
+        )
+        every { clientManager.currentServerUrl } returns serverOrigin
+        every { clientManager.currentAccessToken } returns "test-token"
+        coEvery { settingsDataStore.requireAllowedServiceUrl(any(), any()) } returns ServiceUrl(
+            normalized = serverOrigin,
+            origin = serverOrigin,
+            usesCleartext = false
+        )
 
-        val startSlot = slot<PlaybackStartInfo>()
-        val progressSlot = slot<PlaybackProgressInfo>()
-        val stopSlot = slot<PlaybackStopInfo>()
-
-        val unitResponse = mockk<Response<Unit>> { every { content } returns Unit }
-        coEvery { mockSessionApi.reportPlaybackStart(capture(startSlot)) } returns unitResponse
-        coEvery { mockSessionApi.reportPlaybackProgress(capture(progressSlot)) } returns unitResponse
-        coEvery { mockSessionApi.reportPlaybackStopped(capture(stopSlot)) } returns unitResponse
+        val descriptor = PlaybackDescriptorDto(
+            videoId = "video-123",
+            streamPath = "api/v1/playback/stream/video-123",
+            mimeType = "video/mp4",
+            durationSeconds = 120.0,
+            fileSizeBytes = 50000000L
+        )
+        coEvery { mockApi.getPlaybackDescriptor("video-123") } returns descriptor
 
         val repository = PlaybackRepository(
             clientManager = clientManager,
             settingsDataStore = settingsDataStore
         )
 
-        val itemUuid = UUID.randomUUID()
+        val item = TvItem(id = "video-123", title = "Test Movie")
+        val result = repository.resolvePlaybackInfo(item)
+
+        assertTrue(result.isSuccess)
+        val info = result.getOrThrow()
+        assertEquals("video-123", info.itemId)
+        assertEquals("https://adulthub.example.com/api/v1/playback/stream/video-123", info.streamUrl)
+        assertEquals(PlayMethod.DIRECT_PLAY, info.playMethod)
+        assertEquals(mapOf("Authorization" to "Bearer test-token"), info.headers)
+        assertEquals(120000L, info.durationMs)
+    }
+
+    @Test
+    fun `resolvePlaybackInfo fails when no session snapshot exists and does not fall back to resolver url`() = runTest {
+        val clientManager = mockk<AdultHubClientManager>(relaxed = true)
+        val settingsDataStore = mockk<SettingsDataStore>(relaxed = true)
+        val mockApi = mockk<AdultHubApi>(relaxed = true)
+
+        every { clientManager.getApi() } returns mockApi
+        every { clientManager.getSessionSnapshot() } returns null
+        every { clientManager.currentServerUrl } returns null
+        coEvery { settingsDataStore.getResolverBaseUrl() } returns "https://resolver.example.com"
+
+        val repository = PlaybackRepository(clientManager, settingsDataStore)
+        val result = repository.resolvePlaybackInfo(TvItem(id = "video-123", title = "Test"))
+
+        assertTrue(result.isFailure)
+        assertTrue(result.exceptionOrNull() is IllegalStateException)
+        coVerify(exactly = 0) { settingsDataStore.getResolverBaseUrl() }
+    }
+
+    @Test
+    fun `resolvePlaybackInfo resolves canonical Telegram catalogue ids`() = runTest {
+        val clientManager = mockk<AdultHubClientManager>(relaxed = true)
+        val settingsDataStore = mockk<SettingsDataStore>(relaxed = true)
+        val mockApi = mockk<AdultHubApi>(relaxed = true)
+
+        // Adult Hub v1 catalogue ids are provider ids; they must reach the descriptor endpoint.
+        val canonicalId = "telegram:-100123:456:789"
+        val serverOrigin = "https://adulthub.example.com"
+        every { clientManager.getApi() } returns mockApi
+        every { clientManager.getSessionSnapshot() } returns com.adulthub.tv.data.api.ClientSession(
+            serverUrl = serverOrigin,
+            accessToken = "test-token",
+            userId = "user-123",
+            username = "testuser"
+        )
+        every { clientManager.currentServerUrl } returns serverOrigin
+        every { clientManager.currentAccessToken } returns "test-token"
+        coEvery { settingsDataStore.requireAllowedServiceUrl(any(), any()) } returns ServiceUrl(
+            normalized = serverOrigin,
+            origin = serverOrigin,
+            usesCleartext = false
+        )
+        coEvery { mockApi.getPlaybackDescriptor(canonicalId) } returns PlaybackDescriptorDto(
+            videoId = canonicalId,
+            streamPath = "api/v1/playback/stream/telegram:-100123:456:789",
+            mimeType = "video/mp4",
+            durationSeconds = 60.0
+        )
+
+        val repository = PlaybackRepository(clientManager, settingsDataStore)
+        val result = repository.resolvePlaybackInfo(TvItem(id = canonicalId, title = "Tg"))
+
+        assertTrue(result.isSuccess)
+        coVerify(exactly = 1) { mockApi.getPlaybackDescriptor(canonicalId) }
+    }
+
+    @Test
+    fun `reportPlaybackProgress and stop do not mark already played video unwatched`() = runTest {
+        val clientManager = mockk<AdultHubClientManager>(relaxed = true)
+        val settingsDataStore = mockk<SettingsDataStore>(relaxed = true)
+        val mockApi = mockk<AdultHubApi>(relaxed = true)
+
+        every { clientManager.getApi() } returns mockApi
+        every { clientManager.getApiOrNull() } returns mockApi
+        every { clientManager.getSessionSnapshot() } returns com.adulthub.tv.data.api.ClientSession(
+            serverUrl = "https://adulthub.example.com",
+            accessToken = "token",
+            userId = "u1"
+        )
+        coEvery { settingsDataStore.requireAllowedServiceUrl(any(), any()) } returns com.adulthub.tv.data.network.ServiceUrl(
+            normalized = "https://adulthub.example.com",
+            origin = "https://adulthub.example.com",
+            usesCleartext = false
+        )
+        coEvery { mockApi.getPlaybackDescriptor("v-already-played") } returns PlaybackDescriptorDto(
+            videoId = "v-already-played",
+            streamPath = "stream",
+            durationSeconds = 100.0
+        )
+
+        val repository = PlaybackRepository(clientManager, settingsDataStore)
+        repository.resolvePlaybackInfo(TvItem(id = "v-already-played", title = "Movie", isPlayed = true))
+
+        repository.reportPlaybackProgress(
+            itemId = "v-already-played",
+            mediaSourceId = null,
+            positionTicks = 10L * 10_000_000L,
+            canSeek = true,
+            playMethod = PlayMethod.DIRECT_PLAY
+        )
+
+        coVerify(exactly = 1) {
+            mockApi.putWatchProgress(
+                videoId = "v-already-played",
+                body = match { it.positionSeconds == 10 && it.isPlayed }
+            )
+        }
+    }
+
+    @Test
+    fun `reportPlaybackProgress reports canonical Telegram catalogue ids`() = runTest {
+        val clientManager = mockk<AdultHubClientManager>(relaxed = true)
+        val settingsDataStore = mockk<SettingsDataStore>(relaxed = true)
+        val mockApi = mockk<AdultHubApi>(relaxed = true)
+
+        every { clientManager.getApiOrNull() } returns mockApi
+
+        val repository = PlaybackRepository(clientManager, settingsDataStore)
+        val canonicalId = "telegram:-100123:456:789"
+        val result = repository.reportPlaybackProgress(
+            itemId = canonicalId,
+            mediaSourceId = null,
+            positionTicks = 10_000_000L,
+            canSeek = true,
+            playMethod = PlayMethod.DIRECT_PLAY
+        )
+
+        assertTrue(result.isSuccess)
+        coVerify(exactly = 1) {
+            mockApi.putWatchProgress(videoId = canonicalId, body = any())
+        }
+    }
+
+    @Test
+    fun `resolvePlaybackInfo rethrows CancellationException`() = runTest {
+        val clientManager = mockk<AdultHubClientManager>(relaxed = true)
+        val settingsDataStore = mockk<SettingsDataStore>(relaxed = true)
+        val mockApi = mockk<AdultHubApi>(relaxed = true)
+
+        every { clientManager.getApi() } returns mockApi
+        coEvery { mockApi.getPlaybackDescriptor(any()) } throws CancellationException("Cancelled")
+
+        val repository = PlaybackRepository(
+            clientManager = clientManager,
+            settingsDataStore = settingsDataStore
+        )
+
+        try {
+            repository.resolvePlaybackInfo(TvItem(id = "v-1", title = "Title"))
+            fail("Expected CancellationException to be rethrown")
+        } catch (e: CancellationException) {
+            assertEquals("Cancelled", e.message)
+        }
+    }
+
+    @Test
+    fun `fetchVideoVariants returns renditions from Adult Hub descriptor`() = runTest {
+        val clientManager = mockk<AdultHubClientManager>(relaxed = true)
+        val settingsDataStore = mockk<SettingsDataStore>(relaxed = true)
+        val mockApi = mockk<AdultHubApi>(relaxed = true)
+
+        every { clientManager.getApiOrNull() } returns mockApi
+
+        val descriptor = PlaybackDescriptorDto(
+            videoId = "video-123",
+            streamPath = "api/v1/playback/stream/video-123",
+            renditions = listOf(
+                PlaybackRenditionDto(
+                    id = "orig",
+                    label = "Original",
+                    isDefault = true,
+                    streamPath = "api/v1/playback/stream/video-123?res=orig"
+                ),
+                PlaybackRenditionDto(
+                    id = "720p",
+                    label = "720p",
+                    isDefault = false,
+                    streamPath = "api/v1/playback/stream/video-123?res=720p"
+                )
+            )
+        )
+        coEvery { mockApi.getPlaybackDescriptor("video-123") } returns descriptor
+
+        val repository = PlaybackRepository(
+            clientManager = clientManager,
+            settingsDataStore = settingsDataStore
+        )
+
+        val variantsResult = repository.fetchVideoVariants("video-123")
+        assertTrue(variantsResult is VideoVariantsResult.Available)
+        val variants = (variantsResult as VideoVariantsResult.Available).variants
+        assertEquals(2, variants.size)
+        assertEquals("orig", variants[0].id)
+        assertTrue(variants[0].isOriginal)
+        assertEquals("720p", variants[1].id)
+    }
+
+    @Test
+    fun `playback reporting delegates to Adult Hub API putWatchProgress`() = runTest {
+        val clientManager = mockk<AdultHubClientManager>(relaxed = true)
+        val settingsDataStore = mockk<SettingsDataStore>(relaxed = true)
+        val mockApi = mockk<AdultHubApi>(relaxed = true)
+
+        every { clientManager.getApiOrNull() } returns mockApi
+
+        val repository = PlaybackRepository(
+            clientManager = clientManager,
+            settingsDataStore = settingsDataStore
+        )
+
         val startResult = repository.reportPlaybackStart(
-            itemId = itemUuid.toString(),
-            mediaSourceId = "ms-1",
-            positionTicks = 50000L,
-            playSessionId = "sess-1",
+            itemId = "video-123",
+            mediaSourceId = null,
+            positionTicks = 50000000L,
             canSeek = true,
             playMethod = PlayMethod.DIRECT_PLAY
         )
         assertTrue(startResult.isSuccess)
-        assertEquals(itemUuid, startSlot.captured.itemId)
-        assertEquals("ms-1", startSlot.captured.mediaSourceId)
-        assertEquals(50000L, startSlot.captured.positionTicks)
-        assertEquals(PlayMethod.DIRECT_PLAY, startSlot.captured.playMethod)
 
         val progressResult = repository.reportPlaybackProgress(
-            itemId = itemUuid.toString(),
-            mediaSourceId = "ms-1",
-            positionTicks = 120000L,
-            playSessionId = "sess-1",
-            isPaused = false,
+            itemId = "video-123",
+            mediaSourceId = null,
+            positionTicks = 120000000L,
             canSeek = true,
             playMethod = PlayMethod.DIRECT_PLAY
         )
         assertTrue(progressResult.isSuccess)
-        assertEquals(itemUuid, progressSlot.captured.itemId)
-        assertEquals(120000L, progressSlot.captured.positionTicks)
+        coVerify(exactly = 1) {
+            mockApi.putWatchProgress(
+                videoId = "video-123",
+                body = match { it.positionSeconds == 12 && !it.isPlayed }
+            )
+        }
 
         val stopResult = repository.reportPlaybackStopped(
-            itemId = itemUuid.toString(),
-            mediaSourceId = "ms-1",
-            positionTicks = 200000L,
-            playSessionId = "sess-1"
+            itemId = "video-123",
+            mediaSourceId = null,
+            positionTicks = 200000000L
         )
         assertTrue(stopResult.isSuccess)
-        assertEquals(itemUuid, stopSlot.captured.itemId)
-        assertEquals(200000L, stopSlot.captured.positionTicks)
+        coVerify(exactly = 1) {
+            mockApi.putWatchProgress(
+                videoId = "video-123",
+                body = match { it.positionSeconds == 20 }
+            )
+        }
     }
 
     @Test
-    fun `playback reporting is a no-op for non-UUID items`() = runTest {
-        val clientManager = mockk<JellyfinClientManager>(relaxed = true)
+    fun `fetchVideoVariants returns OriginalOnly when descriptor has empty renditions`() = runTest {
+        val clientManager = mockk<AdultHubClientManager>(relaxed = true)
         val settingsDataStore = mockk<SettingsDataStore>(relaxed = true)
+        val mockApi = mockk<AdultHubApi>(relaxed = true)
 
-        val repository = PlaybackRepository(
-            clientManager = clientManager,
-            settingsDataStore = settingsDataStore
+        every { clientManager.getApiOrNull() } returns mockApi
+        coEvery { mockApi.getPlaybackDescriptor("video-plain") } returns PlaybackDescriptorDto(
+            videoId = "video-plain",
+            streamPath = "stream",
+            renditions = emptyList()
         )
 
-        val startResult = repository.reportPlaybackStart(
-            itemId = "telegram:-100:1:2",
+        val repository = PlaybackRepository(clientManager, settingsDataStore)
+        val result = repository.fetchVideoVariants("video-plain")
+        assertTrue(result is VideoVariantsResult.OriginalOnly)
+    }
+
+    @Test
+    fun `resolvePlaybackInfo duration is carried into progress reports and marks watched at 90 percent`() = runTest {
+        val clientManager = mockk<AdultHubClientManager>(relaxed = true)
+        val settingsDataStore = mockk<SettingsDataStore>(relaxed = true)
+        val mockApi = mockk<AdultHubApi>(relaxed = true)
+
+        every { clientManager.getApi() } returns mockApi
+        every { clientManager.getApiOrNull() } returns mockApi
+        every { clientManager.currentServerUrl } returns "https://adulthub.example.com"
+        coEvery { settingsDataStore.requireAllowedServiceUrl(any(), any()) } returns com.adulthub.tv.data.network.ServiceUrl(
+            normalized = "https://adulthub.example.com",
+            origin = "https://adulthub.example.com",
+            usesCleartext = false
+        )
+
+        val descriptor = PlaybackDescriptorDto(
+            videoId = "v-long",
+            streamPath = "stream",
+            durationSeconds = 100.0
+        )
+        coEvery { mockApi.getPlaybackDescriptor("v-long") } returns descriptor
+
+        val repository = PlaybackRepository(clientManager, settingsDataStore)
+        repository.resolvePlaybackInfo(TvItem(id = "v-long", title = "Long Video"))
+
+        // Report progress at 50s (50% -> not played, duration = 100)
+        repository.reportPlaybackProgress(
+            itemId = "v-long",
             mediaSourceId = null,
-            canSeek = false,
+            positionTicks = 50L * 10_000_000L,
+            canSeek = true,
             playMethod = PlayMethod.DIRECT_PLAY
         )
-        assertTrue(startResult.isSuccess)
-        coVerify(exactly = 0) { clientManager.getApi() }
+        coVerify(exactly = 1) {
+            mockApi.putWatchProgress(
+                videoId = "v-long",
+                body = match { it.positionSeconds == 50 && it.durationSeconds == 100 && !it.isPlayed }
+            )
+        }
+
+        // Report stop at 95s (95% -> isPlayed = true, duration = 100)
+        repository.reportPlaybackStopped(
+            itemId = "v-long",
+            mediaSourceId = null,
+            positionTicks = 95L * 10_000_000L
+        )
+        coVerify(exactly = 1) {
+            mockApi.putWatchProgress(
+                videoId = "v-long",
+                body = match { it.positionSeconds == 95 && it.durationSeconds == 100 && it.isPlayed }
+            )
+        }
     }
 }
