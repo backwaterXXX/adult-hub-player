@@ -4,12 +4,14 @@ import android.app.Application
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import com.adulthub.tv.R
-import com.adulthub.tv.data.jellyfin.JellyfinClientManager
+import com.adulthub.tv.data.api.AdultHubClientManager
 import com.adulthub.tv.data.local.SettingsDataStore
+import com.adulthub.tv.data.model.ItemFilter
 import com.adulthub.tv.data.model.ShuffleContextMode
 import com.adulthub.tv.data.model.TvItem
 import com.adulthub.tv.data.model.TvPersonRole
 import com.adulthub.tv.data.repository.LibraryRepository
+import com.adulthub.tv.ui.components.userFacingMessage
 import java.util.UUID
 import kotlinx.coroutines.flow.MutableSharedFlow
 import kotlinx.coroutines.flow.MutableStateFlow
@@ -19,7 +21,6 @@ import kotlinx.coroutines.flow.asSharedFlow
 import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.launch
-import org.jellyfin.sdk.model.api.ItemFilter
 
 data class ItemDetailUiState(
     val item: TvItem? = null,
@@ -39,7 +40,7 @@ sealed interface ItemDetailNavEvent {
 
 class ItemDetailViewModel(
     private val libraryRepository: LibraryRepository,
-    private val clientManager: JellyfinClientManager,
+    private val clientManager: AdultHubClientManager,
     private val settingsDataStore: SettingsDataStore? = null,
     private val context: Application
 ) : ViewModel() {
@@ -73,7 +74,7 @@ class ItemDetailViewModel(
                     onFailure = { error ->
                         state.copy(
                             isLoading = false,
-                            errorMessage = error.localizedMessage ?: context.getString(R.string.library_error_movie_details)
+                            errorMessage = error.userFacingMessage(context, R.string.library_error_movie_details)
                         )
                     }
                 )
@@ -274,14 +275,23 @@ class ItemDetailViewModel(
 
     fun getBackdropImageUrl(item: TvItem): String {
         val base = clientManager.currentServerUrl?.trimEnd('/') ?: ""
-
-        return if (!item.backdropImageTag.isNullOrBlank()) {
-            "$base/Items/${item.id}/Images/Backdrop/0?maxWidth=1920&tag=${item.backdropImageTag}"
-        } else if (!item.primaryImageTag.isNullOrBlank()) {
-            "$base/Items/${item.id}/Images/Primary?maxWidth=1920&tag=${item.primaryImageTag}"
-        } else {
-            ""
+        if (!item.backdropUrl.isNullOrBlank()) {
+            val backdrop = item.backdropUrl.trim()
+            return if (backdrop.startsWith("http://", ignoreCase = true) || backdrop.startsWith("https://", ignoreCase = true) || base.isEmpty()) {
+                backdrop
+            } else {
+                "$base/${backdrop.trimStart('/')}"
+            }
         }
+        if (!item.posterUrl.isNullOrBlank()) {
+            val poster = item.posterUrl.trim()
+            return if (poster.startsWith("http://", ignoreCase = true) || poster.startsWith("https://", ignoreCase = true) || base.isEmpty()) {
+                poster
+            } else {
+                "$base/${poster.trimStart('/')}"
+            }
+        }
+        return if (base.isNotEmpty()) "$base/api/v1/artwork/video/${item.id}/backdrop" else ""
     }
 
     fun getItemImageUrl(item: TvItem): String = clientManager.getItemImageUrl(item)

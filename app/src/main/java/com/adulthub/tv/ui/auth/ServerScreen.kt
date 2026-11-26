@@ -154,7 +154,7 @@ fun ServerScreen(
                         ) {
                             Column(modifier = Modifier.weight(1f)) {
                                 Text(
-                                    text = server.name.ifEmpty { "Jellyfin Server" },
+                                    text = server.name.ifEmpty { "Adult Hub Server" },
                                     style = MaterialTheme.typography.titleMedium
                                 )
                                 Text(

@@ -1,8 +1,9 @@
 package com.adulthub.tv.ui.home
 
 import android.app.Application
-import com.adulthub.tv.data.jellyfin.JellyfinClientManager
+import com.adulthub.tv.data.api.AdultHubClientManager
 import com.adulthub.tv.data.local.SettingsDataStore
+import com.adulthub.tv.data.model.ItemFilter
 import com.adulthub.tv.data.model.TvCategory
 import com.adulthub.tv.data.model.TvItem
 import com.adulthub.tv.data.model.TvPerson
@@ -36,7 +37,7 @@ class HomeViewModelTest {
     private val fakeLibraryRepository = FakeLibraryRepository()
     private val fakePersonRepository = FakePersonRepository()
     private val settingsDataStore: SettingsDataStore = mockk(relaxed = true)
-    private val clientManager: JellyfinClientManager = mockk(relaxed = true)
+    private val clientManager: AdultHubClientManager = mockk(relaxed = true)
     private val context: Application = mockk(relaxed = true)
 
     private val sampleItem = TvItem(
@@ -296,7 +297,7 @@ class HomeViewModelTest {
         override suspend fun getRandomItems(
             parentId: String?,
             limit: Int,
-            filters: Set<org.jellyfin.sdk.model.api.ItemFilter>
+            filters: Set<ItemFilter>
         ): Result<List<TvItem>> = randomResult
         override suspend fun getRandomItem(parentId: String?, excludeItemId: String?): Result<TvItem?> = singleRandomResult
     }

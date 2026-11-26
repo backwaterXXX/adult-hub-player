@@ -4,7 +4,7 @@ import android.content.Context
 import androidx.datastore.core.DataStore
 import androidx.datastore.preferences.core.PreferenceDataStoreFactory
 import androidx.datastore.preferences.core.Preferences
-import com.adulthub.tv.data.jellyfin.JellyfinClientManager
+import com.adulthub.tv.data.api.AdultHubClientManager
 import com.adulthub.tv.data.model.TvItem
 import com.adulthub.tv.data.repository.AuthRepository
 import io.mockk.coEvery
@@ -90,7 +90,7 @@ class PreferenceWriteFailureTest {
     @Test
     fun `a failed sign out is reported and keeps the session`() = runTest(timeout = 120.seconds) {
         val authDataStore = mockk<AuthDataStore>()
-        val clientManager = mockk<JellyfinClientManager>(relaxed = true)
+        val clientManager = mockk<AdultHubClientManager>(relaxed = true)
         val settingsDataStore = mockk<SettingsDataStore>(relaxed = true)
         every { authDataStore.authState } returns kotlinx.coroutines.flow.flowOf(
             com.adulthub.tv.data.model.AuthState.NotAuthenticated
@@ -113,7 +113,7 @@ class PreferenceWriteFailureTest {
     @Test
     fun `a raw storage failure during sign out is returned instead of thrown`() = runTest(timeout = 120.seconds) {
         val authDataStore = mockk<AuthDataStore>()
-        val clientManager = mockk<JellyfinClientManager>(relaxed = true)
+        val clientManager = mockk<AdultHubClientManager>(relaxed = true)
         val settingsDataStore = mockk<SettingsDataStore>(relaxed = true)
         every { authDataStore.authState } returns kotlinx.coroutines.flow.flowOf(
             com.adulthub.tv.data.model.AuthState.NotAuthenticated
