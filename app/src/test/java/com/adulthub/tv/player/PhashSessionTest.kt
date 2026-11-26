@@ -5,7 +5,7 @@ import androidx.datastore.core.DataStore
 import androidx.datastore.preferences.core.PreferenceDataStoreFactory
 import androidx.datastore.preferences.core.Preferences
 import com.adulthub.tv.R
-import com.adulthub.tv.data.jellyfin.JellyfinClientManager
+import com.adulthub.tv.data.api.AdultHubClientManager
 import com.adulthub.tv.data.local.AccountKeyProvider
 import com.adulthub.tv.data.local.AccountScope
 import com.adulthub.tv.data.local.AuthDataStore
@@ -112,10 +112,8 @@ class PhashSessionTest {
         }.build()
 
         val authDataStore = authDataStore(authState)
-        val jellyfinClientManager = mockk<JellyfinClientManager>()
-        val api = mockk<org.jellyfin.sdk.api.client.ApiClient>(relaxed = true)
-        every { jellyfinClientManager.getApiOrNull() } returns api
-        every { api.accessToken } returns "token-one"
+        val adultHubClientManager = mockk<AdultHubClientManager>()
+        every { adultHubClientManager.currentAccessToken } returns "token-one"
 
         val settingsDataStore = mockk<SettingsDataStore>()
         every { settingsDataStore.phashOnPlayback } returns flowOf(true)
@@ -129,7 +127,7 @@ class PhashSessionTest {
         val jobStore = createJobStore(backgroundScope)
         val coordinator = PhashCoordinator(
             authDataStore = authDataStore,
-            jellyfinClientManager = jellyfinClientManager,
+            clientManager = adultHubClientManager,
             settingsDataStore = settingsDataStore,
             apiClient = ResolverApiClient(client),
             jobStore = jobStore,
@@ -193,10 +191,8 @@ class PhashSessionTest {
         every { apiClient.create(any()) } returns api
 
         val authDataStore = authDataStore(authState)
-        val jellyfinClientManager = mockk<JellyfinClientManager>()
-        val apiClientJellyfin = mockk<org.jellyfin.sdk.api.client.ApiClient>(relaxed = true)
-        every { jellyfinClientManager.getApiOrNull() } returns apiClientJellyfin
-        every { apiClientJellyfin.accessToken } returns "token-one"
+        val adultHubClientManager = mockk<AdultHubClientManager>()
+        every { adultHubClientManager.currentAccessToken } returns "token-one"
 
         val settingsDataStore = mockk<SettingsDataStore>()
         every { settingsDataStore.phashOnPlayback } returns flowOf(true)
@@ -210,7 +206,7 @@ class PhashSessionTest {
         val jobStore = createJobStore(backgroundScope)
         val coordinator = PhashCoordinator(
             authDataStore = authDataStore,
-            jellyfinClientManager = jellyfinClientManager,
+            clientManager = adultHubClientManager,
             settingsDataStore = settingsDataStore,
             apiClient = apiClient,
             jobStore = jobStore,

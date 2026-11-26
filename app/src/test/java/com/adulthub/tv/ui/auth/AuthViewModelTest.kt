@@ -22,6 +22,7 @@ import kotlinx.coroutines.test.runTest
 import kotlinx.coroutines.test.setMain
 import org.junit.After
 import org.junit.Assert.assertEquals
+import org.junit.Assert.assertFalse
 import org.junit.Before
 import org.junit.Test
 
@@ -78,5 +79,23 @@ class AuthViewModelTest {
         coVerify { authRepository.handleRejectedSession("rejected-token") }
         assertEquals("Session rejected", viewModel.serverState.value.errorMessage)
         assertEquals("https://jf.example.com", viewModel.serverState.value.serverUrl)
+    }
+
+    @Test
+    fun `startQuickConnect failure terminates polling and exposes error without misleading success`() = runTest(dispatcher) {
+        every { authRepository.sessionRejections } returns emptyFlow()
+        coEvery { authRepository.restoreSession() } returns AuthState.NotAuthenticated
+        coEvery { authRepository.initiateQuickConnect(any()) } returns Result.failure(UnsupportedOperationException("Pairing is not supported; please use password login"))
+        every { context.getString(R.string.auth_error_quick_connect, any()) } returns "Pairing is not supported"
+
+        val viewModel = AuthViewModel(authRepository, libraryRepository, settingsDataStore, context = context)
+        advanceUntilIdle()
+
+        viewModel.startQuickConnect()
+        advanceUntilIdle()
+
+        val state = viewModel.quickConnectState.value
+        assertFalse(state.isPolling)
+        assertEquals("Pairing is not supported", state.errorMessage)
     }
 }

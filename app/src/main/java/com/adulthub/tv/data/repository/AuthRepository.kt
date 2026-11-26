@@ -1,6 +1,9 @@
 package com.adulthub.tv.data.repository
 
-import com.adulthub.tv.data.jellyfin.JellyfinClientManager
+import com.adulthub.tv.data.api.AdultHubClientManager
+import com.adulthub.tv.data.api.AuthLoginRequestDto
+import com.adulthub.tv.data.api.AuthRevokeRequestDto
+import com.adulthub.tv.data.api.PairingInitRequestDto
 import com.adulthub.tv.data.local.AuthDataStore
 import com.adulthub.tv.data.local.SettingsDataStore
 import com.adulthub.tv.data.model.AuthState
@@ -11,14 +14,11 @@ import com.adulthub.tv.diagnostics.AppLog as Log
 import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.flow.Flow
-import kotlinx.coroutines.flow.map
+import kotlinx.coroutines.flow.emptyFlow
 import kotlinx.coroutines.sync.Mutex
 import kotlinx.coroutines.sync.withLock
 import kotlinx.coroutines.withContext
 import kotlinx.coroutines.withTimeoutOrNull
-import org.jellyfin.sdk.api.client.extensions.authenticationApi
-import org.jellyfin.sdk.api.client.extensions.sessionApi
-import org.jellyfin.sdk.api.client.extensions.systemApi
 
 data class QuickConnectInitResult(
     val code: String,
@@ -29,7 +29,7 @@ private const val TAG = "AuthRepository"
 private const val SERVER_SIGN_OUT_TIMEOUT_MS = 3_000L
 
 open class AuthRepository(
-    private val clientManager: JellyfinClientManager,
+    private val clientManager: AdultHubClientManager,
     private val authDataStore: AuthDataStore,
     private val settingsDataStore: SettingsDataStore,
     /**
@@ -41,20 +41,19 @@ open class AuthRepository(
 ) {
     open val authState: Flow<AuthState> = authDataStore.authState
 
-    /** Jellyfin tokens that the server rejected while they were the active session. */
+    /** Tokens that the server rejected while they were the active session. */
     open val sessionRejections: Flow<String> = clientManager.sessionRejections
 
     suspend fun discoverServer(serverUrl: String): Result<ServerInfo> = withContext(Dispatchers.IO) {
         try {
             val allowedUrl = settingsDataStore.requireAllowedServiceUrl(serverUrl).normalized
             val api = clientManager.createApi(baseUrl = allowedUrl)
-            val response = api.systemApi.getPublicSystemInfo()
-            val info = response.content
+            val versionInfo = api.getVersion()
             Result.success(
                 ServerInfo(
-                    id = info.id.orEmpty(),
-                    name = info.serverName.orEmpty(),
-                    version = info.version.orEmpty(),
+                    id = "adult-hub",
+                    name = "Adult Hub",
+                    version = versionInfo.serverVersion,
                     url = allowedUrl
                 )
             )
@@ -65,16 +64,7 @@ open class AuthRepository(
         }
     }
 
-    fun discoverServers(): Flow<ServerInfo> = clientManager.discovery
-        .discoverLocalServers()
-        .map { info ->
-            ServerInfo(
-                id = info.id.orEmpty(),
-                name = info.name.orEmpty(),
-                version = "",
-                url = info.address.orEmpty()
-            )
-        }
+    fun discoverServers(): Flow<ServerInfo> = emptyFlow()
 
     suspend fun login(
         serverUrl: String,
@@ -84,41 +74,45 @@ open class AuthRepository(
         try {
             val normalizedUrl = settingsDataStore.requireAllowedServiceUrl(serverUrl).normalized
             val api = clientManager.createApi(baseUrl = normalizedUrl)
-            val response = api.authenticationApi.authenticateUserByName(
-                org.jellyfin.sdk.model.api.AuthenticateUserByName(
+            val response = api.login(
+                AuthLoginRequestDto(
                     username = username,
-                    pw = password
+                    password = password,
+                    deviceName = "Adult Hub TV",
+                    deviceId = clientManager.deviceId
                 )
             )
-            val authResult = response.content
-            val token = authResult.accessToken
-                ?: return@withContext Result.failure(IllegalStateException("No access token returned"))
-            val user = authResult.user
-                ?: return@withContext Result.failure(IllegalStateException("No user returned"))
-            val userId = user.id.toString()
-            val serverName = normalizedUrl.substringAfter("://").substringBefore('/')
+            val token = response.accessToken
+            val refreshToken = response.refreshToken
+            val userId = response.user.id
+            val resolvedUsername = response.user.username.ifBlank { username }
+            val serverName = "Adult Hub"
 
             val authenticated = sessionMutex.withLock {
                 authDataStore.saveSession(
                     serverUrl = normalizedUrl,
                     userId = userId,
-                    username = username,
+                    username = resolvedUsername,
                     accessToken = token,
-                    serverName = serverName
+                    serverName = serverName,
+                    refreshToken = refreshToken
                 )
 
                 clientManager.updateSession(
                     serverUrl = normalizedUrl,
                     accessToken = token,
-                    userId = userId
+                    userId = userId,
+                    username = resolvedUsername,
+                    refreshToken = refreshToken
                 )
 
                 AuthState.Authenticated(
                     serverUrl = normalizedUrl,
                     userId = userId,
                     accessToken = token,
-                    username = username,
-                    serverName = serverName
+                    username = resolvedUsername,
+                    serverName = serverName,
+                    refreshToken = refreshToken
                 )
             }
             Result.success(authenticated)
@@ -129,18 +123,26 @@ open class AuthRepository(
         }
     }
 
+    /**
+     * Session handed over by an approved pairing poll. The backend exchanges an approved
+     * code for tokens exactly once, on the poll that observes the approval, so the poll
+     * result is kept here until the screen asks to finish the pairing.
+     */
+    @Volatile
+    private var pendingPairingSession: AuthState.Authenticated? = null
+
     suspend fun initiateQuickConnect(serverUrl: String): Result<QuickConnectInitResult> = withContext(Dispatchers.IO) {
         try {
-            val allowedUrl = settingsDataStore.requireAllowedServiceUrl(serverUrl).normalized
-            val api = clientManager.createApi(baseUrl = allowedUrl)
-            val response = api.authenticationApi.initiateQuickConnect()
-            val content = response.content
-            Result.success(
-                QuickConnectInitResult(
-                    code = content.code,
-                    secret = content.secret
+            val normalizedUrl = settingsDataStore.requireAllowedServiceUrl(serverUrl).normalized
+            val api = clientManager.createApi(baseUrl = normalizedUrl)
+            val response = api.pairInit(
+                PairingInitRequestDto(
+                    deviceName = "Adult Hub TV",
+                    deviceId = clientManager.deviceId
                 )
             )
+            pendingPairingSession = null
+            Result.success(QuickConnectInitResult(code = response.pairingCode, secret = response.secret))
         } catch (e: CancellationException) {
             throw e
         } catch (e: Exception) {
@@ -150,10 +152,35 @@ open class AuthRepository(
 
     suspend fun checkQuickConnectState(serverUrl: String, secret: String): Result<Boolean> = withContext(Dispatchers.IO) {
         try {
-            val allowedUrl = settingsDataStore.requireAllowedServiceUrl(serverUrl).normalized
-            val api = clientManager.createApi(baseUrl = allowedUrl)
-            val response = api.authenticationApi.getQuickConnectState(secret = secret)
-            Result.success(response.content.authenticated)
+            val normalizedUrl = settingsDataStore.requireAllowedServiceUrl(serverUrl).normalized
+            val api = clientManager.createApi(baseUrl = normalizedUrl)
+            val response = api.pairStatus(secretHeader = "Bearer $secret")
+            when (response.status.lowercase()) {
+                "approved" -> {
+                    val accessToken = response.accessToken
+                    val refreshToken = response.refreshToken
+                    if (accessToken.isNullOrBlank() || refreshToken.isNullOrBlank()) {
+                        return@withContext Result.failure(
+                            IllegalStateException("Pairing was approved without a usable session")
+                        )
+                    }
+                    pendingPairingSession = AuthState.Authenticated(
+                        serverUrl = normalizedUrl,
+                        userId = response.user?.id.orEmpty(),
+                        accessToken = accessToken,
+                        username = response.user?.username?.takeIf(String::isNotBlank) ?: "owner",
+                        serverName = "Adult Hub",
+                        refreshToken = refreshToken
+                    )
+                    Result.success(true)
+                }
+
+                "expired", "revoked" -> Result.failure(
+                    IllegalStateException("Pairing code expired. Start pairing again.")
+                )
+
+                else -> Result.success(false)
+            }
         } catch (e: CancellationException) {
             throw e
         } catch (e: Exception) {
@@ -163,43 +190,39 @@ open class AuthRepository(
 
     suspend fun authenticateQuickConnect(serverUrl: String, secret: String): Result<AuthState.Authenticated> = withContext(Dispatchers.IO) {
         try {
-            val normalizedUrl = settingsDataStore.requireAllowedServiceUrl(serverUrl).normalized
-            val api = clientManager.createApi(baseUrl = normalizedUrl)
-            val response = api.authenticationApi.authenticateWithQuickConnect(
-                org.jellyfin.sdk.model.api.QuickConnectDto(secret = secret)
+            val approved = pendingPairingSession ?: run {
+                // Approval can land between the last poll and this call, so poll once more.
+                val polled = checkQuickConnectState(serverUrl, secret)
+                if (polled.isFailure) {
+                    return@withContext Result.failure(
+                        polled.exceptionOrNull() ?: IllegalStateException("Pairing failed")
+                    )
+                }
+                pendingPairingSession
+            } ?: return@withContext Result.failure(
+                IllegalStateException("Pairing has not been approved yet")
             )
-            val authResult = response.content
-            val token = authResult.accessToken
-                ?: return@withContext Result.failure(IllegalStateException("No access token returned"))
-            val user = authResult.user
-                ?: return@withContext Result.failure(IllegalStateException("No user returned"))
-            val userId = user.id.toString()
-            val username = user.name.orEmpty()
-            val serverName = normalizedUrl.substringAfter("://").substringBefore('/')
 
             val authenticated = sessionMutex.withLock {
                 authDataStore.saveSession(
-                    serverUrl = normalizedUrl,
-                    userId = userId,
-                    username = username,
-                    accessToken = token,
-                    serverName = serverName
+                    serverUrl = approved.serverUrl,
+                    userId = approved.userId,
+                    username = approved.username,
+                    accessToken = approved.accessToken,
+                    serverName = approved.serverName,
+                    refreshToken = approved.refreshToken
                 )
 
                 clientManager.updateSession(
-                    serverUrl = normalizedUrl,
-                    accessToken = token,
-                    userId = userId
+                    serverUrl = approved.serverUrl,
+                    accessToken = approved.accessToken,
+                    userId = approved.userId,
+                    username = approved.username,
+                    refreshToken = approved.refreshToken
                 )
-
-                AuthState.Authenticated(
-                    serverUrl = normalizedUrl,
-                    userId = userId,
-                    accessToken = token,
-                    username = username,
-                    serverName = serverName
-                )
+                approved
             }
+            pendingPairingSession = null
             Result.success(authenticated)
         } catch (e: CancellationException) {
             throw e
@@ -230,7 +253,9 @@ open class AuthRepository(
                 clientManager.updateSession(
                     serverUrl = settingsDataStore.requireAllowedServiceUrl(state.serverUrl).normalized,
                     accessToken = state.accessToken,
-                    userId = state.userId
+                    userId = state.userId,
+                    username = state.username,
+                    refreshToken = state.refreshToken
                 )
             }
             state
@@ -264,14 +289,11 @@ open class AuthRepository(
     }
 
     private suspend fun revokeSessionOnServer(session: AuthState.Authenticated?) {
-        if (session == null) return
+        val refreshToken = session?.refreshToken ?: return
         try {
-            val api = clientManager.createApi(
-                baseUrl = session.serverUrl,
-                accessToken = session.accessToken
-            )
+            val api = clientManager.createApi(baseUrl = session.serverUrl)
             withTimeoutOrNull(SERVER_SIGN_OUT_TIMEOUT_MS) {
-                api.sessionApi.reportSessionEnded()
+                api.revoke(AuthRevokeRequestDto(refreshToken = refreshToken))
             }
         } catch (cancelled: CancellationException) {
             throw cancelled
@@ -282,12 +304,6 @@ open class AuthRepository(
 
     /**
      * Clears the stored session after the server rejected [rejectedAccessToken].
-     *
-     * The token comparison and the removal happen in one DataStore edit, so a
-     * login that replaced the session meanwhile is never deleted. The in-memory
-     * client is cleared only while it still carries the same token. Returns the
-     * session that was cleared, or null when the rejection does not belong to the
-     * stored session.
      */
     open suspend fun handleRejectedSession(rejectedAccessToken: String): AuthState.Authenticated? = withContext(Dispatchers.IO) {
         sessionMutex.withLock {

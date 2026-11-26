@@ -52,7 +52,7 @@ import androidx.tv.material3.Text
 import coil.compose.AsyncImage
 import coil.request.ImageRequest
 import com.adulthub.tv.R
-import com.adulthub.tv.data.jellyfin.JellyfinClientManager
+import com.adulthub.tv.data.api.AdultHubClientManager
 import com.adulthub.tv.data.local.SettingsDataStore
 import com.adulthub.tv.data.model.ShuffleContextMode
 import com.adulthub.tv.data.model.TvItem
@@ -96,7 +96,7 @@ fun ItemDetailScreen(
     val context = LocalContext.current
     val tagExcludedMessage = stringResource(R.string.tag_excluded_snackbar)
     val settingsDataStore: SettingsDataStore = koinInject()
-    val jellyfinClientManager: JellyfinClientManager = koinInject()
+    val clientManager: AdultHubClientManager = koinInject()
     var phashThumbnailUrl by remember(itemId) { mutableStateOf<String?>(null) }
     var usePhashBackdrop by remember(itemId) { mutableStateOf(false) }
     var selectedTagForAction by remember(itemId) { mutableStateOf<String?>(null) }
@@ -204,9 +204,9 @@ fun ItemDetailScreen(
                             val backdropRequest = remember(selectedBackdropUrl, item.id) {
                                 selectedBackdropUrl?.let { url ->
                                     ImageRequest.Builder(context).data(url).apply {
-                                        jellyfinClientManager.getApiOrNull()?.accessToken
+                                        clientManager.currentAccessToken
                                             ?.takeIf { it.isNotBlank() }
-                                            ?.let { addHeader("X-Emby-Token", it) }
+                                            ?.let { addHeader("Authorization", "Bearer $it") }
                                     }.build()
                                 }
                             }
@@ -288,6 +288,13 @@ fun ItemDetailScreen(
                                         if (!studio.isNullOrBlank()) {
                                             if (isNotEmpty()) append(" • ")
                                             append(studio)
+                                        }
+                                        val channelName = item.channelName
+                                        if (!channelName.isNullOrBlank() &&
+                                            !channelName.equals(studio, ignoreCase = true)
+                                        ) {
+                                            if (isNotEmpty()) append(" • ")
+                                            append(channelName)
                                         }
                                     }
 

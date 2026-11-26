@@ -1,37 +1,27 @@
 package com.adulthub.tv.data.repository
 
-import com.adulthub.tv.data.jellyfin.JellyfinClientManager
+import com.adulthub.tv.data.api.AdultHubApi
+import com.adulthub.tv.data.api.AdultHubClientManager
+import com.adulthub.tv.data.api.CatalogTaxonomyItemDto
+import com.adulthub.tv.data.api.CatalogTaxonomyListResponseDto
+import com.adulthub.tv.data.api.CatalogVideoItemDto
+import com.adulthub.tv.data.api.CatalogVideoListResponseDto
 import com.adulthub.tv.data.local.SettingsDataStore
 import io.mockk.coEvery
 import io.mockk.every
 import io.mockk.mockk
-import java.util.UUID
 import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.test.runTest
-import org.jellyfin.sdk.api.client.ApiClient
-import org.jellyfin.sdk.api.client.Response
-import org.jellyfin.sdk.api.client.extensions.libraryApi
-import org.jellyfin.sdk.api.client.extensions.studioApi
-import org.jellyfin.sdk.api.operations.LibraryApi
-import org.jellyfin.sdk.api.operations.StudioApi
-import org.jellyfin.sdk.model.api.BaseItemDto
-import org.jellyfin.sdk.model.api.BaseItemDtoQueryResult
-import org.jellyfin.sdk.model.api.ImageType
-import org.jellyfin.sdk.model.api.request.GetItemsRequest
-import org.jellyfin.sdk.model.api.request.GetStudiosRequest
 import org.junit.Assert.assertEquals
-import org.junit.Assert.assertNull
 import org.junit.Assert.assertTrue
 import org.junit.Assert.fail
 import org.junit.Test
 
 class StudioRepositoryTest {
 
-    private val clientManager: JellyfinClientManager = mockk(relaxed = true)
+    private val clientManager: AdultHubClientManager = mockk(relaxed = true)
     private val settingsDataStore: SettingsDataStore = mockk(relaxed = true)
-    private val mockApi: ApiClient = mockk(relaxed = true)
-    private val mockStudioApi: StudioApi = mockk()
-    private val mockLibraryApi: LibraryApi = mockk()
+    private val mockApi: AdultHubApi = mockk(relaxed = true)
 
     private val repository = StudioRepository(
         clientManager = clientManager,
@@ -40,47 +30,30 @@ class StudioRepositoryTest {
 
     init {
         coEvery { clientManager.getApi() } returns mockApi
-        every { mockApi.studioApi } returns mockStudioApi
-        every { mockApi.libraryApi } returns mockLibraryApi
+        every { clientManager.currentServerUrl } returns "https://adulthub.example.com"
     }
 
     @Test
-    fun `getStudios maps studios and respects library filter`() = runTest {
-        val libraryId = UUID.randomUUID()
-        val studioId = UUID.randomUUID()
-        coEvery { settingsDataStore.getSelectedLibraryId() } returns libraryId.toString()
-
-        val mockStudioDto = mockk<BaseItemDto> {
-            every { id } returns studioId
-            every { name } returns "Brazzers"
-            every { imageTags } returns mapOf(ImageType.PRIMARY to "studio-tag")
-            every { childCount } returns 99
-        }
-        val mockQueryResult = mockk<BaseItemDtoQueryResult> {
-            every { items } returns listOf(mockStudioDto)
-        }
-        val mockResponse = mockk<Response<BaseItemDtoQueryResult>> {
-            every { content } returns mockQueryResult
-        }
-        coEvery { mockStudioApi.getStudios(any<GetStudiosRequest>()) } returns mockResponse
+    fun `getStudios maps studios and movie counts`() = runTest {
+        val mockResponse = CatalogTaxonomyListResponseDto(
+            items = listOf(CatalogTaxonomyItemDto(name = "Brazzers", count = 99)),
+            totalCount = 1
+        )
+        coEvery { mockApi.getStudios(offset = 0, limit = 50) } returns mockResponse
 
         val result = repository.getStudios(startIndex = 0, limit = 50)
 
         assertTrue(result.isSuccess)
         val studios = result.getOrThrow()
         assertEquals(1, studios.size)
-        assertEquals(studioId.toString(), studios[0].id)
+        assertEquals("Brazzers", studios[0].id)
         assertEquals("Brazzers", studios[0].name)
-        assertEquals("studio-tag", studios[0].primaryImageTag)
-        // The count is not read for a plain list, and the studio child count is not
-        // used as a substitute for the library movie total.
-        assertNull(studios[0].movieCount)
+        assertEquals(99, studios[0].movieCount)
     }
 
     @Test
     fun `getStudios rethrows CancellationException`() = runTest {
-        coEvery { settingsDataStore.getSelectedLibraryId() } returns UUID.randomUUID().toString()
-        coEvery { mockStudioApi.getStudios(any<GetStudiosRequest>()) } throws CancellationException("Cancelled")
+        coEvery { mockApi.getStudios(any(), any()) } throws CancellationException("Cancelled")
 
         try {
             repository.getStudios()
@@ -91,39 +64,35 @@ class StudioRepositoryTest {
     }
 
     @Test
-    fun `studio movie counts are read from the item endpoint when they are requested`() = runTest {
-        val libraryId = UUID.randomUUID()
-        coEvery { settingsDataStore.getSelectedLibraryId() } returns libraryId.toString()
+    fun `getStudioMoviesPage fetches videos by studio name`() = runTest {
+        val mockResponse = CatalogVideoListResponseDto(
+            items = listOf(
+                CatalogVideoItemDto(
+                    id = "video-1",
+                    title = "Studio Video",
+                    studio = "Brazzers"
+                )
+            ),
+            totalCount = 1,
+            offset = 0,
+            limit = 50
+        )
+        coEvery {
+            mockApi.getVideos(
+                studio = "Brazzers",
+                offset = 0,
+                limit = 50,
+                sort = "latest",
+                direction = "desc"
+            )
+        } returns mockResponse
 
-        val mockStudioDto = mockk<BaseItemDto> {
-            every { id } returns UUID.randomUUID()
-            every { name } returns "Brazzers"
-            every { imageTags } returns mapOf(ImageType.PRIMARY to "studio-tag")
-            every { childCount } returns 7
-        }
-        val mockQueryResult = mockk<BaseItemDtoQueryResult> {
-            every { items } returns listOf(mockStudioDto)
-        }
-        val mockResponse = mockk<Response<BaseItemDtoQueryResult>> {
-            every { content } returns mockQueryResult
-        }
-        coEvery { mockStudioApi.getStudios(any<GetStudiosRequest>()) } returns mockResponse
-
-        val mockItemsQueryResult = mockk<BaseItemDtoQueryResult> {
-            every { items } returns emptyList()
-            every { totalRecordCount } returns 42
-            every { startIndex } returns 0
-        }
-        val mockItemsResponse = mockk<Response<BaseItemDtoQueryResult>> {
-            every { content } returns mockItemsQueryResult
-        }
-        coEvery { mockLibraryApi.getItems(any<GetItemsRequest>()) } returns mockItemsResponse
-
-        val result = repository.getStudios(startIndex = 0, limit = 50, includeMovieCounts = true)
+        val result = repository.getStudioMoviesPage(studioName = "Brazzers", startIndex = 0, limit = 50)
 
         assertTrue(result.isSuccess)
-        val studios = result.getOrThrow()
-        // The count comes from the item endpoint, not from the studio child count.
-        assertEquals(42, studios[0].movieCount)
+        val page = result.getOrThrow()
+        assertEquals(1, page.items.size)
+        assertEquals("video-1", page.items[0].id)
+        assertEquals("Studio Video", page.items[0].title)
     }
 }

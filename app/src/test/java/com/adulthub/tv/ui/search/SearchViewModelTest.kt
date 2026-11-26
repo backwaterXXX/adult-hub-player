@@ -4,6 +4,8 @@ import android.app.Application
 import com.adulthub.tv.data.local.AccountKeyProvider
 import com.adulthub.tv.data.local.SearchHistoryStore
 import com.adulthub.tv.data.local.SettingsDataStore
+import com.adulthub.tv.data.model.ItemFilter
+import com.adulthub.tv.data.model.SortOrder
 import com.adulthub.tv.data.model.TvItem
 import com.adulthub.tv.data.model.TvPerson
 import com.adulthub.tv.data.repository.ChannelRepository
@@ -111,6 +113,68 @@ class SearchViewModelTest {
         assertEquals(1, state.actors.size)
         assertEquals("person-1", state.actors.first().id)
         assertNull(state.errorMessage)
+    }
+
+    @Test
+    fun `loadMoreMovies appends the next page without duplicates`() = runTest(testDispatcher) {
+        val first = TvItem(id = "movie-1", title = "First")
+        val second = TvItem(id = "movie-2", title = "Second")
+        fakeLibraryRepository.itemsResult = Result.success(
+            TvItemsPage(items = listOf(first, second), totalRecordCount = 4, startIndex = 0)
+        )
+        fakeLibraryRepository.itemsPages = mapOf(
+            2 to Result.success(
+                TvItemsPage(
+                    items = listOf(second, TvItem(id = "movie-3", title = "Third")),
+                    totalRecordCount = 4,
+                    startIndex = 2
+                )
+            )
+        )
+
+        val viewModel = SearchViewModel(
+            libraryRepository = fakeLibraryRepository,
+            personRepository = fakePersonRepository,
+            settingsDataStore = settingsDataStore,
+            context = context
+        )
+        viewModel.onQueryChanged("Action")
+        advanceTimeBy(300L)
+        advanceUntilIdle()
+        assertEquals(2, viewModel.uiState.value.movies.size)
+        assertTrue(viewModel.uiState.value.hasMoreMovies)
+
+        viewModel.loadMoreMovies()
+        advanceUntilIdle()
+
+        val state = viewModel.uiState.value
+        assertEquals(listOf("movie-1", "movie-2", "movie-3"), state.movies.map { it.id })
+        assertEquals(4, state.moviesTotalCount)
+        assertFalse(state.isLoadingMoreMovies)
+        assertEquals(listOf(0, 2), fakeLibraryRepository.requestedOffsets)
+    }
+
+    @Test
+    fun `loadMoreMovies does nothing once every match is loaded`() = runTest(testDispatcher) {
+        fakeLibraryRepository.itemsResult = Result.success(
+            TvItemsPage(items = listOf(sampleMovie), totalRecordCount = 1, startIndex = 0)
+        )
+
+        val viewModel = SearchViewModel(
+            libraryRepository = fakeLibraryRepository,
+            personRepository = fakePersonRepository,
+            settingsDataStore = settingsDataStore,
+            context = context
+        )
+        viewModel.onQueryChanged("Action")
+        advanceTimeBy(300L)
+        advanceUntilIdle()
+
+        viewModel.loadMoreMovies()
+        advanceUntilIdle()
+
+        assertEquals(1, viewModel.uiState.value.movies.size)
+        assertEquals(listOf(0), fakeLibraryRepository.requestedOffsets)
     }
 
     @Test
@@ -282,19 +346,31 @@ private class FakeSearchHistoryStore :
 
 private class FakeSearchLibraryRepo : LibraryRepository(mockk(relaxed = true), mockk(relaxed = true)) {
     var itemsResult: Result<TvItemsPage> = Result.success(TvItemsPage(emptyList(), 0, 0))
+    var itemsPages: Map<Int, Result<TvItemsPage>> = emptyMap()
+    var requestedOffsets: MutableList<Int> = mutableListOf()
 
     override suspend fun getItems(
         parentId: String?,
         startIndex: Int,
         limit: Int,
         sortBy: String,
-        sortOrder: org.jellyfin.sdk.model.api.SortOrder,
-        filters: Set<org.jellyfin.sdk.model.api.ItemFilter>,
+        sortOrder: SortOrder,
+        filters: Set<ItemFilter>,
         searchTerm: String?,
         genreIds: List<java.util.UUID>,
         studioIds: List<java.util.UUID>,
-        personIds: List<java.util.UUID>
-    ): Result<TvItemsPage> = itemsResult
+        personIds: List<java.util.UUID>,
+        category: String?,
+        tag: String?,
+        studio: String?,
+        performer: String?,
+        performerId: String?,
+        minDuration: Int?,
+        maxDuration: Int?
+    ): Result<TvItemsPage> {
+        requestedOffsets += startIndex
+        return itemsPages[startIndex] ?: itemsResult
+    }
 }
 
 private class FakeSearchPersonRepo : PersonRepository(mockk(relaxed = true), mockk(relaxed = true), mockk(relaxed = true)) {

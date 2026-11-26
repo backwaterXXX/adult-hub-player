@@ -29,6 +29,7 @@ class AuthDataStore(
         private val KEY_USERNAME = stringPreferencesKey("username")
         private val KEY_SERVER_NAME = stringPreferencesKey("server_name")
         private val KEY_ENCRYPTED_TOKEN = stringPreferencesKey("encrypted_token")
+        private val KEY_ENCRYPTED_REFRESH_TOKEN = stringPreferencesKey("encrypted_refresh_token")
     }
 
     val authState: Flow<AuthState> = dataStore.data
@@ -86,6 +87,7 @@ class AuthDataStore(
         val rawUsername = preferences[KEY_USERNAME]
         val rawServerName = preferences[KEY_SERVER_NAME]
         val encryptedToken = preferences[KEY_ENCRYPTED_TOKEN]
+        val encryptedRefreshToken = preferences[KEY_ENCRYPTED_REFRESH_TOKEN]
 
         val serverUrl = encryptedValue.decode(rawServerUrl)
         val userId = encryptedValue.decode(rawUserId)
@@ -121,13 +123,15 @@ class AuthDataStore(
         if (decryptedToken.isNullOrBlank()) {
             return DecodedAuthState(AuthState.NotAuthenticated, unreadableToken = encryptedToken)
         }
+        val decryptedRefreshToken = encryptedRefreshToken?.let { crypto.decrypt(it) }
         return DecodedAuthState(
             AuthState.Authenticated(
                 serverUrl = serverUrl,
                 userId = userId,
                 accessToken = decryptedToken,
                 username = username,
-                serverName = serverName
+                serverName = serverName,
+                refreshToken = decryptedRefreshToken
             )
         )
     }
@@ -137,9 +141,11 @@ class AuthDataStore(
         userId: String,
         username: String,
         accessToken: String,
-        serverName: String = ""
+        serverName: String = "",
+        refreshToken: String? = null
     ) {
         val encryptedToken = crypto.encrypt(accessToken)
+        val encryptedRefreshToken = refreshToken?.let { crypto.encrypt(it) }
         val encryptedServerUrl = encryptedValue.encode(serverUrl)
         val encryptedUserId = encryptedValue.encode(userId)
         val encryptedUsername = encryptedValue.encode(username)
@@ -151,10 +157,46 @@ class AuthDataStore(
                 preferences[KEY_USERNAME] = encryptedUsername
                 preferences[KEY_SERVER_NAME] = encryptedServerName
                 preferences[KEY_ENCRYPTED_TOKEN] = encryptedToken
+                if (encryptedRefreshToken != null) {
+                    preferences[KEY_ENCRYPTED_REFRESH_TOKEN] = encryptedRefreshToken
+                } else {
+                    preferences.remove(KEY_ENCRYPTED_REFRESH_TOKEN)
+                }
             }
         } catch (error: IOException) {
             // The session is not stored, so the login must not report success.
             throw IllegalStateException("The session could not be saved", error)
+        }
+    }
+
+    suspend fun updateTokensIfOldTokenMatches(
+        oldAccessToken: String,
+        newAccessToken: String,
+        newRefreshToken: String
+    ): Boolean {
+        val encryptedToken = crypto.encrypt(newAccessToken)
+        val encryptedRefreshToken = crypto.encrypt(newRefreshToken)
+        val currentEncryptedToken = readPreferences()[KEY_ENCRYPTED_TOKEN] ?: return false
+        if (crypto.decrypt(currentEncryptedToken) != oldAccessToken) return false
+        var updated = false
+        editSession { preferences ->
+            if (preferences[KEY_ENCRYPTED_TOKEN] == currentEncryptedToken) {
+                preferences[KEY_ENCRYPTED_TOKEN] = encryptedToken
+                preferences[KEY_ENCRYPTED_REFRESH_TOKEN] = encryptedRefreshToken
+                updated = true
+            }
+        }
+        return updated
+    }
+
+    suspend fun updateTokens(accessToken: String, refreshToken: String) {
+        val encryptedToken = crypto.encrypt(accessToken)
+        val encryptedRefreshToken = crypto.encrypt(refreshToken)
+        editSession { preferences ->
+            if (preferences[KEY_ENCRYPTED_TOKEN] != null) {
+                preferences[KEY_ENCRYPTED_TOKEN] = encryptedToken
+                preferences[KEY_ENCRYPTED_REFRESH_TOKEN] = encryptedRefreshToken
+            }
         }
     }
 
@@ -223,6 +265,7 @@ class AuthDataStore(
         remove(KEY_USERNAME)
         remove(KEY_SERVER_NAME)
         remove(KEY_ENCRYPTED_TOKEN)
+        remove(KEY_ENCRYPTED_REFRESH_TOKEN)
     }
 
     private data class DecodedAuthState(

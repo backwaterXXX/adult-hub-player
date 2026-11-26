@@ -2,7 +2,7 @@ package com.adulthub.tv.di
 
 import android.app.Application
 import android.content.Context
-import com.adulthub.tv.data.jellyfin.JellyfinClientManager
+import com.adulthub.tv.data.api.AdultHubClientManager
 import com.adulthub.tv.data.local.AccountKeyProvider
 import com.adulthub.tv.data.local.AccountScope
 import com.adulthub.tv.data.local.AuthDataStore
@@ -114,7 +114,7 @@ class ProductionGraphTest {
 
     @Test
     fun `every production repository and service resolves`() {
-        assertNotNull(koin.get<JellyfinClientManager>())
+        assertNotNull(koin.get<AdultHubClientManager>())
         assertNotNull(koin.get<ResolverApi>())
         assertNotNull(koin.get<AuthRepository>())
         assertNotNull(koin.get<LibraryRepository>())
