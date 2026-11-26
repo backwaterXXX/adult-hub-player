@@ -175,6 +175,17 @@ fun MovieCard(
                     )
                 }
 
+                // Quality badge bottom-left: the tier comes from the server, so it
+                // matches the library filter exactly.
+                item.qualityBadge?.let { badge ->
+                    QualityBadge(
+                        badge = badge,
+                        modifier = Modifier
+                            .align(Alignment.BottomStart)
+                            .padding(horizontal = 8.dp, vertical = if (item.progressFraction > 0f) 12.dp else 8.dp)
+                    )
+                }
+
                 // Duration badge bottom-right
                 val durationText = formattedDurationLabel(item)
                 if (durationText.isNotBlank()) {

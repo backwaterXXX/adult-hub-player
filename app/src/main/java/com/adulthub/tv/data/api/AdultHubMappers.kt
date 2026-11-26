@@ -47,6 +47,7 @@ fun CatalogVideoItemDto.toTvItem(baseUrl: String = ""): TvItem {
         isPlayed = userState?.isPlayed ?: false,
         fileSizeBytes = fileSizeBytes,
         width = width,
-        height = height
+        height = height,
+        quality = quality
     )
 }

@@ -99,6 +99,8 @@ data class CatalogVideoItemDto(
     @SerialName("file_size_bytes") val fileSizeBytes: Long? = null,
     @SerialName("width") val width: Int? = null,
     @SerialName("height") val height: Int? = null,
+    /** Server-side tier: "low", "medium", "high" or null when it has no signal. */
+    @SerialName("quality") val quality: String? = null,
     @SerialName("user_state") val userState: CatalogUserStateDto? = null
 )
 

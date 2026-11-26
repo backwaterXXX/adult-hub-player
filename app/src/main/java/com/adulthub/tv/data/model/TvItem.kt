@@ -1,6 +1,8 @@
 package com.adulthub.tv.data.model
 
+import androidx.annotation.StringRes
 import androidx.compose.runtime.Immutable
+import com.adulthub.tv.R
 
 @Immutable
 data class TvPersonRole(
@@ -39,7 +41,9 @@ data class TvItem(
     val container: String? = null,
     val fileSizeBytes: Long? = null,
     val width: Int? = null,
-    val height: Int? = null
+    val height: Int? = null,
+    /** Server-side quality tier; the card badge and the library filter share it. */
+    val quality: String? = null
 ) {
     /**
      * True only for a legacy provider-only reference the catalog cannot resolve.
@@ -52,6 +56,19 @@ data class TvItem(
     val runtimeMinutes: Int?
         get() = runtimeTicks?.let { (it / 10_000_000 / 60).toInt() }
 
+    /**
+     * Badge for the poster: only a real resolution earns "4K", because the tier
+     * alone can come from the bitrate. Low tier stays unlabelled so most cards
+     * do not carry noise.
+     */
+    val qualityBadge: QualityBadge?
+        get() = when {
+            (height ?: 0) >= UHD_MIN_HEIGHT -> QualityBadge.UHD
+            quality.equals("high", ignoreCase = true) -> QualityBadge.HQ
+            quality.equals("medium", ignoreCase = true) -> QualityBadge.HD
+            else -> null
+        }
+
     val progressFraction: Float
         get() = when {
             playedPercentage != null -> (playedPercentage / 100.0).toFloat().coerceIn(0f, 1f)
@@ -59,3 +76,13 @@ data class TvItem(
             else -> 0f
         }
 }
+
+/** Poster badge for the known quality of a video. */
+enum class QualityBadge(@StringRes val labelRes: Int) {
+    UHD(R.string.quality_badge_4k),
+    HQ(R.string.filter_quality_hq),
+    HD(R.string.filter_quality_hd)
+}
+
+/** 4K starts at 2000 lines; the catalogue's `high` tier may be bitrate-only. */
+private const val UHD_MIN_HEIGHT = 2000

@@ -33,6 +33,21 @@ class AdultHubMappersTest {
     }
 
     @Test
+    fun `the server quality tier reaches the item`() {
+        val item = CatalogVideoItemDto(
+            id = "telegram:-1001618765010:1:2",
+            title = "Scene",
+            width = 3840,
+            height = 2160,
+            quality = "high"
+        ).toTvItem()
+
+        assertEquals("high", item.quality)
+        assertEquals(2160, item.height)
+        assertEquals(com.adulthub.tv.data.model.QualityBadge.UHD, item.qualityBadge)
+    }
+
+    @Test
     fun `blank channel name becomes null`() {
         val item = CatalogVideoItemDto(
             id = "telegram:-1001618765010:1:2",

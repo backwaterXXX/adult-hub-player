@@ -38,6 +38,7 @@
     <string name="library_tab_random">Random</string>
     <string name="library_shuffle">Shuffle</string>
     <string name="library_filters_button">Filters</string>
+    <string name="quality_badge_4k">4K</string>
     <string name="library_filters_button_count">Filters (%1$d)</string>
     <string name="library_filters_quality_label">Quality</string>
     <string name="library_random_empty">No movies match these filters. Shuffle for another sample.</string>
