@@ -12,6 +12,7 @@ import com.adulthub.tv.data.network.ServiceUrlValidation
 import com.adulthub.tv.data.repository.AuthRepository
 import com.adulthub.tv.data.repository.LibraryRepository
 import com.adulthub.tv.data.repository.TvLibrary
+import com.adulthub.tv.ui.components.userFacingMessage
 import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.Job
 import kotlinx.coroutines.channels.Channel
@@ -145,7 +146,7 @@ class AuthViewModel(
                     it.copy(
                         errorMessage = context.getString(
                             R.string.auth_error_restore_settings,
-                            error.localizedMessage ?: context.getString(R.string.error_storage)
+                            error.userFacingMessage(context, R.string.error_storage)
                         )
                     )
                 }
@@ -285,7 +286,7 @@ class AuthViewModel(
                     it.copy(
                         errorMessage = context.getString(
                             R.string.auth_error_save_http_consent,
-                            error.localizedMessage ?: context.getString(R.string.error_storage)
+                            error.userFacingMessage(context, R.string.error_storage)
                         )
                     )
                 }
@@ -324,7 +325,7 @@ class AuthViewModel(
                 it.copy(
                     errorMessage = context.getString(
                         R.string.auth_error_connect,
-                        error.localizedMessage ?: context.getString(R.string.error_unknown)
+                        error.userFacingMessage(context, R.string.error_unknown)
                     )
                 )
             }
@@ -362,7 +363,7 @@ class AuthViewModel(
                     it.copy(
                         errorMessage = context.getString(
                             R.string.auth_error_sign_in,
-                            error.localizedMessage ?: context.getString(R.string.auth_error_invalid_credentials)
+                            error.userFacingMessage(context, R.string.auth_error_invalid_credentials)
                         )
                     )
                 }
@@ -404,9 +405,10 @@ class AuthViewModel(
                 if (generation != quickConnectGeneration) return@onFailure
                 _quickConnectState.update {
                     it.copy(
+                        isPolling = false,
                         errorMessage = context.getString(
                             R.string.auth_error_quick_connect,
-                            error.localizedMessage ?: context.getString(R.string.auth_error_generic)
+                            error.userFacingMessage(context, R.string.auth_error_generic)
                         )
                     )
                 }
@@ -423,28 +425,7 @@ class AuthViewModel(
             while (elapsedSeconds < maxSeconds) {
                 delay(5000)
                 elapsedSeconds += 5
-
-                val checkResult = authRepository.checkQuickConnectState(serverUrl, secret)
-                if (generation != quickConnectGeneration) return@launch
-                if (checkResult.getOrDefault(false)) {
-                    _quickConnectState.update { it.copy(isAuthorized = true, isPolling = false) }
-                    // Exchange secret for actual token
-                    val authResult = authRepository.authenticateQuickConnect(serverUrl, secret)
-                    if (generation != quickConnectGeneration) return@launch
-                    authResult.onSuccess {
-                        loadLibraries()
-                    }.onFailure { error ->
-                        _quickConnectState.update {
-                            it.copy(
-                                errorMessage = context.getString(
-                                    R.string.auth_error_quick_connect_exchange,
-                                    error.localizedMessage.orEmpty()
-                                )
-                            )
-                        }
-                    }
-                    return@launch
-                }
+                if (!pollQuickConnectOnce(serverUrl, secret, generation)) return@launch
             }
 
             if (generation != quickConnectGeneration) return@launch
@@ -456,6 +437,58 @@ class AuthViewModel(
                     errorMessage = context.getString(R.string.auth_error_code_expired)
                 )
             }
+        }
+    }
+
+    /**
+     * Runs one pairing poll. Returns false when the loop is finished: the request was approved
+     * (and exchanged), it failed, or a newer pairing superseded this one.
+     */
+    private suspend fun pollQuickConnectOnce(serverUrl: String, secret: String, generation: Long): Boolean {
+        val checkResult = authRepository.checkQuickConnectState(serverUrl, secret)
+        if (generation != quickConnectGeneration) return false
+        if (checkResult.isFailure) {
+            failQuickConnect(checkResult.exceptionOrNull())
+            return false
+        }
+        if (!checkResult.getOrDefault(false)) return true
+
+        _quickConnectState.update { it.copy(isAuthorized = true, isPolling = false) }
+        val authResult = authRepository.authenticateQuickConnect(serverUrl, secret)
+        if (generation != quickConnectGeneration) return false
+        authResult.onSuccess {
+            loadLibraries()
+        }.onFailure { error ->
+            failQuickConnectExchange(error)
+        }
+        return false
+    }
+
+    /** Reports a pairing poll that failed. */
+    private fun failQuickConnect(error: Throwable?) {
+        _quickConnectState.update {
+            it.copy(
+                isPolling = false,
+                errorMessage = context.getString(
+                    R.string.auth_error_quick_connect,
+                    error?.userFacingMessage(context, R.string.auth_error_generic)
+                        ?: context.getString(R.string.auth_error_generic)
+                )
+            )
+        }
+    }
+
+    /** Reports an approved pairing whose token exchange failed. */
+    private fun failQuickConnectExchange(error: Throwable) {
+        _quickConnectState.update {
+            it.copy(
+                isPolling = false,
+                isAuthorized = false,
+                errorMessage = context.getString(
+                    R.string.auth_error_quick_connect_exchange,
+                    error.userFacingMessage(context, R.string.error_unknown)
+                )
+            )
         }
     }
 
@@ -500,7 +533,7 @@ class AuthViewModel(
                     it.copy(
                         errorMessage = context.getString(
                             R.string.auth_error_load_libraries,
-                            error.localizedMessage.orEmpty()
+                            error.userFacingMessage(context, R.string.error_unknown)
                         )
                     )
                 }
@@ -528,7 +561,7 @@ class AuthViewModel(
                     it.copy(
                         errorMessage = context.getString(
                             R.string.auth_error_sign_out,
-                            error.localizedMessage ?: context.getString(R.string.error_storage)
+                            error.userFacingMessage(context, R.string.error_storage)
                         )
                     )
                 }

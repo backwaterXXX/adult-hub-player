@@ -5,6 +5,7 @@ import com.adulthub.tv.R
 import com.adulthub.tv.data.model.TvCategory
 import com.adulthub.tv.data.repository.LibraryRepository
 import com.adulthub.tv.data.repository.TvItemsPage
+import com.adulthub.tv.ui.components.userFacingMessage
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Job
 import kotlinx.coroutines.flow.MutableStateFlow
@@ -60,7 +61,7 @@ internal class CategoriesTabController(
                         state.copy(
                             categoriesState = state.categoriesState.copy(
                                 isLoading = false,
-                                errorMessage = error.localizedMessage ?: context.getString(R.string.library_error_categories)
+                                errorMessage = error.userFacingMessage(context, R.string.library_error_categories)
                             )
                         )
                     }
@@ -168,7 +169,7 @@ internal class CategoriesTabController(
                     categoriesState = categoriesState.copy(
                         isLoadingCategoryMovies = false,
                         isLoadingMoreCategoryMovies = false,
-                        categoryMoviesError = error.localizedMessage ?: context.getString(R.string.library_error_category_movies)
+                        categoryMoviesError = error.userFacingMessage(context, R.string.library_error_category_movies)
                     )
                 )
             }

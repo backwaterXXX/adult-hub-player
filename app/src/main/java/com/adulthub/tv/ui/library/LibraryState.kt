@@ -5,13 +5,13 @@ import com.adulthub.tv.R
 import com.adulthub.tv.data.local.SettingsDataStore
 import com.adulthub.tv.data.model.ChannelSortMode
 import com.adulthub.tv.data.model.DurationFilter
+import com.adulthub.tv.data.model.SortOrder
 import com.adulthub.tv.data.model.TvCategory
 import com.adulthub.tv.data.model.TvChannel
 import com.adulthub.tv.data.model.TvItem
 import com.adulthub.tv.data.model.TvPerson
 import com.adulthub.tv.data.model.TvStudio
 import com.adulthub.tv.data.resolver.VideoDto
-import org.jellyfin.sdk.model.api.SortOrder
 
 enum class LibraryTab(@StringRes val titleRes: Int) {
     ALL(R.string.library_tab_movies),

@@ -11,9 +11,13 @@ internal fun applyAllItemsFilters(
     items: List<TvItem>,
     durationFilter: DurationFilter,
     hdOnly: Boolean,
-    excludedTags: Set<String>
+    excludedTags: Set<String>,
+    unwatchedOnly: Boolean = false
 ): List<TvItem> {
     return items.filter { item ->
+        if (unwatchedOnly && item.isPlayed) {
+            return@filter false
+        }
         if (excludedTags.isNotEmpty()) {
             val hasExcludedGenre = item.genres.any { g -> excludedTags.any { it.equals(g, ignoreCase = true) } }
             val hasExcludedTag = item.tags.any { t -> excludedTags.any { it.equals(t, ignoreCase = true) } }

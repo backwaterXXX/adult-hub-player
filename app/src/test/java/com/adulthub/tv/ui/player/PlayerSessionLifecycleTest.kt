@@ -4,6 +4,8 @@ import android.app.Application
 import com.adulthub.tv.data.local.SettingsDataStore
 import com.adulthub.tv.data.local.TelegramProgressRecord
 import com.adulthub.tv.data.local.TelegramProgressStore
+import com.adulthub.tv.data.model.ItemFilter
+import com.adulthub.tv.data.model.PlayMethod
 import com.adulthub.tv.data.model.PlaybackInfo
 import com.adulthub.tv.data.model.TvItem
 import com.adulthub.tv.data.repository.LibraryRepository
@@ -23,7 +25,6 @@ import kotlinx.coroutines.test.resetMain
 import kotlinx.coroutines.test.runCurrent
 import kotlinx.coroutines.test.runTest
 import kotlinx.coroutines.test.setMain
-import org.jellyfin.sdk.model.api.PlayMethod
 import org.junit.After
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertFalse
@@ -281,7 +282,7 @@ private class FakeLifecycleLibraryRepository : LibraryRepository(mockk(relaxed =
     override suspend fun getRandomItemFiltered(
         parentId: String?,
         excludeItemId: String?,
-        filters: Set<org.jellyfin.sdk.model.api.ItemFilter>,
+        filters: Set<ItemFilter>,
         genreIds: List<java.util.UUID>,
         studioIds: List<java.util.UUID>,
         personIds: List<java.util.UUID>,
@@ -310,7 +311,9 @@ private class FakeLifecyclePlaybackRepository : PlaybackRepository(mockk(relaxed
         itemId: String,
         mediaSourceId: String?,
         positionTicks: Long,
-        playSessionId: String?
+        playSessionId: String?,
+        durationSeconds: Int?,
+        isPlayed: Boolean?
     ): Result<Unit> = Result.success(Unit)
 
     override suspend fun resolvePlaybackInfo(item: TvItem, variantId: String?): Result<PlaybackInfo> = playbackInfoResult ?: Result.success(
@@ -329,7 +332,9 @@ private class FakeLifecyclePlaybackRepository : PlaybackRepository(mockk(relaxed
         playSessionId: String?,
         isPaused: Boolean,
         canSeek: Boolean,
-        playMethod: PlayMethod
+        playMethod: PlayMethod,
+        durationSeconds: Int?,
+        isPlayed: Boolean?
     ): Result<Unit> {
         lastReportedProgressTicks = positionTicks
         return Result.success(Unit)

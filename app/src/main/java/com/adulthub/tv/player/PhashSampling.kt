@@ -2,7 +2,7 @@ package com.adulthub.tv.player
 
 import android.content.Context
 import com.adulthub.tv.R
-import com.adulthub.tv.data.jellyfin.JellyfinClientManager
+import com.adulthub.tv.data.api.AdultHubClientManager
 import com.adulthub.tv.data.local.AccountScope
 import com.adulthub.tv.data.local.AuthDataStore
 import com.adulthub.tv.data.local.PhashJobStore
@@ -52,7 +52,7 @@ internal fun adultHubVideoId(item: TvItem): String? {
 }
 class PhashCoordinator(
     private val authDataStore: AuthDataStore,
-    private val jellyfinClientManager: JellyfinClientManager,
+    private val clientManager: AdultHubClientManager,
     private val settingsDataStore: SettingsDataStore,
     private val apiClient: ResolverApiClient,
     private val jobStore: PhashJobStore,
@@ -139,7 +139,7 @@ class PhashCoordinator(
         val resolverUrl = settingsDataStore.getResolverBaseUrl()
         // The token belongs to the session that starts the task. A task of an older
         // session is never continued with the token of a newer session.
-        val token = jellyfinClientManager.getApiOrNull()?.accessToken?.takeIf { it.isNotBlank() }
+        val token = clientManager.currentAccessToken?.takeIf { it.isNotBlank() }
         if (stored != null && stored.state in ACTIVE_STATES && !stored.jobId.isNullOrBlank()) {
             if (token == null) {
                 setStatus(videoId, PhashUiStatus(context.getString(R.string.phash_sign_in_to_check)))

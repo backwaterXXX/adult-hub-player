@@ -10,10 +10,10 @@
     <string name="action_cancel">Cancel</string>
 
     <!-- Server Screen -->
-    <string name="server_title">Connect to Jellyfin</string>
-    <string name="server_subtitle">Enter your Jellyfin server address or select a discovered server on your network</string>
+    <string name="server_title">Connect to Adult Hub</string>
+    <string name="server_subtitle">Enter your Adult Hub server address</string>
     <string name="server_url_label">Server Address</string>
-    <string name="server_url_hint">https://jellyfin.example.com:8096 or http://192.168.1.10:8096</string>
+    <string name="server_url_hint">https://adulthub.example.com or http://192.168.1.10:8000</string>
     <string name="server_discovered_header">Discovered Servers</string>
     <string name="server_connecting">Connecting to server…</string>
     <string name="http_consent_title">Allow unencrypted HTTP?</string>
@@ -22,7 +22,7 @@
 
     <!-- Local network permission (enforced on Android 17 for apps that target SDK 37) -->
     <string name="local_network_permission_title">Allow local network access?</string>
-    <string name="local_network_permission_message">Android 17 blocks apps from reaching devices on your local network. Allow local network access so Adult Hub can connect to your Jellyfin server and the Resolver on this LAN.</string>
+    <string name="local_network_permission_message">Android 17 blocks apps from reaching devices on your local network. Allow local network access so Adult Hub can connect to your Adult Hub server and the Resolver on this LAN.</string>
     <string name="local_network_permission_blocked">Local network access is blocked. Allow it in Android settings, then connect again.</string>
     <string name="local_network_permission_allow">Allow access</string>
     <string name="local_network_permission_settings">Open settings</string>
@@ -38,7 +38,7 @@
 
     <!-- Quick Connect Screen -->
     <string name="quick_connect_title">Quick Connect</string>
-    <string name="quick_connect_instructions">Open Jellyfin in your browser or phone app, go to Settings > Quick Connect, and enter the code below:</string>
+    <string name="quick_connect_instructions">Open Adult Hub in your browser or phone app, go to Settings &gt; Quick Connect, and enter the code below:</string>
     <string name="quick_connect_status_pending">Waiting for authorization…</string>
     <string name="quick_connect_status_connected">Authorized! Logging in…</string>
     <string name="quick_connect_get_new_code">Get New Code</string>
@@ -59,7 +59,7 @@
     <!-- Authentication errors -->
     <string name="auth_error_restore_settings">Could not restore saved settings: %1$s</string>
     <string name="auth_saved_server_unavailable">Saved server unavailable. Please reconnect.</string>
-    <string name="auth_session_rejected">The Jellyfin server no longer accepts this session. Sign in again.</string>
+    <string name="auth_session_rejected">The server no longer accepts this session. Sign in again.</string>
     <string name="auth_error_server_empty">Server address cannot be empty</string>
     <string name="auth_error_save_http_consent">Could not save HTTP consent: %1$s</string>
     <string name="auth_error_connect">Could not connect to server: %1$s</string>
@@ -177,4 +177,10 @@
     </plurals>
     <string name="licenses_title">Third-Party Licenses</string>
     <string name="licenses_subtitle">Open-source software licenses and LGPL-3.0 copyleft disclosures</string>
+    <string name="error_timeout">The server took too long to respond. Try again in a moment.</string>
+    <string name="error_network">The network is unavailable. Check the connection to the server.</string>
+    <string name="error_unreachable">Cannot reach the server. Check its address in Settings.</string>
+    <string name="error_not_authorized">The server rejected the request. Check the access token in Settings.</string>
+    <string name="error_server">The server hit an internal error. Try again in a moment.</string>
+    <string name="error_request_failed">The server rejected the request (HTTP %1$d).</string>
 </resources>

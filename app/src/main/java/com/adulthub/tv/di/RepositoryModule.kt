@@ -18,7 +18,7 @@ import org.koin.dsl.module
 
 val repositoryModule = module {
     single { AuthRepository(get(), get(), get()) }
-    single { LibraryRepository(get(), get(), get<TelegramProgressStore>(), get()) }
+    single { LibraryRepository(get(), get(), get<TelegramProgressStore>(), get(), getOrNull()) }
     single { PersonRepository(get(), get(), get()) }
     single { StudioRepository(get(), get()) }
     single {
@@ -37,5 +37,5 @@ val repositoryModule = module {
         }
         channelRepository
     }
-    single { PlaybackRepository(get(), get(), get()) }
+    single { PlaybackRepository(get(), get()) }
 }

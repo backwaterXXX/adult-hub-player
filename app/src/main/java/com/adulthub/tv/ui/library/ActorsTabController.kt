@@ -5,6 +5,9 @@ import com.adulthub.tv.R
 import com.adulthub.tv.data.model.TvPerson
 import com.adulthub.tv.data.repository.PersonRepository
 import com.adulthub.tv.data.repository.TvPersonPage
+import com.adulthub.tv.diagnostics.AppLog
+import com.adulthub.tv.ui.components.userFacingMessage
+import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Job
 import kotlinx.coroutines.delay
@@ -26,21 +29,34 @@ internal class ActorsTabController(
     private var actorsLoadJob: Job? = null
     private var actorSearchJob: Job? = null
 
+    /** Guards against a cancelled load leaving the tab in its loading state for good. */
+    private var actorsLoadGeneration = 0
+
     fun loadActors(reset: Boolean = true) {
         val current = uiState.value.actorsState
         if (!reset && (!current.hasMore || current.isLoadingMore || actorsLoadJob?.isActive == true)) return
         if (reset) actorsLoadJob?.cancel()
+        val generation = ++actorsLoadGeneration
         actorsLoadJob = scope.launch {
             uiState.update { state -> state.withActorsLoading(reset) }
             val requestState = uiState.value.actorsState
             val startIndex = if (reset) 0 else requestState.allPersons.size
             val pageSize = 100
-            val result = personRepository.getPersonsPage(
-                startIndex = startIndex,
-                limit = pageSize,
-                searchTerm = requestState.searchQuery.takeIf(String::isNotBlank),
-                nameStartsWith = requestState.selectedLetter?.toString()
-            )
+            val result = try {
+                personRepository.getPersonsPage(
+                    startIndex = startIndex,
+                    limit = pageSize,
+                    searchTerm = requestState.searchQuery.takeIf(String::isNotBlank),
+                    nameStartsWith = requestState.selectedLetter?.toString()
+                )
+            } catch (cancelled: CancellationException) {
+                throw cancelled
+            } catch (error: Throwable) {
+                // A throwable escaping here used to strand the tab on its spinner.
+                AppLog.e(ACTORS_TAG, "Actor page failed: ${error.javaClass.simpleName}: ${error.message}")
+                Result.failure(error)
+            }
+            if (generation != actorsLoadGeneration) return@launch
             uiState.update { state -> state.withActorsResult(result, reset, startIndex) }
         }
     }
@@ -140,7 +156,7 @@ internal class ActorsTabController(
                     actorsState = actors.copy(
                         isLoading = false,
                         isLoadingMore = false,
-                        errorMessage = error.localizedMessage ?: context.getString(R.string.library_error_actors)
+                        errorMessage = error.userFacingMessage(context, R.string.library_error_actors)
                     )
                 )
             }
@@ -149,5 +165,6 @@ internal class ActorsTabController(
 
     private companion object {
         const val ACTOR_SEARCH_DEBOUNCE_MS = 300L
+        const val ACTORS_TAG = "ActorsTab"
     }
 }
