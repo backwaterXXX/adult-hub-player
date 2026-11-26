@@ -59,7 +59,17 @@ internal class RandomTabController(
             val filters = uiState.value.randomState
             val result = if (reset) fetchFirstPage(filters) else fetchNextPage(filters)
             if (currentGeneration != generation) return@launch
-            uiState.update { current -> applyResult(current, reset, result) }
+            var shouldAutoFetch = false
+            uiState.update { current ->
+                val updated = applyResult(current, reset, result)
+                shouldAutoFetch = result.isSuccess &&
+                    updated.randomState.items.isEmpty() &&
+                    updated.randomState.hasMore
+                updated
+            }
+            if (shouldAutoFetch) {
+                loadRandom(reset = false)
+            }
         }
     }
 

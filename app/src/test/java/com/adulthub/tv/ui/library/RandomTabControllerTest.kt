@@ -247,6 +247,29 @@ class RandomTabControllerTest {
     }
 
     @Test
+    fun `filtered-out initial sample retries automatically up to max empty samples`() = runTest(dispatcher) {
+        repository.total = 100
+        repository.page = { _, _ ->
+            Result.success(
+                TvItemsPage(
+                    listOf(movie("played-1", played = true), movie("played-2", played = true)),
+                    100,
+                    0
+                )
+            )
+        }
+        val controller = controller()
+        controller.toggleUnwatchedOnly()
+        advanceUntilIdle()
+
+        val randomState = state.value.randomState
+        assertTrue(randomState.items.isEmpty())
+        assertFalse(randomState.hasMore)
+        // 1 probe + 1 initial sample + RANDOM_MAX_EMPTY_SAMPLES retries = 5 requests
+        assertEquals(2 + RANDOM_MAX_EMPTY_SAMPLES, repository.requestedOffsets.size)
+    }
+
+    @Test
     fun `a failure surfaces as an error and keeps the tab usable`() = runTest(dispatcher) {
         repository.total = 100
         repository.page = { _, _ -> Result.failure(IllegalStateException("boom")) }

@@ -517,6 +517,7 @@ class LibraryViewModel(
         _uiState.update { state ->
             when (state.selectedTab) {
                 LibraryTab.ALL -> state.copy(allState = state.allState.copy(lastSelectedItemId = item.id))
+                LibraryTab.RANDOM -> state.copy(randomState = state.randomState.copy(lastSelectedItemId = item.id))
                 LibraryTab.CATEGORIES -> state.copy(categoriesState = state.categoriesState.copy(lastSelectedMovieId = item.id))
                 LibraryTab.STUDIOS -> state.copy(studiosState = state.studiosState.copy(lastSelectedMovieId = item.id))
                 else -> state

@@ -1053,6 +1053,23 @@ class LibraryViewModelTest {
         assertEquals("performer-slug-99", fakeLibraryRepository.randomPerformerId)
     }
 
+    @Test
+    fun `onMovieClicked records lastSelectedItemId on RANDOM tab`() = runTest(testDispatcher) {
+        val viewModel = LibraryViewModel(
+            libraryRepository = fakeLibraryRepository,
+            personRepository = fakePersonRepository,
+            studioRepository = fakeStudioRepository,
+            channelRepository = fakeChannelRepository,
+            clientManager = clientManager,
+            context = context
+        )
+        viewModel.selectTab(LibraryTab.RANDOM)
+        advanceUntilIdle()
+
+        viewModel.onMovieClicked(sampleMovie1)
+        assertEquals(sampleMovie1.id, viewModel.uiState.value.randomState.lastSelectedItemId)
+    }
+
     private class FakeChannelRepository : ChannelRepository(mockk(relaxed = true)) {
         var categoriesResult: Result<List<TvChannel>> = Result.success(emptyList())
         var categoryVideosResult: Result<List<VideoDto>> = Result.success(emptyList())
