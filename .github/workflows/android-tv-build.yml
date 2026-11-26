@@ -51,6 +51,22 @@ jobs:
           grep -Fq -- '-Dfile.encoding=UTF-8' gradlew || { echo "gradlew missing -Dfile.encoding=UTF-8" >&2; exit 1; }
           grep -Fq -- '-Dfile.encoding=UTF-8' gradlew.bat || { echo "gradlew.bat missing -Dfile.encoding=UTF-8" >&2; exit 1; }
 
+      # Resolving the plugin markers for the first time asks the Gradle Plugin
+      # Portal and Maven Central, and either can answer with a transient error
+      # ("Plugin ... was not found in any of the following sources"). Configuration
+      # runs that resolution, so retry it here on a cheap task; a real
+      # configuration error still fails the job after the last attempt.
+      - name: Warm the Gradle configuration
+        run: |
+          for attempt in 1 2 3; do
+            if ./gradlew help --no-daemon; then
+              exit 0
+            fi
+            echo "Gradle configuration failed (attempt $attempt/3); retrying in 30s" >&2
+            sleep 30
+          done
+          exit 1
+
       - name: Test, lint, and build both APKs
         env:
           UPDATE_GITHUB_OWNER: ${{ github.repository_owner }}
@@ -193,6 +209,22 @@ jobs:
           grep -Fq 'export JAVA_HOME="$_candidate"' gradlew || { echo "gradlew missing JAVA_HOME auto-discovery patch" >&2; exit 1; }
           grep -Fq -- '-Dfile.encoding=UTF-8' gradlew || { echo "gradlew missing -Dfile.encoding=UTF-8" >&2; exit 1; }
           grep -Fq -- '-Dfile.encoding=UTF-8' gradlew.bat || { echo "gradlew.bat missing -Dfile.encoding=UTF-8" >&2; exit 1; }
+
+      # Resolving the plugin markers for the first time asks the Gradle Plugin
+      # Portal and Maven Central, and either can answer with a transient error
+      # ("Plugin ... was not found in any of the following sources"). Configuration
+      # runs that resolution, so retry it here on a cheap task; a real
+      # configuration error still fails the job after the last attempt.
+      - name: Warm the Gradle configuration
+        run: |
+          for attempt in 1 2 3; do
+            if ./gradlew help --no-daemon; then
+              exit 0
+            fi
+            echo "Gradle configuration failed (attempt $attempt/3); retrying in 30s" >&2
+            sleep 30
+          done
+          exit 1
 
       - name: Build and verify signed Release APK
         env:
