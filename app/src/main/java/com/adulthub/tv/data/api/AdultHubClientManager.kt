@@ -342,33 +342,44 @@ class AdultHubClientManager(
         val base = currentServerUrl?.trimEnd('/') ?: ""
         if (!item.posterUrl.isNullOrBlank()) {
             val poster = item.posterUrl.trim()
-            return if (poster.startsWith("http://", ignoreCase = true) || poster.startsWith("https://", ignoreCase = true) || base.isEmpty()) {
+            val url = if (poster.startsWith("http://", ignoreCase = true) || poster.startsWith("https://", ignoreCase = true) || base.isEmpty()) {
                 poster
             } else {
                 "$base/${poster.trimStart('/')}"
             }
+            return artworkUrlWithWidth(url, maxWidth)
         }
         if (!item.backdropUrl.isNullOrBlank()) {
             val backdrop = item.backdropUrl.trim()
-            return if (backdrop.startsWith("http://", ignoreCase = true) || backdrop.startsWith("https://", ignoreCase = true) || base.isEmpty()) {
+            val url = if (backdrop.startsWith("http://", ignoreCase = true) || backdrop.startsWith("https://", ignoreCase = true) || base.isEmpty()) {
                 backdrop
             } else {
                 "$base/${backdrop.trimStart('/')}"
             }
+            return artworkUrlWithWidth(url, maxWidth)
         }
-        return if (base.isNotEmpty()) "$base/api/v1/artwork/video/${item.id}/poster" else ""
+        return if (base.isNotEmpty()) {
+            artworkUrlWithWidth("$base/api/v1/artwork/video/${item.id}/poster", maxWidth)
+        } else {
+            ""
+        }
     }
 
     fun getPersonImageUrl(personId: String, tag: String? = null, maxWidth: Int = 300, photoUrl: String? = null): String {
         val base = currentServerUrl?.trimEnd('/') ?: ""
         if (!photoUrl.isNullOrBlank()) {
             val photo = photoUrl.trim()
-            return if (photo.startsWith("http://", ignoreCase = true) || photo.startsWith("https://", ignoreCase = true) || base.isEmpty()) {
+            val url = if (photo.startsWith("http://", ignoreCase = true) || photo.startsWith("https://", ignoreCase = true) || base.isEmpty()) {
                 photo
             } else {
                 "$base/${photo.trimStart('/')}"
             }
+            return artworkUrlWithWidth(url, maxWidth)
         }
-        return if (base.isNotEmpty()) "$base/api/v1/artwork/performer/$personId/photo" else ""
+        return if (base.isNotEmpty()) {
+            artworkUrlWithWidth("$base/api/v1/artwork/performer/$personId/photo", maxWidth)
+        } else {
+            ""
+        }
     }
 }

@@ -5,6 +5,7 @@ import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import com.adulthub.tv.R
 import com.adulthub.tv.data.api.AdultHubClientManager
+import com.adulthub.tv.data.api.artworkUrlWithWidth
 import com.adulthub.tv.data.local.SettingsDataStore
 import com.adulthub.tv.data.model.ItemFilter
 import com.adulthub.tv.data.model.ShuffleContextMode
@@ -277,24 +278,35 @@ class ItemDetailViewModel(
         val base = clientManager.currentServerUrl?.trimEnd('/') ?: ""
         if (!item.backdropUrl.isNullOrBlank()) {
             val backdrop = item.backdropUrl.trim()
-            return if (backdrop.startsWith("http://", ignoreCase = true) || backdrop.startsWith("https://", ignoreCase = true) || base.isEmpty()) {
+            val url = if (backdrop.startsWith("http://", ignoreCase = true) || backdrop.startsWith("https://", ignoreCase = true) || base.isEmpty()) {
                 backdrop
             } else {
                 "$base/${backdrop.trimStart('/')}"
             }
+            return artworkUrlWithWidth(url, DETAIL_ARTWORK_WIDTH)
         }
         if (!item.posterUrl.isNullOrBlank()) {
             val poster = item.posterUrl.trim()
-            return if (poster.startsWith("http://", ignoreCase = true) || poster.startsWith("https://", ignoreCase = true) || base.isEmpty()) {
+            val url = if (poster.startsWith("http://", ignoreCase = true) || poster.startsWith("https://", ignoreCase = true) || base.isEmpty()) {
                 poster
             } else {
                 "$base/${poster.trimStart('/')}"
             }
+            return artworkUrlWithWidth(url, DETAIL_ARTWORK_WIDTH)
         }
-        return if (base.isNotEmpty()) "$base/api/v1/artwork/video/${item.id}/backdrop" else ""
+        return if (base.isNotEmpty()) {
+            artworkUrlWithWidth("$base/api/v1/artwork/video/${item.id}/backdrop", DETAIL_ARTWORK_WIDTH)
+        } else {
+            ""
+        }
     }
 
     fun getItemImageUrl(item: TvItem): String = clientManager.getItemImageUrl(item)
+
+    private companion object {
+        /** The detail hero fills the screen, so it asks for the largest derivative. */
+        const val DETAIL_ARTWORK_WIDTH = 1280
+    }
 
     fun getPersonImageUrl(personId: String, tag: String?): String = clientManager.getPersonImageUrl(personId, tag)
 }
