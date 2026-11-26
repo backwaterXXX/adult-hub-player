@@ -1,5 +1,6 @@
 package com.adulthub.tv.ui.library
 
+import androidx.compose.animation.AnimatedVisibility
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
@@ -11,6 +12,7 @@ import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
+import androidx.compose.foundation.layout.fillMaxHeight
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
@@ -24,8 +26,10 @@ import androidx.compose.foundation.lazy.grid.LazyVerticalGrid
 import androidx.compose.foundation.lazy.grid.items
 import androidx.compose.foundation.lazy.grid.rememberLazyGridState
 import androidx.compose.foundation.lazy.items
+import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.text.BasicTextField
+import androidx.compose.foundation.verticalScroll
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
@@ -93,8 +97,18 @@ fun AllItemsTab(
     onShuffle: () -> Unit = {}
 ) {
     var filterPicker by rememberSaveable { mutableStateOf<CatalogFilter?>(null) }
+    var filtersOpen by rememberSaveable { mutableStateOf(false) }
     val gridState = rememberLazyGridState()
     val focusRequesterMap = remember { mutableMapOf<String, FocusRequester>() }
+    val activeFilterCount = listOf(
+        state.favoritesOnly,
+        state.unwatchedOnly,
+        state.quality != QualityTier.ALL,
+        state.durationFilter != DurationFilter.ALL,
+        state.selectedGenre != null,
+        state.selectedStudio != null,
+        state.selectedPerformer != null
+    ).count { it }
 
     LaunchedEffect(state.lastSelectedItemId) {
         val targetId = state.lastSelectedItemId ?: return@LaunchedEffect
@@ -113,184 +127,87 @@ fun AllItemsTab(
             .fillMaxSize()
             .padding(horizontal = 48.dp)
     ) {
-        // Filter & Sort Bar
+        // Compact top bar: count, collapsible side-filter toggle, sort, and shuffle.
         Row(
             modifier = Modifier
                 .fillMaxWidth()
-                .padding(vertical = 12.dp),
-            horizontalArrangement = Arrangement.spacedBy(12.dp),
-            verticalAlignment = Alignment.CenterVertically
-        ) {
-            Row(horizontalArrangement = Arrangement.spacedBy(10.dp)) {
-                Text(
-                    text = pluralStringResource(
-                        R.plurals.library_movies_count,
-                        state.totalCount,
-                        state.totalCount
-                    ),
-                    style = MaterialTheme.typography.bodyMedium,
-                    color = TextSecondary,
-                    modifier = Modifier.align(Alignment.CenterVertically)
-                )
-                // Sort controls are hidden on the Random tab: the order is always random.
-                if (!isRandom) {
-                    TvSecondaryButton(
-                        onClick = {
-                            val nextSort = when (state.sortBy) {
-                                "DateCreated" -> "SortName"
-                                "SortName" -> "Runtime"
-                                else -> "DateCreated"
-                            }
-                            onSortChange(nextSort, state.sortOrder)
-                        },
-                        modifier = Modifier.height(36.dp)
-                    ) {
-                        val label = stringResource(
-                            when (state.sortBy) {
-                                "DateCreated" -> R.string.library_sort_by_date_added
-                                "SortName" -> R.string.library_sort_by_title
-                                "Runtime" -> R.string.library_sort_by_duration
-                                else -> R.string.library_sort_by_default
-                            }
-                        )
-                        Text(text = stringResource(R.string.library_sort_value, label), fontSize = 12.sp)
-                    }
-
-                    TvSecondaryButton(
-                        onClick = {
-                            val nextOrder = if (state.sortOrder == SortOrder.DESCENDING) {
-                                SortOrder.ASCENDING
-                            } else {
-                                SortOrder.DESCENDING
-                            }
-                            onSortChange(state.sortBy, nextOrder)
-                        },
-                        modifier = Modifier.height(36.dp)
-                    ) {
-                        val arrow = if (state.sortOrder == SortOrder.DESCENDING) {
-                            stringResource(R.string.library_sort_order_desc)
-                        } else {
-                            stringResource(R.string.library_sort_order_asc)
-                        }
-                        Text(text = arrow, fontSize = 12.sp)
-                    }
-                }
-
-                // Favorites Only Toggle
-                if (state.favoritesOnly) {
-                    TvPrimaryButton(
-                        onClick = onToggleFavorites,
-                        modifier = Modifier.height(36.dp)
-                    ) {
-                        Text(text = stringResource(R.string.library_filter_favorites), fontSize = 12.sp)
-                    }
-                } else {
-                    TvSecondaryButton(
-                        onClick = onToggleFavorites,
-                        modifier = Modifier.height(36.dp)
-                    ) {
-                        Text(text = stringResource(R.string.library_filter_favorites), fontSize = 12.sp)
-                    }
-                }
-
-                if (state.unwatchedOnly) {
-                    TvPrimaryButton(onClick = onToggleUnwatched, modifier = Modifier.height(36.dp)) {
-                        Text(text = stringResource(R.string.library_filter_unwatched), fontSize = 12.sp)
-                    }
-                } else {
-                    TvSecondaryButton(onClick = onToggleUnwatched, modifier = Modifier.height(36.dp)) {
-                        Text(text = stringResource(R.string.library_filter_unwatched), fontSize = 12.sp)
-                    }
-                }
-
-                // Quality tiers: the resolver derives them from the bitrate, so a
-                // click only changes the request. Selecting the active tier clears it.
-                QualityTier.entries.filter { it != QualityTier.ALL }.forEach { tier ->
-                    val onClick = { onSelectQuality(state.quality.toggled(tier)) }
-                    if (state.quality == tier) {
-                        TvPrimaryButton(onClick = onClick, modifier = Modifier.height(36.dp)) {
-                            Text(text = stringResource(tier.labelRes), fontSize = 12.sp)
-                        }
-                    } else {
-                        TvSecondaryButton(onClick = onClick, modifier = Modifier.height(36.dp)) {
-                            Text(text = stringResource(tier.labelRes), fontSize = 12.sp)
-                        }
-                    }
-                }
-            }
-        }
-
-        Row(
-            modifier = Modifier.fillMaxWidth().padding(bottom = 8.dp),
+                .padding(vertical = 8.dp),
             horizontalArrangement = Arrangement.spacedBy(10.dp),
             verticalAlignment = Alignment.CenterVertically
         ) {
             Text(
-                text = stringResource(
-                    R.string.library_filter_duration,
-                    stringResource(state.durationFilter.labelRes)
+                text = pluralStringResource(
+                    R.plurals.library_movies_count,
+                    state.totalCount,
+                    state.totalCount
                 ),
-                fontSize = 12.sp,
-                color = TextSecondary,
-                modifier = Modifier.padding(end = 2.dp)
+                style = MaterialTheme.typography.bodyMedium,
+                color = TextSecondary
             )
-            DurationFilter.entries.forEach { filter ->
-                val selected = state.durationFilter == filter
-                val onSelect = { onDurationFilterChange(filter) }
-                if (selected) {
-                    TvPrimaryButton(onClick = onSelect, modifier = Modifier.height(36.dp)) {
-                        Text(stringResource(filter.labelRes), fontSize = 12.sp)
-                    }
-                } else {
-                    TvSecondaryButton(onClick = onSelect, modifier = Modifier.height(36.dp)) {
-                        Text(stringResource(filter.labelRes), fontSize = 12.sp)
-                    }
+            val filtersLabel = if (activeFilterCount > 0) {
+                stringResource(R.string.library_filters_button_count, activeFilterCount)
+            } else {
+                stringResource(R.string.library_filters_button)
+            }
+            if (filtersOpen || activeFilterCount > 0) {
+                TvPrimaryButton(
+                    onClick = { filtersOpen = !filtersOpen },
+                    modifier = Modifier.height(36.dp)
+                ) {
+                    Text(text = filtersLabel, fontSize = 12.sp)
+                }
+            } else {
+                TvSecondaryButton(
+                    onClick = { filtersOpen = !filtersOpen },
+                    modifier = Modifier.height(36.dp)
+                ) {
+                    Text(text = filtersLabel, fontSize = 12.sp)
                 }
             }
-        }
-
-        Row(
-            modifier = Modifier.fillMaxWidth().padding(bottom = 8.dp),
-            horizontalArrangement = Arrangement.spacedBy(10.dp),
-            verticalAlignment = Alignment.CenterVertically
-        ) {
-            TvSecondaryButton(onClick = {
-                filterPicker = CatalogFilter.GENRE
-                onLoadGenres()
-            }, modifier = Modifier.height(36.dp)) {
-                Text(
-                    stringResource(
-                        R.string.library_filter_genre,
-                        state.selectedGenre?.name ?: stringResource(R.string.library_filter_all)
-                    ),
-                    fontSize = 12.sp
-                )
-            }
-            TvSecondaryButton(onClick = {
-                filterPicker = CatalogFilter.STUDIO
-                onLoadStudios()
-            }, modifier = Modifier.height(36.dp)) {
-                Text(
-                    stringResource(
-                        R.string.library_filter_studio,
-                        state.selectedStudio?.name ?: stringResource(R.string.library_filter_all)
-                    ),
-                    fontSize = 12.sp
-                )
-            }
-            TvSecondaryButton(onClick = {
-                filterPicker = CatalogFilter.PERFORMER
-                onLoadPerformers()
-            }, modifier = Modifier.height(36.dp)) {
-                Text(
-                    stringResource(
-                        R.string.library_filter_performer,
-                        state.selectedPerformer?.name ?: stringResource(R.string.library_filter_all)
-                    ),
-                    fontSize = 12.sp
-                )
-            }
             Spacer(modifier = Modifier.weight(1f))
+            // Sort controls are hidden on the Random tab: the order is always random.
+            if (!isRandom) {
+                TvSecondaryButton(
+                    onClick = {
+                        val nextSort = when (state.sortBy) {
+                            "DateCreated" -> "SortName"
+                            "SortName" -> "Runtime"
+                            else -> "DateCreated"
+                        }
+                        onSortChange(nextSort, state.sortOrder)
+                    },
+                    modifier = Modifier.height(36.dp)
+                ) {
+                    val label = stringResource(
+                        when (state.sortBy) {
+                            "DateCreated" -> R.string.library_sort_by_date_added
+                            "SortName" -> R.string.library_sort_by_title
+                            "Runtime" -> R.string.library_sort_by_duration
+                            else -> R.string.library_sort_by_default
+                        }
+                    )
+                    Text(text = stringResource(R.string.library_sort_value, label), fontSize = 12.sp)
+                }
+
+                TvSecondaryButton(
+                    onClick = {
+                        val nextOrder = if (state.sortOrder == SortOrder.DESCENDING) {
+                            SortOrder.ASCENDING
+                        } else {
+                            SortOrder.DESCENDING
+                        }
+                        onSortChange(state.sortBy, nextOrder)
+                    },
+                    modifier = Modifier.height(36.dp)
+                ) {
+                    val arrow = if (state.sortOrder == SortOrder.DESCENDING) {
+                        stringResource(R.string.library_sort_order_desc)
+                    } else {
+                        stringResource(R.string.library_sort_order_asc)
+                    }
+                    Text(text = arrow, fontSize = 12.sp)
+                }
+            }
             if (isRandom) {
                 TvPrimaryButton(onClick = onShuffle, modifier = Modifier.height(36.dp)) {
                     Text(stringResource(R.string.library_shuffle), fontSize = 12.sp)
@@ -341,86 +258,108 @@ fun AllItemsTab(
             )
         }
 
-        when {
-            state.isLoading -> {
-                Box(
-                    modifier = Modifier.fillMaxSize(),
-                    contentAlignment = Alignment.Center
-                ) {
-                    LoadingIndicator(message = stringResource(R.string.library_loading_movies))
-                }
-            }
-
-            state.errorMessage != null && state.items.isEmpty() -> {
-                Box(
-                    modifier = Modifier.fillMaxSize(),
-                    contentAlignment = Alignment.Center
-                ) {
-                    ErrorMessage(
-                        message = state.errorMessage,
-                        onRetry = onRetry,
-                        modifier = Modifier.fillMaxWidth(0.5f)
-                    )
-                }
-            }
-
-            state.isEmpty -> {
-                Box(
-                    modifier = Modifier.fillMaxSize(),
-                    contentAlignment = Alignment.Center
-                ) {
-                    Text(
-                        text = stringResource(
-                            if (isRandom) R.string.library_random_empty else R.string.library_no_movies_matching_filters
-                        ),
-                        style = MaterialTheme.typography.bodyLarge,
-                        color = TextSecondary
-                    )
-                }
-            }
-
-            else -> {
-                LazyVerticalGrid(
-                    columns = GridCells.Fixed(4),
-                    state = gridState,
-                    contentPadding = PaddingValues(top = 8.dp, bottom = 48.dp),
-                    horizontalArrangement = Arrangement.spacedBy(16.dp),
-                    verticalArrangement = Arrangement.spacedBy(16.dp),
-                    modifier = Modifier.fillMaxSize().focusRestorer()
-                ) {
-                    items(
-                        items = state.items,
-                        key = { it.id }
-                    ) { item ->
-                        val requester = remember(item.id) {
-                            focusRequesterMap.getOrPut(item.id) { FocusRequester() }
+        Row(modifier = Modifier.weight(1f).fillMaxWidth()) {
+            AnimatedVisibility(visible = filtersOpen) {
+                AllItemsSideFilterPanel(
+                    state = state,
+                    onToggleFavorites = onToggleFavorites,
+                    onToggleUnwatched = onToggleUnwatched,
+                    onSelectQuality = onSelectQuality,
+                    onDurationFilterChange = onDurationFilterChange,
+                    onOpenPicker = { picker ->
+                        when (picker) {
+                            CatalogFilter.GENRE -> onLoadGenres()
+                            CatalogFilter.STUDIO -> onLoadStudios()
+                            CatalogFilter.PERFORMER -> onLoadPerformers()
                         }
-                        MovieCard(
-                            item = item,
-                            imageUrl = getImageUrl(item),
-                            onClick = { onMovieClick(item) },
-                            modifier = Modifier
-                                .fillMaxWidth()
-                                .focusRequester(requester)
-                        )
+                        filterPicker = picker
+                    }
+                )
+            }
+
+            Box(modifier = Modifier.weight(1f).fillMaxHeight()) {
+                when {
+                    state.isLoading -> {
+                        Box(
+                            modifier = Modifier.fillMaxSize(),
+                            contentAlignment = Alignment.Center
+                        ) {
+                            LoadingIndicator(message = stringResource(R.string.library_loading_movies))
+                        }
                     }
 
-                    if (state.hasMore) {
-                        item(span = { GridItemSpan(maxLineSpan) }) {
-                            Box(
-                                modifier = Modifier
-                                    .fillMaxWidth()
-                                    .padding(vertical = 24.dp),
-                                contentAlignment = Alignment.Center
-                            ) {
-                                if (state.isLoadingMore) {
-                                    LoadingIndicator(message = stringResource(R.string.library_loading_more_movies))
-                                } else {
-                                    TvSecondaryButton(
-                                        onClick = onLoadMore,
-                                        modifier = Modifier.height(44.dp)
+                    state.errorMessage != null && state.items.isEmpty() -> {
+                        Box(
+                            modifier = Modifier.fillMaxSize(),
+                            contentAlignment = Alignment.Center
+                        ) {
+                            ErrorMessage(
+                                message = state.errorMessage,
+                                onRetry = onRetry,
+                                modifier = Modifier.fillMaxWidth(0.5f)
+                            )
+                        }
+                    }
+
+                    state.isEmpty -> {
+                        Box(
+                            modifier = Modifier.fillMaxSize(),
+                            contentAlignment = Alignment.Center
+                        ) {
+                            Text(
+                                text = stringResource(
+                                    if (isRandom) R.string.library_random_empty else R.string.library_no_movies_matching_filters
+                                ),
+                                style = MaterialTheme.typography.bodyLarge,
+                                color = TextSecondary
+                            )
+                        }
+                    }
+
+                    else -> {
+                        LazyVerticalGrid(
+                            columns = GridCells.Fixed(4),
+                            state = gridState,
+                            contentPadding = PaddingValues(top = 8.dp, bottom = 48.dp),
+                            horizontalArrangement = Arrangement.spacedBy(16.dp),
+                            verticalArrangement = Arrangement.spacedBy(16.dp),
+                            modifier = Modifier.fillMaxSize().focusRestorer()
+                        ) {
+                            items(
+                                items = state.items,
+                                key = { it.id }
+                            ) { item ->
+                                val requester = remember(item.id) {
+                                    focusRequesterMap.getOrPut(item.id) { FocusRequester() }
+                                }
+                                MovieCard(
+                                    item = item,
+                                    imageUrl = getImageUrl(item),
+                                    onClick = { onMovieClick(item) },
+                                    modifier = Modifier
+                                        .fillMaxWidth()
+                                        .focusRequester(requester)
+                                )
+                            }
+
+                            if (state.hasMore) {
+                                item(span = { GridItemSpan(maxLineSpan) }) {
+                                    Box(
+                                        modifier = Modifier
+                                            .fillMaxWidth()
+                                            .padding(vertical = 24.dp),
+                                        contentAlignment = Alignment.Center
                                     ) {
-                                        Text(text = stringResource(R.string.library_load_more_movies))
+                                        if (state.isLoadingMore) {
+                                            LoadingIndicator(message = stringResource(R.string.library_loading_more_movies))
+                                        } else {
+                                            TvSecondaryButton(
+                                                onClick = onLoadMore,
+                                                modifier = Modifier.height(44.dp)
+                                            ) {
+                                                Text(text = stringResource(R.string.library_load_more_movies))
+                                            }
+                                        }
                                     }
                                 }
                             }
@@ -428,6 +367,138 @@ fun AllItemsTab(
                     }
                 }
             }
+        }
+    }
+}
+
+@Composable
+private fun AllItemsSideFilterPanel(
+    state: AllItemsTabState,
+    onToggleFavorites: () -> Unit,
+    onToggleUnwatched: () -> Unit,
+    onSelectQuality: (QualityTier) -> Unit,
+    onDurationFilterChange: (DurationFilter) -> Unit,
+    onOpenPicker: (CatalogFilter) -> Unit
+) {
+    Column(
+        modifier = Modifier
+            .width(248.dp)
+            .fillMaxHeight()
+            .padding(end = 16.dp, bottom = 16.dp)
+            .background(CardSurface, RoundedCornerShape(12.dp))
+            .padding(12.dp)
+            .verticalScroll(rememberScrollState()),
+        verticalArrangement = Arrangement.spacedBy(8.dp)
+    ) {
+        FilterToggleButton(
+            label = stringResource(R.string.library_filter_favorites),
+            selected = state.favoritesOnly,
+            onClick = onToggleFavorites,
+            modifier = Modifier.fillMaxWidth()
+        )
+        FilterToggleButton(
+            label = stringResource(R.string.library_filter_unwatched),
+            selected = state.unwatchedOnly,
+            onClick = onToggleUnwatched,
+            modifier = Modifier.fillMaxWidth()
+        )
+
+        Text(
+            text = stringResource(R.string.library_filters_quality_label),
+            fontSize = 11.sp,
+            color = TextSecondary
+        )
+        Row(
+            modifier = Modifier.fillMaxWidth(),
+            horizontalArrangement = Arrangement.spacedBy(6.dp)
+        ) {
+            QualityTier.entries.filter { it != QualityTier.ALL }.forEach { tier ->
+                FilterToggleButton(
+                    label = stringResource(tier.labelRes),
+                    selected = state.quality == tier,
+                    onClick = { onSelectQuality(state.quality.toggled(tier)) },
+                    modifier = Modifier.weight(1f)
+                )
+            }
+        }
+
+        Text(
+            text = stringResource(
+                R.string.library_filter_duration,
+                stringResource(state.durationFilter.labelRes)
+            ),
+            fontSize = 11.sp,
+            color = TextSecondary
+        )
+        DurationFilter.entries.chunked(2).forEach { pair ->
+            Row(
+                modifier = Modifier.fillMaxWidth(),
+                horizontalArrangement = Arrangement.spacedBy(6.dp)
+            ) {
+                pair.forEach { filter ->
+                    FilterToggleButton(
+                        label = stringResource(filter.labelRes),
+                        selected = state.durationFilter == filter,
+                        onClick = { onDurationFilterChange(filter) },
+                        modifier = Modifier.weight(1f)
+                    )
+                }
+            }
+        }
+
+        TvSecondaryButton(
+            onClick = { onOpenPicker(CatalogFilter.GENRE) },
+            modifier = Modifier.fillMaxWidth().height(36.dp)
+        ) {
+            Text(
+                stringResource(
+                    R.string.library_filter_genre,
+                    state.selectedGenre?.name ?: stringResource(R.string.library_filter_all)
+                ),
+                fontSize = 12.sp
+            )
+        }
+        TvSecondaryButton(
+            onClick = { onOpenPicker(CatalogFilter.STUDIO) },
+            modifier = Modifier.fillMaxWidth().height(36.dp)
+        ) {
+            Text(
+                stringResource(
+                    R.string.library_filter_studio,
+                    state.selectedStudio?.name ?: stringResource(R.string.library_filter_all)
+                ),
+                fontSize = 12.sp
+            )
+        }
+        TvSecondaryButton(
+            onClick = { onOpenPicker(CatalogFilter.PERFORMER) },
+            modifier = Modifier.fillMaxWidth().height(36.dp)
+        ) {
+            Text(
+                stringResource(
+                    R.string.library_filter_performer,
+                    state.selectedPerformer?.name ?: stringResource(R.string.library_filter_all)
+                ),
+                fontSize = 12.sp
+            )
+        }
+    }
+}
+
+@Composable
+private fun FilterToggleButton(
+    label: String,
+    selected: Boolean,
+    onClick: () -> Unit,
+    modifier: Modifier = Modifier
+) {
+    if (selected) {
+        TvPrimaryButton(onClick = onClick, modifier = modifier.height(34.dp)) {
+            Text(text = label, fontSize = 12.sp)
+        }
+    } else {
+        TvSecondaryButton(onClick = onClick, modifier = modifier.height(34.dp)) {
+            Text(text = label, fontSize = 12.sp)
         }
     }
 }

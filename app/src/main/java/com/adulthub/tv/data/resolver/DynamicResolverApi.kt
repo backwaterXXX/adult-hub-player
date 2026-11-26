@@ -33,9 +33,9 @@ class DynamicResolverApi(
 
     override suspend fun getPerformerBio(name: String): PerformerBioDto = api().getPerformerBio(name)
 
-    override suspend fun generatePhash(token: String, body: PhashGenerationRequest): PhashGenerationDto = api().generatePhash(token, body)
+    override suspend fun generatePhash(authorization: String, body: PhashGenerationRequest): PhashGenerationDto = api().generatePhash(authorization, body)
 
-    override suspend fun getPhashJob(token: String, jobId: String): PhashJobStatusDto = api().getPhashJob(token, jobId)
+    override suspend fun getPhashJob(authorization: String, jobId: String): PhashJobStatusDto = api().getPhashJob(authorization, jobId)
 
     override suspend fun getVideoVariants(videoId: String): VideoVariantsDto = api().getVideoVariants(videoId)
 }

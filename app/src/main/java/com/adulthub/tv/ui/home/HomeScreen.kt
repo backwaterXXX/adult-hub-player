@@ -126,35 +126,6 @@ fun HomeScreen(
                 Spacer(modifier = Modifier.height(16.dp))
             }
 
-            // Continue Watching Section
-            item {
-                SectionRow(
-                    title = stringResource(R.string.home_section_resume),
-                    isLoading = state.resumeSection.isLoading,
-                    errorMessage = state.resumeSection.errorMessage,
-                    isEmpty = state.resumeSection.isEmpty,
-                    emptyMessage = stringResource(R.string.home_resume_empty),
-                    onRetry = viewModel::loadResume
-                ) {
-                    LazyRow(
-                        modifier = Modifier.focusRestorer(),
-                        contentPadding = PaddingValues(horizontal = 48.dp),
-                        horizontalArrangement = Arrangement.spacedBy(16.dp)
-                    ) {
-                        items(
-                            items = state.resumeSection.items,
-                            key = { it.id }
-                        ) { item ->
-                            MovieCard(
-                                item = item,
-                                imageUrl = viewModel.getItemImageUrl(item),
-                                onClick = { viewModel.onMovieClicked(item) }
-                            )
-                        }
-                    }
-                }
-            }
-
             // Watch History Section
             if (state.watchHistorySection.items.isNotEmpty()) {
                 item {

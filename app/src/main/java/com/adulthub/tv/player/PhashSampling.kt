@@ -187,7 +187,7 @@ class PhashCoordinator(
             try {
                 val api = apiClient.create(settingsDataStore.requireAllowedServiceUrl(resolverUrl).normalized)
                 val response = withTimeout(15_000L) {
-                    api.generatePhash(token, PhashGenerationRequest(videoId = videoId, durationUs = durationUs))
+                    api.generatePhash(bearerHeader(token), PhashGenerationRequest(videoId = videoId, durationUs = durationUs))
                 }
                 if (!response.ok) {
                     jobStore.remove(videoId, accountKey)
@@ -326,7 +326,7 @@ class PhashCoordinator(
             try {
                 polls += 1
                 val api = apiClient.create(settingsDataStore.requireAllowedServiceUrl(resolverUrl).normalized)
-                val response = withTimeout(15_000L) { api.getPhashJob(token, jobId) }
+                val response = withTimeout(15_000L) { api.getPhashJob(bearerHeader(token), jobId) }
                 val job = response.job
                 if (!response.ok || job == null || job.id != jobId || job.videoId != videoId) {
                     setStatus(videoId, PhashUiStatus(context.getString(R.string.phash_invalid_status)))
@@ -464,6 +464,8 @@ class PhashCoordinator(
     }
 
     private fun isRetryable(code: Int): Boolean = code == 429 || code >= 500
+
+    private fun bearerHeader(token: String): String = if (token.startsWith("Bearer ", ignoreCase = true)) token else "Bearer $token"
 
     companion object {
         private const val STATUS_POLL_INTERVAL_MS = 5_000L

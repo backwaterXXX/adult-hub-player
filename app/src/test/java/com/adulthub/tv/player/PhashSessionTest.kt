@@ -99,7 +99,7 @@ class PhashSessionTest {
         val tokenRequests = mutableListOf<String>()
         val client = OkHttpClient.Builder().addInterceptor { chain ->
             val request = chain.request()
-            tokenRequests += request.header("X-Emby-Token").orEmpty()
+            tokenRequests += request.header("Authorization").orEmpty()
             val body = if (request.url.encodedPath.endsWith("/generate")) {
                 """{"ok":true,"job_id":"job-1","state":"queued"}"""
             } else {
@@ -168,7 +168,7 @@ class PhashSessionTest {
         assertNotNull(jobStore.get(item.id, firstAccountKey))
 
         // The status request never used the token of the new session.
-        assertTrue(tokenRequests.all { it == "token-one" })
+        assertTrue(tokenRequests.all { it == "Bearer token-one" })
     }
 
     @Test

@@ -40,13 +40,13 @@ interface ResolverApi {
 
     @POST("admin/api/v2/video-phash/generate")
     suspend fun generatePhash(
-        @Header("X-Emby-Token") token: String,
+        @Header("Authorization") authorization: String,
         @Body body: PhashGenerationRequest
     ): PhashGenerationDto
 
     @GET("admin/api/v2/video-phash/jobs/{job_id}")
     suspend fun getPhashJob(
-        @Header("X-Emby-Token") token: String,
+        @Header("Authorization") authorization: String,
         @Path("job_id") jobId: String
     ): PhashJobStatusDto
 

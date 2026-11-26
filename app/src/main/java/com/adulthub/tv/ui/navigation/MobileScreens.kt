@@ -215,9 +215,8 @@ fun MobileHomeScreen(vm: HomeViewModel, isCurrentDestination: Boolean = true, on
                     }
                 }
             }
-            section(R.string.mobile_continue_watching, state.resumeSection, vm::loadResume)
-            section(R.string.mobile_recently_added, state.latestSection, vm::loadLatest)
             section(R.string.mobile_watch_history, state.watchHistorySection, vm::loadWatchHistory)
+            section(R.string.mobile_recently_added, state.latestSection, vm::loadLatest)
             section(R.string.mobile_random_picks, state.randomSection, vm::loadRandom)
             state.performersSection.errorMessage?.let { message ->
                 failure(R.string.mobile_performers, message, vm::loadPerformers)
