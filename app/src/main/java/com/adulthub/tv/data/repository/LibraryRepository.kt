@@ -91,7 +91,8 @@ open class LibraryRepository(
         studio: String? = null,
         performer: String? = null,
         performerId: String? = null,
-        minDuration: Int? = null
+        minDuration: Int? = null,
+        maxDuration: Int? = null
     ): Result<TvItemsPage> = withContext(Dispatchers.IO) {
         try {
             val api = clientManager.getApi()
@@ -112,6 +113,7 @@ open class LibraryRepository(
                 performer = performer,
                 performerId = performerId,
                 minDuration = minDuration,
+                maxDuration = maxDuration,
                 isFavorite = isFavorite
             )
 
@@ -214,6 +216,7 @@ open class LibraryRepository(
                 baseUrl = clientManager.currentServerUrl ?: "",
                 category = genres.firstOrNull(),
                 studio = studios.firstOrNull(),
+                performerId = personIds.firstOrNull()?.toString(),
                 isFavorite = if (filters.contains(ItemFilter.IS_FAVORITE)) true else null
             )
 
@@ -246,6 +249,7 @@ open class LibraryRepository(
         baseUrl: String,
         category: String?,
         studio: String?,
+        performerId: String? = null,
         isFavorite: Boolean?
     ): RandomVideoPool {
         val firstPage = api.getVideos(
@@ -254,6 +258,7 @@ open class LibraryRepository(
             sort = "latest",
             category = category,
             studio = studio,
+            performerId = performerId,
             isFavorite = isFavorite
         )
         val totalCount = firstPage.totalCount
@@ -268,6 +273,7 @@ open class LibraryRepository(
             sort = "latest",
             category = category,
             studio = studio,
+            performerId = performerId,
             isFavorite = isFavorite
         )
         return RandomVideoPool(
@@ -357,11 +363,50 @@ open class LibraryRepository(
     }
 
     /**
-     * Adult Hub backend does not currently have a dedicated /similar catalog endpoint.
-     * Retains build compatibility and safe fallback to empty list without mocking backend contracts.
+     * Adult Hub has no dedicated /similar endpoint, so the row is built from the
+     * strongest shared attribute of the open item: its first performer, then its
+     * studio. The open item itself never appears in the answer.
      */
     open suspend fun getSimilarItems(itemId: String, limit: Int = 12): Result<List<TvItem>> = withContext(Dispatchers.IO) {
-        Result.success(emptyList())
+        try {
+            if (itemId.isBlank() || limit <= 0) {
+                return@withContext Result.success(emptyList())
+            }
+            val api = clientManager.getApi()
+            val baseUrl = clientManager.currentServerUrl ?: ""
+            val detail = api.getVideoDetail(itemId)
+            val pageSize = (limit + 1).coerceAtMost(100)
+            val performer = detail.performers.firstOrNull { it.name.isNotBlank() }?.name
+            val studio = detail.studio?.takeIf { it.isNotBlank() }
+            val response = when {
+                performer != null -> api.getVideos(
+                    offset = 0,
+                    limit = pageSize,
+                    sort = "latest",
+                    performer = performer
+                )
+
+                studio != null -> api.getVideos(
+                    offset = 0,
+                    limit = pageSize,
+                    sort = "latest",
+                    studio = studio
+                )
+
+                else -> return@withContext Result.success(emptyList())
+            }
+            Result.success(
+                response.items
+                    .filter { it.id != itemId }
+                    .map { it.toTvItem(baseUrl) }
+                    .distinctBy { it.id }
+                    .take(limit)
+            )
+        } catch (e: CancellationException) {
+            throw e
+        } catch (e: Exception) {
+            Result.failure(e)
+        }
     }
 
     open suspend fun toggleFavorite(itemId: String, markFavorite: Boolean): Result<Boolean> = withContext(Dispatchers.IO) {

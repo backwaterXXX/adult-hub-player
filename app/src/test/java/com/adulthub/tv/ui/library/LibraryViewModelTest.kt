@@ -34,6 +34,7 @@ import org.junit.After
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertFalse
 import org.junit.Assert.assertNotNull
+import org.junit.Assert.assertNull
 import org.junit.Assert.assertTrue
 import org.junit.Before
 import org.junit.Test
@@ -684,13 +685,16 @@ class LibraryViewModelTest {
 
         assertEquals(2, viewModel.uiState.value.allState.items.size)
 
-        // Filter short (<15m)
+        // Filter short (<15m): the range goes to the backend and the reloaded
+        // page is still narrowed to the same window client-side.
         viewModel.setDurationFilter(com.adulthub.tv.data.model.DurationFilter.SHORT)
+        advanceUntilIdle()
         assertEquals(1, viewModel.uiState.value.allState.items.size)
         assertEquals("m-short", viewModel.uiState.value.allState.items.first().id)
 
         // Filter HD only
         viewModel.setDurationFilter(com.adulthub.tv.data.model.DurationFilter.ALL)
+        advanceUntilIdle()
         viewModel.toggleHdOnly()
         assertEquals(1, viewModel.uiState.value.allState.items.size)
         assertEquals("m-short", viewModel.uiState.value.allState.items.first().id)
@@ -734,6 +738,8 @@ class LibraryViewModelTest {
         var genreRequestCount = 0
         var lastGenreIds: List<UUID> = emptyList()
         var lastFilters: Set<ItemFilter> = emptySet()
+        var lastMinDuration: Int? = null
+        var lastMaxDuration: Int? = null
         var randomGenreIds: List<UUID> = emptyList()
         var randomFilters: Set<ItemFilter> = emptySet()
         var randomResult: Result<TvItem?> = Result.success(null)
@@ -787,10 +793,13 @@ class LibraryViewModelTest {
             studio: String?,
             performer: String?,
             performerId: String?,
-            minDuration: Int?
+            minDuration: Int?,
+            maxDuration: Int?
         ): Result<TvItemsPage> {
             lastGenreIds = genreIds
             lastFilters = filters
+            lastMinDuration = minDuration
+            lastMaxDuration = maxDuration
             return itemsPageResult
         }
 
@@ -860,6 +869,35 @@ class LibraryViewModelTest {
                 TvItemsPage(items = slice, totalRecordCount = items.size, startIndex = startIndex)
             }
         }
+    }
+
+    @Test
+    fun `duration filter sends the whole range to the backend`() = runTest(testDispatcher) {
+        val viewModel = LibraryViewModel(
+            libraryRepository = fakeLibraryRepository,
+            personRepository = fakePersonRepository,
+            studioRepository = fakeStudioRepository,
+            channelRepository = fakeChannelRepository,
+            clientManager = clientManager,
+            savedStateHandle = SavedStateHandle(),
+            context = context
+        )
+        advanceUntilIdle()
+
+        viewModel.setDurationFilter(DurationFilter.SHORT)
+        advanceUntilIdle()
+        assertNull(fakeLibraryRepository.lastMinDuration)
+        assertEquals(900, fakeLibraryRepository.lastMaxDuration)
+
+        viewModel.setDurationFilter(DurationFilter.MEDIUM)
+        advanceUntilIdle()
+        assertEquals(900, fakeLibraryRepository.lastMinDuration)
+        assertEquals(2400, fakeLibraryRepository.lastMaxDuration)
+
+        viewModel.setDurationFilter(DurationFilter.LONG)
+        advanceUntilIdle()
+        assertEquals(2400, fakeLibraryRepository.lastMinDuration)
+        assertNull(fakeLibraryRepository.lastMaxDuration)
     }
 
     @Test

@@ -39,8 +39,18 @@ data class SearchUiState(
     val errorMessage: String? = null,
     val hasSearched: Boolean = false,
     val lastSelectedKey: String? = null,
-    val recentQueries: List<String> = emptyList()
-)
+    val recentQueries: List<String> = emptyList(),
+    val moviesTotalCount: Int = 0,
+    val isLoadingMoreMovies: Boolean = false,
+    val moviesLimit: Int = SEARCH_PAGE_SIZE
+) {
+    /** True while the movies grid can still append another page. */
+    val hasMoreMovies: Boolean
+        get() = movies.isNotEmpty() && moviesTotalCount > movies.size
+}
+
+/** One page of the search result groups; the movies grid appends further pages. */
+const val SEARCH_PAGE_SIZE = 30
 
 @OptIn(FlowPreview::class)
 class SearchViewModel(
@@ -125,7 +135,9 @@ class SearchViewModel(
                 movies = emptyList(),
                 actors = emptyList(),
                 channelVideos = emptyList(),
-                errorMessage = null
+                errorMessage = null,
+                moviesTotalCount = 0,
+                isLoadingMoreMovies = false
             )
         }
 
@@ -136,7 +148,7 @@ class SearchViewModel(
                 libraryRepository.getItems(
                     parentId = libraryId,
                     searchTerm = searchTerm,
-                    limit = 30
+                    limit = SEARCH_PAGE_SIZE
                 )
             }
 
@@ -144,7 +156,7 @@ class SearchViewModel(
                 personRepository.getPersons(
                     parentId = libraryId,
                     searchTerm = searchTerm,
-                    limit = 30
+                    limit = SEARCH_PAGE_SIZE
                 )
             }
             val channelVideosDeferred = async {
@@ -159,7 +171,16 @@ class SearchViewModel(
                         successfulSections++
                         val movies = page.items.distinctBy { it.providerVideoId?.ifBlank { null } ?: it.id }
                         _uiState.update { state ->
-                            if (state.query == searchTerm) state.copy(movies = movies) else state
+                            if (state.query == searchTerm) {
+                                state.copy(
+                                    movies = movies,
+                                    moviesTotalCount = page.totalRecordCount,
+                                    moviesLimit = SEARCH_PAGE_SIZE,
+                                    isLoadingMoreMovies = false
+                                )
+                            } else {
+                                state
+                            }
                         }
                     },
                     onFailure = failures::add
@@ -189,38 +210,91 @@ class SearchViewModel(
                 )
             }
             joinAll(movieUpdates, personUpdates, channelUpdates)
-            if (searchTerm != _query.value) return@coroutineScope
+            finishSearch(searchTerm, accountKey, successfulSections, failures)
+        }
+    }
 
-            val totalSections = 2 + if (channelRepository != null) 1 else 0
-            val error = if (successfulSections == 0 && failures.size == totalSections) {
-                failures.firstOrNull()?.userFacingMessage(context, R.string.library_search_failed_retry)
-            } else {
-                null
-            }
+    /** Publish the finished search unless a newer query already replaced it. */
+    private suspend fun finishSearch(
+        searchTerm: String,
+        accountKey: String?,
+        successfulSections: Int,
+        failures: List<Throwable>
+    ) {
+        if (searchTerm != _query.value) return
 
-            val resolverBaseUrl = try {
-                settingsDataStore.getResolverBaseUrl()
-            } catch (error: CancellationException) {
-                throw error
-            } catch (_: Exception) {
-                SettingsDataStore.DEFAULT_RESOLVER_URL
-            }
+        val totalSections = 2 + if (channelRepository != null) 1 else 0
+        val error = if (successfulSections == 0 && failures.size == totalSections) {
+            failures.firstOrNull()?.userFacingMessage(context, R.string.library_search_failed_retry)
+        } else {
+            null
+        }
 
-            // A response that was superseded by a newer query neither enters the
-            // history nor clears the spinner of the search the user is waiting for.
-            if (searchTerm != _query.value) return@coroutineScope
+        val resolverBaseUrl = try {
+            settingsDataStore.getResolverBaseUrl()
+        } catch (error: CancellationException) {
+            throw error
+        } catch (_: Exception) {
+            SettingsDataStore.DEFAULT_RESOLVER_URL
+        }
 
-            searchHistoryStore?.recordQuery(searchTerm, accountKey)
-            if (searchTerm != _query.value) return@coroutineScope
+        // A response that was superseded by a newer query neither enters the
+        // history nor clears the spinner of the search the user is waiting for.
+        if (searchTerm != _query.value) return
 
-            _uiState.update {
-                it.copy(
-                    isSearching = false,
-                    resolverBaseUrl = resolverBaseUrl,
-                    hasSearched = true,
-                    errorMessage = error
-                )
-            }
+        searchHistoryStore?.recordQuery(searchTerm, accountKey)
+        if (searchTerm != _query.value) return
+
+        _uiState.update {
+            it.copy(
+                isSearching = false,
+                resolverBaseUrl = resolverBaseUrl,
+                hasSearched = true,
+                errorMessage = error
+            )
+        }
+    }
+
+    /**
+     * Append the next movies page. The grid asks for it when the last cards
+     * become visible, so a broad search is no longer capped at one page.
+     */
+    fun loadMoreMovies() {
+        val state = _uiState.value
+        val searchTerm = state.query
+        if (searchTerm.isBlank() || state.isSearching || state.isLoadingMoreMovies || !state.hasMoreMovies) {
+            return
+        }
+        _uiState.update { it.copy(isLoadingMoreMovies = true) }
+        viewModelScope.launch {
+            val libraryId = settingsDataStore.selectedLibraryId.firstOrNull()
+            val result = libraryRepository.getItems(
+                parentId = libraryId,
+                startIndex = state.movies.size,
+                searchTerm = searchTerm,
+                limit = SEARCH_PAGE_SIZE
+            )
+            result.fold(
+                onSuccess = { page ->
+                    val pageItems = page.items
+                    _uiState.update { current ->
+                        if (current.query != searchTerm) {
+                            current.copy(isLoadingMoreMovies = false)
+                        } else {
+                            current.copy(
+                                movies = (current.movies + pageItems).distinctBy {
+                                    it.providerVideoId?.ifBlank { null } ?: it.id
+                                },
+                                moviesTotalCount = page.totalRecordCount,
+                                isLoadingMoreMovies = false
+                            )
+                        }
+                    }
+                },
+                onFailure = {
+                    _uiState.update { current -> current.copy(isLoadingMoreMovies = false) }
+                }
+            )
         }
     }
 

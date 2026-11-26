@@ -89,6 +89,7 @@ data class CatalogVideoItemDto(
     @SerialName("release_date") val releaseDate: String? = null,
     @SerialName("date_added") val dateAdded: String? = null,
     @SerialName("studio") val studio: String? = null,
+    @SerialName("channel_name") val channelName: String? = null,
     @SerialName("plot") val plot: String? = null,
     @SerialName("categories") val categories: List<String> = emptyList(),
     @SerialName("tags") val tags: List<String> = emptyList(),
