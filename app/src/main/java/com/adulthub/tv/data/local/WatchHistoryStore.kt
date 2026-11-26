@@ -96,22 +96,23 @@ open class WatchHistoryStore(
         val accountKey = accountKey ?: accountKeys.currentKey()
         dataStore.edit { prefs ->
             val currentList = parseList(prefs[historyKey(accountKey)]).toMutableList()
+            val existing = currentList.firstOrNull { it.itemId == item.id || (item.providerVideoId != null && it.providerVideoId == item.providerVideoId) }
             // Deduplicate: remove any existing entry for this item
             currentList.removeAll { it.itemId == item.id || (item.providerVideoId != null && it.providerVideoId == item.providerVideoId) }
 
             val newRecord = WatchHistoryRecord(
                 itemId = item.id,
-                title = item.title.ifBlank { "Untitled Video" },
+                title = item.title.ifBlank { existing?.title ?: "Untitled Video" },
                 watchedAt = watchedAt,
-                overview = item.overview,
-                posterUrl = item.posterUrl,
-                backdropUrl = item.backdropUrl,
-                runtimeMinutes = item.runtimeMinutes,
-                runtimeTicks = item.runtimeTicks,
-                providerVideoId = item.providerVideoId,
-                isPlayed = item.isPlayed,
-                progressFraction = item.progressFraction,
-                genres = item.genres
+                overview = item.overview ?: existing?.overview,
+                posterUrl = item.posterUrl ?: existing?.posterUrl,
+                backdropUrl = item.backdropUrl ?: existing?.backdropUrl,
+                runtimeMinutes = item.runtimeMinutes ?: existing?.runtimeMinutes,
+                runtimeTicks = item.runtimeTicks ?: existing?.runtimeTicks,
+                providerVideoId = item.providerVideoId ?: existing?.providerVideoId,
+                isPlayed = item.isPlayed || (existing?.isPlayed == true),
+                progressFraction = if (item.progressFraction > 0f) item.progressFraction else existing?.progressFraction ?: 0f,
+                genres = if (item.genres.isNotEmpty()) item.genres else existing?.genres ?: emptyList()
             )
 
             // Insert at the front (most recent)

@@ -1,7 +1,5 @@
 package com.adulthub.tv.data.model
 
-import org.jellyfin.sdk.model.api.PlayMethod
-
 data class PlaybackInfo(
     val itemId: String,
     val streamUrl: String,

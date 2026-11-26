@@ -1,7 +1,7 @@
 package com.adulthub.tv.ui.detail
 
 import android.app.Application
-import com.adulthub.tv.data.jellyfin.JellyfinClientManager
+import com.adulthub.tv.data.api.AdultHubClientManager
 import com.adulthub.tv.data.model.TvItem
 import com.adulthub.tv.data.repository.LibraryRepository
 import io.mockk.mockk
@@ -27,7 +27,7 @@ class ItemDetailViewModelTest {
     private val testDispatcher = StandardTestDispatcher()
 
     private val fakeLibraryRepository = FakeLibraryRepository()
-    private val clientManager: JellyfinClientManager = mockk(relaxed = true)
+    private val clientManager: AdultHubClientManager = mockk(relaxed = true)
     private val context: Application = mockk(relaxed = true)
 
     private val sampleItem = TvItem(
