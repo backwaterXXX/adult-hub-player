@@ -39,7 +39,8 @@ If your Adult Hub server is located in a different network, behind a firewall, o
 ### 🎲 Smart Discovery
 - **"Surprise Me" (Instant Shuffle)**: Play a random movie immediately when you cannot decide what to watch.
 - **Filtered Shuffles**: Shuffle by performer, category, or unwatched movies only.
-- **Random Tab**: A dedicated library tab samples the catalogue at a random offset on every visit, so each load is a fresh slice of the library instead of the first page. Filters (duration, HD, favorites, unwatched, genre, studio, performer) narrow the sample, and the *Shuffle* button draws a new one without leaving the grid.
+- **Quality Tiers**: The SD/HD/HQ chips filter the library on the resolver side — it derives the tier from each video's average bitrate, so a page always arrives already filtered instead of shrinking on the device.
+- **Random Tab**: A dedicated library tab samples the catalogue at a random offset on every visit, so each load is a fresh slice of the library instead of the first page. Filters (duration, quality, favorites, unwatched, genre, studio, performer) narrow the sample, and the *Shuffle* button draws a new one without leaving the grid.
 
 ### 🔒 Privacy by Design
 - **Quick Panic Exit**: Press the Back button twice from the home screen to quickly close the app.
