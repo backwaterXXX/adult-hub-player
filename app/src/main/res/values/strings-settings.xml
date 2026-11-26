@@ -11,9 +11,9 @@
     <string name="settings_server_url_label">Server URL</string>
     <string name="settings_not_connected">Not connected</string>
     <string name="settings_server_name_label">Server Name</string>
-    <string name="settings_value_jellyfin">Jellyfin</string>
+    <string name="settings_value_jellyfin">Adult Hub</string>
     <string name="settings_playback_label">Playback</string>
-    <string name="settings_playback_streams">Jellyfin + Adult Hub streams</string>
+    <string name="settings_playback_streams">Adult Hub streams</string>
     <string name="settings_sign_out">Sign out</string>
 
     <!-- Active library -->
@@ -60,19 +60,19 @@
 
     <!-- Resolver API -->
     <string name="settings_resolver_title">Resolver API</string>
-    <string name="settings_resolver_desc">By default, this origin follows the Jellyfin server address. Enter a different URL only if your Resolver service is hosted separately.</string>
+    <string name="settings_resolver_desc">By default, this origin follows the Adult Hub server address. Enter a different URL only if your Resolver service is hosted separately.</string>
     <string name="settings_resolver_current_origin">Current origin</string>
     <string name="settings_not_configured">Not configured</string>
     <string name="settings_resolver_origin_source">Origin source</string>
     <string name="settings_resolver_source_configured">Set in the app settings</string>
-    <string name="settings_resolver_source_server">Jellyfin server address</string>
+    <string name="settings_resolver_source_server">Adult Hub server address</string>
     <string name="settings_label_resolver">Resolver</string>
     <string name="settings_checking_connections">Checking connections…</string>
     <string name="settings_check_connections">Check connections</string>
     <string name="settings_resolver_url_label">Resolver base URL</string>
     <string name="settings_resolver_url_hint">https://resolver.example.com or http://192.168.1.10:8099</string>
     <string name="settings_save_resolver_url">Save Resolver URL</string>
-    <string name="settings_use_jellyfin_url">Use Jellyfin Server URL</string>
+    <string name="settings_use_jellyfin_url">Use Adult Hub Server URL</string>
 
     <!-- App updates -->
     <string name="settings_updates_title">App updates</string>
@@ -122,11 +122,11 @@
 
     <!-- About & licenses -->
     <string name="settings_about_title">About &amp; Licenses</string>
-    <string name="settings_about_summary">%1$s v%2$s (code %3$d). Built with Jetpack Compose, Jellyfin Kotlin SDK, and Media3 ExoPlayer.</string>
+    <string name="settings_about_summary">%1$s v%2$s (code %3$d). Built with Jetpack Compose and Media3 ExoPlayer.</string>
     <string name="settings_licenses_button">Third-party open-source licenses</string>
     <!-- Settings status & error messages -->
     <string name="settings_error_load">Could not load settings: %1$s</string>
-    <string name="settings_server_name_default">Jellyfin Server</string>
+    <string name="settings_server_name_default">Adult Hub Server</string>
     <string name="settings_no_library_selected">None Selected</string>
     <string name="settings_import_done">The history of the previous install was imported into this account</string>
     <string name="settings_import_nothing">There was nothing to import</string>
@@ -151,7 +151,7 @@
     <string name="settings_connection_unavailable">Unavailable: %1$s</string>
     <string name="settings_resolver_not_served">No Resolver at %1$s. If the Resolver runs on another address, set it below.</string>
     <string name="settings_error_request_failed">Request failed</string>
-    <string name="settings_resolver_using_server">Using Jellyfin server URL</string>
+    <string name="settings_resolver_using_server">Using Adult Hub server URL</string>
     <string name="settings_resolver_updated">Resolver URL updated</string>
     <string name="settings_cache_cleared">Cache cleared successfully</string>
     <string name="settings_cache_clear_failed">Could not clear the image cache</string>

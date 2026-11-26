@@ -4,7 +4,7 @@
     <uses-permission android:name="android.permission.REQUEST_INSTALL_PACKAGES" />
     <!--
         Android 17 blocks connections to local network addresses for apps that target SDK 37.
-        The Jellyfin server and the Resolver usually live on the user's LAN, so the app asks
+        The Adult Hub server and the Resolver usually live on the user's LAN, so the app asks
         for this permission before it connects to a private address.
     -->
     <uses-permission android:name="android.permission.ACCESS_LOCAL_NETWORK" />

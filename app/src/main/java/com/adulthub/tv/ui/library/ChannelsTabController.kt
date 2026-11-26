@@ -9,6 +9,7 @@ import com.adulthub.tv.data.model.TvChannel
 import com.adulthub.tv.data.repository.ChannelHistoryPage
 import com.adulthub.tv.data.repository.ChannelRepository
 import com.adulthub.tv.data.resolver.VideoDto
+import com.adulthub.tv.ui.components.userFacingMessage
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Job
 import kotlinx.coroutines.flow.MutableStateFlow
@@ -51,7 +52,7 @@ internal class ChannelsTabController(
                         state.copy(
                             channelsState = state.channelsState.copy(
                                 isLoading = false,
-                                errorMessage = error.localizedMessage ?: context.getString(R.string.library_error_channels)
+                                errorMessage = error.userFacingMessage(context, R.string.library_error_channels)
                             )
                         )
                     }
@@ -237,7 +238,7 @@ internal class ChannelsTabController(
             return copy(
                 channelsState = channelsState.copy(
                     isLoadingMoreVideos = false,
-                    channelVideosError = error.localizedMessage ?: context.getString(R.string.library_error_more_channel_videos)
+                    channelVideosError = error.userFacingMessage(context, R.string.library_error_more_channel_videos)
                 )
             )
         }
@@ -246,7 +247,7 @@ internal class ChannelsTabController(
                 channelsState = channelsState.copy(
                     isLoadingVideos = false,
                     isLoadingMoreVideos = false,
-                    channelVideosError = error.localizedMessage ?: context.getString(R.string.library_error_channel_videos)
+                    channelVideosError = error.userFacingMessage(context, R.string.library_error_channel_videos)
                 )
             )
         }
@@ -284,7 +285,7 @@ internal class ChannelsTabController(
             channelVideos = emptyList(),
             isLoadingVideos = false,
             isLoadingMoreVideos = false,
-            channelVideosError = fallbackError.localizedMessage ?: error.localizedMessage ?: context.getString(R.string.library_error_channel_videos),
+            channelVideosError = fallbackError.userFacingMessage(context, R.string.library_error_channel_videos),
             hasMoreVideos = false,
             nextOffsetId = null
         )

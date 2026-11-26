@@ -7,8 +7,8 @@ import androidx.compose.animation.fadeOut
 import androidx.compose.foundation.BorderStroke
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
-import androidx.compose.foundation.clickable
 import androidx.compose.foundation.focusable
+import androidx.compose.foundation.gestures.detectTapGestures
 import androidx.compose.foundation.interaction.MutableInteractionSource
 import androidx.compose.foundation.interaction.collectIsFocusedAsState
 import androidx.compose.foundation.layout.Arrangement
@@ -25,6 +25,8 @@ import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.automirrored.rounded.VolumeOff
+import androidx.compose.material.icons.automirrored.rounded.VolumeUp
 import androidx.compose.material.icons.rounded.AspectRatio
 import androidx.compose.material.icons.rounded.Close
 import androidx.compose.material.icons.rounded.FastForward
@@ -38,8 +40,6 @@ import androidx.compose.material.icons.rounded.Pause
 import androidx.compose.material.icons.rounded.PlayArrow
 import androidx.compose.material.icons.rounded.Shuffle
 import androidx.compose.material.icons.rounded.Speed
-import androidx.compose.material.icons.rounded.VolumeOff
-import androidx.compose.material.icons.rounded.VolumeUp
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
@@ -52,15 +52,18 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.focus.FocusRequester
+import androidx.compose.ui.focus.focusProperties
 import androidx.compose.ui.focus.focusRequester
 import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.input.key.Key
+import androidx.compose.ui.input.key.KeyEvent
 import androidx.compose.ui.input.key.KeyEventType
 import androidx.compose.ui.input.key.key
 import androidx.compose.ui.input.key.onPreviewKeyEvent
 import androidx.compose.ui.input.key.type
+import androidx.compose.ui.input.pointer.pointerInput
 import androidx.compose.ui.res.pluralStringResource
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.semantics.ProgressBarRangeInfo
@@ -106,6 +109,7 @@ fun PlayerOverlay(
     onResetOsdTimer: () -> Unit,
     onPlayPauseClick: () -> Unit,
     onSeekRelative: (deltaMs: Long) -> Unit,
+    onSeekTo: (positionMs: Long) -> Unit,
     onRandomClick: () -> Unit,
     onInfoClick: () -> Unit,
     onBackClick: () -> Unit,
@@ -318,6 +322,18 @@ fun PlayerOverlay(
                             onSeekRight = {
                                 seekWithAcceleration(1)
                             },
+                            onTogglePlayPause = {
+                                if (!isBuffering) {
+                                    onPlayPauseClick()
+                                }
+                                onResetOsdTimer()
+                            },
+                            onSeekTo = { positionMs ->
+                                onSeekTo(positionMs)
+                                onResetOsdTimer()
+                            },
+                            durationMs = duration,
+                            playPauseFocusRequester = playPauseFocusRequester,
                             modifier = Modifier.weight(1f)
                         )
 
@@ -457,7 +473,7 @@ fun PlayerOverlay(
                         )
                         Spacer(modifier = Modifier.width(16.dp))
                         OsdIconButton(
-                            icon = if (isMuted) Icons.Rounded.VolumeOff else Icons.Rounded.VolumeUp,
+                            icon = if (isMuted) Icons.AutoMirrored.Rounded.VolumeOff else Icons.AutoMirrored.Rounded.VolumeUp,
                             contentDescription = stringResource(if (isMuted) R.string.player_cd_unmute else R.string.player_cd_mute),
                             isActive = isMuted,
                             onClick = {
@@ -652,6 +668,10 @@ private fun FocusableProgressBar(
     progress: Float,
     onSeekLeft: () -> Unit,
     onSeekRight: () -> Unit,
+    onTogglePlayPause: () -> Unit,
+    onSeekTo: (positionMs: Long) -> Unit,
+    durationMs: Long,
+    playPauseFocusRequester: FocusRequester,
     modifier: Modifier = Modifier
 ) {
     val interactionSource = remember { MutableInteractionSource() }
@@ -668,29 +688,24 @@ private fun FocusableProgressBar(
                 color = if (isFocused) NeonPink else Color.Transparent,
                 shape = RoundedCornerShape(14.dp)
             )
+            .focusProperties {
+                down = playPauseFocusRequester
+            }
             .focusable(interactionSource = interactionSource)
+            .pointerInput(durationMs, onSeekTo) {
+                detectTapGestures { offset ->
+                    if (durationMs > 0L && size.width > 0) {
+                        val fraction = (offset.x / size.width).coerceIn(0f, 1f)
+                        onSeekTo((fraction * durationMs).toLong())
+                    }
+                }
+            }
             .semantics {
                 contentDescription = seekBarDescription
                 progressBarRangeInfo = ProgressBarRangeInfo(clampedProgress, 0f..1f)
             }
             .onPreviewKeyEvent { event ->
-                if (event.type == KeyEventType.KeyDown) {
-                    when (event.key) {
-                        Key.DirectionLeft -> {
-                            onSeekLeft()
-                            true
-                        }
-
-                        Key.DirectionRight -> {
-                            onSeekRight()
-                            true
-                        }
-
-                        else -> false
-                    }
-                } else {
-                    false
-                }
+                handleSeekBarKey(event, onSeekLeft, onSeekRight, onTogglePlayPause)
             }
             .padding(horizontal = 4.dp),
         contentAlignment = Alignment.CenterStart
@@ -711,6 +726,35 @@ private fun FocusableProgressBar(
                 .clip(RoundedCornerShape(4.dp))
                 .background(NeonPink)
         )
+    }
+}
+
+private fun handleSeekBarKey(
+    event: KeyEvent,
+    onSeekLeft: () -> Unit,
+    onSeekRight: () -> Unit,
+    onTogglePlayPause: () -> Unit
+): Boolean {
+    if (event.type != KeyEventType.KeyDown) return false
+    return when (event.key) {
+        Key.DirectionLeft -> {
+            onSeekLeft()
+            true
+        }
+
+        Key.DirectionRight -> {
+            onSeekRight()
+            true
+        }
+
+        Key.DirectionCenter, Key.Enter, Key.NumPadEnter -> {
+            if (event.nativeKeyEvent.repeatCount == 0) {
+                onTogglePlayPause()
+            }
+            true
+        }
+
+        else -> false
     }
 }
 

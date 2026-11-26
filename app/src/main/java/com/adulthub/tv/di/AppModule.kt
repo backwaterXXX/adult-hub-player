@@ -1,6 +1,6 @@
 package com.adulthub.tv.di
 
-import com.adulthub.tv.data.jellyfin.JellyfinClientManager
+import com.adulthub.tv.data.api.AdultHubClientManager
 import com.adulthub.tv.data.local.AccountKeyProvider
 import com.adulthub.tv.data.local.AccountScope
 import com.adulthub.tv.data.local.AuthDataStore
@@ -45,7 +45,7 @@ val appModule = module {
     single { SearchHistoryStore(androidContext(), accountKeyProvider = get()) }
     single { UserScopedDataMigration(get(), get(), get(), get(), get()) }
     single { CleartextOriginInterceptor(get()) }
-    single { JellyfinClientManager(androidContext(), get()) }
+    single { AdultHubClientManager(androidContext(), get(), get()) }
     single { ResolverApiClient(cleartextInterceptor = get<CleartextOriginInterceptor>()) }
     single { kotlinx.coroutines.CoroutineScope(kotlinx.coroutines.SupervisorJob() + kotlinx.coroutines.Dispatchers.IO) }
     single {
@@ -69,7 +69,7 @@ val appModule = module {
     single {
         com.adulthub.tv.player.PhashCoordinator(
             authDataStore = get(),
-            jellyfinClientManager = get(),
+            clientManager = get(),
             settingsDataStore = get(),
             apiClient = get(),
             applicationScope = get(),

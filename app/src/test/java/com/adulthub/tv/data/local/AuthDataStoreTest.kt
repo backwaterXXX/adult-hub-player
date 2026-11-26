@@ -100,4 +100,19 @@ class AuthDataStoreTest {
             (authDataStore.getAuthState() as AuthState.Authenticated).accessToken
         )
     }
+
+    @Test
+    fun `updateTokensIfOldTokenMatches safely updates tokens and prevents overwriting newer sign-in`() = runTest(testDispatcher) {
+        save("token-v1")
+
+        val failedUpdate = authDataStore.updateTokensIfOldTokenMatches("stale-token", "token-v2", "refresh-v2")
+        assertFalse(failedUpdate)
+        assertEquals("token-v1", (authDataStore.getAuthState() as AuthState.Authenticated).accessToken)
+
+        val successUpdate = authDataStore.updateTokensIfOldTokenMatches("token-v1", "token-v2", "refresh-v2")
+        assertTrue(successUpdate)
+        val state = authDataStore.getAuthState() as AuthState.Authenticated
+        assertEquals("token-v2", state.accessToken)
+        assertEquals("refresh-v2", state.refreshToken)
+    }
 }

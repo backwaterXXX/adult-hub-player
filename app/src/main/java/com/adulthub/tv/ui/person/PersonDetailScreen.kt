@@ -175,7 +175,7 @@ fun PersonDetailScreen(
                                 if (!person.birthDate.isNullOrBlank()) {
                                     Row {
                                         Text(text = stringResource(R.string.library_label_born), style = MaterialTheme.typography.bodyMedium, color = TextSecondary)
-                                        Text(text = person.birthDate ?: "", style = MaterialTheme.typography.bodyMedium, color = TextPrimary)
+                                        Text(text = person.birthDate, style = MaterialTheme.typography.bodyMedium, color = TextPrimary)
                                     }
                                     Spacer(modifier = Modifier.height(4.dp))
                                 }
@@ -183,7 +183,7 @@ fun PersonDetailScreen(
                                 if (!person.nationality.isNullOrBlank()) {
                                     Row {
                                         Text(text = stringResource(R.string.library_label_nationality), style = MaterialTheme.typography.bodyMedium, color = TextSecondary)
-                                        Text(text = person.nationality ?: "", style = MaterialTheme.typography.bodyMedium, color = TextPrimary)
+                                        Text(text = person.nationality, style = MaterialTheme.typography.bodyMedium, color = TextPrimary)
                                     }
                                     Spacer(modifier = Modifier.height(4.dp))
                                 }
@@ -214,7 +214,7 @@ fun PersonDetailScreen(
                                     )
                                     Spacer(modifier = Modifier.height(4.dp))
                                     Text(
-                                        text = person.bio ?: "",
+                                        text = person.bio,
                                         style = MaterialTheme.typography.bodyMedium,
                                         color = TextSecondary,
                                         lineHeight = 22.sp

@@ -20,8 +20,8 @@ android {
         applicationId = "com.adulthub.tv"
         minSdk = 28
         targetSdk = 37
-        versionCode = 88
-        versionName = "0.1.88"
+        versionCode = 92
+        versionName = "0.1.92"
 
         testInstrumentationRunner = "androidx.test.runner.AndroidJUnitRunner"
         val updateOwner = providers.environmentVariable("UPDATE_GITHUB_OWNER")
@@ -157,9 +157,6 @@ dependencies {
     implementation(libs.media3.session)
     implementation(libs.media3.datasource.okhttp)
 
-    // Jellyfin SDK
-    implementation(libs.jellyfin.core)
-
     // Coroutines & Serialization
     implementation(libs.kotlinx.coroutines.android)
     implementation(libs.kotlinx.serialization.json)
@@ -168,12 +165,6 @@ dependencies {
     implementation(libs.retrofit)
     implementation(libs.retrofit.converter.kotlinx.serialization)
     implementation(libs.okhttp)
-
-    // A no-op SLF4J 2 provider: Jellyfin SDK uses SLF4J for HTTP logging. Because
-    // request URLs can carry sensitive credentials (such as the QuickConnect secret in query parameters),
-    // slf4j-nop is bound across all configurations (including debug) to prevent accidental leaks to logcat.
-    // Application diagnostics use AppLog / android.util.Log instead.
-    implementation(libs.slf4j.nop)
 
     debugImplementation("androidx.compose.ui:ui-tooling")
     debugImplementation(libs.androidx.compose.ui.test.manifest)

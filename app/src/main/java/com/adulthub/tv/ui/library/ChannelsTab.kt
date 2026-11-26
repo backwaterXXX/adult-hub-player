@@ -469,13 +469,16 @@ private fun ChannelCard(
                 overflow = TextOverflow.Ellipsis,
                 fontWeight = FontWeight.Bold
             )
-            Spacer(modifier = Modifier.height(4.dp))
-            Text(
-                text = channel.slug,
-                style = MaterialTheme.typography.bodySmall,
-                color = TextSecondary,
-                fontSize = 12.sp
-            )
+            val subtitle = channel.slug.takeIf { it.isNotBlank() && !it.looksLikeTelegramChannelId() }
+            if (subtitle != null) {
+                Spacer(modifier = Modifier.height(4.dp))
+                Text(
+                    text = subtitle,
+                    style = MaterialTheme.typography.bodySmall,
+                    color = TextSecondary,
+                    fontSize = 12.sp
+                )
+            }
         }
     }
 }
@@ -603,3 +606,9 @@ private fun ChannelVideoCard(
         }
     }
 }
+
+/**
+ * Resolvers that manage Telegram channels reuse the numeric channel id as the slug
+ * (`-1001188284602`), which is noise on a channel card. Only real labels are shown.
+ */
+private fun String.looksLikeTelegramChannelId(): Boolean = matches(Regex("-?\\d{6,}"))
