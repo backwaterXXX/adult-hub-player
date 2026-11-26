@@ -370,7 +370,9 @@ fun AllItemsTab(
                     contentAlignment = Alignment.Center
                 ) {
                     Text(
-                        text = stringResource(R.string.library_no_movies_matching_filters),
+                        text = stringResource(
+                            if (isRandom) R.string.library_random_empty else R.string.library_no_movies_matching_filters
+                        ),
                         style = MaterialTheme.typography.bodyLarge,
                         color = TextSecondary
                     )

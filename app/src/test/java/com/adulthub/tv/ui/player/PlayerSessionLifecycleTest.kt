@@ -287,7 +287,8 @@ private class FakeLifecycleLibraryRepository : LibraryRepository(mockk(relaxed =
         studioIds: List<java.util.UUID>,
         personIds: List<java.util.UUID>,
         genres: List<String>,
-        studios: List<String>
+        studios: List<String>,
+        performerId: String?
     ): Result<TvItem?> = randomItemResult
 }
 

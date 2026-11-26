@@ -820,6 +820,8 @@ class LibraryViewModelTest {
             return itemsPageResult
         }
 
+        var randomPerformerId: String? = null
+
         override suspend fun getRandomItemFiltered(
             parentId: String?,
             excludeItemId: String?,
@@ -828,10 +830,12 @@ class LibraryViewModelTest {
             studioIds: List<UUID>,
             personIds: List<UUID>,
             genres: List<String>,
-            studios: List<String>
+            studios: List<String>,
+            performerId: String?
         ): Result<TvItem?> {
             randomGenreIds = genreIds
             randomFilters = filters
+            randomPerformerId = performerId
             return randomResult
         }
     }
@@ -955,6 +959,98 @@ class LibraryViewModelTest {
         assertTrue(state.allState.favoritesOnly)
         assertEquals(LibraryTab.ACTORS, state.selectedTab)
         assertEquals('A', state.actorsState.selectedLetter)
+    }
+
+    @Test
+    fun `restoring RANDOM tab on init loads random items`() = runTest(testDispatcher) {
+        val handle = SavedStateHandle()
+        val initial = LibraryViewModel(
+            libraryRepository = fakeLibraryRepository,
+            personRepository = fakePersonRepository,
+            studioRepository = fakeStudioRepository,
+            channelRepository = fakeChannelRepository,
+            clientManager = clientManager,
+            savedStateHandle = handle,
+            context = context
+        )
+        advanceUntilIdle()
+        initial.selectTab(LibraryTab.RANDOM)
+        advanceUntilIdle()
+
+        fakeLibraryRepository.itemsPageResult = Result.success(
+            TvItemsPage(listOf(sampleMovie1), totalRecordCount = 1, startIndex = 0)
+        )
+
+        val restored = LibraryViewModel(
+            libraryRepository = fakeLibraryRepository,
+            personRepository = fakePersonRepository,
+            studioRepository = fakeStudioRepository,
+            channelRepository = fakeChannelRepository,
+            clientManager = clientManager,
+            savedStateHandle = handle,
+            context = context
+        )
+        advanceUntilIdle()
+
+        assertEquals(LibraryTab.RANDOM, restored.uiState.value.selectedTab)
+        assertEquals(listOf(sampleMovie1.id), restored.uiState.value.randomState.items.map { it.id })
+    }
+
+    @Test
+    fun `excludedTags updates randomState items from rawItems`() = runTest(testDispatcher) {
+        val taggedItem = sampleMovie1.copy(id = "tagged", tags = listOf("blocked"))
+        val cleanItem = sampleMovie1.copy(id = "clean", tags = listOf("ok"))
+        fakeLibraryRepository.itemsPageResult = Result.success(
+            TvItemsPage(listOf(taggedItem, cleanItem), totalRecordCount = 2, startIndex = 0)
+        )
+        val excludedTagsFlow = kotlinx.coroutines.flow.MutableStateFlow(emptySet<String>())
+        val settings = mockk<com.adulthub.tv.data.local.SettingsDataStore>(relaxed = true)
+        io.mockk.every { settings.excludedTags } returns excludedTagsFlow
+        io.mockk.every { settings.resolverBaseUrl } returns kotlinx.coroutines.flow.flowOf("")
+        io.mockk.every { settings.channelSortMode } returns kotlinx.coroutines.flow.flowOf(ChannelSortMode.entries.first())
+        io.mockk.every { settings.hiddenChannelIds } returns kotlinx.coroutines.flow.flowOf(emptySet())
+
+        val viewModel = LibraryViewModel(
+            libraryRepository = fakeLibraryRepository,
+            personRepository = fakePersonRepository,
+            studioRepository = fakeStudioRepository,
+            channelRepository = fakeChannelRepository,
+            clientManager = clientManager,
+            settingsDataStore = settings,
+            context = context
+        )
+        viewModel.selectTab(LibraryTab.RANDOM)
+        advanceUntilIdle()
+        assertEquals(2, viewModel.uiState.value.randomState.items.size)
+
+        excludedTagsFlow.value = setOf("blocked")
+        advanceUntilIdle()
+        assertEquals(listOf("clean"), viewModel.uiState.value.randomState.items.map { it.id })
+
+        excludedTagsFlow.value = emptySet()
+        advanceUntilIdle()
+        assertEquals(setOf("tagged", "clean"), viewModel.uiState.value.randomState.items.map { it.id }.toSet())
+    }
+
+    @Test
+    fun `onSurpriseMeClicked forwards non-UUID performerId to repository`() = runTest(testDispatcher) {
+        val viewModel = LibraryViewModel(
+            libraryRepository = fakeLibraryRepository,
+            personRepository = fakePersonRepository,
+            studioRepository = fakeStudioRepository,
+            channelRepository = fakeChannelRepository,
+            clientManager = clientManager,
+            context = context
+        )
+        advanceUntilIdle()
+
+        viewModel.selectPerformer(TvPerson(id = "performer-slug-99", name = "Performer"))
+        advanceUntilIdle()
+        fakeLibraryRepository.randomResult = Result.success(sampleMovie1)
+        viewModel.onSurpriseMeClicked()
+        advanceUntilIdle()
+
+        assertEquals("performer-slug-99", fakeLibraryRepository.randomPerformerId)
     }
 
     private class FakeChannelRepository : ChannelRepository(mockk(relaxed = true)) {

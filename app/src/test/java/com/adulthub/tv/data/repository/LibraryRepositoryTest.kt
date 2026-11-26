@@ -235,6 +235,29 @@ class LibraryRepositoryTest {
     }
 
     @Test
+    fun `getRandomItemFiltered forwards raw performerId even when not a UUID`() = runTest {
+        val mockResponse = CatalogVideoListResponseDto(
+            items = listOf(CatalogVideoItemDto(id = "video-performer", title = "Performer Video")),
+            totalCount = 1
+        )
+        coEvery {
+            mockApi.getVideos(
+                offset = any(),
+                limit = any(),
+                sort = any(),
+                category = any(),
+                studio = any(),
+                performerId = "performer-slug-42",
+                isFavorite = any()
+            )
+        } returns mockResponse
+
+        val result = repository.getRandomItemFiltered(performerId = "performer-slug-42")
+        assertTrue(result.isSuccess)
+        assertEquals("video-performer", result.getOrThrow()?.id)
+    }
+
+    @Test
     fun `getItems filters out played items when IS_UNPLAYED filter is present`() = runTest {
         val mockResponse = CatalogVideoListResponseDto(
             items = listOf(

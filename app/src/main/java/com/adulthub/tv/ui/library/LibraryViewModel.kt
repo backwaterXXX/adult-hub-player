@@ -98,6 +98,9 @@ class LibraryViewModel(
     init {
         _uiState.value = savedFilters.restore(_uiState.value)
         loadAllItems(reset = true)
+        if (_uiState.value.selectedTab == LibraryTab.RANDOM) {
+            randomTab.loadRandom(reset = true)
+        }
         viewModelScope.launch {
             _uiState.collect { state -> savedFilters.save(state) }
         }
@@ -133,11 +136,14 @@ class LibraryViewModel(
                 settings.excludedTags.distinctUntilChanged().collect { excluded ->
                     _uiState.update { state ->
                         val allState = state.allState
+                        val randomState = state.randomState
                         val cs = state.channelsState
                         val allFiltered = applyAllItemsFilters(allState.rawItems, allState.durationFilter, excluded, allState.unwatchedOnly)
+                        val randomFiltered = applyAllItemsFilters(randomState.rawItems, randomState.durationFilter, excluded, randomState.unwatchedOnly)
                         val chFiltered = applyChannelFilters(cs.rawChannelVideos, cs.durationFilter, excluded, cs.sortMode)
                         state.copy(
                             allState = allState.copy(excludedTags = excluded, items = allFiltered),
+                            randomState = randomState.copy(excludedTags = excluded, items = randomFiltered),
                             channelsState = cs.copy(excludedTags = excluded, channelVideos = chFiltered)
                         )
                     }
@@ -160,7 +166,12 @@ class LibraryViewModel(
     fun loadGenresForFilter() {
         if (_uiState.value.allState.areGenresLoaded || _uiState.value.allState.isLoadingGenres) return
         viewModelScope.launch {
-            _uiState.update { it.copy(allState = it.allState.copy(isLoadingGenres = true)) }
+            _uiState.update {
+                it.copy(
+                    allState = it.allState.copy(isLoadingGenres = true),
+                    randomState = it.randomState.copy(isLoadingGenres = true)
+                )
+            }
             val result = libraryRepository.getGenres()
             _uiState.update { state ->
                 val genres = result.getOrDefault(emptyList()).sortedBy { it.name.lowercase() }
@@ -183,7 +194,12 @@ class LibraryViewModel(
     fun loadStudiosForFilter() {
         if (_uiState.value.allState.areStudiosLoaded || _uiState.value.allState.isLoadingStudios) return
         viewModelScope.launch {
-            _uiState.update { it.copy(allState = it.allState.copy(isLoadingStudios = true)) }
+            _uiState.update {
+                it.copy(
+                    allState = it.allState.copy(isLoadingStudios = true),
+                    randomState = it.randomState.copy(isLoadingStudios = true)
+                )
+            }
             // The filter panel only needs the names; counting every studio would
             // add one request per studio to a list of several hundred entries.
             val result = studioRepository.getStudios(limit = 500)
@@ -208,7 +224,12 @@ class LibraryViewModel(
     fun loadPerformersForFilter() {
         if (_uiState.value.allState.arePerformersLoaded || _uiState.value.allState.isLoadingPerformers) return
         viewModelScope.launch {
-            _uiState.update { it.copy(allState = it.allState.copy(isLoadingPerformers = true)) }
+            _uiState.update {
+                it.copy(
+                    allState = it.allState.copy(isLoadingPerformers = true),
+                    randomState = it.randomState.copy(isLoadingPerformers = true)
+                )
+            }
             val result = personRepository.getPersons(limit = 100)
             _uiState.update { state ->
                 val performers = result.getOrDefault(emptyList()).sortedBy { it.name.lowercase() }
@@ -432,6 +453,7 @@ class LibraryViewModel(
                 personIds = listOfNotNull(filters.selectedPerformer?.id?.toUuidOrNull()),
                 genres = listOfNotNull(filters.selectedGenre?.name),
                 studios = listOfNotNull(filters.selectedStudio?.name),
+                performerId = filters.selectedPerformer?.id,
                 filters = buildSet {
                     if (filters.favoritesOnly) add(ItemFilter.IS_FAVORITE)
                     if (filters.unwatchedOnly) add(ItemFilter.IS_UNPLAYED)

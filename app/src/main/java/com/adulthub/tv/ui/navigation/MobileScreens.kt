@@ -312,9 +312,6 @@ fun MobileLibraryScreen(vm: LibraryViewModel, initialCategoryId: String?, onItem
     val state by vm.uiState.collectAsStateWithLifecycle()
     var tab by remember(initialCategoryId) { mutableStateOf(if (initialCategoryId.isNullOrBlank()) LibraryTab.ALL else LibraryTab.CATEGORIES) }
     var sortMenu by rememberSaveable { mutableStateOf(false) }
-    var genreMenu by rememberSaveable { mutableStateOf(false) }
-    var studioMenu by rememberSaveable { mutableStateOf(false) }
-    var performerMenu by rememberSaveable { mutableStateOf(false) }
     LaunchedEffect(initialCategoryId) { if (!initialCategoryId.isNullOrBlank()) vm.openCategory(initialCategoryId) }
     MobilePage(stringResource(R.string.nav_library), horizontalPadding = 12.dp, verticalPadding = 6.dp, contentGap = 4.dp) {
         BoxWithConstraints(Modifier.fillMaxWidth()) {
@@ -360,60 +357,15 @@ fun MobileLibraryScreen(vm: LibraryViewModel, initialCategoryId: String?, onItem
                             }
                         }
                     }
-                    Box {
-                        TextButton(onClick = {
-                            vm.loadGenresForFilter()
-                            genreMenu = true
-                        }) { Text(state.allState.selectedGenre?.name ?: stringResource(R.string.mobile_genre)) }
-                        DropdownMenu(expanded = genreMenu, onDismissRequest = { genreMenu = false }) {
-                            DropdownMenuItem(text = { Text(stringResource(R.string.mobile_all_genres)) }, onClick = {
-                                vm.selectGenre(null)
-                                genreMenu = false
-                            })
-                            state.allState.genres.forEach { genre ->
-                                DropdownMenuItem(text = { Text(genre.name) }, onClick = {
-                                    vm.selectGenre(genre)
-                                    genreMenu = false
-                                })
-                            }
-                        }
-                    }
-                    Box {
-                        TextButton(onClick = {
-                            vm.loadStudiosForFilter()
-                            studioMenu = true
-                        }) { Text(state.allState.selectedStudio?.name ?: stringResource(R.string.mobile_studio)) }
-                        DropdownMenu(expanded = studioMenu, onDismissRequest = { studioMenu = false }) {
-                            DropdownMenuItem(text = { Text(stringResource(R.string.mobile_all_studios)) }, onClick = {
-                                vm.selectCatalogStudio(null)
-                                studioMenu = false
-                            })
-                            state.allState.studios.forEach { studio ->
-                                DropdownMenuItem(text = { Text(studio.name) }, onClick = {
-                                    vm.selectCatalogStudio(studio)
-                                    studioMenu = false
-                                })
-                            }
-                        }
-                    }
-                    Box {
-                        TextButton(onClick = {
-                            vm.loadPerformersForFilter()
-                            performerMenu = true
-                        }) { Text(state.allState.selectedPerformer?.name ?: stringResource(R.string.mobile_performer)) }
-                        DropdownMenu(expanded = performerMenu, onDismissRequest = { performerMenu = false }) {
-                            DropdownMenuItem(text = { Text(stringResource(R.string.mobile_all_performers)) }, onClick = {
-                                vm.selectPerformer(null)
-                                performerMenu = false
-                            })
-                            state.allState.performers.forEach { performer ->
-                                DropdownMenuItem(text = { Text(performer.name) }, onClick = {
-                                    vm.selectPerformer(performer)
-                                    performerMenu = false
-                                })
-                            }
-                        }
-                    }
+                    MobileTaxonomyFilterMenus(
+                        tabState = state.allState,
+                        onLoadGenres = vm::loadGenresForFilter,
+                        onLoadStudios = vm::loadStudiosForFilter,
+                        onLoadPerformers = vm::loadPerformersForFilter,
+                        onSelectGenre = vm::selectGenre,
+                        onSelectStudio = vm::selectCatalogStudio,
+                        onSelectPerformer = vm::selectPerformer
+                    )
                 }
                 LazyVerticalGrid(columns = GridCells.Adaptive(minSize = 142.dp), verticalArrangement = Arrangement.spacedBy(8.dp), horizontalArrangement = Arrangement.spacedBy(6.dp), contentPadding = PaddingValues(top = 8.dp, bottom = 18.dp)) {
                     items(state.allState.items, key = { it.id }) { item ->
@@ -446,6 +398,15 @@ fun MobileLibraryScreen(vm: LibraryViewModel, initialCategoryId: String?, onItem
                             label = { Text(stringResource(filter.labelRes)) }
                         )
                     }
+                    MobileTaxonomyFilterMenus(
+                        tabState = state.randomState,
+                        onLoadGenres = vm::loadGenresForFilter,
+                        onLoadStudios = vm::loadStudiosForFilter,
+                        onLoadPerformers = vm::loadPerformersForFilter,
+                        onSelectGenre = vm::selectRandomGenre,
+                        onSelectStudio = vm::selectRandomStudio,
+                        onSelectPerformer = vm::selectRandomPerformer
+                    )
                 }
                 if (state.randomState.isLoading) LinearProgressIndicator(Modifier.fillMaxWidth())
                 MobileError(state.randomState.errorMessage)
@@ -564,6 +525,76 @@ fun MobileLibraryScreen(vm: LibraryViewModel, initialCategoryId: String?, onItem
                         }
                     }
                 }
+            }
+        }
+    }
+}
+
+@Composable
+private fun MobileTaxonomyFilterMenus(
+    tabState: AllItemsTabState,
+    onLoadGenres: () -> Unit,
+    onLoadStudios: () -> Unit,
+    onLoadPerformers: () -> Unit,
+    onSelectGenre: (TvCategory?) -> Unit,
+    onSelectStudio: (TvStudio?) -> Unit,
+    onSelectPerformer: (TvPerson?) -> Unit
+) {
+    var genreMenu by rememberSaveable { mutableStateOf(false) }
+    var studioMenu by rememberSaveable { mutableStateOf(false) }
+    var performerMenu by rememberSaveable { mutableStateOf(false) }
+
+    Box {
+        TextButton(onClick = {
+            onLoadGenres()
+            genreMenu = true
+        }) { Text(tabState.selectedGenre?.name ?: stringResource(R.string.mobile_genre)) }
+        DropdownMenu(expanded = genreMenu, onDismissRequest = { genreMenu = false }) {
+            DropdownMenuItem(text = { Text(stringResource(R.string.mobile_all_genres)) }, onClick = {
+                onSelectGenre(null)
+                genreMenu = false
+            })
+            tabState.genres.forEach { genre ->
+                DropdownMenuItem(text = { Text(genre.name) }, onClick = {
+                    onSelectGenre(genre)
+                    genreMenu = false
+                })
+            }
+        }
+    }
+    Box {
+        TextButton(onClick = {
+            onLoadStudios()
+            studioMenu = true
+        }) { Text(tabState.selectedStudio?.name ?: stringResource(R.string.mobile_studio)) }
+        DropdownMenu(expanded = studioMenu, onDismissRequest = { studioMenu = false }) {
+            DropdownMenuItem(text = { Text(stringResource(R.string.mobile_all_studios)) }, onClick = {
+                onSelectStudio(null)
+                studioMenu = false
+            })
+            tabState.studios.forEach { studio ->
+                DropdownMenuItem(text = { Text(studio.name) }, onClick = {
+                    onSelectStudio(studio)
+                    studioMenu = false
+                })
+            }
+        }
+    }
+    Box {
+        TextButton(onClick = {
+            onLoadPerformers()
+            performerMenu = true
+        }) { Text(tabState.selectedPerformer?.name ?: stringResource(R.string.mobile_performer)) }
+        DropdownMenu(expanded = performerMenu, onDismissRequest = { performerMenu = false }) {
+            DropdownMenuItem(text = { Text(stringResource(R.string.mobile_all_performers)) }, onClick = {
+                onSelectPerformer(null)
+                performerMenu = false
+            })
+            tabState.performers.forEach { performer ->
+                DropdownMenuItem(text = { Text(performer.name) }, onClick = {
+                    onSelectPerformer(performer)
+                    performerMenu = false
+                })
             }
         }
     }

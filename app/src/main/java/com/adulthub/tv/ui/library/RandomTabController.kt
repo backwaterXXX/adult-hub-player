@@ -153,20 +153,30 @@ internal class RandomTabController(
         reset: Boolean,
         sample: RandomSample
     ): AllItemsTabState {
-        val combined = if (reset) sample.items else state.items + sample.items.excluding(state.items)
-        if (!reset) emptySamples = if (sample.items.isEmpty()) emptySamples + 1 else 0
+        val baseRaw = if (reset) emptyList() else state.rawItems
+        val combinedRaw = baseRaw + sample.items.excluding(baseRaw)
+        val filtered = applyAllItemsFilters(
+            combinedRaw,
+            state.durationFilter,
+            state.excludedTags,
+            state.unwatchedOnly
+        )
+        val addedVisibleCount = if (reset) filtered.size else (filtered.size - state.items.size).coerceAtLeast(0)
+        if (!reset) {
+            emptySamples = if (addedVisibleCount == 0) emptySamples + 1 else 0
+        }
+        val hasMore = if (reset) {
+            sample.hasMore && sample.totalCount > RANDOM_PAGE_SIZE
+        } else {
+            emptySamples < RANDOM_MAX_EMPTY_SAMPLES
+        }
         return state.copy(
-            rawItems = combined,
-            items = applyAllItemsFilters(
-                combined,
-                state.durationFilter,
-                state.excludedTags,
-                state.unwatchedOnly
-            ),
+            rawItems = combinedRaw,
+            items = filtered,
             totalCount = if (reset) sample.totalCount else state.totalCount,
             isLoading = false,
             isLoadingMore = false,
-            hasMore = if (reset) sample.hasMore else emptySamples < RANDOM_MAX_EMPTY_SAMPLES,
+            hasMore = hasMore,
             errorMessage = null
         )
     }
@@ -177,6 +187,7 @@ internal class RandomTabController(
     }
 
     private fun AllItemsTabState.startingOver(): AllItemsTabState = copy(
+        rawItems = emptyList(),
         items = emptyList(),
         isLoading = true,
         isLoadingMore = false,

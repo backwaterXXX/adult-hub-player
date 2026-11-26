@@ -194,6 +194,59 @@ class RandomTabControllerTest {
     }
 
     @Test
+    fun `small catalogue under page size does not offer load more`() = runTest(dispatcher) {
+        repository.total = 25
+        repository.page = { offset, limit ->
+            Result.success(TvItemsPage((offset until offset + limit).map { movie("m-$it") }, 25, offset))
+        }
+
+        controller(offset = 0).loadRandom(reset = true)
+        advanceUntilIdle()
+
+        assertFalse(state.value.randomState.hasMore)
+    }
+
+    @Test
+    fun `three duplicate samples in a row stop load more`() = runTest(dispatcher) {
+        repository.total = 100
+        repository.page = { _, _ ->
+            Result.success(TvItemsPage((0 until RANDOM_PAGE_SIZE).map { movie("m-$it") }, 100, 0))
+        }
+        val controller = controller()
+        controller.loadRandom(reset = true)
+        advanceUntilIdle()
+        assertTrue(state.value.randomState.hasMore)
+
+        repeat(RANDOM_MAX_EMPTY_SAMPLES) {
+            controller.loadRandom(reset = false)
+            advanceUntilIdle()
+        }
+
+        assertFalse(state.value.randomState.hasMore)
+    }
+
+    @Test
+    fun `rawItems preserves items filtered out by unwatchedOnly`() = runTest(dispatcher) {
+        repository.total = 10
+        repository.page = { _, _ ->
+            Result.success(
+                TvItemsPage(
+                    listOf(movie("m-1", played = true), movie("m-2", played = false)),
+                    10,
+                    0
+                )
+            )
+        }
+        val controller = controller()
+        controller.toggleUnwatchedOnly()
+        advanceUntilIdle()
+
+        val randomState = state.value.randomState
+        assertEquals(listOf("m-2"), randomState.items.map { it.id })
+        assertEquals(setOf("m-1", "m-2"), randomState.rawItems.map { it.id }.toSet())
+    }
+
+    @Test
     fun `a failure surfaces as an error and keeps the tab usable`() = runTest(dispatcher) {
         repository.total = 100
         repository.page = { _, _ -> Result.failure(IllegalStateException("boom")) }

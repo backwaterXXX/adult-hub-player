@@ -210,7 +210,8 @@ open class LibraryRepository(
         studioIds: List<UUID> = emptyList(),
         personIds: List<UUID> = emptyList(),
         genres: List<String> = emptyList(),
-        studios: List<String> = emptyList()
+        studios: List<String> = emptyList(),
+        performerId: String? = null
     ): Result<TvItem?> = withContext(Dispatchers.IO) {
         try {
             val pool = fetchRandomVideoPool(
@@ -218,7 +219,7 @@ open class LibraryRepository(
                 baseUrl = clientManager.currentServerUrl ?: "",
                 category = genres.firstOrNull(),
                 studio = studios.firstOrNull(),
-                performerId = personIds.firstOrNull()?.toString(),
+                performerId = performerId ?: personIds.firstOrNull()?.toString(),
                 isFavorite = if (filters.contains(ItemFilter.IS_FAVORITE)) true else null
             )
 
