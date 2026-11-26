@@ -99,7 +99,10 @@ jobs:
 
   dependency-review:
     name: Dependency Review
-    if: github.event_name == 'pull_request'
+    # The action needs a dependency graph, which this account cannot enable, so
+    # the job only runs when the repository variable turns it on. Without the
+    # guard every pull request carried a check that could never pass.
+    if: github.event_name == 'pull_request' && vars.DEPENDENCY_REVIEW == 'enabled'
     runs-on: ubuntu-24.04
     timeout-minutes: 15
     permissions:
