@@ -87,7 +87,9 @@ fun AllItemsTab(
     onLoadStudios: () -> Unit,
     onLoadPerformers: () -> Unit,
     onSurpriseMe: () -> Unit,
-    getImageUrl: (TvItem) -> String
+    getImageUrl: (TvItem) -> String,
+    isRandom: Boolean = false,
+    onShuffle: () -> Unit = {}
 ) {
     var filterPicker by rememberSaveable { mutableStateOf<CatalogFilter?>(null) }
     val gridState = rememberLazyGridState()
@@ -129,47 +131,48 @@ fun AllItemsTab(
                     color = TextSecondary,
                     modifier = Modifier.align(Alignment.CenterVertically)
                 )
-                // Sort By Button
-                TvSecondaryButton(
-                    onClick = {
-                        val nextSort = when (state.sortBy) {
-                            "DateCreated" -> "SortName"
-                            "SortName" -> "Runtime"
-                            else -> "DateCreated"
-                        }
-                        onSortChange(nextSort, state.sortOrder)
-                    },
-                    modifier = Modifier.height(36.dp)
-                ) {
-                    val label = stringResource(
-                        when (state.sortBy) {
-                            "DateCreated" -> R.string.library_sort_by_date_added
-                            "SortName" -> R.string.library_sort_by_title
-                            "Runtime" -> R.string.library_sort_by_duration
-                            else -> R.string.library_sort_by_default
-                        }
-                    )
-                    Text(text = stringResource(R.string.library_sort_value, label), fontSize = 12.sp)
-                }
-
-                // Sort Order Button
-                TvSecondaryButton(
-                    onClick = {
-                        val nextOrder = if (state.sortOrder == SortOrder.DESCENDING) {
-                            SortOrder.ASCENDING
-                        } else {
-                            SortOrder.DESCENDING
-                        }
-                        onSortChange(state.sortBy, nextOrder)
-                    },
-                    modifier = Modifier.height(36.dp)
-                ) {
-                    val arrow = if (state.sortOrder == SortOrder.DESCENDING) {
-                        stringResource(R.string.library_sort_order_desc)
-                    } else {
-                        stringResource(R.string.library_sort_order_asc)
+                // Sort controls are hidden on the Random tab: the order is always random.
+                if (!isRandom) {
+                    TvSecondaryButton(
+                        onClick = {
+                            val nextSort = when (state.sortBy) {
+                                "DateCreated" -> "SortName"
+                                "SortName" -> "Runtime"
+                                else -> "DateCreated"
+                            }
+                            onSortChange(nextSort, state.sortOrder)
+                        },
+                        modifier = Modifier.height(36.dp)
+                    ) {
+                        val label = stringResource(
+                            when (state.sortBy) {
+                                "DateCreated" -> R.string.library_sort_by_date_added
+                                "SortName" -> R.string.library_sort_by_title
+                                "Runtime" -> R.string.library_sort_by_duration
+                                else -> R.string.library_sort_by_default
+                            }
+                        )
+                        Text(text = stringResource(R.string.library_sort_value, label), fontSize = 12.sp)
                     }
-                    Text(text = arrow, fontSize = 12.sp)
+
+                    TvSecondaryButton(
+                        onClick = {
+                            val nextOrder = if (state.sortOrder == SortOrder.DESCENDING) {
+                                SortOrder.ASCENDING
+                            } else {
+                                SortOrder.DESCENDING
+                            }
+                            onSortChange(state.sortBy, nextOrder)
+                        },
+                        modifier = Modifier.height(36.dp)
+                    ) {
+                        val arrow = if (state.sortOrder == SortOrder.DESCENDING) {
+                            stringResource(R.string.library_sort_order_desc)
+                        } else {
+                            stringResource(R.string.library_sort_order_asc)
+                        }
+                        Text(text = arrow, fontSize = 12.sp)
+                    }
                 }
 
                 // Favorites Only Toggle
@@ -283,8 +286,14 @@ fun AllItemsTab(
                 )
             }
             Spacer(modifier = Modifier.weight(1f))
-            TvPrimaryButton(onClick = onSurpriseMe, modifier = Modifier.height(36.dp)) {
-                Text(stringResource(R.string.home_play_random), fontSize = 12.sp)
+            if (isRandom) {
+                TvPrimaryButton(onClick = onShuffle, modifier = Modifier.height(36.dp)) {
+                    Text(stringResource(R.string.library_shuffle), fontSize = 12.sp)
+                }
+            } else {
+                TvPrimaryButton(onClick = onSurpriseMe, modifier = Modifier.height(36.dp)) {
+                    Text(stringResource(R.string.home_play_random), fontSize = 12.sp)
+                }
             }
         }
 

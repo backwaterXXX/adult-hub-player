@@ -15,6 +15,7 @@ import com.adulthub.tv.data.resolver.VideoDto
 
 enum class LibraryTab(@StringRes val titleRes: Int) {
     ALL(R.string.library_tab_movies),
+    RANDOM(R.string.library_tab_random),
     CATEGORIES(R.string.library_tab_categories),
     ACTORS(R.string.library_tab_actors),
     STUDIOS(R.string.library_tab_studios),
@@ -134,6 +135,8 @@ data class ChannelsTabState(
 data class LibraryUiState(
     val selectedTab: LibraryTab = LibraryTab.ALL,
     val allState: AllItemsTabState = AllItemsTabState(),
+    /** Reuses the All tab shape: the Random tab has the same filters and grid. */
+    val randomState: AllItemsTabState = AllItemsTabState(),
     val categoriesState: CategoriesTabState = CategoriesTabState(),
     val actorsState: ActorsTabState = ActorsTabState(),
     val studiosState: StudiosTabState = StudiosTabState(),

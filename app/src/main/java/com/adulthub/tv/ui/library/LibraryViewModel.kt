@@ -57,6 +57,12 @@ class LibraryViewModel(
     private val _navEvents = MutableSharedFlow<LibraryNavEvent>()
     val navEvents: SharedFlow<LibraryNavEvent> = _navEvents.asSharedFlow()
 
+    private val randomTab = RandomTabController(
+        scope = viewModelScope,
+        uiState = _uiState,
+        libraryRepository = libraryRepository,
+        context = context
+    )
     private val categoriesTab = CategoriesTabController(
         scope = viewModelScope,
         uiState = _uiState,
@@ -156,9 +162,15 @@ class LibraryViewModel(
             _uiState.update { it.copy(allState = it.allState.copy(isLoadingGenres = true)) }
             val result = libraryRepository.getGenres()
             _uiState.update { state ->
+                val genres = result.getOrDefault(emptyList()).sortedBy { it.name.lowercase() }
                 state.copy(
                     allState = state.allState.copy(
-                        genres = result.getOrDefault(emptyList()).sortedBy { it.name.lowercase() },
+                        genres = genres,
+                        areGenresLoaded = result.isSuccess,
+                        isLoadingGenres = false
+                    ),
+                    randomState = state.randomState.copy(
+                        genres = genres,
                         areGenresLoaded = result.isSuccess,
                         isLoadingGenres = false
                     )
@@ -175,9 +187,15 @@ class LibraryViewModel(
             // add one request per studio to a list of several hundred entries.
             val result = studioRepository.getStudios(limit = 500)
             _uiState.update { state ->
+                val studios = result.getOrDefault(emptyList()).sortedBy { it.name.lowercase() }
                 state.copy(
                     allState = state.allState.copy(
-                        studios = result.getOrDefault(emptyList()).sortedBy { it.name.lowercase() },
+                        studios = studios,
+                        areStudiosLoaded = result.isSuccess,
+                        isLoadingStudios = false
+                    ),
+                    randomState = state.randomState.copy(
+                        studios = studios,
                         areStudiosLoaded = result.isSuccess,
                         isLoadingStudios = false
                     )
@@ -192,9 +210,15 @@ class LibraryViewModel(
             _uiState.update { it.copy(allState = it.allState.copy(isLoadingPerformers = true)) }
             val result = personRepository.getPersons(limit = 100)
             _uiState.update { state ->
+                val performers = result.getOrDefault(emptyList()).sortedBy { it.name.lowercase() }
                 state.copy(
                     allState = state.allState.copy(
-                        performers = result.getOrDefault(emptyList()).sortedBy { it.name.lowercase() },
+                        performers = performers,
+                        arePerformersLoaded = result.isSuccess,
+                        isLoadingPerformers = false
+                    ),
+                    randomState = state.randomState.copy(
+                        performers = performers,
                         arePerformersLoaded = result.isSuccess,
                         isLoadingPerformers = false
                     )
@@ -207,6 +231,7 @@ class LibraryViewModel(
         _uiState.update { it.copy(selectedTab = tab) }
         when (tab) {
             LibraryTab.ALL -> if (_uiState.value.allState.items.isEmpty()) loadAllItems(reset = true)
+            LibraryTab.RANDOM -> randomTab.loadRandom(reset = true)
             LibraryTab.CATEGORIES -> if (_uiState.value.categoriesState.categories.isEmpty()) loadCategories()
             LibraryTab.ACTORS -> if (_uiState.value.actorsState.allPersons.isEmpty()) loadActors()
             LibraryTab.STUDIOS -> if (_uiState.value.studiosState.studios.isEmpty()) loadStudios()
@@ -225,6 +250,26 @@ class LibraryViewModel(
     fun loadMoreCategoryMovies() = categoriesTab.loadMoreCategoryMovies()
 
     fun retrySelectedCategoryMovies() = categoriesTab.retrySelectedCategoryMovies()
+
+    // --- RANDOM TAB (see RandomTabController) ---
+
+    fun loadRandomItems() = randomTab.loadRandom(reset = false)
+
+    fun shuffleRandom() = randomTab.shuffle()
+
+    fun setRandomDurationFilter(filter: DurationFilter) = randomTab.setDurationFilter(filter)
+
+    fun toggleRandomHdOnly() = randomTab.toggleHdOnly()
+
+    fun toggleRandomFavoritesOnly() = randomTab.toggleFavoritesOnly()
+
+    fun toggleRandomUnwatchedOnly() = randomTab.toggleUnwatchedOnly()
+
+    fun selectRandomGenre(genre: TvCategory?) = randomTab.selectGenre(genre)
+
+    fun selectRandomStudio(studio: TvStudio?) = randomTab.selectStudio(studio)
+
+    fun selectRandomPerformer(performer: TvPerson?) = randomTab.selectPerformer(performer)
 
     // --- ALL ITEMS TAB ---
 

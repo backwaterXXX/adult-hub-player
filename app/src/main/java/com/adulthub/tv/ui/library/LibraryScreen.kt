@@ -140,85 +140,117 @@ fun LibraryScreen(
 
             // Tab Content
             Box(modifier = Modifier.weight(1f)) {
-                when (state.selectedTab) {
-                    LibraryTab.ALL -> {
-                        AllItemsTab(
-                            state = state.allState,
-                            onMovieClick = viewModel::onMovieClicked,
-                            onLoadMore = { viewModel.loadAllItems(reset = false) },
-                            onRetry = { viewModel.loadAllItems(reset = true) },
-                            onSortChange = viewModel::setSort,
-                            onToggleFavorites = viewModel::toggleFavoritesOnly,
-                            onToggleUnwatched = viewModel::toggleUnwatchedOnly,
-                            onDurationFilterChange = viewModel::setDurationFilter,
-                            onToggleHdOnly = viewModel::toggleHdOnly,
-                            onSelectGenre = viewModel::selectGenre,
-                            onSelectStudio = viewModel::selectCatalogStudio,
-                            onSelectPerformer = viewModel::selectPerformer,
-                            onLoadGenres = viewModel::loadGenresForFilter,
-                            onLoadStudios = viewModel::loadStudiosForFilter,
-                            onLoadPerformers = viewModel::loadPerformersForFilter,
-                            onSurpriseMe = viewModel::onSurpriseMeClicked,
-                            getImageUrl = viewModel::getItemImageUrl
-                        )
-                    }
-
-                    LibraryTab.CATEGORIES -> {
-                        CategoriesTab(
-                            state = state.categoriesState,
-                            onCategoryClick = viewModel::selectCategory,
-                            onMovieClick = viewModel::onMovieClicked,
-                            onBackToCategories = { viewModel.selectCategory(null) },
-                            onRetry = viewModel::loadCategories,
-                            onRetryCategoryMovies = viewModel::retrySelectedCategoryMovies,
-                            onLoadMore = viewModel::loadMoreCategoryMovies,
-                            getImageUrl = viewModel::getItemImageUrl
-                        )
-                    }
-
-                    LibraryTab.ACTORS -> {
-                        ActorsTab(
-                            state = state.actorsState,
-                            onPersonClick = viewModel::onPersonClicked,
-                            onSelectLetter = viewModel::selectAlphabetLetter,
-                            onToggleOnlyWithPhoto = viewModel::toggleOnlyWithPhoto,
-                            onRetry = { viewModel.loadActors() },
-                            onLoadMore = viewModel::loadMoreActors,
-                            onSearchQueryChange = viewModel::setActorSearchQuery,
-                            getImageUrl = viewModel::getPersonImageUrl
-                        )
-                    }
-
-                    LibraryTab.STUDIOS -> {
-                        StudiosTab(
-                            state = state.studiosState,
-                            onStudioClick = viewModel::selectStudio,
-                            onMovieClick = viewModel::onMovieClicked,
-                            onBackToStudios = { viewModel.selectStudio(null) },
-                            onRetry = viewModel::loadStudios,
-                            onRetryStudioMovies = viewModel::retrySelectedStudioMovies,
-                            onLoadMore = viewModel::loadMoreStudioMovies,
-                            getImageUrl = viewModel::getItemImageUrl
-                        )
-                    }
-
-                    LibraryTab.CHANNELS -> {
-                        ChannelsTab(
-                            state = state.channelsState,
-                            onChannelClick = viewModel::selectChannel,
-                            onVideoClick = viewModel::onChannelVideoClicked,
-                            onBackToChannels = { viewModel.selectChannel(null) },
-                            onRetry = viewModel::loadChannels,
-                            onRetryChannelVideos = viewModel::retrySelectedChannelVideos,
-                            onLoadMore = viewModel::loadMoreChannelVideos,
-                            onSortModeChange = viewModel::setChannelSortMode,
-                            onHideChannel = viewModel::hideCurrentChannel,
-                            onDurationFilterChange = viewModel::setChannelDurationFilter,
-                            getVideoThumbnailUrl = viewModel::getChannelVideoThumbnailUrl
-                        )
-                    }
-                }
+                LibraryTabContent(state = state, viewModel = viewModel)
             }
+        }
+    }
+}
+
+@Composable
+private fun LibraryTabContent(
+    state: LibraryUiState,
+    viewModel: LibraryViewModel
+) {
+    when (state.selectedTab) {
+        LibraryTab.ALL -> {
+            AllItemsTab(
+                state = state.allState,
+                onMovieClick = viewModel::onMovieClicked,
+                onLoadMore = { viewModel.loadAllItems(reset = false) },
+                onRetry = { viewModel.loadAllItems(reset = true) },
+                onSortChange = viewModel::setSort,
+                onToggleFavorites = viewModel::toggleFavoritesOnly,
+                onToggleUnwatched = viewModel::toggleUnwatchedOnly,
+                onDurationFilterChange = viewModel::setDurationFilter,
+                onToggleHdOnly = viewModel::toggleHdOnly,
+                onSelectGenre = viewModel::selectGenre,
+                onSelectStudio = viewModel::selectCatalogStudio,
+                onSelectPerformer = viewModel::selectPerformer,
+                onLoadGenres = viewModel::loadGenresForFilter,
+                onLoadStudios = viewModel::loadStudiosForFilter,
+                onLoadPerformers = viewModel::loadPerformersForFilter,
+                onSurpriseMe = viewModel::onSurpriseMeClicked,
+                getImageUrl = viewModel::getItemImageUrl
+            )
+        }
+
+        LibraryTab.RANDOM -> {
+            AllItemsTab(
+                state = state.randomState,
+                onMovieClick = viewModel::onMovieClicked,
+                onLoadMore = { viewModel.loadRandomItems() },
+                onRetry = { viewModel.shuffleRandom() },
+                onSortChange = { _, _ -> },
+                onToggleFavorites = viewModel::toggleRandomFavoritesOnly,
+                onToggleUnwatched = viewModel::toggleRandomUnwatchedOnly,
+                onDurationFilterChange = viewModel::setRandomDurationFilter,
+                onToggleHdOnly = viewModel::toggleRandomHdOnly,
+                onSelectGenre = viewModel::selectRandomGenre,
+                onSelectStudio = viewModel::selectRandomStudio,
+                onSelectPerformer = viewModel::selectRandomPerformer,
+                onLoadGenres = viewModel::loadGenresForFilter,
+                onLoadStudios = viewModel::loadStudiosForFilter,
+                onLoadPerformers = viewModel::loadPerformersForFilter,
+                onSurpriseMe = viewModel::onSurpriseMeClicked,
+                getImageUrl = viewModel::getItemImageUrl,
+                isRandom = true,
+                onShuffle = viewModel::shuffleRandom
+            )
+        }
+
+        LibraryTab.CATEGORIES -> {
+            CategoriesTab(
+                state = state.categoriesState,
+                onCategoryClick = viewModel::selectCategory,
+                onMovieClick = viewModel::onMovieClicked,
+                onBackToCategories = { viewModel.selectCategory(null) },
+                onRetry = viewModel::loadCategories,
+                onRetryCategoryMovies = viewModel::retrySelectedCategoryMovies,
+                onLoadMore = viewModel::loadMoreCategoryMovies,
+                getImageUrl = viewModel::getItemImageUrl
+            )
+        }
+
+        LibraryTab.ACTORS -> {
+            ActorsTab(
+                state = state.actorsState,
+                onPersonClick = viewModel::onPersonClicked,
+                onSelectLetter = viewModel::selectAlphabetLetter,
+                onToggleOnlyWithPhoto = viewModel::toggleOnlyWithPhoto,
+                onRetry = { viewModel.loadActors() },
+                onLoadMore = viewModel::loadMoreActors,
+                onSearchQueryChange = viewModel::setActorSearchQuery,
+                getImageUrl = viewModel::getPersonImageUrl
+            )
+        }
+
+        LibraryTab.STUDIOS -> {
+            StudiosTab(
+                state = state.studiosState,
+                onStudioClick = viewModel::selectStudio,
+                onMovieClick = viewModel::onMovieClicked,
+                onBackToStudios = { viewModel.selectStudio(null) },
+                onRetry = viewModel::loadStudios,
+                onRetryStudioMovies = viewModel::retrySelectedStudioMovies,
+                onLoadMore = viewModel::loadMoreStudioMovies,
+                getImageUrl = viewModel::getItemImageUrl
+            )
+        }
+
+        LibraryTab.CHANNELS -> {
+            ChannelsTab(
+                state = state.channelsState,
+                onChannelClick = viewModel::selectChannel,
+                onVideoClick = viewModel::onChannelVideoClicked,
+                onBackToChannels = { viewModel.selectChannel(null) },
+                onRetry = viewModel::loadChannels,
+                onRetryChannelVideos = viewModel::retrySelectedChannelVideos,
+                onLoadMore = viewModel::loadMoreChannelVideos,
+                onSortModeChange = viewModel::setChannelSortMode,
+                onHideChannel = viewModel::hideCurrentChannel,
+                onDurationFilterChange = viewModel::setChannelDurationFilter,
+                getVideoThumbnailUrl = viewModel::getChannelVideoThumbnailUrl
+            )
         }
     }
 }

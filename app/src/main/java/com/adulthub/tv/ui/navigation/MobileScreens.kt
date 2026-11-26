@@ -419,6 +419,37 @@ fun MobileLibraryScreen(vm: LibraryViewModel, initialCategoryId: String?, onItem
                 }
             }
 
+            LibraryTab.RANDOM -> {
+                Row(Modifier.horizontalScroll(rememberScrollState()), horizontalArrangement = Arrangement.spacedBy(4.dp)) {
+                    FilterChip(selected = state.randomState.favoritesOnly, onClick = vm::toggleRandomFavoritesOnly, label = { Text(stringResource(R.string.mobile_favorites)) })
+                    FilterChip(selected = state.randomState.unwatchedOnly, onClick = vm::toggleRandomUnwatchedOnly, label = { Text(stringResource(R.string.mobile_unwatched)) })
+                    FilterChip(selected = state.randomState.hdOnly, onClick = vm::toggleRandomHdOnly, label = { Text(stringResource(R.string.mobile_hd)) })
+                    TextButton(onClick = vm::shuffleRandom) { Text(stringResource(R.string.library_shuffle)) }
+                }
+                Row(Modifier.horizontalScroll(rememberScrollState()), horizontalArrangement = Arrangement.spacedBy(4.dp)) {
+                    DurationFilter.entries.forEach { filter ->
+                        FilterChip(
+                            selected = state.randomState.durationFilter == filter,
+                            onClick = { vm.setRandomDurationFilter(filter) },
+                            label = { Text(stringResource(filter.labelRes)) }
+                        )
+                    }
+                }
+                if (state.randomState.isLoading) LinearProgressIndicator(Modifier.fillMaxWidth())
+                MobileError(state.randomState.errorMessage)
+                if (state.randomState.isEmpty && state.randomState.errorMessage == null) {
+                    Text(stringResource(R.string.library_random_empty), style = MaterialTheme.typography.bodyMedium)
+                }
+                LazyVerticalGrid(columns = GridCells.Adaptive(minSize = 142.dp), verticalArrangement = Arrangement.spacedBy(8.dp), horizontalArrangement = Arrangement.spacedBy(6.dp), contentPadding = PaddingValues(top = 8.dp, bottom = 18.dp)) {
+                    items(state.randomState.items, key = { it.id }) { item ->
+                        MobileMediaPosterCard(item.title, vm.getItemImageUrl(item)) {
+                            if (item.providerVideoId != null) onPlay(item.id) else onItem(item.id)
+                        }
+                    }
+                    item { if (state.randomState.hasMore) TextButton(onClick = { vm.loadRandomItems() }) { Text(stringResource(R.string.mobile_load_more)) } }
+                }
+            }
+
             LibraryTab.CATEGORIES -> {
                 val selected = state.categoriesState.selectedCategory
                 if (selected != null) {

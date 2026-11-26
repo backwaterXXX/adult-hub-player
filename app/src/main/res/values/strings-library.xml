@@ -35,6 +35,9 @@
 
     <!-- Library tabs -->
     <string name="library_tab_movies">Movies</string>
+    <string name="library_tab_random">Random</string>
+    <string name="library_shuffle">Shuffle</string>
+    <string name="library_random_empty">No movies match these filters. Shuffle for another sample.</string>
     <string name="library_tab_categories">Categories</string>
     <string name="library_tab_actors">Actors</string>
     <string name="library_tab_studios">Studios</string>
