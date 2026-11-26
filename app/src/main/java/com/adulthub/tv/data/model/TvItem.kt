@@ -21,6 +21,8 @@ data class TvItem(
     val genres: List<String> = emptyList(),
     val tags: List<String> = emptyList(),
     val studios: List<String> = emptyList(),
+    /** Display label of the source channel; empty studios fall back to it. */
+    val channelName: String? = null,
     val people: List<TvPersonRole> = emptyList(),
     val primaryImageTag: String? = null,
     val backdropImageTag: String? = null,
@@ -39,8 +41,13 @@ data class TvItem(
     val width: Int? = null,
     val height: Int? = null
 ) {
+    /**
+     * True only for a legacy provider-only reference the catalog cannot resolve.
+     * Adult Hub v1 catalog ids are themselves "telegram:<channel>:<message>:<file>",
+     * so those stay playable and keep detail, genres and favourites available.
+     */
     val isTelegram: Boolean
-        get() = !providerVideoId.isNullOrBlank() || id.startsWith("telegram:")
+        get() = id.isNotBlank() && !id.startsWith("telegram:") && !providerVideoId.isNullOrBlank()
 
     val isHd: Boolean
         get() = (width ?: 0) >= 1280 || (height ?: 0) >= 720 || (fileSizeBytes ?: 0L) >= 300 * 1024 * 1024L

@@ -1,32 +1,16 @@
 package com.adulthub.tv.data.repository
 
-import com.adulthub.tv.data.jellyfin.JellyfinClientManager
-import com.adulthub.tv.data.jellyfin.toTvItem
+import com.adulthub.tv.data.api.AdultHubClientManager
+import com.adulthub.tv.data.api.toTvItem
 import com.adulthub.tv.data.local.SettingsDataStore
 import com.adulthub.tv.data.model.TvItem
 import com.adulthub.tv.data.model.TvStudio
-import java.util.UUID
 import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.Dispatchers
-import kotlinx.coroutines.async
-import kotlinx.coroutines.awaitAll
-import kotlinx.coroutines.coroutineScope
-import kotlinx.coroutines.sync.Semaphore
-import kotlinx.coroutines.sync.withPermit
 import kotlinx.coroutines.withContext
-import org.jellyfin.sdk.api.client.extensions.libraryApi
-import org.jellyfin.sdk.api.client.extensions.studioApi
-import org.jellyfin.sdk.model.api.BaseItemDto
-import org.jellyfin.sdk.model.api.BaseItemKind
-import org.jellyfin.sdk.model.api.ImageType
-import org.jellyfin.sdk.model.api.ItemFields
-import org.jellyfin.sdk.model.api.ItemSortBy
-import org.jellyfin.sdk.model.api.SortOrder
-import org.jellyfin.sdk.model.api.request.GetItemsRequest
-import org.jellyfin.sdk.model.api.request.GetStudiosRequest
 
 open class StudioRepository(
-    private val clientManager: JellyfinClientManager,
+    private val clientManager: AdultHubClientManager,
     private val settingsDataStore: SettingsDataStore
 ) {
     open suspend fun getStudios(
@@ -37,27 +21,15 @@ open class StudioRepository(
     ): Result<List<TvStudio>> = withContext(Dispatchers.IO) {
         try {
             val api = clientManager.getApi()
-            val targetParentId = parentId ?: settingsDataStore.getSelectedLibraryId()
-            val parentUuid = targetParentId?.let { UUID.fromString(it) }
-            val userUuid = clientManager.currentUserId?.let { runCatching { UUID.fromString(it) }.getOrNull() }
-
-            val response = api.studioApi.getStudios(
-                GetStudiosRequest(
-                    userId = userUuid,
-                    parentId = parentUuid,
-                    startIndex = startIndex,
-                    limit = limit
-                )
+            val response = api.getStudios(
+                offset = startIndex,
+                limit = limit.coerceAtMost(100)
             )
-            val items = response.content.items
-            val movieCounts = if (includeMovieCounts) fetchMovieCounts(items, targetParentId) else emptyMap()
-            val studios = items.map { item ->
-                val name = item.name.orEmpty()
+            val studios = response.items.map { item ->
                 TvStudio(
-                    id = item.id.toString(),
-                    name = name,
-                    primaryImageTag = item.imageTags?.get(ImageType.PRIMARY),
-                    movieCount = movieCounts[name]
+                    id = item.name,
+                    name = item.name,
+                    movieCount = item.count
                 )
             }
             Result.success(studios)
@@ -65,42 +37,6 @@ open class StudioRepository(
             throw e
         } catch (e: Exception) {
             Result.failure(e)
-        }
-    }
-
-    /**
-     * Reads the movie count of a bounded number of studios.
-     *
-     * Every count is one extra request, so only the first [MAX_COUNTED_STUDIOS]
-     * studios are counted. A failing count stays unknown instead of falling back
-     * to a studio child count, whose semantics are not the library movie total.
-     */
-    private suspend fun fetchMovieCounts(
-        items: List<BaseItemDto>,
-        parentId: String?
-    ): Map<String, Int> {
-        val countSemaphore = Semaphore(4)
-        return coroutineScope {
-            items.take(MAX_COUNTED_STUDIOS)
-                .map { item ->
-                    async {
-                        val name = item.name.orEmpty()
-                        val count = try {
-                            countSemaphore.withPermit {
-                                getStudioMoviesPage(name, parentId, startIndex = 0, limit = 1)
-                                    .getOrThrow().totalRecordCount
-                            }
-                        } catch (e: CancellationException) {
-                            throw e
-                        } catch (_: Exception) {
-                            null
-                        }
-                        name to count
-                    }
-                }
-                .awaitAll()
-                .mapNotNull { (name, count) -> count?.let { name to it } }
-                .toMap()
         }
     }
 
@@ -112,29 +48,18 @@ open class StudioRepository(
     ): Result<TvItemsPage> = withContext(Dispatchers.IO) {
         try {
             val api = clientManager.getApi()
-            val targetParentId = parentId ?: settingsDataStore.getSelectedLibraryId()
-            val parentUuid = targetParentId?.let { UUID.fromString(it) }
-            val userUuid = clientManager.currentUserId?.let { runCatching { UUID.fromString(it) }.getOrNull() }
-
-            val response = api.libraryApi.getItems(
-                GetItemsRequest(
-                    userId = userUuid,
-                    parentId = parentUuid,
-                    studios = listOf(studioName),
-                    startIndex = startIndex,
-                    limit = limit,
-                    recursive = true,
-                    includeItemTypes = setOf(BaseItemKind.MOVIE),
-                    fields = setOf(ItemFields.PROVIDER_IDS),
-                    sortBy = listOf(ItemSortBy.DATE_CREATED),
-                    sortOrder = listOf(SortOrder.DESCENDING),
-                    enableTotalRecordCount = true
-                )
+            val baseUrl = clientManager.currentServerUrl ?: ""
+            val response = api.getVideos(
+                studio = studioName,
+                offset = startIndex,
+                limit = limit.coerceAtMost(100),
+                sort = "latest",
+                direction = "desc"
             )
             val page = TvItemsPage(
-                items = response.content.items.map { it.toTvItem() },
-                totalRecordCount = response.content.totalRecordCount,
-                startIndex = response.content.startIndex
+                items = response.items.map { it.toTvItem(baseUrl) },
+                totalRecordCount = response.totalCount,
+                startIndex = response.offset
             )
             Result.success(page)
         } catch (e: CancellationException) {
@@ -155,9 +80,4 @@ open class StudioRepository(
         startIndex = startIndex,
         limit = limit
     ).map { it.items }
-
-    private companion object {
-        /** Upper bound for the per-studio count requests of a single list load. */
-        const val MAX_COUNTED_STUDIOS = 24
-    }
 }
