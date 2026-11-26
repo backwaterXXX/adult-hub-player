@@ -221,7 +221,9 @@ fun MovieCard(
 
                 val meta = buildString {
                     item.year?.let { append(it) }
-                    val studio = item.studios.firstOrNull()
+                    // Telegram items rarely have a production studio, so the source
+                    // channel keeps the second line informative on the card.
+                    val studio = item.studios.firstOrNull() ?: item.channelName
                     if (!studio.isNullOrBlank()) {
                         if (isNotEmpty()) append(" • ")
                         append(studio)

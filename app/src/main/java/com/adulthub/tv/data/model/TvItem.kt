@@ -21,6 +21,8 @@ data class TvItem(
     val genres: List<String> = emptyList(),
     val tags: List<String> = emptyList(),
     val studios: List<String> = emptyList(),
+    /** Display label of the source channel; empty studios fall back to it. */
+    val channelName: String? = null,
     val people: List<TvPersonRole> = emptyList(),
     val primaryImageTag: String? = null,
     val backdropImageTag: String? = null,
