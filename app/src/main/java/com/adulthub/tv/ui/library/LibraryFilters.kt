@@ -10,7 +10,6 @@ import java.util.UUID
 internal fun applyAllItemsFilters(
     items: List<TvItem>,
     durationFilter: DurationFilter,
-    hdOnly: Boolean,
     excludedTags: Set<String>,
     unwatchedOnly: Boolean = false
 ): List<TvItem> {
@@ -22,9 +21,6 @@ internal fun applyAllItemsFilters(
             val hasExcludedGenre = item.genres.any { g -> excludedTags.any { it.equals(g, ignoreCase = true) } }
             val hasExcludedTag = item.tags.any { t -> excludedTags.any { it.equals(t, ignoreCase = true) } }
             if (hasExcludedGenre || hasExcludedTag) return@filter false
-        }
-        if (hdOnly && !item.isHd) {
-            return@filter false
         }
         val durationMinutes = item.runtimeMinutes ?: (item.runtimeTicks?.div(10_000_000L * 60L)?.toInt()) ?: 0
         when (durationFilter) {

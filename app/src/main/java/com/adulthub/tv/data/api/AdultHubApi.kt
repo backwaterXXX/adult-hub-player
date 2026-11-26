@@ -38,6 +38,7 @@ interface AdultHubApi {
         @Query("performer_id") performerId: String? = null,
         @Query("min_duration") minDuration: Int? = null,
         @Query("max_duration") maxDuration: Int? = null,
+        @Query("quality") quality: String? = null,
         @Query("is_favorite") isFavorite: Boolean? = null
     ): CatalogVideoListResponseDto
 

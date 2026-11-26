@@ -6,6 +6,7 @@ import com.adulthub.tv.data.api.AdultHubClientManager
 import com.adulthub.tv.data.model.ChannelSortMode
 import com.adulthub.tv.data.model.DurationFilter
 import com.adulthub.tv.data.model.ItemFilter
+import com.adulthub.tv.data.model.QualityTier
 import com.adulthub.tv.data.model.SortOrder
 import com.adulthub.tv.data.model.TvCategory
 import com.adulthub.tv.data.model.TvChannel
@@ -667,9 +668,9 @@ class LibraryViewModelTest {
     }
 
     @Test
-    fun `duration and hd filtering filters allState items`() = runTest(testDispatcher) {
-        val shortMovie = TvItem(id = "m-short", title = "Short", runtimeTicks = 10L * 60L * 10_000_000L, width = 1920, height = 1080)
-        val longMovie = TvItem(id = "m-long", title = "Long", runtimeTicks = 50L * 60L * 10_000_000L, width = 720, height = 480)
+    fun `duration and quality filters go to the backend`() = runTest(testDispatcher) {
+        val shortMovie = TvItem(id = "m-short", title = "Short", runtimeTicks = 10L * 60L * 10_000_000L)
+        val longMovie = TvItem(id = "m-long", title = "Long", runtimeTicks = 50L * 60L * 10_000_000L)
         fakeLibraryRepository.itemsPageResult = Result.success(
             TvItemsPage(items = listOf(shortMovie, longMovie), totalRecordCount = 2, startIndex = 0)
         )
@@ -692,12 +693,23 @@ class LibraryViewModelTest {
         assertEquals(1, viewModel.uiState.value.allState.items.size)
         assertEquals("m-short", viewModel.uiState.value.allState.items.first().id)
 
-        // Filter HD only
+        // The quality tier is the backend's job: the app sends the tier and
+        // never narrows the page itself, so the page keeps both movies.
         viewModel.setDurationFilter(com.adulthub.tv.data.model.DurationFilter.ALL)
         advanceUntilIdle()
-        viewModel.toggleHdOnly()
-        assertEquals(1, viewModel.uiState.value.allState.items.size)
-        assertEquals("m-short", viewModel.uiState.value.allState.items.first().id)
+        assertNull(fakeLibraryRepository.lastQuality)
+
+        val requestsBefore = fakeLibraryRepository.itemsRequestCount
+        viewModel.setQualityFilter(com.adulthub.tv.data.model.QualityTier.HIGH)
+        advanceUntilIdle()
+        assertEquals("high", fakeLibraryRepository.lastQuality)
+        assertEquals(requestsBefore + 1, fakeLibraryRepository.itemsRequestCount)
+        assertEquals(2, viewModel.uiState.value.allState.items.size)
+
+        // Selecting the active tier again is a no-op, the request count stays put.
+        viewModel.setQualityFilter(com.adulthub.tv.data.model.QualityTier.HIGH)
+        advanceUntilIdle()
+        assertEquals(requestsBefore + 1, fakeLibraryRepository.itemsRequestCount)
     }
 
     @Test
@@ -740,6 +752,8 @@ class LibraryViewModelTest {
         var lastFilters: Set<ItemFilter> = emptySet()
         var lastMinDuration: Int? = null
         var lastMaxDuration: Int? = null
+        var lastQuality: String? = null
+        var itemsRequestCount = 0
         var randomGenreIds: List<UUID> = emptyList()
         var randomFilters: Set<ItemFilter> = emptySet()
         var randomResult: Result<TvItem?> = Result.success(null)
@@ -794,12 +808,15 @@ class LibraryViewModelTest {
             performer: String?,
             performerId: String?,
             minDuration: Int?,
-            maxDuration: Int?
+            maxDuration: Int?,
+            quality: String?
         ): Result<TvItemsPage> {
             lastGenreIds = genreIds
             lastFilters = filters
             lastMinDuration = minDuration
             lastMaxDuration = maxDuration
+            lastQuality = quality
+            itemsRequestCount += 1
             return itemsPageResult
         }
 
@@ -915,7 +932,7 @@ class LibraryViewModelTest {
         advanceUntilIdle()
 
         viewModel.setDurationFilter(DurationFilter.SHORT)
-        viewModel.toggleHdOnly()
+        viewModel.setQualityFilter(QualityTier.HIGH)
         viewModel.toggleFavoritesOnly()
         viewModel.selectAlphabetLetter('A')
         viewModel.selectTab(LibraryTab.ACTORS)
@@ -934,7 +951,7 @@ class LibraryViewModelTest {
 
         val state = restored.uiState.value
         assertEquals(DurationFilter.SHORT, state.allState.durationFilter)
-        assertTrue(state.allState.hdOnly)
+        assertEquals(QualityTier.HIGH, state.allState.quality)
         assertTrue(state.allState.favoritesOnly)
         assertEquals(LibraryTab.ACTORS, state.selectedTab)
         assertEquals('A', state.actorsState.selectedLetter)

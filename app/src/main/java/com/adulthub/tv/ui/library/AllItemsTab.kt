@@ -51,6 +51,7 @@ import androidx.tv.material3.MaterialTheme
 import androidx.tv.material3.Text
 import com.adulthub.tv.R
 import com.adulthub.tv.data.model.DurationFilter
+import com.adulthub.tv.data.model.QualityTier
 import com.adulthub.tv.data.model.SortOrder
 import com.adulthub.tv.data.model.TvCategory
 import com.adulthub.tv.data.model.TvItem
@@ -79,7 +80,7 @@ fun AllItemsTab(
     onToggleUnwatched: () -> Unit,
     modifier: Modifier = Modifier,
     onDurationFilterChange: (DurationFilter) -> Unit = {},
-    onToggleHdOnly: () -> Unit = {},
+    onSelectQuality: (QualityTier) -> Unit = {},
     onSelectGenre: (TvCategory?) -> Unit,
     onSelectStudio: (TvStudio?) -> Unit,
     onSelectPerformer: (TvPerson?) -> Unit,
@@ -202,14 +203,18 @@ fun AllItemsTab(
                     }
                 }
 
-                // HD Only Toggle
-                if (state.hdOnly) {
-                    TvPrimaryButton(onClick = onToggleHdOnly, modifier = Modifier.height(36.dp)) {
-                        Text(text = stringResource(R.string.filter_quality_hd), fontSize = 12.sp)
-                    }
-                } else {
-                    TvSecondaryButton(onClick = onToggleHdOnly, modifier = Modifier.height(36.dp)) {
-                        Text(text = stringResource(R.string.filter_quality_hd), fontSize = 12.sp)
+                // Quality tiers: the resolver derives them from the bitrate, so a
+                // click only changes the request. Selecting the active tier clears it.
+                QualityTier.entries.filter { it != QualityTier.ALL }.forEach { tier ->
+                    val onClick = { onSelectQuality(state.quality.toggled(tier)) }
+                    if (state.quality == tier) {
+                        TvPrimaryButton(onClick = onClick, modifier = Modifier.height(36.dp)) {
+                            Text(text = stringResource(tier.labelRes), fontSize = 12.sp)
+                        }
+                    } else {
+                        TvSecondaryButton(onClick = onClick, modifier = Modifier.height(36.dp)) {
+                            Text(text = stringResource(tier.labelRes), fontSize = 12.sp)
+                        }
                     }
                 }
             }

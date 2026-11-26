@@ -338,7 +338,13 @@ fun MobileLibraryScreen(vm: LibraryViewModel, initialCategoryId: String?, onItem
                 Row(Modifier.horizontalScroll(rememberScrollState()), horizontalArrangement = Arrangement.spacedBy(4.dp)) {
                     FilterChip(selected = state.allState.favoritesOnly, onClick = vm::toggleFavoritesOnly, label = { Text(stringResource(R.string.mobile_favorites)) })
                     FilterChip(selected = state.allState.unwatchedOnly, onClick = vm::toggleUnwatchedOnly, label = { Text(stringResource(R.string.mobile_unwatched)) })
-                    FilterChip(selected = state.allState.hdOnly, onClick = vm::toggleHdOnly, label = { Text(stringResource(R.string.mobile_hd)) })
+                    QualityTier.entries.filter { it != QualityTier.ALL }.forEach { tier ->
+                        FilterChip(
+                            selected = state.allState.quality == tier,
+                            onClick = { vm.setQualityFilter(state.allState.quality.toggled(tier)) },
+                            label = { Text(stringResource(tier.labelRes)) }
+                        )
+                    }
                     TextButton(onClick = vm::onSurpriseMeClicked) { Text(stringResource(R.string.mobile_shuffle)) }
                 }
                 Row(Modifier.horizontalScroll(rememberScrollState()), horizontalArrangement = Arrangement.spacedBy(4.dp)) {
@@ -423,7 +429,13 @@ fun MobileLibraryScreen(vm: LibraryViewModel, initialCategoryId: String?, onItem
                 Row(Modifier.horizontalScroll(rememberScrollState()), horizontalArrangement = Arrangement.spacedBy(4.dp)) {
                     FilterChip(selected = state.randomState.favoritesOnly, onClick = vm::toggleRandomFavoritesOnly, label = { Text(stringResource(R.string.mobile_favorites)) })
                     FilterChip(selected = state.randomState.unwatchedOnly, onClick = vm::toggleRandomUnwatchedOnly, label = { Text(stringResource(R.string.mobile_unwatched)) })
-                    FilterChip(selected = state.randomState.hdOnly, onClick = vm::toggleRandomHdOnly, label = { Text(stringResource(R.string.mobile_hd)) })
+                    QualityTier.entries.filter { it != QualityTier.ALL }.forEach { tier ->
+                        FilterChip(
+                            selected = state.randomState.quality == tier,
+                            onClick = { vm.setRandomQuality(state.randomState.quality.toggled(tier)) },
+                            label = { Text(stringResource(tier.labelRes)) }
+                        )
+                    }
                     TextButton(onClick = vm::shuffleRandom) { Text(stringResource(R.string.library_shuffle)) }
                 }
                 Row(Modifier.horizontalScroll(rememberScrollState()), horizontalArrangement = Arrangement.spacedBy(4.dp)) {

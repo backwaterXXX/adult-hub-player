@@ -2,6 +2,7 @@ package com.adulthub.tv.ui.library
 
 import androidx.lifecycle.SavedStateHandle
 import com.adulthub.tv.data.model.DurationFilter
+import com.adulthub.tv.data.model.QualityTier
 import com.adulthub.tv.data.model.SortOrder
 import com.adulthub.tv.data.model.TvCategory
 import com.adulthub.tv.data.model.TvPerson
@@ -18,7 +19,7 @@ internal class LibrarySavedFilters(private val savedStateHandle: SavedStateHandl
         savedStateHandle[KEY_SORT_ORDER] = state.allState.sortOrder.name
         savedStateHandle[KEY_FAVORITES_ONLY] = state.allState.favoritesOnly
         savedStateHandle[KEY_UNWATCHED_ONLY] = state.allState.unwatchedOnly
-        savedStateHandle[KEY_HD_ONLY] = state.allState.hdOnly
+        savedStateHandle[KEY_QUALITY] = state.allState.quality.name
         savedStateHandle[KEY_DURATION_FILTER] = state.allState.durationFilter.name
         savedStateHandle[KEY_GENRE_ID] = state.allState.selectedGenre?.id
         savedStateHandle[KEY_GENRE_NAME] = state.allState.selectedGenre?.name
@@ -46,7 +47,9 @@ internal class LibrarySavedFilters(private val savedStateHandle: SavedStateHandl
                 ?: current.allState.sortOrder,
             favoritesOnly = savedStateHandle.get<Boolean>(KEY_FAVORITES_ONLY) ?: current.allState.favoritesOnly,
             unwatchedOnly = savedStateHandle.get<Boolean>(KEY_UNWATCHED_ONLY) ?: current.allState.unwatchedOnly,
-            hdOnly = savedStateHandle.get<Boolean>(KEY_HD_ONLY) ?: current.allState.hdOnly,
+            quality = savedStateHandle.get<String>(KEY_QUALITY)
+                ?.let { name -> QualityTier.entries.firstOrNull { it.name == name } }
+                ?: current.allState.quality,
             durationFilter = savedStateHandle.get<String>(KEY_DURATION_FILTER)
                 ?.let { name -> DurationFilter.entries.firstOrNull { it.name == name } }
                 ?: current.allState.durationFilter,
@@ -85,7 +88,7 @@ internal class LibrarySavedFilters(private val savedStateHandle: SavedStateHandl
         const val KEY_SORT_ORDER = "library_sort_order"
         const val KEY_FAVORITES_ONLY = "library_favorites_only"
         const val KEY_UNWATCHED_ONLY = "library_unwatched_only"
-        const val KEY_HD_ONLY = "library_hd_only"
+        const val KEY_QUALITY = "library_quality"
         const val KEY_DURATION_FILTER = "library_duration_filter"
         const val KEY_GENRE_ID = "library_genre_id"
         const val KEY_GENRE_NAME = "library_genre_name"

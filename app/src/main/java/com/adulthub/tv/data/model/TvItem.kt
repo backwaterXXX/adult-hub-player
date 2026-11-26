@@ -49,9 +49,6 @@ data class TvItem(
     val isTelegram: Boolean
         get() = id.isNotBlank() && !id.startsWith("telegram:") && !providerVideoId.isNullOrBlank()
 
-    val isHd: Boolean
-        get() = (width ?: 0) >= 1280 || (height ?: 0) >= 720 || (fileSizeBytes ?: 0L) >= 300 * 1024 * 1024L
-
     val runtimeMinutes: Int?
         get() = runtimeTicks?.let { (it / 10_000_000 / 60).toInt() }
 

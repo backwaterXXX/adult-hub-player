@@ -4,6 +4,7 @@ import android.app.Application
 import com.adulthub.tv.data.api.AdultHubClientManager
 import com.adulthub.tv.data.model.DurationFilter
 import com.adulthub.tv.data.model.ItemFilter
+import com.adulthub.tv.data.model.QualityTier
 import com.adulthub.tv.data.model.SortOrder
 import com.adulthub.tv.data.model.TvCategory
 import com.adulthub.tv.data.model.TvItem
@@ -139,6 +140,30 @@ class RandomTabControllerTest {
     }
 
     @Test
+    fun `the quality tier travels to the server and reloads the sample`() = runTest(dispatcher) {
+        repository.total = 10
+        repository.page = { offset, limit ->
+            Result.success(TvItemsPage((offset until offset + limit).map { movie("m-$it") }, 10, offset))
+        }
+        val controller = controller()
+        advanceUntilIdle()
+        assertEquals(null, repository.lastQuality)
+
+        val requestsBefore = repository.requestedOffsets.size
+        controller.setQuality(QualityTier.HIGH)
+        advanceUntilIdle()
+
+        // The resolver decides the tier from the average bitrate: the app sends
+        // "high" and draws a new sample, never filtering the page locally.
+        assertEquals("high", repository.lastQuality)
+        assertEquals(requestsBefore + 2, repository.requestedOffsets.size)
+
+        controller.setQuality(QualityTier.ALL)
+        advanceUntilIdle()
+        assertEquals(null, repository.lastQuality)
+    }
+
+    @Test
     fun `the selected genre is sent as both id and name`() = runTest(dispatcher) {
         repository.total = 10
         repository.page = { offset, limit ->
@@ -192,6 +217,7 @@ class RandomTabControllerTest {
         var lastFilters: Set<ItemFilter> = emptySet()
         var lastMinDuration: Int? = null
         var lastMaxDuration: Int? = null
+        var lastQuality: String? = null
         var lastGenreIds: List<UUID> = emptyList()
         var lastCategory: String? = null
 
@@ -212,13 +238,15 @@ class RandomTabControllerTest {
             performer: String?,
             performerId: String?,
             minDuration: Int?,
-            maxDuration: Int?
+            maxDuration: Int?,
+            quality: String?
         ): Result<TvItemsPage> {
             requestedOffsets += startIndex
             requestedLimits += limit
             lastFilters = filters
             lastMinDuration = minDuration
             lastMaxDuration = maxDuration
+            lastQuality = quality
             lastGenreIds = genreIds
             lastCategory = category
             val provider = page ?: return Result.success(TvItemsPage(emptyList(), total, startIndex))

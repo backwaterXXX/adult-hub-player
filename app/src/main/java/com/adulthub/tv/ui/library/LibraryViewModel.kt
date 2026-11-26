@@ -10,6 +10,7 @@ import com.adulthub.tv.data.local.SettingsDataStore
 import com.adulthub.tv.data.model.ChannelSortMode
 import com.adulthub.tv.data.model.DurationFilter
 import com.adulthub.tv.data.model.ItemFilter
+import com.adulthub.tv.data.model.QualityTier
 import com.adulthub.tv.data.model.SortOrder
 import com.adulthub.tv.data.model.TvCategory
 import com.adulthub.tv.data.model.TvChannel
@@ -133,7 +134,7 @@ class LibraryViewModel(
                     _uiState.update { state ->
                         val allState = state.allState
                         val cs = state.channelsState
-                        val allFiltered = applyAllItemsFilters(allState.rawItems, allState.durationFilter, allState.hdOnly, excluded, allState.unwatchedOnly)
+                        val allFiltered = applyAllItemsFilters(allState.rawItems, allState.durationFilter, excluded, allState.unwatchedOnly)
                         val chFiltered = applyChannelFilters(cs.rawChannelVideos, cs.durationFilter, excluded, cs.sortMode)
                         state.copy(
                             allState = allState.copy(excludedTags = excluded, items = allFiltered),
@@ -259,7 +260,7 @@ class LibraryViewModel(
 
     fun setRandomDurationFilter(filter: DurationFilter) = randomTab.setDurationFilter(filter)
 
-    fun toggleRandomHdOnly() = randomTab.toggleHdOnly()
+    fun setRandomQuality(tier: QualityTier) = randomTab.setQuality(tier)
 
     fun toggleRandomFavoritesOnly() = randomTab.toggleFavoritesOnly()
 
@@ -319,7 +320,8 @@ class LibraryViewModel(
                 studio = currentState.selectedStudio?.name,
                 performerId = currentState.selectedPerformer?.id,
                 minDuration = minDuration,
-                maxDuration = maxDuration
+                maxDuration = maxDuration,
+                quality = currentState.quality.queryValue
             )
 
             if (generation != allItemsGeneration) return@launch
@@ -333,7 +335,6 @@ class LibraryViewModel(
                         val filtered = applyAllItemsFilters(
                             rawCombined,
                             state.allState.durationFilter,
-                            state.allState.hdOnly,
                             state.allState.excludedTags,
                             state.allState.unwatchedOnly
                         )
@@ -378,13 +379,12 @@ class LibraryViewModel(
         loadAllItems(reset = true)
     }
 
-    fun toggleHdOnly() {
-        _uiState.update { state ->
-            val allState = state.allState
-            val newHd = !allState.hdOnly
-            val filtered = applyAllItemsFilters(allState.rawItems, allState.durationFilter, newHd, allState.excludedTags, allState.unwatchedOnly)
-            state.copy(allState = allState.copy(hdOnly = newHd, items = filtered))
-        }
+    fun setQualityFilter(tier: QualityTier) {
+        if (_uiState.value.allState.quality == tier) return
+        // The tier is decided and applied by the backend, so the page has to be
+        // refetched instead of narrowing whatever page happens to be loaded.
+        _uiState.update { state -> state.copy(allState = state.allState.copy(quality = tier)) }
+        loadAllItems(reset = true)
     }
 
     fun setSort(sortBy: String, sortOrder: SortOrder) {

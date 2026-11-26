@@ -27,14 +27,19 @@ enum class DurationFilter(@StringRes val labelRes: Int, val minMinutes: Int?, va
     }
 }
 
-enum class QualityFilter(@StringRes val labelRes: Int) {
-    ALL(R.string.filter_all),
-    HD(R.string.quality_hd_only);
+/**
+ * Library quality tiers. The resolver derives the tier from the average bitrate
+ * (file size over duration), so the app only sends the tier and never guesses
+ * quality from the file size the way the old "HD only" toggle did.
+ */
+enum class QualityTier(@StringRes val labelRes: Int, val queryValue: String?) {
+    ALL(R.string.filter_all, null),
+    LOW(R.string.filter_quality_sd, "low"),
+    MEDIUM(R.string.filter_quality_hd, "medium"),
+    HIGH(R.string.filter_quality_hq, "high");
 
-    fun matches(item: TvItem): Boolean {
-        if (this == ALL) return true
-        return item.isHd
-    }
+    /** The tier a click on [tier] should produce: selecting the active one clears the filter. */
+    fun toggled(tier: QualityTier): QualityTier = if (this == tier) ALL else tier
 }
 
 enum class ShuffleContextMode(@StringRes val labelRes: Int) {

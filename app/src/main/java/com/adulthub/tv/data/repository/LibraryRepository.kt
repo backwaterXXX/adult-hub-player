@@ -92,7 +92,8 @@ open class LibraryRepository(
         performer: String? = null,
         performerId: String? = null,
         minDuration: Int? = null,
-        maxDuration: Int? = null
+        maxDuration: Int? = null,
+        quality: String? = null
     ): Result<TvItemsPage> = withContext(Dispatchers.IO) {
         try {
             val api = clientManager.getApi()
@@ -114,6 +115,7 @@ open class LibraryRepository(
                 performerId = performerId,
                 minDuration = minDuration,
                 maxDuration = maxDuration,
+                quality = quality,
                 isFavorite = isFavorite
             )
 

@@ -32,7 +32,6 @@
 
     <!-- Library -->
     <string name="mobile_favorites">Favorites</string>
-    <string name="mobile_hd">HD</string>
     <string name="mobile_shuffle">Shuffle</string>
     <string name="mobile_sort">Sort</string>
     <string name="mobile_sort_newest">Newest</string>

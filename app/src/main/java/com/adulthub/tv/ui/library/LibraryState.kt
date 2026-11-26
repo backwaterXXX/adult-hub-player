@@ -5,6 +5,7 @@ import com.adulthub.tv.R
 import com.adulthub.tv.data.local.SettingsDataStore
 import com.adulthub.tv.data.model.ChannelSortMode
 import com.adulthub.tv.data.model.DurationFilter
+import com.adulthub.tv.data.model.QualityTier
 import com.adulthub.tv.data.model.SortOrder
 import com.adulthub.tv.data.model.TvCategory
 import com.adulthub.tv.data.model.TvChannel
@@ -26,7 +27,7 @@ data class AllItemsTabState(
     val items: List<TvItem> = emptyList(),
     val rawItems: List<TvItem> = emptyList(),
     val durationFilter: DurationFilter = DurationFilter.ALL,
-    val hdOnly: Boolean = false,
+    val quality: QualityTier = QualityTier.ALL,
     val excludedTags: Set<String> = emptySet(),
     val totalCount: Int = 0,
     val startIndex: Int = 0,

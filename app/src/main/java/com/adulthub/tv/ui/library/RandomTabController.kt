@@ -4,6 +4,7 @@ import android.app.Application
 import com.adulthub.tv.R
 import com.adulthub.tv.data.model.DurationFilter
 import com.adulthub.tv.data.model.ItemFilter
+import com.adulthub.tv.data.model.QualityTier
 import com.adulthub.tv.data.model.TvCategory
 import com.adulthub.tv.data.model.TvItem
 import com.adulthub.tv.data.model.TvPerson
@@ -107,7 +108,8 @@ internal class RandomTabController(
         studio = state.selectedStudio?.name,
         performerId = state.selectedPerformer?.id,
         minDuration = state.durationFilter.minMinutes?.takeIf { it > 0 }?.times(60),
-        maxDuration = state.durationFilter.maxMinutes?.times(60)
+        maxDuration = state.durationFilter.maxMinutes?.times(60),
+        quality = state.quality.queryValue
     )
 
     private fun offsetWithin(totalCount: Int): Int {
@@ -158,7 +160,6 @@ internal class RandomTabController(
             items = applyAllItemsFilters(
                 combined,
                 state.durationFilter,
-                state.hdOnly,
                 state.excludedTags,
                 state.unwatchedOnly
             ),
@@ -195,8 +196,8 @@ internal class RandomTabController(
         loadRandom(reset = true)
     }
 
-    fun toggleHdOnly() {
-        update { it.copy(hdOnly = !it.hdOnly) }
+    fun setQuality(tier: QualityTier) {
+        update { it.copy(quality = tier) }
         loadRandom(reset = true)
     }
 

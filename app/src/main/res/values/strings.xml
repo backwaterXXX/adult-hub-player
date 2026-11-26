@@ -153,12 +153,13 @@
     <string name="shuffle_same_performer">Shuffle: Performer</string>
     <string name="shuffle_same_category">Shuffle: Category</string>
     <string name="filter_duration_all">Duration: All</string>
-    <string name="filter_quality_hd">HD Only</string>
+    <string name="filter_quality_hd">HD</string>
+    <string name="filter_quality_sd">SD</string>
+    <string name="filter_quality_hq">HQ</string>
     <string name="filter_all">All</string>
     <string name="duration_short">&lt;15m</string>
     <string name="duration_medium">15–40m</string>
     <string name="duration_long">40m+</string>
-    <string name="quality_hd_only">HD only</string>
     <string name="shuffle_any_random">Any Random</string>
     <string name="shuffle_same_performer_mode">Same Performer</string>
     <string name="shuffle_same_category_mode">Same Category</string>
