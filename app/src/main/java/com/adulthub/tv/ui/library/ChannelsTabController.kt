@@ -123,6 +123,9 @@ internal class ChannelsTabController(
     fun retrySelectedChannelVideos() {
         val channel = uiState.value.channelsState.selectedChannel ?: return
         val isFirstPage = uiState.value.channelsState.channelVideos.isEmpty()
+        if (isFirstPage) {
+            channelRepository.invalidateChannelHistory(channel.id)
+        }
         loadChannelVideos(channel, reset = isFirstPage)
     }
 
@@ -145,7 +148,7 @@ internal class ChannelsTabController(
             val historyResult = channelRepository.getChannelHistory(
                 channelId = channel.id,
                 offsetId = currentOffset,
-                limit = 100
+                limit = CHANNEL_HISTORY_PAGE_SIZE
             )
 
             // The fallback is a network call, so it is resolved before the state update:
@@ -291,3 +294,5 @@ internal class ChannelsTabController(
         )
     )
 }
+
+private const val CHANNEL_HISTORY_PAGE_SIZE = 40

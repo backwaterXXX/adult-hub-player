@@ -23,14 +23,36 @@ data class ChannelHistoryPage(
  */
 class StaleSessionException : RuntimeException("The session changed while the request was running")
 
+private data class CachedEntry<T>(
+    val value: T,
+    val cachedAtMillis: Long
+)
+
+private data class ChannelHistoryKey(
+    val channelId: String,
+    val offsetId: Long?,
+    val limit: Int
+)
+
 open class ChannelRepository(
     private val resolverApi: ResolverApi,
-    private val accountScope: SessionOwnerProvider? = null
+    private val accountScope: SessionOwnerProvider? = null,
+    private val clockMillis: () -> Long = { System.nanoTime() / 1_000_000L }
 ) {
     private val videoCacheLock = Any()
     private val videoCache = LinkedHashMap<String, VideoDto>(CACHE_MAX_VIDEOS * 4, 0.75f, true)
     private val videoIdLru = LinkedHashMap<String, Unit>(CACHE_MAX_VIDEOS, 0.75f, true)
     private val aliasesByVideoId = mutableMapOf<String, MutableSet<String>>()
+    private var cachedCategories: CachedEntry<List<TvChannel>>? = null
+    private val channelHistoryCache = object : LinkedHashMap<ChannelHistoryKey, CachedEntry<ChannelHistoryPage>>(
+        CACHE_MAX_HISTORY_PAGES,
+        0.75f,
+        true
+    ) {
+        override fun removeEldestEntry(
+            eldest: MutableMap.MutableEntry<ChannelHistoryKey, CachedEntry<ChannelHistoryPage>>?
+        ): Boolean = size > CACHE_MAX_HISTORY_PAGES
+    }
 
     fun cacheVideos(videos: List<VideoDto>) {
         synchronized(videoCacheLock) {
@@ -78,7 +100,7 @@ open class ChannelRepository(
     }
 
     /**
-     * Drops the cached videos of the previous session.
+     * Drops the cached channels, history pages, and videos of the previous session.
      *
      * The cache holds data of one account and one resolver origin, so it is
      * cleared whenever either of them changes.
@@ -88,6 +110,26 @@ open class ChannelRepository(
             videoCache.clear()
             videoIdLru.clear()
             aliasesByVideoId.clear()
+            cachedCategories = null
+            channelHistoryCache.clear()
+        }
+    }
+
+    /** Clears the cached channel list so the next [getCategories] fetches fresh data. */
+    fun invalidateCategoriesCache() {
+        synchronized(videoCacheLock) {
+            cachedCategories = null
+        }
+    }
+
+    /** Clears cached history pages for [channelId], or all channels when null. */
+    fun invalidateChannelHistory(channelId: String? = null) {
+        synchronized(videoCacheLock) {
+            if (channelId == null) {
+                channelHistoryCache.clear()
+            } else {
+                channelHistoryCache.keys.removeAll { it.channelId == channelId }
+            }
         }
     }
 
@@ -109,6 +151,9 @@ open class ChannelRepository(
 
     open suspend fun getCategories(): Result<List<TvChannel>> = withContext(Dispatchers.IO) {
         val owner = accountScope?.currentOwner()
+        getFreshCategories()?.let { cached ->
+            if (isCurrent(owner)) return@withContext Result.success(cached)
+        }
         try {
             val response = resolverApi.getCategories()
             if (!isCurrent(owner)) return@withContext Result.failure(StaleSessionException())
@@ -119,6 +164,9 @@ open class ChannelRepository(
                     slug = it.slug,
                     url = it.url
                 )
+            }
+            synchronized(videoCacheLock) {
+                cachedCategories = CachedEntry(channels, clockMillis())
             }
             Result.success(channels)
         } catch (e: CancellationException) {
@@ -136,6 +184,13 @@ open class ChannelRepository(
         // The owner is captured before the request runs. A response of a session that
         // ended meanwhile must not fill the cache of the new session.
         val owner = accountScope?.currentOwner()
+        val cacheKey = ChannelHistoryKey(channelId = channelId, offsetId = offsetId, limit = limit)
+        getFreshHistoryPage(cacheKey)?.let { cached ->
+            if (isCurrent(owner)) {
+                cacheVideos(cached.videos)
+                return@withContext Result.success(cached)
+            }
+        }
         try {
             val response = resolverApi.getChannelHistory(
                 channelId = channelId,
@@ -151,6 +206,9 @@ open class ChannelRepository(
                 hasMore = response.hasMore,
                 messageCount = response.messageCount
             )
+            synchronized(videoCacheLock) {
+                channelHistoryCache[cacheKey] = CachedEntry(page, clockMillis())
+            }
             Result.success(page)
         } catch (e: CancellationException) {
             throw e
@@ -201,6 +259,27 @@ open class ChannelRepository(
 
     /** True when the owner of a request is still the active session. */
     private suspend fun isCurrent(owner: SessionOwner?): Boolean = owner == null || accountScope?.isCurrent(owner) != false
+
+    private fun getFreshCategories(): List<TvChannel>? = synchronized(videoCacheLock) {
+        val entry = cachedCategories ?: return null
+        if (clockMillis() - entry.cachedAtMillis >= CATEGORIES_CACHE_TTL_MS) {
+            cachedCategories = null
+            return null
+        }
+        entry.value
+    }
+
+    private fun getFreshHistoryPage(key: ChannelHistoryKey): ChannelHistoryPage? = synchronized(videoCacheLock) {
+        val entry = channelHistoryCache[key] ?: return null
+        if (clockMillis() - entry.cachedAtMillis >= HISTORY_CACHE_TTL_MS) {
+            channelHistoryCache.remove(key)
+            return null
+        }
+        entry.value
+    }
 }
 
 private const val CACHE_MAX_VIDEOS = 500
+private const val CACHE_MAX_HISTORY_PAGES = 24
+private const val CATEGORIES_CACHE_TTL_MS = 5 * 60 * 1000L
+private const val HISTORY_CACHE_TTL_MS = 2 * 60 * 1000L

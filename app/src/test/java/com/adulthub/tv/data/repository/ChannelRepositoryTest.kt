@@ -1,6 +1,8 @@
 package com.adulthub.tv.data.repository
 
+import com.adulthub.tv.data.resolver.CategoryDto
 import com.adulthub.tv.data.resolver.ResolverApi
+import com.adulthub.tv.data.resolver.TelegramHistoryResponseDto
 import com.adulthub.tv.data.resolver.VideoDto
 import io.mockk.coEvery
 import io.mockk.coVerify
@@ -97,5 +99,66 @@ class ChannelRepositoryTest {
 
         assertNull(repository.getVideo("video-1"))
         assertNull(repository.getRandomCachedVideo())
+    }
+
+    @Test
+    fun `getCategories caches results until TTL expires or cache is invalidated`() {
+        var now = 1_000L
+        val api = mockk<ResolverApi>()
+        coEvery { api.getCategories() } returns listOf(
+            CategoryDto(id = "ch-1", title = "Channel One", slug = "ch-1")
+        )
+        val repository = ChannelRepository(api, clockMillis = { now })
+
+        val first = kotlinx.coroutines.runBlocking { repository.getCategories() }.getOrThrow()
+        now += 60_000L
+        val second = kotlinx.coroutines.runBlocking { repository.getCategories() }.getOrThrow()
+
+        assertEquals(first, second)
+        coVerify(exactly = 1) { api.getCategories() }
+
+        now += 5 * 60_000L
+        kotlinx.coroutines.runBlocking { repository.getCategories() }.getOrThrow()
+        coVerify(exactly = 2) { api.getCategories() }
+
+        repository.invalidateCategoriesCache()
+        kotlinx.coroutines.runBlocking { repository.getCategories() }.getOrThrow()
+        coVerify(exactly = 3) { api.getCategories() }
+    }
+
+    @Test
+    fun `getChannelHistory caches pages until TTL expires or channel history is invalidated`() {
+        var now = 1_000L
+        val api = mockk<ResolverApi>()
+        coEvery { api.getChannelHistory("ch-1", 40, null) } returns TelegramHistoryResponseDto(
+            videos = listOf(VideoDto(id = "v-1", title = "Video 1", providerVideoId = "pv-1")),
+            nextOffsetId = 10L,
+            hasMore = true,
+            messageCount = 40
+        )
+        val repository = ChannelRepository(api, clockMillis = { now })
+
+        val first = kotlinx.coroutines.runBlocking {
+            repository.getChannelHistory("ch-1", offsetId = null, limit = 40)
+        }.getOrThrow()
+        now += 30_000L
+        val second = kotlinx.coroutines.runBlocking {
+            repository.getChannelHistory("ch-1", offsetId = null, limit = 40)
+        }.getOrThrow()
+
+        assertEquals(first, second)
+        coVerify(exactly = 1) { api.getChannelHistory("ch-1", 40, null) }
+
+        now += 2 * 60_000L
+        kotlinx.coroutines.runBlocking {
+            repository.getChannelHistory("ch-1", offsetId = null, limit = 40)
+        }.getOrThrow()
+        coVerify(exactly = 2) { api.getChannelHistory("ch-1", 40, null) }
+
+        repository.invalidateChannelHistory("ch-1")
+        kotlinx.coroutines.runBlocking {
+            repository.getChannelHistory("ch-1", offsetId = null, limit = 40)
+        }.getOrThrow()
+        coVerify(exactly = 3) { api.getChannelHistory("ch-1", 40, null) }
     }
 }
