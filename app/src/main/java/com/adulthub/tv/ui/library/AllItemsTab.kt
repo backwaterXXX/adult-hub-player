@@ -1,9 +1,14 @@
 package com.adulthub.tv.ui.library
 
-import androidx.compose.animation.AnimatedVisibility
+import androidx.activity.compose.BackHandler
+import androidx.compose.animation.fadeIn
+import androidx.compose.animation.fadeOut
+import androidx.compose.animation.slideInHorizontally
+import androidx.compose.animation.slideOutHorizontally
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
+import androidx.compose.foundation.focusGroup
 import androidx.compose.foundation.interaction.MutableInteractionSource
 import androidx.compose.foundation.interaction.collectIsFocusedAsState
 import androidx.compose.foundation.layout.Arrangement
@@ -40,7 +45,9 @@ import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.ExperimentalComposeUiApi
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.focus.FocusDirection
 import androidx.compose.ui.focus.FocusRequester
+import androidx.compose.ui.focus.focusProperties
 import androidx.compose.ui.focus.focusRequester
 import androidx.compose.ui.focus.focusRestorer
 import androidx.compose.ui.focus.onFocusChanged
@@ -51,6 +58,7 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.compose.ui.window.Dialog
+import androidx.compose.ui.zIndex
 import androidx.tv.material3.MaterialTheme
 import androidx.tv.material3.Text
 import com.adulthub.tv.R
@@ -98,10 +106,68 @@ fun AllItemsTab(
 ) {
     var filterPicker by rememberSaveable { mutableStateOf<CatalogFilter?>(null) }
     var filtersOpen by rememberSaveable { mutableStateOf(false) }
+    val filtersButtonFocusRequester = remember { FocusRequester() }
+    val filterPanelFirstFocusRequester = remember { FocusRequester() }
+    val gridFocusRequester = remember { FocusRequester() }
+    val pickerFocusRequesters = remember { CatalogFilter.entries.associateWith { FocusRequester() } }
+    var filterPanelHasFocus by remember { mutableStateOf(false) }
+    var filterPanelHadFocus by remember { mutableStateOf(false) }
+    var restoreFocusToFiltersButton by remember { mutableStateOf(false) }
+    var lastOpenedPicker by remember { mutableStateOf<CatalogFilter?>(null) }
     val gridState = rememberLazyGridState()
     val focusRequesterMap = remember { mutableMapOf<String, FocusRequester>() }
     // Stale requesters of a reset list would otherwise stay in the map forever.
     LaunchedEffect(state.items) { focusRequesterMap.clear() }
+    val hasGridItems = !state.isLoading && !state.isEmpty &&
+        !(state.errorMessage != null && state.items.isEmpty()) &&
+        state.items.isNotEmpty()
+
+    BackHandler(enabled = filtersOpen && filterPicker == null) {
+        restoreFocusToFiltersButton = true
+        filtersOpen = false
+    }
+
+    LaunchedEffect(filtersOpen) {
+        if (filtersOpen) {
+            filterPanelHadFocus = false
+            restoreFocusToFiltersButton = false
+            runCatching { filterPanelFirstFocusRequester.requestFocus() }
+        } else {
+            filterPanelHasFocus = false
+            filterPanelHadFocus = false
+            if (restoreFocusToFiltersButton) {
+                restoreFocusToFiltersButton = false
+                runCatching { filtersButtonFocusRequester.requestFocus() }
+            }
+        }
+    }
+
+    LaunchedEffect(filterPicker) {
+        if (filterPicker != null) {
+            lastOpenedPicker = filterPicker
+        } else {
+            val closedPicker = lastOpenedPicker
+            if (closedPicker != null) {
+                lastOpenedPicker = null
+                if (filtersOpen) {
+                    // Prevent the 80ms focus-loss timeout from closing the overlay while
+                    // focus transitions back from the dismissed Dialog window.
+                    filterPanelHadFocus = false
+                    val targetRequester = pickerFocusRequesters[closedPicker]
+                        ?: filterPanelFirstFocusRequester
+                    runCatching { targetRequester.requestFocus() }
+                }
+            }
+        }
+    }
+
+    LaunchedEffect(filtersOpen, filterPanelHasFocus, filterPanelHadFocus, filterPicker) {
+        if (filtersOpen && filterPanelHadFocus && !filterPanelHasFocus && filterPicker == null) {
+            // Brief grace period avoids closing during the 1-frame FilterToggleButton swap.
+            delay(80L)
+            filtersOpen = false
+        }
+    }
     val activeFilterCount = listOf(
         state.favoritesOnly,
         state.unwatchedOnly,
@@ -154,14 +220,18 @@ fun AllItemsTab(
             if (filtersOpen || activeFilterCount > 0) {
                 TvPrimaryButton(
                     onClick = { filtersOpen = !filtersOpen },
-                    modifier = Modifier.height(36.dp)
+                    modifier = Modifier
+                        .height(36.dp)
+                        .focusRequester(filtersButtonFocusRequester)
                 ) {
                     Text(text = filtersLabel, fontSize = 12.sp)
                 }
             } else {
                 TvSecondaryButton(
                     onClick = { filtersOpen = !filtersOpen },
-                    modifier = Modifier.height(36.dp)
+                    modifier = Modifier
+                        .height(36.dp)
+                        .focusRequester(filtersButtonFocusRequester)
                 ) {
                     Text(text = filtersLabel, fontSize = 12.sp)
                 }
@@ -260,26 +330,8 @@ fun AllItemsTab(
             )
         }
 
-        Row(modifier = Modifier.weight(1f).fillMaxWidth()) {
-            AnimatedVisibility(visible = filtersOpen) {
-                AllItemsSideFilterPanel(
-                    state = state,
-                    onToggleFavorites = onToggleFavorites,
-                    onToggleUnwatched = onToggleUnwatched,
-                    onSelectQuality = onSelectQuality,
-                    onDurationFilterChange = onDurationFilterChange,
-                    onOpenPicker = { picker ->
-                        when (picker) {
-                            CatalogFilter.GENRE -> onLoadGenres()
-                            CatalogFilter.STUDIO -> onLoadStudios()
-                            CatalogFilter.PERFORMER -> onLoadPerformers()
-                        }
-                        filterPicker = picker
-                    }
-                )
-            }
-
-            Box(modifier = Modifier.weight(1f).fillMaxHeight()) {
+        Box(modifier = Modifier.weight(1f).fillMaxWidth()) {
+            Box(modifier = Modifier.fillMaxSize()) {
                 when {
                     state.isLoading -> {
                         Box(
@@ -325,7 +377,10 @@ fun AllItemsTab(
                             contentPadding = PaddingValues(top = 8.dp, bottom = 48.dp),
                             horizontalArrangement = Arrangement.spacedBy(16.dp),
                             verticalArrangement = Arrangement.spacedBy(16.dp),
-                            modifier = Modifier.fillMaxSize().focusRestorer()
+                            modifier = Modifier
+                                .fillMaxSize()
+                                .focusRequester(gridFocusRequester)
+                                .focusRestorer()
                         ) {
                             items(
                                 items = state.items,
@@ -369,6 +424,57 @@ fun AllItemsTab(
                     }
                 }
             }
+
+            androidx.compose.animation.AnimatedVisibility(
+                visible = filtersOpen,
+                enter = fadeIn() + slideInHorizontally { -it / 3 },
+                exit = fadeOut() + slideOutHorizontally { -it / 3 },
+                modifier = Modifier
+                    .align(Alignment.TopStart)
+                    .zIndex(1f)
+            ) {
+                AllItemsSideFilterPanel(
+                    state = state,
+                    firstFocusRequester = filterPanelFirstFocusRequester,
+                    pickerFocusRequesters = pickerFocusRequesters,
+                    onFocusChanged = { hasFocus ->
+                        filterPanelHasFocus = hasFocus
+                        if (hasFocus) filterPanelHadFocus = true
+                    },
+                    onExitDirection = { direction ->
+                        when (direction) {
+                            FocusDirection.Up -> {
+                                restoreFocusToFiltersButton = true
+                                filtersOpen = false
+                                true
+                            }
+                            FocusDirection.Right -> {
+                                if (hasGridItems) {
+                                    filtersOpen = false
+                                    runCatching { gridFocusRequester.requestFocus() }
+                                    true
+                                } else {
+                                    false
+                                }
+                            }
+                            FocusDirection.Left, FocusDirection.Down -> true
+                            else -> false
+                        }
+                    },
+                    onToggleFavorites = onToggleFavorites,
+                    onToggleUnwatched = onToggleUnwatched,
+                    onSelectQuality = onSelectQuality,
+                    onDurationFilterChange = onDurationFilterChange,
+                    onOpenPicker = { picker ->
+                        when (picker) {
+                            CatalogFilter.GENRE -> onLoadGenres()
+                            CatalogFilter.STUDIO -> onLoadStudios()
+                            CatalogFilter.PERFORMER -> onLoadPerformers()
+                        }
+                        filterPicker = picker
+                    }
+                )
+            }
         }
     }
 }
@@ -376,6 +482,10 @@ fun AllItemsTab(
 @Composable
 private fun AllItemsSideFilterPanel(
     state: AllItemsTabState,
+    firstFocusRequester: FocusRequester,
+    pickerFocusRequesters: Map<CatalogFilter, FocusRequester>,
+    onFocusChanged: (Boolean) -> Unit,
+    onExitDirection: (FocusDirection) -> Boolean,
     onToggleFavorites: () -> Unit,
     onToggleUnwatched: () -> Unit,
     onSelectQuality: (QualityTier) -> Unit,
@@ -386,8 +496,18 @@ private fun AllItemsSideFilterPanel(
         modifier = Modifier
             .width(248.dp)
             .fillMaxHeight()
-            .padding(end = 16.dp, bottom = 16.dp)
+            .padding(bottom = 16.dp)
             .background(CardSurface, RoundedCornerShape(12.dp))
+            .border(1.dp, Color.White.copy(alpha = 0.14f), RoundedCornerShape(12.dp))
+            .onFocusChanged { onFocusChanged(it.hasFocus) }
+            .focusProperties {
+                onExit = {
+                    if (onExitDirection(requestedFocusDirection)) {
+                        cancelFocusChange()
+                    }
+                }
+            }
+            .focusGroup()
             .padding(12.dp)
             .verticalScroll(rememberScrollState()),
         verticalArrangement = Arrangement.spacedBy(8.dp)
@@ -396,7 +516,9 @@ private fun AllItemsSideFilterPanel(
             label = stringResource(R.string.library_filter_favorites),
             selected = state.favoritesOnly,
             onClick = onToggleFavorites,
-            modifier = Modifier.fillMaxWidth()
+            modifier = Modifier
+                .fillMaxWidth()
+                .focusRequester(firstFocusRequester)
         )
         FilterToggleButton(
             label = stringResource(R.string.library_filter_unwatched),
@@ -456,7 +578,10 @@ private fun AllItemsSideFilterPanel(
         ).forEach { (picker, labelRes, selectedName) ->
             TvSecondaryButton(
                 onClick = { onOpenPicker(picker) },
-                modifier = Modifier.fillMaxWidth().height(36.dp)
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .height(36.dp)
+                    .focusRequester(pickerFocusRequesters.getValue(picker))
             ) {
                 Text(stringResource(labelRes, selectedName ?: allLabel), fontSize = 12.sp)
             }
@@ -471,12 +596,35 @@ private fun FilterToggleButton(
     onClick: () -> Unit,
     modifier: Modifier = Modifier
 ) {
+    val focusRequester = remember { FocusRequester() }
+    var isFocused by remember { mutableStateOf(false) }
+    var restoreFocusAfterToggle by remember { mutableStateOf(false) }
+    var previousSelected by remember { mutableStateOf(selected) }
+    LaunchedEffect(selected, isFocused) {
+        if (selected != previousSelected) {
+            previousSelected = selected
+            if (restoreFocusAfterToggle) {
+                restoreFocusAfterToggle = false
+                runCatching { focusRequester.requestFocus() }
+            }
+        } else if (!isFocused) {
+            restoreFocusAfterToggle = false
+        }
+    }
+    val buttonModifier = modifier
+        .height(34.dp)
+        .focusRequester(focusRequester)
+        .onFocusChanged { isFocused = it.isFocused }
+    val handleClick: () -> Unit = {
+        if (isFocused) restoreFocusAfterToggle = true
+        onClick()
+    }
     if (selected) {
-        TvPrimaryButton(onClick = onClick, modifier = modifier.height(34.dp)) {
+        TvPrimaryButton(onClick = handleClick, modifier = buttonModifier) {
             Text(text = label, fontSize = 12.sp)
         }
     } else {
-        TvSecondaryButton(onClick = onClick, modifier = modifier.height(34.dp)) {
+        TvSecondaryButton(onClick = handleClick, modifier = buttonModifier) {
             Text(text = label, fontSize = 12.sp)
         }
     }
