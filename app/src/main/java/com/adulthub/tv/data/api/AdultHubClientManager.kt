@@ -9,11 +9,14 @@ import com.adulthub.tv.data.network.CleartextOriginInterceptor
 import com.adulthub.tv.data.network.ImageTokenOriginPolicy
 import java.util.UUID
 import java.util.concurrent.TimeUnit
+import kotlinx.coroutines.CoroutineScope
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.SupervisorJob
 import kotlinx.coroutines.channels.BufferOverflow
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.MutableSharedFlow
 import kotlinx.coroutines.flow.asSharedFlow
-import kotlinx.coroutines.runBlocking
+import kotlinx.coroutines.launch
 import kotlinx.serialization.json.Json
 import okhttp3.Authenticator
 import okhttp3.MediaType.Companion.toMediaType
@@ -36,7 +39,9 @@ data class ClientSession(
 class AdultHubClientManager(
     private val context: Context,
     private val settingsDataStore: SettingsDataStore,
-    private val authDataStore: AuthDataStore? = null
+    private val authDataStore: AuthDataStore? = null,
+    /** Carries the guarded token persistence off the OkHttp threads. */
+    private val persistenceScope: CoroutineScope = CoroutineScope(SupervisorJob() + Dispatchers.IO)
 ) {
     val deviceId: String by lazy {
         val identityPreferences = context.applicationContext
@@ -158,12 +163,20 @@ class AdultHubClientManager(
             refreshResponse.use { resp ->
                 if (resp.isSuccessful) {
                     val bodyStr = resp.body.string()
-                    val refreshed = json.decodeFromString(AuthRefreshResponseDto.serializer(), bodyStr)
+                    // A 2xx body that is not valid JSON (a captive portal answering the refresh
+                    // URL, a truncated response) must degrade like a transient failure and
+                    // retain the session, not fail the in-flight request with an exception.
+                    val refreshed = runCatching {
+                        json.decodeFromString(AuthRefreshResponseDto.serializer(), bodyStr)
+                    }.getOrNull() ?: return@Authenticator null
                     val oldToken = latest.accessToken
                     val updated = updateTokensIfMatches(oldToken, refreshed.accessToken, refreshed.refreshToken)
                     if (updated) {
                         authDataStore?.let { store ->
-                            runBlocking {
+                            // The write is token-match guarded, so it can leave the OkHttp
+                            // thread: a logout or a newer login wins the race instead of every
+                            // waiting request stalling behind tokenRefreshLock on disk I/O.
+                            persistenceScope.launch {
                                 store.updateTokensIfOldTokenMatches(oldToken, refreshed.accessToken, refreshed.refreshToken)
                             }
                         }
@@ -365,7 +378,7 @@ class AdultHubClientManager(
         }
     }
 
-    fun getPersonImageUrl(personId: String, tag: String? = null, maxWidth: Int = 300, photoUrl: String? = null): String {
+    fun getPersonImageUrl(personId: String, maxWidth: Int = 300, photoUrl: String? = null): String {
         val base = currentServerUrl?.trimEnd('/') ?: ""
         if (!photoUrl.isNullOrBlank()) {
             val photo = photoUrl.trim()

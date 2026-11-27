@@ -105,7 +105,6 @@ fun PlayerOverlay(
     isOsdVisible: Boolean,
     seekFeedback: String?,
     playPauseFocusRequester: FocusRequester,
-    onShowOsd: () -> Unit,
     onResetOsdTimer: () -> Unit,
     onPlayPauseClick: () -> Unit,
     onSeekRelative: (deltaMs: Long) -> Unit,

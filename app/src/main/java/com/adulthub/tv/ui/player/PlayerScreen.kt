@@ -184,6 +184,10 @@ fun PlayerScreen(
                     viewModel.abortQualitySwitch(qualitySwitchFailureMessage)
                     return@launch
                 }
+                // The resolve suspends, so a new playback may have started meanwhile and
+                // must not receive the superseded movie's address. The check and the swap
+                // are both synchronous on the main thread, so nothing can start in between.
+                if (!viewModel.isQualitySwitchCurrent()) return@launch
                 val swapped = playerManager.switchQualityStream(info.streamUrl, viewModel.variantFor(variantId))
                 if (swapped) {
                     viewModel.confirmQualitySwitch(variantId)
@@ -192,6 +196,16 @@ fun PlayerScreen(
                 }
             }
         }
+    }
+
+    // The screen stays composed through the navigation fade-out, so every exit path
+    // pauses the player first to keep the previous video's audio from playing over the
+    // screen the user returned to. The player itself is released when the composable
+    // finally leaves composition.
+    val exitPlayer: (Long) -> Unit = { positionMs ->
+        playerManager.pause()
+        viewModel.onExitPlayer(positionMs, reportingSessionId)
+        onBack()
     }
 
     // Initial load
@@ -380,8 +394,7 @@ fun PlayerScreen(
             PlayerBackAction.HIDE_OSD -> isOsdVisible = false
 
             PlayerBackAction.EXIT_PLAYER -> {
-                viewModel.onExitPlayer(playerManager.currentPositionMs.value, reportingSessionId)
-                onBack()
+                exitPlayer(playerManager.currentPositionMs.value)
             }
         }
     }
@@ -534,10 +547,7 @@ fun PlayerScreen(
                             }
                         }
                     },
-                    onBack = {
-                        viewModel.onExitPlayer(0L, reportingSessionId)
-                        onBack()
-                    }
+                    onBack = { exitPlayer(0L) }
                 )
             }
 
@@ -590,10 +600,7 @@ fun PlayerScreen(
                         onMuteClick = { playerManager.toggleMute() },
                         onRandomClick = { viewModel.playRandomMovie(playerManager.currentPositionMs.value, reportingSessionId) },
                         onInfoClick = { showInfoDialog = !showInfoDialog },
-                        onBackClick = {
-                            viewModel.onExitPlayer(playerManager.currentPositionMs.value, reportingSessionId)
-                            onBack()
-                        },
+                        onBackClick = { exitPlayer(playerManager.currentPositionMs.value) },
                         isFavorite = state.item.isFavorite,
                         onToggleFavorite = viewModel::toggleFavorite,
                         playbackSpeed = playbackSpeed,
@@ -621,10 +628,6 @@ fun PlayerScreen(
                         isOsdVisible = isOsdVisible,
                         seekFeedback = seekFeedback,
                         playPauseFocusRequester = playPauseFocusRequester,
-                        onShowOsd = {
-                            isOsdVisible = true
-                            osdTimerTrigger = System.currentTimeMillis()
-                        },
                         onResetOsdTimer = {
                             osdTimerTrigger = System.currentTimeMillis()
                         },
@@ -661,10 +664,7 @@ fun PlayerScreen(
                         onInfoClick = {
                             showInfoDialog = !showInfoDialog
                         },
-                        onBackClick = {
-                            viewModel.onExitPlayer(playerManager.currentPositionMs.value, reportingSessionId)
-                            onBack()
-                        },
+                        onBackClick = { exitPlayer(playerManager.currentPositionMs.value) },
                         isFavorite = state.item.isFavorite,
                         onToggleFavorite = {
                             viewModel.toggleFavorite()
@@ -721,10 +721,7 @@ fun PlayerScreen(
                                 viewModel.playRandomMovie(currentPositionMs = 0L, reportingSessionId = reportingSessionId)
                             }
                         },
-                        onBack = {
-                            viewModel.onExitPlayer(playerManager.currentPositionMs.value, reportingSessionId)
-                            onBack()
-                        }
+                        onBack = { exitPlayer(playerManager.currentPositionMs.value) }
                     )
                 }
 
@@ -770,10 +767,7 @@ fun PlayerScreen(
                                 }
                             }
                         },
-                        onBack = {
-                            viewModel.onExitPlayer(playerManager.currentPositionMs.value, reportingSessionId)
-                            onBack()
-                        }
+                        onBack = { exitPlayer(playerManager.currentPositionMs.value) }
                     )
                 }
             }

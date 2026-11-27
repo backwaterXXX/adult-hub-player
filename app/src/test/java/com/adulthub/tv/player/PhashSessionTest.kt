@@ -31,6 +31,7 @@ import kotlinx.coroutines.test.TestScope
 import kotlinx.coroutines.test.UnconfinedTestDispatcher
 import kotlinx.coroutines.test.advanceTimeBy
 import kotlinx.coroutines.test.runTest
+import okhttp3.Interceptor
 import okhttp3.MediaType.Companion.toMediaType
 import okhttp3.OkHttpClient
 import okhttp3.Protocol
@@ -129,7 +130,7 @@ class PhashSessionTest {
             authDataStore = authDataStore,
             clientManager = adultHubClientManager,
             settingsDataStore = settingsDataStore,
-            apiClient = ResolverApiClient(client),
+            apiClient = ResolverApiClient(client, cleartextInterceptor = Interceptor { chain -> chain.proceed(chain.request()) }),
             jobStore = jobStore,
             applicationScope = backgroundScope,
             accountScope = accountScope,

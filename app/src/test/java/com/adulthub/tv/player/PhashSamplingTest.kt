@@ -3,6 +3,7 @@ package com.adulthub.tv.player
 import com.adulthub.tv.data.resolver.PhashGenerationRequest
 import com.adulthub.tv.data.resolver.ResolverApiClient
 import kotlinx.coroutines.runBlocking
+import okhttp3.Interceptor
 import okhttp3.MediaType.Companion.toMediaType
 import okhttp3.OkHttpClient
 import okhttp3.Protocol
@@ -47,7 +48,7 @@ class PhashSamplingTest {
                 .body("""{"ok":true,"job_id":"p-abc","state":"queued","already_computed":false,"thumbnail_ready":false}""".toResponseBody("application/json".toMediaType()))
                 .build()
         }.build()
-        val api = ResolverApiClient(client).create("https://example.com")
+        val api = ResolverApiClient(client, cleartextInterceptor = Interceptor { chain -> chain.proceed(chain.request()) }).create("https://example.com")
         val result = api.generatePhash("Bearer secret-token", PhashGenerationRequest("telegram:-100:1:1", 90_000_000L))
         assertEquals(true, result.ok)
         assertEquals("queued", result.state)

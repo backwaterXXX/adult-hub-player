@@ -298,59 +298,6 @@ class LibraryRepositoryTest {
     }
 
     @Test
-    fun `getResumeItems returns catalog items with server progress for canonical Telegram ids`() = runTest {
-        val watchHistoryStore = mockk<com.adulthub.tv.data.local.WatchHistoryStore>(relaxed = true)
-        val repoWithHistory = LibraryRepository(
-            clientManager = clientManager,
-            settingsDataStore = settingsDataStore,
-            watchHistoryStore = watchHistoryStore
-        )
-
-        val historyRecords = listOf(
-            com.adulthub.tv.data.local.WatchHistoryRecord(
-                itemId = "cat-movie-1",
-                title = "Catalog Movie 1",
-                watchedAt = System.currentTimeMillis(),
-                runtimeTicks = 100_000_000_000L,
-                progressFraction = 0.40f,
-                isPlayed = false
-            ),
-            com.adulthub.tv.data.local.WatchHistoryRecord(
-                itemId = "telegram:-100:999:1",
-                title = "Telegram Video",
-                watchedAt = System.currentTimeMillis(),
-                runtimeTicks = 50_000_000_000L,
-                progressFraction = 0.30f,
-                isPlayed = false
-            )
-        )
-        every { watchHistoryStore.history } returns kotlinx.coroutines.flow.flowOf(historyRecords)
-        coEvery { mockApi.getWatchProgress("cat-movie-1") } returns com.adulthub.tv.data.api.WatchProgressDto(
-            videoId = "cat-movie-1",
-            positionSeconds = 45,
-            durationSeconds = 100,
-            isPlayed = false,
-            playedPercentage = 45.0
-        )
-
-        coEvery { mockApi.getWatchProgress("telegram:-100:999:1") } returns com.adulthub.tv.data.api.WatchProgressDto(
-            videoId = "telegram:-100:999:1",
-            positionSeconds = 30,
-            durationSeconds = 100,
-            isPlayed = false,
-            playedPercentage = 30.0
-        )
-
-        val result = repoWithHistory.getResumeItems(limit = 10)
-        assertTrue(result.isSuccess)
-        val items = result.getOrThrow()
-        // Both records are canonical catalogue ids, so both stay resumable.
-        assertEquals(2, items.size)
-        assertEquals(450_000_000L, items.first { it.id == "cat-movie-1" }.playbackPositionTicks)
-        coVerify(exactly = 1) { mockApi.getWatchProgress("telegram:-100:999:1") }
-    }
-
-    @Test
     fun `getRandomItems respects IS_UNPLAYED filter and does not return played items`() = runTest {
         val mockResponse = CatalogVideoListResponseDto(
             items = listOf(

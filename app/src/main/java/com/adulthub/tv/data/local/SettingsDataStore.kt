@@ -60,7 +60,6 @@ data class AppConfigExport(
     val bufferProfile: String = "standard",
     val lowRamMode: Boolean = false,
     val seekStepSec: Int = 15,
-    val autoplayNext: Boolean = false,
     val selectedHomeCategoryIds: Set<String>? = null,
     val hiddenChannelIds: Set<String> = emptySet(),
     val excludedTags: Set<String> = emptySet(),
@@ -91,7 +90,6 @@ open class SettingsDataStore(
         private val KEY_BUFFER_PROFILE = stringPreferencesKey("buffer_profile")
         private val KEY_LOW_RAM_MODE = booleanPreferencesKey("low_ram_mode")
         private val KEY_SEEK_STEP_SEC = intPreferencesKey("seek_step_sec")
-        private val KEY_AUTOPLAY_NEXT = booleanPreferencesKey("autoplay_next")
         private val KEY_SELECTED_HOME_CATEGORY_IDS = stringSetPreferencesKey("selected_home_category_ids")
         private val KEY_CHANNEL_SORT_MODE = stringPreferencesKey("channel_sort_mode")
         private val KEY_HIDDEN_CHANNEL_IDS = stringSetPreferencesKey("hidden_channel_ids")
@@ -116,6 +114,7 @@ open class SettingsDataStore(
         ?: AccountKeyProvider.ANONYMOUS
     private val approvedCleartextOriginsSnapshot = AtomicReference<Set<String>>(emptySet())
     private val resolverBaseUrlSnapshot = AtomicReference(DEFAULT_RESOLVER_URL)
+    private val lowRamModeSnapshot = AtomicReference(false)
     private val settingsPreferences = dataStore.data
         .catch { if (it is IOException) emit(emptyPreferences()) else throw it }
 
@@ -205,14 +204,14 @@ open class SettingsDataStore(
     open val lowRamMode: Flow<Boolean> = dataStore.data
         .catch { if (it is IOException) emit(emptyPreferences()) else throw it }
         .map { it[KEY_LOW_RAM_MODE] ?: false }
+        .onEach { lowRamModeSnapshot.set(it) }
+
+    /** Synchronous last-known value of [lowRamMode] for the app-root composition. */
+    fun lowRamModeSnapshot(): Boolean = lowRamModeSnapshot.get()
 
     open val seekStepSec: Flow<Int> = dataStore.data
         .catch { if (it is IOException) emit(emptyPreferences()) else throw it }
         .map { it[KEY_SEEK_STEP_SEC] ?: DEFAULT_SEEK_STEP_SEC }
-
-    open val autoplayNext: Flow<Boolean> = dataStore.data
-        .catch { if (it is IOException) emit(emptyPreferences()) else throw it }
-        .map { it[KEY_AUTOPLAY_NEXT] ?: false }
 
     open val selectedHomeCategoryIds: Flow<Set<String>?> = dataStore.data
         .catch { if (it is IOException) emit(emptyPreferences()) else throw it }
@@ -489,10 +488,6 @@ open class SettingsDataStore(
         dataStore.edit { it[KEY_SEEK_STEP_SEC] = seconds }
     }
 
-    open suspend fun setAutoplayNext(enabled: Boolean) {
-        dataStore.edit { it[KEY_AUTOPLAY_NEXT] = enabled }
-    }
-
     open suspend fun setSelectedHomeCategoryIds(ids: Set<String>) {
         dataStore.edit { it[KEY_SELECTED_HOME_CATEGORY_IDS] = ids }
     }
@@ -555,7 +550,6 @@ open class SettingsDataStore(
         bufferProfile = bufferProfile.first().id,
         lowRamMode = lowRamMode.first(),
         seekStepSec = seekStepSec.first(),
-        autoplayNext = autoplayNext.first(),
         selectedHomeCategoryIds = selectedHomeCategoryIds.first(),
         hiddenChannelIds = hiddenChannelIds.first(),
         excludedTags = excludedTags.first(),
@@ -579,7 +573,6 @@ open class SettingsDataStore(
         setBufferProfile(BufferProfile.fromId(config.bufferProfile))
         setLowRamMode(config.lowRamMode)
         setSeekStepSec(config.seekStepSec)
-        setAutoplayNext(config.autoplayNext)
         config.selectedHomeCategoryIds?.let { setSelectedHomeCategoryIds(it) }
         setHiddenChannelIds(config.hiddenChannelIds)
         setExcludedTags(config.excludedTags)

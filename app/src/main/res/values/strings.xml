@@ -11,6 +11,7 @@
 
     <!-- Server Screen -->
     <string name="server_title">Connect to Adult Hub</string>
+    <string name="server_default_name">Adult Hub Server</string>
     <string name="server_subtitle">Enter your Adult Hub server address</string>
     <string name="server_url_label">Server Address</string>
     <string name="server_url_hint">https://adulthub.example.com or http://192.168.1.10:8000</string>
@@ -86,7 +87,6 @@
     <string name="home_random_empty">No movies available.</string>
     <string name="home_performers_empty">No performers found in this library.</string>
     <string name="home_play_random">Surprise Me</string>
-    <string name="home_error_resume">Failed to load continue watching</string>
     <string name="home_error_latest">Failed to load recently added</string>
     <string name="home_error_random">Failed to load random picks</string>
     <string name="home_error_categories">Failed to load categories</string>

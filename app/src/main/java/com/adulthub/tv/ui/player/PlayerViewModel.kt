@@ -108,10 +108,12 @@ class PlayerViewModel(
      */
     private var playbackOwner: SessionOwner? = null
 
-    /** The playback whose final write is running. */
+    /** The playback whose final write is running. Volatile: updated from the persistence scope and read on main. */
+    @Volatile
     private var finalizingPlaybackId: Long? = null
 
-    /** The playback whose final write finished. */
+    /** The playback whose final write finished. Volatile: updated from the persistence scope and read on main. */
+    @Volatile
     private var finalizedPlaybackId: Long? = null
 
     /** The active playback request/session whose end was already handled. */
@@ -472,6 +474,16 @@ class PlayerViewModel(
         val ready = _uiState.value as? PlayerUiState.Ready ?: return null
         return playbackRepository.resolvePlaybackInfo(ready.item, variantId).getOrNull()
     }
+
+    /**
+     * True while the prepared switch still belongs to the running playback request.
+     *
+     * [resolveQualityStreamUrl] suspends while it resolves the address, and a new
+     * playback can start in that window. The caller must re-check this before it
+     * hands the resolved address to the player; the remaining call is synchronous
+     * on the main thread, so the check closes the race window.
+     */
+    fun isQualitySwitchCurrent(): Boolean = qualitySwitchRequestId == playbackRequestCounter
 
     fun confirmQualitySwitch(variantId: String) {
         if (qualitySwitchRequestId != playbackRequestCounter) return

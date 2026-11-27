@@ -67,3 +67,6 @@ Thumbs.db
 AGENTS.md
 .aws/
 .codex/
+
+# JVM crash artifacts (HeapDumpOnOutOfMemoryError writes them to the daemon cwd)
+*.hprof

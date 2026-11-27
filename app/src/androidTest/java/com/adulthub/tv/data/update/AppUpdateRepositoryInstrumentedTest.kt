@@ -38,16 +38,6 @@ class AppUpdateRepositoryInstrumentedTest {
     @Test
     fun restoreRemovesAnUpdateThatIsOlderThanTheInstalledVersion() = runBlocking {
         val dir = File(context.filesDir, "updates").apply { mkdirs() }
-        val manifest = UpdateManifest(
-            schemaVersion = 2,
-            applicationId = context.packageName,
-            versionCode = 1L,
-            versionName = "0.0.1",
-            minSdk = 28,
-            apkAssetName = "AdultHubTV-0.0.1.apk",
-            sizeBytes = 10L,
-            sha256 = "a".repeat(64)
-        )
         File(dir, "update-manifest.json").writeText(
             """
             {"schemaVersion":2,"applicationId":"${context.packageName}","versionCode":1,
@@ -59,9 +49,11 @@ class AppUpdateRepositoryInstrumentedTest {
         val restored = repository.restoreDownloadedUpdate()
 
         assertNull("An outdated update must not be restored", restored)
+        // The fixture pins versionCode = 1, so the second operand used to be a constant true
+        // and the assertion could never fail; only the file removal is asserted here.
         assertTrue(
             "The outdated update files have to be removed",
-            File(dir, "update-manifest.json").let { !it.exists() } || manifest.versionCode == 1L
+            !File(dir, "update-manifest.json").exists()
         )
     }
 }

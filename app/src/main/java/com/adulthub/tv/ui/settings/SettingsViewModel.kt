@@ -119,17 +119,25 @@ class SettingsViewModel(
         }
     }
 
+    /** The account block of the settings snapshot, so the update reads named fields. */
+    private data class AuthSnapshot(
+        val serverUrl: String,
+        val serverName: String,
+        val username: String,
+        val userId: String
+    )
+
     private suspend fun loadSettingsSnapshot() {
         val authState = authRepository.authState.firstOrNull()
-        val (serverUrl, serverName, username, userId) = when (authState) {
-            is AuthState.Authenticated -> listOf(
-                authState.serverUrl,
-                authState.serverName.ifEmpty { context.getString(R.string.settings_server_name_default) },
-                authState.username,
-                authState.userId
+        val auth = when (authState) {
+            is AuthState.Authenticated -> AuthSnapshot(
+                serverUrl = authState.serverUrl,
+                serverName = authState.serverName.ifEmpty { context.getString(R.string.settings_server_name_default) },
+                username = authState.username,
+                userId = authState.userId
             )
 
-            else -> listOf("", "", "", "")
+            else -> AuthSnapshot(serverUrl = "", serverName = "", username = "", userId = "")
         }
 
         val libraryId = settingsDataStore.selectedLibraryId.firstOrNull().orEmpty()
@@ -166,10 +174,10 @@ class SettingsViewModel(
 
         _uiState.update {
             it.copy(
-                serverUrl = serverUrl,
-                serverName = serverName,
-                username = username,
-                userId = userId,
+                serverUrl = auth.serverUrl,
+                serverName = auth.serverName,
+                username = auth.username,
+                userId = auth.userId,
                 selectedLibraryId = libraryId,
                 selectedLibraryName = libraryName.ifEmpty { context.getString(R.string.settings_no_library_selected) },
                 resolverBaseUrl = resolverUrl,

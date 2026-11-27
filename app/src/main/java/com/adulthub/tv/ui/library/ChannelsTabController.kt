@@ -253,7 +253,7 @@ internal class ChannelsTabController(
         }
         return fallbackResult.fold(
             onSuccess = { fallbackVideos -> withFallbackVideos(fallbackVideos) },
-            onFailure = { fallbackError -> withFallbackFailure(fallbackError, error) }
+            onFailure = { fallbackError -> withFallbackFailure(fallbackError) }
         )
     }
 
@@ -279,7 +279,7 @@ internal class ChannelsTabController(
         )
     }
 
-    private fun LibraryUiState.withFallbackFailure(fallbackError: Throwable, error: Throwable): LibraryUiState = copy(
+    private fun LibraryUiState.withFallbackFailure(fallbackError: Throwable): LibraryUiState = copy(
         channelsState = channelsState.copy(
             rawChannelVideos = emptyList(),
             channelVideos = emptyList(),

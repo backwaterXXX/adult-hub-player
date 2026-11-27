@@ -1,4 +1,3 @@
-# Optional SLF4J 2 logging APIs referenced by kotlin-logging's Android adapter.
-# The app uses the SLF4J 1.7 Android binding, so these APIs are not packaged.
--dontwarn org.slf4j.spi.CallerBoundaryAware
--dontwarn org.slf4j.spi.LoggingEventBuilder
+# Release builds run with R8 full mode. Keep rules here only for classes whose
+# reflection-based usage R8 cannot model; library consumer rules (Retrofit, Media3)
+# and R8's built-in kotlinx.serialization support cover the rest.

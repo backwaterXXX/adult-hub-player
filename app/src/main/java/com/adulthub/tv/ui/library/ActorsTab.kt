@@ -25,6 +25,7 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.focus.FocusRequester
 import androidx.compose.ui.focus.focusRequester
+import androidx.compose.ui.focus.focusRestorer
 import androidx.compose.ui.res.pluralStringResource
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.unit.dp
@@ -58,6 +59,8 @@ fun ActorsTab(
     val alphabet = ('A'..'Z').toList()
     val gridState = rememberLazyGridState()
     val focusRequesterMap = remember { mutableMapOf<String, FocusRequester>() }
+    // Stale requesters of a reset list would otherwise stay in the map forever.
+    LaunchedEffect(state.allPersons) { focusRequesterMap.clear() }
 
     LaunchedEffect(state.lastSelectedPersonId) {
         val targetId = state.lastSelectedPersonId ?: return@LaunchedEffect
@@ -234,7 +237,7 @@ fun ActorsTab(
                     contentPadding = PaddingValues(top = 8.dp, bottom = 48.dp),
                     horizontalArrangement = Arrangement.spacedBy(16.dp),
                     verticalArrangement = Arrangement.spacedBy(16.dp),
-                    modifier = Modifier.fillMaxSize()
+                    modifier = Modifier.fillMaxSize().focusRestorer()
                 ) {
                     items(
                         items = state.filteredPersons,

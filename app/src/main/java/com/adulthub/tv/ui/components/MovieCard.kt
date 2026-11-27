@@ -36,7 +36,6 @@ import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
-import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import androidx.tv.material3.Border
 import androidx.tv.material3.Card
 import androidx.tv.material3.CardDefaults
@@ -67,7 +66,8 @@ fun MovieCard(
     val context = LocalContext.current
     val settingsDataStore: SettingsDataStore = koinInject()
     val clientManager: AdultHubClientManager = koinInject()
-    val lowRamMode by settingsDataStore.lowRamMode.collectAsStateWithLifecycle(initialValue = false)
+    // Read from the app root instead of collecting the DataStore once per composed card.
+    val lowRamMode = LocalLowRamMode.current
     val telegramVideoId = item.providerVideoId?.takeIf { it.isNotBlank() }
         ?: item.id.takeIf { it.startsWith("telegram:") }?.removePrefix("telegram:")
     var phashThumbnailUrl by remember(item.id) { mutableStateOf<String?>(null) }

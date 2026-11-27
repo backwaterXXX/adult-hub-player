@@ -77,9 +77,8 @@ fun HomeScreen(
         if (isCurrentDestination) {
             if (hasBeenCurrentDestination) {
                 runCatching { homeFocusRequester.restoreFocusedChild() }
-                // Give Jellyfin's playback-stop report time to update resume position.
+                // Give the playback-stop report time to update the watch position.
                 delay(500L)
-                viewModel.loadResume()
                 viewModel.loadWatchHistory()
             }
             hasBeenCurrentDestination = true

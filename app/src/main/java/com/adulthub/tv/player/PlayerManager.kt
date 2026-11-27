@@ -109,7 +109,6 @@ class PlayerManager(
     @Volatile private var streamFileSizeBytes: Long? = null
 
     @Volatile private var streamContentType: String? = null
-    val currentStreamFileSizeBytes: Long? get() = streamFileSizeBytes
 
     // Written from the ExoPlayer loader thread and read on the main thread, so a plain
     // volatile += would lose increments between the read and the write-back.
@@ -310,7 +309,7 @@ class PlayerManager(
                 PlaybackException.ERROR_CODE_AUDIO_TRACK_WRITE_FAILED ->
                     context.getString(R.string.player_error_audio_output)
 
-                else -> error.userFacingMessage(context, R.string.player_error_unknown)
+                else -> context.getString(R.string.player_error_unknown)
             }
             val failureStage = when {
                 error.errorCode == PlaybackException.ERROR_CODE_IO_BAD_HTTP_STATUS ->
@@ -338,8 +337,10 @@ class PlayerManager(
     }
 
     init {
+        // No decoder extension (e.g. media3-decoder-ffmpeg) is bundled, so hardware-to-
+        // software fallback relies on setEnableDecoderFallback plus the platform c2.*
+        // software codecs; an extension renderer mode without an extension is a no-op.
         val renderersFactory = DefaultRenderersFactory(context)
-            .setExtensionRendererMode(DefaultRenderersFactory.EXTENSION_RENDERER_MODE_ON)
             .setEnableDecoderFallback(true)
 
         val audioAttributes = AudioAttributes.Builder()
@@ -397,8 +398,7 @@ class PlayerManager(
         try {
             startPlayback(streamUrl, startPositionMs, title, headers, resetPlaybackSpeed = true, resumePlayback = true)
         } catch (error: Exception) {
-            _errorMessage.value = error.message?.takeIf(String::isNotBlank)
-                ?: context.getString(R.string.player_error_prepare)
+            _errorMessage.value = friendlyPrepareError(error)
             Log.w(TAG, "Playback preparation failed (${error.javaClass.simpleName})")
         }
     }
@@ -596,6 +596,19 @@ class PlayerManager(
         exoPlayer.playWhenReady = resumePlayback
     }
 
+    /**
+     * Maps a preparation failure to the dialog line a viewer sees.
+     *
+     * ExoPlayer's [PlaybackException] messages are technical (parsing, DRM, codec
+     * internals) and must not reach the friendly line of the error dialog; the
+     * generic unknown error is shown instead. Transport failures keep the copy of
+     * [userFacingMessage].
+     */
+    private fun friendlyPrepareError(error: Exception): String = when (error) {
+        is PlaybackException -> context.getString(R.string.player_error_unknown)
+        else -> error.userFacingMessage(context, R.string.player_error_prepare)
+    }
+
     private fun scheduleAutomaticRetry(error: PlaybackException): Boolean {
         if (!retryBudget.canRetry(MAX_AUTOMATIC_RETRIES) || !isTransient(error)) return false
         val request = playbackRequest ?: return false
@@ -619,6 +632,9 @@ class PlayerManager(
                 // meanwhile, and its state must not receive the outcome of this retry.
                 if (generation != playbackGeneration) return@launch
                 if (streamUrl == null) {
+                    // The dialog contradicts a stale "Retrying n/3" chip, so the chip is cleared
+                    // on every path that leaves the retry without a playback.
+                    _retryStatus.value = null
                     _errorMessage.value = context.getString(R.string.player_error_stream_address_refresh)
                     Log.w(TAG, "Automatic retry failed because the stream address could not be refreshed")
                     return@launch
@@ -637,8 +653,10 @@ class PlayerManager(
                 throw cancelled
             } catch (error: Exception) {
                 if (generation != playbackGeneration) return@launch
-                _errorMessage.value = error.message?.takeIf(String::isNotBlank)
-                    ?: context.getString(R.string.player_error_prepare)
+                // The dialog contradicts a stale "Retrying n/3" chip, so the chip is cleared
+                // on every path that leaves the retry without a playback.
+                _retryStatus.value = null
+                _errorMessage.value = friendlyPrepareError(error)
                 Log.w(TAG, "Automatic retry preparation failed (${error.javaClass.simpleName})")
             }
         }

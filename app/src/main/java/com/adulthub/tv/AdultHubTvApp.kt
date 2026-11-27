@@ -21,6 +21,7 @@ import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.SupervisorJob
 import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.launch
+import kotlinx.coroutines.runBlocking
 import okhttp3.OkHttpClient
 import org.koin.android.ext.koin.androidContext
 import org.koin.core.context.GlobalContext
@@ -35,12 +36,6 @@ class AdultHubTvApp :
 
     override fun onCreate() {
         super.onCreate()
-        // The Jellyfin SDK is bound to the no-op SLF4J provider in all builds to ensure
-        // credentials like QuickConnect secrets never leak to logcat. For kotlin-logging
-        // usages outside the SDK, debug builds direct output to Android logcat.
-        if (BuildConfig.DEBUG) {
-            System.setProperty("kotlin-logging-to-android-native", "true")
-        }
 
         startKoin {
             androidContext(this@AdultHubTvApp)
@@ -52,6 +47,16 @@ class AdultHubTvApp :
         }
 
         if (!BuildConfig.DEBUG) GlobalContext.get().get<AppUpdateManager>().checkAutomaticallyIfDue()
+
+        // The cleartext consent and the resolver snapshots are warmed once, synchronously:
+        // the network interceptors cannot suspend, and their cold-snapshot fallbacks would
+        // otherwise block every OkHttp thread that races the background refresh at startup.
+        runCatching {
+            runBlocking {
+                settingsDataStore.refreshApprovedCleartextOriginsSnapshot()
+                settingsDataStore.refreshResolverBaseUrlSnapshot()
+            }
+        }
 
         applicationScope.launch {
             launch {

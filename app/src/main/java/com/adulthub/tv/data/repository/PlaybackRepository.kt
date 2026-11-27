@@ -33,6 +33,16 @@ open class PlaybackRepository(
     private val itemDurations = ConcurrentHashMap<String, Int>()
     private val itemPlayedStatus = ConcurrentHashMap<String, Boolean>()
 
+    /**
+     * Drops the per-account playback caches. Durations and played flags belong to one
+     * account: a played flag of the previous user must not leak into the watch-progress
+     * reports of the next one. The repository module invalidates on account changes.
+     */
+    fun invalidateCache() {
+        itemDurations.clear()
+        itemPlayedStatus.clear()
+    }
+
     open suspend fun resolvePlaybackInfo(
         item: TvItem,
         variantId: String? = null

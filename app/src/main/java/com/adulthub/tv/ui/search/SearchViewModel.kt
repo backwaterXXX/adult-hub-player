@@ -38,7 +38,6 @@ data class SearchUiState(
     val resolverBaseUrl: String = SettingsDataStore.DEFAULT_RESOLVER_URL,
     val errorMessage: String? = null,
     val hasSearched: Boolean = false,
-    val lastSelectedKey: String? = null,
     val recentQueries: List<String> = emptyList(),
     val moviesTotalCount: Int = 0,
     val isLoadingMoreMovies: Boolean = false,
@@ -296,9 +295,5 @@ class SearchViewModel(
                 }
             )
         }
-    }
-
-    fun setLastSelectedKey(key: String?) {
-        _uiState.update { it.copy(lastSelectedKey = key) }
     }
 }

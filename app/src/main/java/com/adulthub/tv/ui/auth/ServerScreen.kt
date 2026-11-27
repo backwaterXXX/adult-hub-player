@@ -154,7 +154,7 @@ fun ServerScreen(
                         ) {
                             Column(modifier = Modifier.weight(1f)) {
                                 Text(
-                                    text = server.name.ifEmpty { "Adult Hub Server" },
+                                    text = server.name.ifEmpty { stringResource(R.string.server_default_name) },
                                     style = MaterialTheme.typography.titleMedium
                                 )
                                 Text(

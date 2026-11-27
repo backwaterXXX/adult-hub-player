@@ -308,5 +308,5 @@ class ItemDetailViewModel(
         const val DETAIL_ARTWORK_WIDTH = 1280
     }
 
-    fun getPersonImageUrl(personId: String, tag: String?): String = clientManager.getPersonImageUrl(personId, tag)
+    fun getPersonImageUrl(personId: String): String = clientManager.getPersonImageUrl(personId, maxWidth = DETAIL_ARTWORK_WIDTH)
 }

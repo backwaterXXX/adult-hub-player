@@ -493,7 +493,7 @@ fun ItemDetailScreen(
                                         )
                                         PersonCard(
                                             person = person,
-                                            imageUrl = viewModel.getPersonImageUrl(role.id, role.primaryImageTag),
+                                            imageUrl = viewModel.getPersonImageUrl(role.id),
                                             onClick = { viewModel.onCastPersonClicked(role) }
                                         )
                                     }

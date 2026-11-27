@@ -10,7 +10,13 @@ import retrofit2.converter.kotlinx.serialization.asConverterFactory
 
 class ResolverApiClient(
     okHttpClient: OkHttpClient? = null,
-    cleartextInterceptor: Interceptor? = null
+    /**
+     * The cleartext consent gate. The platform network security config permits cleartext
+     * globally, so this interceptor is the only guard for resolver traffic over HTTP; it is
+     * required (like in AppUpdateRepository) so no caller can construct a client that
+     * silently bypasses the consent policy.
+     */
+    cleartextInterceptor: Interceptor
 ) {
     companion object {
         /**
@@ -37,7 +43,7 @@ class ResolverApiClient(
         .newBuilder()
         .followRedirects(false)
         .followSslRedirects(false)
-        .apply { cleartextInterceptor?.let(::addNetworkInterceptor) }
+        .addNetworkInterceptor(cleartextInterceptor)
         .build()
     private val longRunningClient = client.newBuilder()
         .readTimeout(11, TimeUnit.MINUTES)

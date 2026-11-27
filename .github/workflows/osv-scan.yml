@@ -1,0 +1,90 @@
+name: OSV dependency scan
+
+# The GitHub dependency-review job cannot run on this account (the dependency graph
+# is unavailable), so the version catalog is checked directly against the OSV
+# database. The scan fails on any known vulnerability of moderate severity or worse,
+# matching the fail-on-severity the dependency-review job was configured with.
+on:
+  push:
+    branches: [ main ]
+  pull_request:
+    branches: [ main ]
+  schedule:
+    - cron: '41 5 * * 1'
+
+permissions:
+  contents: read
+
+jobs:
+  scan:
+    name: Scan the version catalog (Maven)
+    runs-on: ubuntu-24.04
+    timeout-minutes: 10
+
+    steps:
+      - name: Checkout Code
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+
+      - name: Query api.osv.dev for every pinned library
+        run: |
+          python3 - <<'PY'
+          import json
+          import sys
+          import tomllib
+          import urllib.request
+
+          with open('gradle/libs.versions.toml', 'rb') as f:
+              catalog = tomllib.load(f)
+
+          versions = catalog.get('versions', {})
+          libraries = catalog.get('libraries', {})
+          if not libraries:
+              raise SystemExit('No libraries found in gradle/libs.versions.toml')
+
+          failing = {}
+          checked = 0
+          for name, spec in sorted(libraries.items()):
+              module = spec.get('module')
+              if not module:
+                  continue
+              version = spec.get('version')
+              if isinstance(version, dict):
+                  version = version.get('ref')
+              version = versions.get(version, version) if isinstance(version, str) else None
+              if not version or not str(version)[0].isdigit():
+                  # Aliases and rich version syntax are skipped; only pinned coordinates are queried.
+                  continue
+              checked += 1
+              query = json.dumps({
+                  'package': {'name': module, 'ecosystem': 'Maven'},
+                  'version': str(version),
+              }).encode()
+              request = urllib.request.Request(
+                  'https://api.osv.dev/v1/query',
+                  data=query,
+                  headers={'Content-Type': 'application/json'},
+              )
+              try:
+                  with urllib.request.urlopen(request, timeout=30) as response:
+                      result = json.load(response)
+              except Exception as error:  # noqa: BLE001 - a scan outage must fail loudly
+                  raise SystemExit(f'OSV query failed for {module}:{version}: {error}')
+              for vuln in result.get('vulns', []):
+                  severity = (vuln.get('database_specific') or {}).get('severity', '').upper()
+                  if severity in ('MODERATE', 'HIGH', 'CRITICAL'):
+                      failing.setdefault(f'{module}:{version}', []).append(
+                          f'{vuln["id"]} ({severity}) {vuln.get("summary", "")}'
+                      )
+
+          print(f'Checked {checked} pinned Maven coordinates against api.osv.dev.')
+          if not failing:
+              print('No known vulnerabilities of moderate severity or worse.')
+          else:
+              for coordinate, vulns in sorted(failing.items()):
+                  print(f'!! {coordinate}')
+                  for v in vulns:
+                      print(f'   - {v}')
+              raise SystemExit('Known vulnerabilities of moderate severity or worse were found.')
+          PY

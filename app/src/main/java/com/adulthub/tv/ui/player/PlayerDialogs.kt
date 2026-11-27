@@ -426,18 +426,6 @@ fun PlaybackInfoOverlay(
 }
 
 @Composable
-fun PlaybackInfoDialog(
-    technicalInfo: com.adulthub.tv.player.PlaybackTechnicalInfo,
-    onDismiss: () -> Unit,
-    modifier: Modifier = Modifier
-) {
-    PlaybackInfoOverlay(
-        technicalInfo = technicalInfo,
-        modifier = modifier
-    )
-}
-
-@Composable
 private fun TechnicalInfoRow(label: String, value: String) {
     Row(
         modifier = Modifier.fillMaxWidth(),

@@ -313,22 +313,6 @@ class SearchViewModelTest {
         assertEquals(1, viewModel.uiState.value.channelVideos.size)
         assertEquals("tg-1", viewModel.uiState.value.channelVideos[0].id)
     }
-
-    @Test
-    fun `setLastSelectedKey updates state`() = runTest(testDispatcher) {
-        val viewModel = SearchViewModel(
-            libraryRepository = fakeLibraryRepository,
-            personRepository = fakePersonRepository,
-            settingsDataStore = settingsDataStore,
-            context = context
-        )
-
-        viewModel.setLastSelectedKey("movie:123")
-        assertEquals("movie:123", viewModel.uiState.value.lastSelectedKey)
-
-        viewModel.setLastSelectedKey(null)
-        assertNull(viewModel.uiState.value.lastSelectedKey)
-    }
 }
 
 private class FakeSearchHistoryStore :

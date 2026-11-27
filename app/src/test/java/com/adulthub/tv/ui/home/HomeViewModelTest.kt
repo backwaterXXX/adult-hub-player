@@ -58,7 +58,6 @@ class HomeViewModelTest {
     fun setUp() {
         Dispatchers.setMain(testDispatcher)
         coEvery { settingsDataStore.getSavedLibraryName() } returns "VIP Movies"
-        fakeLibraryRepository.resumeResult = Result.success(listOf(sampleItem))
         fakeLibraryRepository.latestResult = Result.success(listOf(sampleItem))
         fakeLibraryRepository.randomResult = Result.success(listOf(sampleItem))
         fakeLibraryRepository.singleRandomResult = Result.success(sampleItem)
@@ -84,9 +83,6 @@ class HomeViewModelTest {
 
         val state = viewModel.uiState.value
         assertEquals("VIP Movies", state.libraryName)
-        assertFalse(state.resumeSection.isLoading)
-        assertEquals(1, state.resumeSection.items.size)
-        assertEquals("movie-1", state.resumeSection.items.first().id)
 
         assertFalse(state.latestSection.isLoading)
         assertEquals(1, state.latestSection.items.size)
@@ -101,7 +97,7 @@ class HomeViewModelTest {
 
     @Test
     fun `failure in one section isolates error and keeps other sections intact`() = runTest(testDispatcher) {
-        fakeLibraryRepository.resumeResult = Result.failure(RuntimeException("Network error"))
+        fakeLibraryRepository.latestResult = Result.failure(RuntimeException("Network error"))
 
         val viewModel = HomeViewModel(
             libraryRepository = fakeLibraryRepository,
@@ -114,12 +110,10 @@ class HomeViewModelTest {
         advanceUntilIdle()
 
         val state = viewModel.uiState.value
-        assertNotNull(state.resumeSection.errorMessage)
-        assertTrue(state.resumeSection.items.isEmpty())
+        assertNotNull(state.latestSection.errorMessage)
+        assertTrue(state.latestSection.items.isEmpty())
 
         // Other sections succeeded
-        assertFalse(state.latestSection.isLoading)
-        assertEquals(1, state.latestSection.items.size)
         assertFalse(state.randomSection.isLoading)
         assertEquals(1, state.randomSection.items.size)
         assertFalse(state.performersSection.isLoading)
@@ -172,7 +166,7 @@ class HomeViewModelTest {
 
     @Test
     fun `retry on failed section reloads only that section`() = runTest(testDispatcher) {
-        fakeLibraryRepository.resumeResult = Result.failure(RuntimeException("First attempt failed"))
+        fakeLibraryRepository.latestResult = Result.failure(RuntimeException("First attempt failed"))
 
         val viewModel = HomeViewModel(
             libraryRepository = fakeLibraryRepository,
@@ -183,16 +177,65 @@ class HomeViewModelTest {
         )
 
         advanceUntilIdle()
-        assertNotNull(viewModel.uiState.value.resumeSection.errorMessage)
+        assertNotNull(viewModel.uiState.value.latestSection.errorMessage)
 
         // Fix failure for retry
-        fakeLibraryRepository.resumeResult = Result.success(listOf(sampleItem))
-        viewModel.loadResume()
+        fakeLibraryRepository.latestResult = Result.success(listOf(sampleItem))
+        viewModel.loadLatest()
         advanceUntilIdle()
 
         val updatedState = viewModel.uiState.value
-        assertEquals(null, updatedState.resumeSection.errorMessage)
-        assertEquals(1, updatedState.resumeSection.items.size)
+        assertEquals(null, updatedState.latestSection.errorMessage)
+        assertEquals(1, updatedState.latestSection.items.size)
+    }
+
+    @Test
+    fun `loadWatchHistory refreshes unplayed records with server progress and skips played ones`() = runTest(testDispatcher) {
+        val watchHistoryStore = mockk<com.adulthub.tv.data.local.WatchHistoryStore>(relaxed = true)
+        val records = listOf(
+            com.adulthub.tv.data.local.WatchHistoryRecord(
+                itemId = "movie-1",
+                title = "Unfinished Movie",
+                watchedAt = 1_000L,
+                isPlayed = false
+            ),
+            com.adulthub.tv.data.local.WatchHistoryRecord(
+                itemId = "movie-2",
+                title = "Played Movie",
+                watchedAt = 1_000L,
+                isPlayed = true
+            )
+        )
+        every { watchHistoryStore.history } returns kotlinx.coroutines.flow.flowOf(records)
+        val api = mockk<com.adulthub.tv.data.api.AdultHubApi>(relaxed = true)
+        every { clientManager.getApiOrNull() } returns api
+        coEvery { api.getWatchProgress("movie-1") } returns com.adulthub.tv.data.api.WatchProgressDto(
+            videoId = "movie-1",
+            positionSeconds = 45,
+            durationSeconds = 100,
+            playedPercentage = 45.0,
+            isPlayed = false
+        )
+
+        val viewModel = HomeViewModel(
+            libraryRepository = fakeLibraryRepository,
+            personRepository = fakePersonRepository,
+            settingsDataStore = settingsDataStore,
+            clientManager = clientManager,
+            telegramProgressStore = null,
+            watchHistoryStore = watchHistoryStore,
+            context = context
+        )
+
+        advanceUntilIdle()
+
+        val items = viewModel.uiState.value.watchHistorySection.items
+        assertFalse(viewModel.uiState.value.watchHistorySection.isLoading)
+        assertEquals(2, items.size)
+        assertEquals(450_000_000L, items.first { it.id == "movie-1" }.playbackPositionTicks)
+        // The played record already carries its own progress; the server is not asked for it.
+        io.mockk.coVerify(exactly = 1) { api.getWatchProgress("movie-1") }
+        io.mockk.coVerify(exactly = 0) { api.getWatchProgress("movie-2") }
     }
 
     @Test
@@ -273,7 +316,6 @@ class HomeViewModelTest {
     }
 
     private class FakeLibraryRepository : LibraryRepository(mockk(relaxed = true), mockk(relaxed = true)) {
-        var resumeResult: Result<List<TvItem>> = Result.success(emptyList())
         var latestResult: Result<List<TvItem>> = Result.success(emptyList())
         var randomResult: Result<List<TvItem>> = Result.success(emptyList())
         var singleRandomResult: Result<TvItem?> = Result.success(null)
@@ -289,7 +331,6 @@ class HomeViewModelTest {
             limit: Int
         ): Result<List<TvItem>> = Result.success(emptyList())
 
-        override suspend fun getResumeItems(limit: Int): Result<List<TvItem>> = resumeResult
         override suspend fun getLatestItems(parentId: String?, limit: Int): Result<List<TvItem>> {
             latestRequests += 1
             return latestResult

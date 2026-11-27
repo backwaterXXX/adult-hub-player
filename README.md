@@ -87,10 +87,10 @@ The release signing key changed on 2026-10-20. An installation signed with the o
 
 ## 🛠️ Quick Start & Setup
 
-### 1. Connect to Jellyfin
-When you first launch the app, choose how to connect to your Jellyfin server:
-- **Quick Connect (Recommended)**: Select *Quick Connect*, open Jellyfin on your phone or computer, go to *User Settings → Quick Connect*, and enter the 6-digit code shown in the app.
-- **Manual Login**: Enter your Jellyfin server address (e.g., `https://jellyfin.example.com` or local `http://192.168.1.50:8096`), your username, and your password.
+### 1. Connect to Adult Hub
+When you first launch the app, choose how to connect to your Adult Hub server:
+- **Quick Connect (Recommended)**: Select *Quick Connect*, open Adult Hub on your phone or computer, go to *User Settings → Quick Connect*, and enter the 6-digit code shown in the app.
+- **Manual Login**: Enter your Adult Hub server address (e.g., `https://adulthub.example.com` or local `http://192.168.1.50:8000`), your username, and your password.
   > [!NOTE]
   > Unencrypted HTTP is permitted for local network IP addresses (`192.168.x.x`, `10.x.x.x`) with your explicit approval in the app dialog. For servers accessed over the internet, HTTPS is required.
 
@@ -98,12 +98,12 @@ When you first launch the app, choose how to connect to your Jellyfin server:
 Select the media library you want to browse (e.g., Movies). You can switch libraries anytime from the Settings menu.
 
 ### 3. Adult Hub stream and channel service
-By default, the Resolver origin follows the Jellyfin server address for `.strm` playback, provider channels, and video matching. If your deployment hosts the Resolver separately, set its address under **Settings → Resolver base URL**.
+By default, the Resolver origin follows the Adult Hub server address for `.strm` playback, provider channels, and video matching. If your deployment hosts the Resolver separately, set its address under **Settings → Resolver base URL**.
 
 ### 4. (Optional) Connecting Across Different Networks via Proxy
 If your **Adult Hub** server runs on a different local network, on a remote server, or behind a firewall:
 - You can route traffic securely over HTTPS using any reverse proxy (e.g. Caddy, Nginx, or Cloudflare Tunnels).
-- A lightweight, ready-to-run Caddy proxy setup is included in [deploy/local-proxy/](deploy/local-proxy/) to bridge both your Jellyfin and Resolver endpoints to your Android device.
+- A lightweight, ready-to-run Caddy proxy setup is included in [deploy/local-proxy/](deploy/local-proxy/) to bridge both your Adult Hub and Resolver endpoints to your Android device.
 
 ---
 
@@ -123,7 +123,7 @@ If your **Adult Hub** server runs on a different local network, on a remote serv
 <details>
 <summary><strong>Does this app send my personal data or viewing history anywhere?</strong></summary>
 <br>
-No. Adult Hub communicates only with the server addresses you explicitly enter (your Jellyfin instance and your optional Resolver proxy). There are no third-party trackers, no analytics SDKs, and no telemetry. Playback history, search history, and credentials are stored on your device and credentials are protected by the Android KeyStore.
+No. Adult Hub communicates only with the server addresses you explicitly enter (your Adult Hub instance and your optional Resolver proxy). There are no third-party trackers, no analytics SDKs, and no telemetry. Playback history, search history, and credentials are stored on your device and credentials are protected by the Android KeyStore.
 </details>
 
 <details>
@@ -210,9 +210,9 @@ Push a version tag matching `v<versionName>-tv` (for example, `v0.1.70-tv`) to r
 ### Architecture & Tech Stack
 - **UI**: Jetpack Compose for TV and Material 3 for mobile
 - **Player**: AndroidX Media3 ExoPlayer (`androidx.media3:media3-exoplayer`)
-- **Jellyfin Integration**: Jellyfin Kotlin SDK (`org.jellyfin.sdk:jellyfin-core`)
+- **Backend Integration**: Adult Hub REST API (Jellyfin-compatible endpoints) via a Retrofit-generated client
 - **Dependency Injection**: Koin (`io.insert-koin:koin-androidx-compose`)
-- **Networking**: Retrofit 2 + OkHttp 5 + Kotlinx Serialization
+- **Networking**: Retrofit 3 + OkHttp 5 + Kotlinx Serialization
 - **Storage**: Jetpack DataStore Preferences + Android KeyStore crypto
 - **Image Loading**: Coil Compose
 
@@ -223,4 +223,4 @@ Push a version tag matching `v<versionName>-tv` (for example, `v0.1.70-tv`) to r
 ## 📄 License & Acknowledgements
 
 - **License**: This project is licensed under the **Apache License 2.0** — see the [LICENSE](LICENSE) file for details.
-- **Third-Party Libraries**: For open-source acknowledgements and third-party license notices (including LGPL-3.0 disclosures for the precompiled Jellyfin Kotlin SDK), see [NOTICE](NOTICE).
+- **Third-Party Libraries**: For open-source acknowledgements and third-party license notices , see [NOTICE](NOTICE).

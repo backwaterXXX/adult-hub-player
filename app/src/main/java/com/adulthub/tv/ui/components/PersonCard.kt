@@ -13,7 +13,6 @@ import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.runtime.Composable
-import androidx.compose.runtime.getValue
 import androidx.compose.runtime.remember
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
@@ -28,7 +27,6 @@ import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.dp
-import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import androidx.tv.material3.Border
 import androidx.tv.material3.Card
 import androidx.tv.material3.CardDefaults
@@ -37,7 +35,6 @@ import androidx.tv.material3.Text
 import coil.compose.AsyncImage
 import coil.request.ImageRequest
 import com.adulthub.tv.R
-import com.adulthub.tv.data.local.SettingsDataStore
 import com.adulthub.tv.data.model.TvPerson
 import com.adulthub.tv.ui.theme.CardSurface
 import com.adulthub.tv.ui.theme.CardSurfaceFocused
@@ -45,7 +42,6 @@ import com.adulthub.tv.ui.theme.NeonPink
 import com.adulthub.tv.ui.theme.SurfaceDark
 import com.adulthub.tv.ui.theme.TextPrimary
 import com.adulthub.tv.ui.theme.TextSecondary
-import org.koin.compose.koinInject
 
 @Composable
 fun PersonCard(
@@ -56,8 +52,8 @@ fun PersonCard(
     cardWidth: Dp = 140.dp
 ) {
     val context = LocalContext.current
-    val settingsDataStore: SettingsDataStore = koinInject()
-    val lowRamMode by settingsDataStore.lowRamMode.collectAsStateWithLifecycle(initialValue = false)
+    // Read from the app root instead of collecting the DataStore once per composed card.
+    val lowRamMode = LocalLowRamMode.current
 
     val targetWidth = ThumbnailQualityConfig.personTargetWidth(lowRamMode)
     val targetHeight = ThumbnailQualityConfig.personTargetHeight(lowRamMode)

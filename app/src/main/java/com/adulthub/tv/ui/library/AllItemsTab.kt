@@ -100,6 +100,8 @@ fun AllItemsTab(
     var filtersOpen by rememberSaveable { mutableStateOf(false) }
     val gridState = rememberLazyGridState()
     val focusRequesterMap = remember { mutableMapOf<String, FocusRequester>() }
+    // Stale requesters of a reset list would otherwise stay in the map forever.
+    LaunchedEffect(state.items) { focusRequesterMap.clear() }
     val activeFilterCount = listOf(
         state.favoritesOnly,
         state.unwatchedOnly,

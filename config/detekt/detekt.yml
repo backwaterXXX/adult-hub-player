@@ -1,6 +1,9 @@
 # Detekt configuration for adult-hub-player
-# Focused on code quality, complexity limits, and prohibiting accidental prints.
-# Formatting and style rules are delegated to Ktlint.
+# Runs on top of detekt's default rule sets (buildUponDefaultConfig = true):
+# potential-bugs, exceptions, coroutines, naming, empty-blocks, style and complexity
+# are all active, so the gate checks more than complexity alone. The entries below
+# override thresholds and deliberately switch off rules that do not fit the codebase.
+# Formatting and layout are delegated to Ktlint.
 
 style:
   ForbiddenMethodCall:
@@ -10,6 +13,21 @@ style:
       - 'kotlin.io.println'
   MaxLineLength:
     active: false
+  MagicNumber:
+    # UI dimensions (dp/tick multipliers, aspect ratios, HTTP status codes) are
+    # intentionally inline; the noise outweighs the benefit in this codebase.
+    active: false
+  WildcardImport:
+    # Kept active in detekt's defaults; ktlint standard already enforces import order.
+    active: false
+
+naming:
+  FunctionNaming:
+    # Jetpack Compose composables are PascalCase by convention.
+    active: true
+    functionPattern: '[a-z][a-zA-Z0-9]*'
+    ignoreAnnotated:
+      - 'Composable'
 
 complexity:
   active: true

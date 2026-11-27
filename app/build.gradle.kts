@@ -185,7 +185,11 @@ detekt {
     toolVersion.set(libs.versions.detekt)
     config.setFrom(files("$rootDir/config/detekt/detekt.yml"))
     baseline = file("$rootDir/config/detekt/baseline.xml")
-    buildUponDefaultConfig = false
+    // The custom yml only overrides thresholds; the default rule sets (potential-bugs,
+    // exceptions, coroutines, naming, empty-blocks, ...) run on top of it. Rules that do
+    // not fit a Compose/Android codebase are switched off inside the yml, deliberately.
+    buildUponDefaultConfig = true
+    allRules = false
 }
 
 tasks.withType<Detekt>().configureEach {

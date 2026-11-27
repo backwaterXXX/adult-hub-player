@@ -189,17 +189,6 @@ class AuthDataStore(
         return updated
     }
 
-    suspend fun updateTokens(accessToken: String, refreshToken: String) {
-        val encryptedToken = crypto.encrypt(accessToken)
-        val encryptedRefreshToken = crypto.encrypt(refreshToken)
-        editSession { preferences ->
-            if (preferences[KEY_ENCRYPTED_TOKEN] != null) {
-                preferences[KEY_ENCRYPTED_TOKEN] = encryptedToken
-                preferences[KEY_ENCRYPTED_REFRESH_TOKEN] = encryptedRefreshToken
-            }
-        }
-    }
-
     suspend fun clearSession() {
         editSession { preferences ->
             preferences.clearAuthSession()

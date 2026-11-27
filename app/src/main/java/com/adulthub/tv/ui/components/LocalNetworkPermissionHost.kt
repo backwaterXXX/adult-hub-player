@@ -36,6 +36,7 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.window.Dialog
 import androidx.core.app.ActivityCompat
 import androidx.core.content.ContextCompat
+import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import androidx.tv.material3.MaterialTheme
 import androidx.tv.material3.Text
 import com.adulthub.tv.R
@@ -135,6 +136,13 @@ fun LocalNetworkPermissionHost(
 ) {
     val context = LocalContext.current
     val activity = context as? Activity
+    val settingsDataStore: com.adulthub.tv.data.local.SettingsDataStore = org.koin.compose.koinInject()
+    // The only DataStore collector for low-RAM mode: cards read [LocalLowRamMode] instead of
+    // collecting the setting per cell. The snapshot seeds the first composition so the image
+    // requests of the first frame already use the right target size.
+    val lowRamMode by settingsDataStore.lowRamMode.collectAsStateWithLifecycle(
+        initialValue = settingsDataStore.lowRamModeSnapshot()
+    )
     val controller = remember {
         LocalNetworkPermissionController(
             isRequired = LocalNetworkAccessPolicy.isEnforced(Build.VERSION.SDK_INT),
@@ -158,7 +166,8 @@ fun LocalNetworkPermissionHost(
 
     androidx.compose.runtime.CompositionLocalProvider(
         LocalNetworkPermission provides controller,
-        LocalTouchUi provides touchUi
+        LocalTouchUi provides touchUi,
+        LocalLowRamMode provides lowRamMode
     ) {
         content()
 

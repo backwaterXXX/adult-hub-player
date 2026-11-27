@@ -12,13 +12,8 @@
     <ID>CognitiveComplexMethod:HomeScreen.kt:@Composable @OptIn(ExperimentalComposeUiApi::class) fun HomeScreen</ID>
     <ID>CognitiveComplexMethod:ItemDetailScreen.kt:@Composable @OptIn(ExperimentalComposeUiApi::class) fun ItemDetailScreen</ID>
     <ID>CognitiveComplexMethod:ItemDetailViewModel.kt:ItemDetailViewModel$fun playRandomContextual</ID>
-    <ID>CognitiveComplexMethod:LibraryScreen.kt:@Composable @OptIn(ExperimentalComposeUiApi::class) fun LibraryScreen</ID>
     <ID>CognitiveComplexMethod:LibrarySelectScreen.kt:@Composable fun LibrarySelectScreen</ID>
-    <ID>CognitiveComplexMethod:LibraryViewModel.kt:LibraryViewModel$fun loadActors</ID>
     <ID>CognitiveComplexMethod:LibraryViewModel.kt:LibraryViewModel$fun loadAllItems</ID>
-    <ID>CognitiveComplexMethod:LibraryViewModel.kt:LibraryViewModel$private fun loadCategoryMovies</ID>
-    <ID>CognitiveComplexMethod:LibraryViewModel.kt:LibraryViewModel$private fun loadChannelVideos</ID>
-    <ID>CognitiveComplexMethod:LibraryViewModel.kt:LibraryViewModel$private fun loadStudioMovies</ID>
     <ID>CognitiveComplexMethod:MobilePlayerOverlay.kt:@Composable fun MobilePlayerOverlay</ID>
     <ID>CognitiveComplexMethod:MobileScreens.kt:@Composable fun MobileHomeScreen</ID>
     <ID>CognitiveComplexMethod:MobileScreens.kt:@Composable fun MobileItemDetailScreen</ID>
@@ -28,7 +23,6 @@
     <ID>CognitiveComplexMethod:PersonDetailScreen.kt:@Composable @OptIn(ExperimentalComposeUiApi::class) fun PersonDetailScreen</ID>
     <ID>CognitiveComplexMethod:PhashSampling.kt:PhashCoordinator$private suspend fun poll</ID>
     <ID>CognitiveComplexMethod:PhashSampling.kt:PhashCoordinator$private suspend fun process</ID>
-    <ID>CognitiveComplexMethod:PlaybackRepository.kt:PlaybackRepository$open suspend fun resolvePlaybackInfo: Result&lt;PlaybackInfo&gt;</ID>
     <ID>CognitiveComplexMethod:PlayerDialogs.kt:@Composable fun PlaybackInfoOverlay</ID>
     <ID>CognitiveComplexMethod:PlayerManager.kt:PlayerManager$fun getTechnicalInfo: PlaybackTechnicalInfo</ID>
     <ID>CognitiveComplexMethod:PlayerOverlay.kt:@Composable fun PlayerOverlay</ID>
@@ -36,7 +30,6 @@
     <ID>CognitiveComplexMethod:PlayerViewModel.kt:PlayerViewModel$fun loadItem</ID>
     <ID>CognitiveComplexMethod:PlayerViewModel.kt:PlayerViewModel$fun playRandomMovie</ID>
     <ID>CognitiveComplexMethod:SearchScreen.kt:@Composable @OptIn(ExperimentalComposeUiApi::class) fun SearchScreen</ID>
-    <ID>CognitiveComplexMethod:SearchViewModel.kt:SearchViewModel$private suspend fun performSearch</ID>
     <ID>CognitiveComplexMethod:SettingsDataStore.kt:SettingsDataStore$open suspend fun migrateSensitiveValues</ID>
     <ID>CognitiveComplexMethod:SettingsScreen.kt:@Composable fun SettingsScreen</ID>
     <ID>CognitiveComplexMethod:StudiosTab.kt:@Composable fun StudiosTab</ID>
@@ -54,12 +47,10 @@
     <ID>CyclomaticComplexMethod:CategoriesTab.kt:@Composable fun CategoriesTab</ID>
     <ID>CyclomaticComplexMethod:ChannelsTab.kt:@Composable fun ChannelsTab</ID>
     <ID>CyclomaticComplexMethod:ItemDetailScreen.kt:@Composable @OptIn(ExperimentalComposeUiApi::class) fun ItemDetailScreen</ID>
-    <ID>CyclomaticComplexMethod:LibraryViewModel.kt:LibraryViewModel$private fun loadChannelVideos</ID>
     <ID>CyclomaticComplexMethod:MobilePlayerOverlay.kt:@Composable fun MobilePlayerOverlay</ID>
     <ID>CyclomaticComplexMethod:MobileScreens.kt:@Composable fun MobileHomeScreen</ID>
     <ID>CyclomaticComplexMethod:MobileScreens.kt:@Composable fun MobileLibraryScreen</ID>
     <ID>CyclomaticComplexMethod:MovieCard.kt:@Composable fun MovieCard</ID>
-    <ID>CyclomaticComplexMethod:PersonDetailScreen.kt:@Composable @OptIn(ExperimentalComposeUiApi::class) fun PersonDetailScreen</ID>
     <ID>CyclomaticComplexMethod:PhashSampling.kt:PhashCoordinator$private suspend fun poll</ID>
     <ID>CyclomaticComplexMethod:PhashSampling.kt:PhashCoordinator$private suspend fun process</ID>
     <ID>CyclomaticComplexMethod:PlaybackRepository.kt:PlaybackRepository$open suspend fun resolvePlaybackInfo: Result&lt;PlaybackInfo&gt;</ID>
@@ -67,12 +58,10 @@
     <ID>CyclomaticComplexMethod:PlayerOverlay.kt:@Composable fun PlayerOverlay</ID>
     <ID>CyclomaticComplexMethod:PlayerScreen.kt:@OptIn(UnstableApi::class) @Composable fun PlayerScreen</ID>
     <ID>CyclomaticComplexMethod:PlayerViewModel.kt:PlayerViewModel$fun loadItem</ID>
-    <ID>CyclomaticComplexMethod:PlayerViewModel.kt:PlayerViewModel$fun playRandomMovie</ID>
     <ID>CyclomaticComplexMethod:ServiceUrlPolicy.kt:ServiceUrlPolicy$internal fun isLocalNetworkHost: Boolean</ID>
     <ID>CyclomaticComplexMethod:SettingsDataStore.kt:SettingsDataStore$open suspend fun migrateSensitiveValues</ID>
-    <ID>CyclomaticComplexMethod:SettingsScreen.kt:@Composable fun SettingsScreen</ID>
     <ID>CyclomaticComplexMethod:StudiosTab.kt:@Composable fun StudiosTab</ID>
-    <ID>LargeClass:LibraryViewModel.kt:LibraryViewModel : ViewModel</ID>
+    <ID>LargeClass:LibraryViewModelTest.kt:LibraryViewModelTest</ID>
     <ID>LongMethod:ActorsTab.kt:@Composable fun ActorsTab</ID>
     <ID>LongMethod:AllItemsTab.kt:@Composable @OptIn(ExperimentalComposeUiApi::class) fun AllItemsTab</ID>
     <ID>LongMethod:AllItemsTab.kt:@Composable private fun CatalogFilterDialog</ID>
@@ -82,16 +71,12 @@
     <ID>LongMethod:ChannelsTab.kt:@Composable private fun ChannelVideoCard</ID>
     <ID>LongMethod:HomeScreen.kt:@Composable @OptIn(ExperimentalComposeUiApi::class) fun HomeScreen</ID>
     <ID>LongMethod:ItemDetailScreen.kt:@Composable @OptIn(ExperimentalComposeUiApi::class) fun ItemDetailScreen</ID>
-    <ID>LongMethod:LibraryScreen.kt:@Composable @OptIn(ExperimentalComposeUiApi::class) fun LibraryScreen</ID>
-    <ID>LongMethod:LibraryViewModel.kt:LibraryViewModel$private fun loadChannelVideos</ID>
-    <ID>LongMethod:LoginScreen.kt:@Composable fun LoginScreen</ID>
     <ID>LongMethod:MobileAppNavigation.kt:@Composable fun MobileAppNavigation</ID>
     <ID>LongMethod:MobilePlayerOverlay.kt:@Composable fun MobilePlayerOverlay</ID>
     <ID>LongMethod:MobileScreens.kt:@Composable fun MobileLibraryScreen</ID>
     <ID>LongMethod:MovieCard.kt:@Composable fun MovieCard</ID>
     <ID>LongMethod:PersonDetailScreen.kt:@Composable @OptIn(ExperimentalComposeUiApi::class) fun PersonDetailScreen</ID>
     <ID>LongMethod:PhashSampling.kt:PhashCoordinator$private suspend fun process</ID>
-    <ID>LongMethod:PlaybackRepository.kt:PlaybackRepository$open suspend fun resolvePlaybackInfo: Result&lt;PlaybackInfo&gt;</ID>
     <ID>LongMethod:PlayerDialogs.kt:@Composable fun PlaybackErrorDialog</ID>
     <ID>LongMethod:PlayerDialogs.kt:@Composable fun PlaybackInfoOverlay</ID>
     <ID>LongMethod:PlayerDialogs.kt:@Composable fun ResumePlaybackDialog</ID>
@@ -102,9 +87,76 @@
     <ID>LongMethod:SettingsScreen.kt:@Composable fun SettingsScreen</ID>
     <ID>LongMethod:StudiosTab.kt:@Composable fun StudiosTab</ID>
     <ID>LongMethod:TvTextField.kt:@Composable fun TvTextField</ID>
-    <ID>LongParameterList:AllItemsTab.kt:@Composable @OptIn(ExperimentalComposeUiApi::class) fun AllItemsTab</ID>
-    <ID>LongParameterList:MobilePlayerOverlay.kt:@Composable fun MobilePlayerOverlay</ID>
-    <ID>LongParameterList:PlayerOverlay.kt:@Composable fun PlayerOverlay</ID>
+    <ID>MatchingDeclarationName:LocalNetworkPermissionHost.kt:LocalNetworkPermissionController</ID>
+    <ID>MatchingDeclarationName:RetryPolicy.kt:RetryBudget</ID>
+    <ID>MatchingDeclarationName:SettingsDataSections.kt:ClearDataType</ID>
+    <ID>ReturnCount:AdultHubClientManager.kt:AdultHubClientManager$@Synchronized fun updateTokensIfMatches: Boolean</ID>
+    <ID>ReturnCount:AdultHubClientManager.kt:AdultHubClientManager$fun getItemImageUrl: String</ID>
+    <ID>ReturnCount:AppUpdateRepository.kt:AppUpdateRepository$suspend fun checkAndDownload: UpdateCheckResult</ID>
+    <ID>ReturnCount:AppUpdateRepository.kt:AppUpdateRepository$suspend fun restoreDownloadedUpdate: AvailableUpdate?</ID>
+    <ID>ReturnCount:ArtworkUrls.kt:fun artworkUrlWithWidth: String</ID>
+    <ID>ReturnCount:AuthDataStore.kt:AuthDataStore$private suspend fun decodeAuthState: DecodedAuthState</ID>
+    <ID>ReturnCount:AuthDataStore.kt:AuthDataStore$suspend fun clearSessionIfAccessTokenMatches: Boolean</ID>
+    <ID>ReturnCount:AuthDataStore.kt:AuthDataStore$suspend fun updateTokensIfOldTokenMatches: Boolean</ID>
+    <ID>ReturnCount:AuthViewModel.kt:AuthViewModel$private suspend fun pollQuickConnectOnce: Boolean</ID>
+    <ID>ReturnCount:ChannelsTabController.kt:ChannelsTabController$private fun LibraryUiState.withHistoryFailure: LibraryUiState</ID>
+    <ID>ReturnCount:ItemDetailViewModel.kt:ItemDetailViewModel$fun getBackdropImageUrl: String</ID>
+    <ID>ReturnCount:LibrarySavedFilters.kt:LibrarySavedFilters$private fun &lt;T&gt; restoreSelection: T?</ID>
+    <ID>ReturnCount:LibraryViewModelTest.kt:LibraryViewModelTest.FakeChannelRepository$override suspend fun getChannelHistory: Result&lt;ChannelHistoryPage&gt;</ID>
+    <ID>ReturnCount:LocalNetworkAccessPolicy.kt:LocalNetworkAccessPolicy$fun requiresPermission: Boolean</ID>
+    <ID>ReturnCount:MediaFilter.kt:DurationFilter$fun matchesMinutes: Boolean</ID>
+    <ID>ReturnCount:MediaFilter.kt:DurationFilter$fun matchesSeconds: Boolean</ID>
+    <ID>ReturnCount:MobileScreens.kt:fun section</ID>
+    <ID>ReturnCount:PhashSampling.kt:PhashCoordinator$private suspend fun poll</ID>
+    <ID>ReturnCount:PhashSampling.kt:PhashCoordinator$private suspend fun process</ID>
+    <ID>ReturnCount:PlaybackRepository.kt:PlaybackRepository$open suspend fun fetchVideoVariants: VideoVariantsResult</ID>
+    <ID>ReturnCount:PlayerManager.kt:PlayerManager$private fun isTransient: Boolean</ID>
+    <ID>ReturnCount:PlayerManager.kt:PlayerManager$private fun restoreQualitySwitch: Boolean</ID>
+    <ID>ReturnCount:PlayerManager.kt:PlayerManager$private fun sampleDownloadRateBps: Long?</ID>
+    <ID>ReturnCount:PlayerManager.kt:PlayerManager$private fun scheduleAutomaticRetry: Boolean</ID>
+    <ID>ReturnCount:PlayerManager.kt:PlayerManager$suspend fun switchQualityStream: Boolean</ID>
+    <ID>ReturnCount:PlayerManager.kt:private fun formatFileSize: String</ID>
+    <ID>ReturnCount:PlayerViewModel.kt:PlayerViewModel$fun beginQualitySwitch: Boolean</ID>
+    <ID>ReturnCount:PlayerViewModel.kt:PlayerViewModel$private suspend fun resolveRandomItem: TvItem?</ID>
+    <ID>ReturnCount:PlayerViewModel.kt:PlayerViewModel$suspend fun resolveFreshStreamUrl: String?</ID>
+    <ID>ReturnCount:PlayerViewModel.kt:PlayerViewModel$suspend fun resolveQualityStreamUrl: PlaybackInfo?</ID>
+    <ID>ReturnCount:ResolverUrls.kt:fun resolveResolverUrl: String</ID>
+    <ID>ReturnCount:SearchViewModel.kt:SearchViewModel$private suspend fun finishSearch</ID>
+    <ID>ReturnCount:ServiceUrlPolicy.kt:ServiceUrlPolicy$fun inspect: ServiceUrlValidation</ID>
+    <ID>ReturnCount:ServiceUrlPolicy.kt:ServiceUrlPolicy$internal fun isLocalNetworkHost: Boolean</ID>
+    <ID>ReturnCount:ThumbnailQuality.kt:fun isPoorThumbnail: Boolean</ID>
+    <ID>ReturnCount:VideoVariants.kt:fun classifyVariantsError: VideoVariantsResult</ID>
+    <ID>SwallowedException:AdultHubClientManager.kt:AdultHubClientManager$e: Exception</ID>
+    <ID>SwallowedException:AuthRepository.kt:AuthRepository$error: Exception</ID>
+    <ID>SwallowedException:PlaybackReporter.kt:PlaybackReporter$e: CancellationException</ID>
+    <ID>SwallowedException:PlayerManager.kt:PlayerManager$e: CancellationException</ID>
+    <ID>SwallowedException:RetryPolicy.kt:error: Exception</ID>
+    <ID>ThrowsCount:AppUpdateRepository.kt:AppUpdateRepository$suspend fun checkAndDownload: UpdateCheckResult</ID>
+    <ID>ThrowsCount:PlaybackPolicyInterceptor.kt:PlaybackPolicyInterceptor$override fun intercept: Response</ID>
+    <ID>TooGenericExceptionCaught:ActorsTabController.kt:ActorsTabController$error: Throwable</ID>
+    <ID>TooGenericExceptionCaught:AdultHubClientManager.kt:AdultHubClientManager$e: Exception</ID>
+    <ID>TooGenericExceptionCaught:AdultHubTvApp.kt:AdultHubTvApp$error: Exception</ID>
+    <ID>TooGenericExceptionCaught:AppUpdateManager.kt:AppUpdateManager$error: Exception</ID>
+    <ID>TooGenericExceptionCaught:AppUpdateRepository.kt:AppUpdateRepository$error: Exception</ID>
+    <ID>TooGenericExceptionCaught:AuthRepository.kt:AuthRepository$e: Exception</ID>
+    <ID>TooGenericExceptionCaught:AuthRepository.kt:AuthRepository$error: Exception</ID>
+    <ID>TooGenericExceptionCaught:AuthViewModel.kt:AuthViewModel$error: Exception</ID>
+    <ID>TooGenericExceptionCaught:ChannelRepository.kt:ChannelRepository$e: Exception</ID>
+    <ID>TooGenericExceptionCaught:CleartextOriginInterceptor.kt:CleartextOriginInterceptor$error: Exception</ID>
+    <ID>TooGenericExceptionCaught:LibraryRepository.kt:LibraryRepository$e: Exception</ID>
+    <ID>TooGenericExceptionCaught:PersonRepository.kt:PersonRepository$e: Exception</ID>
+    <ID>TooGenericExceptionCaught:PhashSampling.kt:PhashCoordinator$error: Exception</ID>
+    <ID>TooGenericExceptionCaught:PlaybackReporter.kt:PlaybackReporter$e: Exception</ID>
+    <ID>TooGenericExceptionCaught:PlaybackRepository.kt:PlaybackRepository$e: Exception</ID>
+    <ID>TooGenericExceptionCaught:PlaybackRepository.kt:PlaybackRepository$error: Exception</ID>
+    <ID>TooGenericExceptionCaught:PlaybackRepository.kt:error: Exception</ID>
+    <ID>TooGenericExceptionCaught:PlayerManager.kt:PlayerManager$e: Exception</ID>
+    <ID>TooGenericExceptionCaught:PlayerManager.kt:PlayerManager$error: Exception</ID>
+    <ID>TooGenericExceptionCaught:PlayerScreen.kt:error: Exception</ID>
+    <ID>TooGenericExceptionCaught:PlayerViewModel.kt:PlayerViewModel$error: Exception</ID>
+    <ID>TooGenericExceptionCaught:RetryPolicy.kt:error: Exception</ID>
+    <ID>TooGenericExceptionCaught:SettingsViewModel.kt:SettingsViewModel$error: Exception</ID>
+    <ID>TooGenericExceptionCaught:StudioRepository.kt:StudioRepository$e: Exception</ID>
     <ID>TooManyFunctions:LibraryViewModel.kt:LibraryViewModel : ViewModel</ID>
     <ID>TooManyFunctions:SettingsDataStore.kt:SettingsDataStore</ID>
     <ID>TooManyFunctions:SettingsViewModel.kt:SettingsViewModel : ViewModel</ID>

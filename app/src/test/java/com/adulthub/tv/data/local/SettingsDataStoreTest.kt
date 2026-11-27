@@ -275,19 +275,15 @@ class SettingsDataStoreTest {
     }
 
     @Test
-    fun `seek step and autoplay next update flows and export import roundtrip`() = runTest(timeout = 120.seconds) {
+    fun `seek step updates the flow and survives an export import roundtrip`() = runTest(timeout = 120.seconds) {
         assertEquals(15, settingsDataStore.seekStepSec.first())
-        assertFalse(settingsDataStore.autoplayNext.first())
 
         settingsDataStore.setSeekStepSec(30)
-        settingsDataStore.setAutoplayNext(true)
 
         assertEquals(30, settingsDataStore.seekStepSec.first())
-        assertTrue(settingsDataStore.autoplayNext.first())
 
         val exported = settingsDataStore.exportNonSecretConfig()
         assertEquals(30, exported.seekStepSec)
-        assertTrue(exported.autoplayNext)
 
         val newFile = tmpFolder.newFile("playback_ctrl_test.preferences_pb")
         val newDataStore = PreferenceDataStoreFactory.create(
@@ -297,7 +293,6 @@ class SettingsDataStoreTest {
         val newSettings = SettingsDataStore(context, crypto, newDataStore)
         newSettings.importNonSecretConfig(exported)
         assertEquals(30, newSettings.seekStepSec.first())
-        assertTrue(newSettings.autoplayNext.first())
     }
 
     @Test

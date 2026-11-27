@@ -18,7 +18,7 @@ import org.koin.dsl.module
 
 val repositoryModule = module {
     single { AuthRepository(get(), get(), get()) }
-    single { LibraryRepository(get(), get(), get<TelegramProgressStore>(), get(), getOrNull()) }
+    single { LibraryRepository(get(), get(), get<TelegramProgressStore>(), get()) }
     single { PersonRepository(get(), get(), get()) }
     single { StudioRepository(get(), get()) }
     single {
@@ -37,5 +37,17 @@ val repositoryModule = module {
         }
         channelRepository
     }
-    single { PlaybackRepository(get(), get()) }
+    single {
+        val playbackRepository = PlaybackRepository(get(), get())
+        val scope = get<CoroutineScope>()
+        val accountScope = get<AccountScope>()
+        // Playback durations and played flags belong to one account.
+        scope.launch {
+            accountScope.accountKey
+                .distinctUntilChanged()
+                .drop(1)
+                .collect { playbackRepository.invalidateCache() }
+        }
+        playbackRepository
+    }
 }

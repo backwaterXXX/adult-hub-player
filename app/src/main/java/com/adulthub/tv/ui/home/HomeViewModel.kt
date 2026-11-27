@@ -53,7 +53,6 @@ data class HomeCategoryRow(
 @Immutable
 data class HomeUiState(
     val libraryName: String = "",
-    val resumeSection: SectionState<TvItem> = SectionState(isLoading = true),
     val watchHistorySection: SectionState<TvItem> = SectionState(isLoading = true),
     val latestSection: SectionState<TvItem> = SectionState(isLoading = true),
     val randomSection: SectionState<TvItem> = SectionState(isLoading = true),
@@ -95,7 +94,6 @@ class HomeViewModel(
     private val _navEvents = MutableSharedFlow<HomeNavEvent>()
     val navEvents: SharedFlow<HomeNavEvent> = _navEvents.asSharedFlow()
     private var libraryNameJob: kotlinx.coroutines.Job? = null
-    private var resumeJob: kotlinx.coroutines.Job? = null
     private var watchHistoryJob: kotlinx.coroutines.Job? = null
     private var latestJob: kotlinx.coroutines.Job? = null
     private var randomJob: kotlinx.coroutines.Job? = null
@@ -109,7 +107,6 @@ class HomeViewModel(
                 _uiState.update { state ->
                     state.copy(
                         excludedTags = excluded,
-                        resumeSection = state.resumeSection.copy(items = filterExcluded(state.resumeSection.items, excluded)),
                         watchHistorySection = state.watchHistorySection.copy(items = filterExcluded(state.watchHistorySection.items, excluded)),
                         latestSection = state.latestSection.copy(items = filterExcluded(state.latestSection.items, excluded)),
                         randomSection = state.randomSection.copy(items = filterExcluded(state.randomSection.items, excluded)),
@@ -155,37 +152,10 @@ class HomeViewModel(
             val libName = settingsDataStore.getSavedLibraryName().orEmpty()
             _uiState.update { it.copy(libraryName = libName) }
         }
-        loadResume()
         loadWatchHistory()
         loadLatest()
         loadRandom()
         loadPerformers()
-    }
-
-    fun loadResume() {
-        resumeJob?.cancel()
-        resumeJob = viewModelScope.launch {
-            _uiState.update { it.copy(resumeSection = it.resumeSection.copy(isLoading = true, errorMessage = null)) }
-            val result = libraryRepository.getResumeItems(limit = 15)
-            _uiState.update { state ->
-                result.fold(
-                    onSuccess = { items ->
-                        val validCatalogItems = filterExcluded(
-                            items.filter { it.id.isNotBlank() }.distinctBy { it.id }
-                        )
-                        state.copy(resumeSection = SectionState(items = validCatalogItems, isLoading = false))
-                    },
-                    onFailure = { err ->
-                        state.copy(
-                            resumeSection = SectionState(
-                                errorMessage = err.userFacingMessage(context, R.string.home_error_resume),
-                                isLoading = false
-                            )
-                        )
-                    }
-                )
-            }
-        }
     }
 
     fun loadWatchHistory() {
@@ -195,19 +165,33 @@ class HomeViewModel(
             val records = watchHistoryStore?.history?.firstOrNull().orEmpty()
             val validRecords = records.filter { it.itemId.isNotBlank() }
             val api = clientManager.getApiOrNull()
-            val items = validRecords.map { record ->
-                var item = record.toTvItem()
-                if (api != null) {
-                    val serverProgress = runCatching { api.getWatchProgress(record.itemId) }.getOrNull()
-                    if (serverProgress != null) {
-                        item = item.copy(
-                            playbackPositionTicks = serverProgress.positionSeconds * 10_000_000L,
-                            isPlayed = serverProgress.isPlayed,
-                            playedPercentage = serverProgress.playedPercentage
-                        )
+            // The per-record progress refresh runs with bounded parallelism (like the category
+            // rows) instead of one call after another, so a full history does not serialize
+            // dozens of round-trips behind the home screen.
+            val semaphore = Semaphore(4)
+            val items = coroutineScope {
+                validRecords.map { record ->
+                    async {
+                        semaphore.withPermit {
+                            // A record the store already knows as played carries its own
+                            // progress; the server refresh cannot add anything to it.
+                            if (api == null || record.isPlayed) {
+                                record.toTvItem()
+                            } else {
+                                var item = record.toTvItem()
+                                val serverProgress = runCatching { api.getWatchProgress(record.itemId) }.getOrNull()
+                                if (serverProgress != null) {
+                                    item = item.copy(
+                                        playbackPositionTicks = serverProgress.positionSeconds * 10_000_000L,
+                                        isPlayed = serverProgress.isPlayed,
+                                        playedPercentage = serverProgress.playedPercentage
+                                    )
+                                }
+                                item
+                            }
+                        }
                     }
-                }
-                item
+                }.awaitAll()
             }
             val filtered = filterExcluded(items).distinctBy { it.id }
             _uiState.update { it.copy(watchHistorySection = SectionState(items = filtered, isLoading = false)) }

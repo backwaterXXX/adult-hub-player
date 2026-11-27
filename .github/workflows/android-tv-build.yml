@@ -71,7 +71,11 @@ jobs:
         env:
           UPDATE_GITHUB_OWNER: ${{ github.repository_owner }}
           UPDATE_GITHUB_REPO: ${{ github.event.repository.name }}
-        run: ./gradlew ktlintCheck detektTvDebug detektMobileDebug detektTvRelease detektMobileRelease testTvDebugUnitTest testMobileDebugUnitTest lintTvDebug lintMobileDebug lintTvRelease lintMobileRelease compileTvReleaseKotlin compileMobileReleaseKotlin minifyTvReleaseWithR8 minifyMobileReleaseWithR8 assembleTvDebug assembleMobileDebug assembleTvDebugAndroidTest assembleMobileDebugAndroidTest --no-daemon
+        # `detekt` is the whole-source task: it analyzes src/main, src/test and src/androidTest.
+        # The Android variant tasks (detektTvDebug, ...) source from AGP's src/*/kotlin
+        # directories, which this project does not use (all Kotlin lives in src/*/java), so
+        # they analyzed zero files and reported empty SARIFs.
+        run: ./gradlew ktlintCheck detekt testTvDebugUnitTest testMobileDebugUnitTest lintTvDebug lintMobileDebug lintTvRelease lintMobileRelease compileTvReleaseKotlin compileMobileReleaseKotlin minifyTvReleaseWithR8 minifyMobileReleaseWithR8 assembleTvDebug assembleMobileDebug assembleTvDebugAndroidTest assembleMobileDebugAndroidTest --no-daemon
 
       - name: Check the pinned signing certificate
         run: |
@@ -112,6 +116,51 @@ jobs:
           path: debug-artifacts/
           if-no-files-found: error
           retention-days: 14
+
+  instrumented-tests:
+    name: Instrumented tests (emulator)
+    # The instrumented suite (real ExoPlayer lifecycle, real Keystore crypto, the update
+    # restore path) is otherwise only compiled, never executed. The lane is behind a repo
+    # variable so it can be smoke-tested once interactively before it starts gating pushes.
+    if: vars.CONNECTED_TESTS == 'enabled'
+    runs-on: ubuntu-24.04
+    timeout-minutes: 45
+    concurrency:
+      group: android-instrumented-${{ github.ref }}
+      cancel-in-progress: true
+    permissions:
+      contents: read
+
+    steps:
+      - name: Checkout Code
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+
+      - name: Set up JDK 17
+        uses: actions/setup-java@d1374f8ac74474200d16ef8ecee22c7ae7a51880 # v6.3.0
+        with:
+          distribution: 'temurin'
+          java-version: '17'
+
+      - name: Setup Gradle
+        uses: gradle/actions/setup-gradle@8da46b539cd8fe6ab27ca75128919a18d757604c # v6.4.1
+
+      - name: Install Android SDK Platform and Build Tools
+        run: |
+          "$ANDROID_HOME/cmdline-tools/latest/bin/sdkmanager" "platforms;android-37.1" "build-tools;36.0.0"
+
+      - name: Grant execute permission for gradlew
+        run: chmod +x gradlew
+
+      - name: Run the TV instrumented tests
+        uses: reactivecircus/android-emulator-runner@a421e43855164a8197daf9d8d40fe71c6996bb0d # v2.38.0
+        with:
+          api-level: 33
+          arch: x86_64
+          target: default
+          emulator-options: -no-window -gpu swiftshader_indirect -noaudio -no-boot-anim
+          script: ./gradlew connectedTvDebugAndroidTest --no-daemon
 
   dependency-review:
     name: Dependency Review

@@ -68,8 +68,13 @@ fun MobilePage(
 }
 
 @Composable
-private fun MobileError(text: String?) {
-    if (text != null) Text(text, color = MaterialTheme.colorScheme.error)
+private fun MobileError(text: String?, onRetry: (() -> Unit)? = null) {
+    if (text != null) {
+        Text(text, color = MaterialTheme.colorScheme.error)
+        if (onRetry != null) {
+            TextButton(onClick = onRetry) { Text(stringResource(R.string.action_retry)) }
+        }
+    }
 }
 
 @Composable
@@ -157,7 +162,6 @@ fun MobileHomeScreen(vm: HomeViewModel, isCurrentDestination: Boolean = true, on
         if (isCurrentDestination) {
             if (hasBeenCurrentDestination) {
                 delay(500L)
-                vm.loadResume()
                 vm.loadWatchHistory()
             }
             hasBeenCurrentDestination = true
@@ -309,7 +313,9 @@ private fun MobileMediaCard(title: String, imageUrl: String?, onClick: () -> Uni
 @Composable
 fun MobileLibraryScreen(vm: LibraryViewModel, initialCategoryId: String?, onItem: (String) -> Unit, onPlay: (String) -> Unit, onPerson: (String, String) -> Unit) {
     val state by vm.uiState.collectAsStateWithLifecycle()
-    var tab by remember(initialCategoryId) { mutableStateOf(if (initialCategoryId.isNullOrBlank()) LibraryTab.ALL else LibraryTab.CATEGORIES) }
+    // The tab lives in the view model only: it is restored from the SavedStateHandle after
+    // process death, and the saved per-tab focus item is written for the tab that is shown.
+    val tab = state.selectedTab
     var sortMenu by rememberSaveable { mutableStateOf(false) }
     LaunchedEffect(initialCategoryId) { if (!initialCategoryId.isNullOrBlank()) vm.openCategory(initialCategoryId) }
     MobilePage(stringResource(R.string.nav_library), horizontalPadding = 12.dp, verticalPadding = 6.dp, contentGap = 4.dp) {
@@ -320,10 +326,7 @@ fun MobileLibraryScreen(vm: LibraryViewModel, initialCategoryId: String?, onItem
                 verticalAlignment = Alignment.CenterVertically
             ) {
                 LibraryTab.entries.forEach { option ->
-                    TextButton(onClick = {
-                        tab = option
-                        vm.selectTab(option)
-                    }) {
+                    TextButton(onClick = { vm.selectTab(option) }) {
                         Text(stringResource(option.titleRes), color = if (option == tab) NeonPink else MaterialTheme.colorScheme.onSurface)
                     }
                 }
@@ -365,6 +368,11 @@ fun MobileLibraryScreen(vm: LibraryViewModel, initialCategoryId: String?, onItem
                         onSelectStudio = vm::selectCatalogStudio,
                         onSelectPerformer = vm::selectPerformer
                     )
+                }
+                if (state.allState.isLoading) LinearProgressIndicator(Modifier.fillMaxWidth())
+                MobileError(state.allState.errorMessage, onRetry = { vm.loadAllItems(reset = true) })
+                if (state.allState.isEmpty && state.allState.errorMessage == null) {
+                    Text(stringResource(R.string.library_no_movies_matching_filters), style = MaterialTheme.typography.bodyMedium)
                 }
                 LazyVerticalGrid(columns = GridCells.Adaptive(minSize = 142.dp), verticalArrangement = Arrangement.spacedBy(8.dp), horizontalArrangement = Arrangement.spacedBy(6.dp), contentPadding = PaddingValues(top = 8.dp, bottom = 18.dp)) {
                     items(state.allState.items, key = { it.id }) { item ->
@@ -690,6 +698,12 @@ fun MobilePersonScreen(vm: PersonDetailViewModel, personId: String, personName: 
     val state by vm.uiState.collectAsStateWithLifecycle()
     LaunchedEffect(personId, personName) { vm.loadPerson(personId, personName) }
     MobilePage(state.person?.name ?: personName, state.errorMessage) {
+        // The same states the TV person screen shows: a loading indicator while the
+        // profile resolves, a retry on a failed profile, and a retry for a failed
+        // filmography (the profile above it stays visible).
+        if (state.isLoading) LinearProgressIndicator(Modifier.fillMaxWidth())
+        MobileError(state.errorMessage, onRetry = { vm.loadPerson(personId, personName) })
+        MobileError(state.moviesErrorMessage, onRetry = vm::reloadMovies)
         state.person?.bio?.let { Text(it) }
         LazyColumn { items(state.movies, key = { it.id }) { item -> MobileMediaCard(item.title, vm.getItemImageUrl(item)) { onItem(item.id) } } }
     }

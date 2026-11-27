@@ -35,13 +35,6 @@ internal fun itemSortBy(sortBy: String): String = when (sortBy.lowercase()) {
     else -> "latest"
 }
 
-/** Below this a viewer barely started; above it there is nothing left to resume. */
-private const val RESUME_MIN_FRACTION = 0.01f
-private const val RESUME_MAX_FRACTION = 0.90f
-private const val RESUME_CANDIDATE_FACTOR = 3
-private const val MAX_RESUME_CANDIDATES = 30
-private const val TICKS_PER_SECOND = 10_000_000L
-
 private const val RANDOM_POOL_SIZE = 50
 
 private data class RandomVideoPool(
@@ -54,8 +47,7 @@ open class LibraryRepository(
     private val clientManager: AdultHubClientManager,
     private val settingsDataStore: SettingsDataStore,
     private val telegramProgressStore: TelegramProgressStore? = null,
-    private val accountKeyProvider: AccountKeyProvider? = null,
-    private val watchHistoryStore: com.adulthub.tv.data.local.WatchHistoryStore? = null
+    private val accountKeyProvider: AccountKeyProvider? = null
 ) {
     open suspend fun getLibraries(): Result<List<TvLibrary>> = withContext(Dispatchers.IO) {
         try {
@@ -153,42 +145,6 @@ open class LibraryRepository(
                 direction = "desc"
             )
             val items = response.items.map { it.toTvItem(baseUrl) }
-            Result.success(items)
-        } catch (e: CancellationException) {
-            throw e
-        } catch (e: Exception) {
-            Result.failure(e)
-        }
-    }
-
-    open suspend fun getResumeItems(limit: Int = 12): Result<List<TvItem>> = withContext(Dispatchers.IO) {
-        try {
-            val records = watchHistoryStore?.history?.firstOrNull().orEmpty()
-            // The local store only knows what a caller handed it, so its progress fraction is
-            // usually zero and cannot decide what is resumable. Every unfinished record is a
-            // candidate and the server's watch progress is the source of truth.
-            val candidates = records
-                .filter { record -> !record.isPlayed && record.itemId.isNotBlank() }
-                .take((limit * RESUME_CANDIDATE_FACTOR).coerceAtMost(MAX_RESUME_CANDIDATES))
-
-            val api = clientManager.getApiOrNull()
-            val items = candidates.mapNotNull { record ->
-                var item = record.toTvItem()
-                if (api != null) {
-                    val serverProgress = runCatching { api.getWatchProgress(record.itemId) }.getOrNull()
-                    if (serverProgress != null) {
-                        item = item.copy(
-                            playbackPositionTicks = serverProgress.positionSeconds * TICKS_PER_SECOND,
-                            runtimeTicks = item.runtimeTicks
-                                ?: serverProgress.durationSeconds.takeIf { it > 0 }?.times(TICKS_PER_SECOND),
-                            isPlayed = serverProgress.isPlayed,
-                            playedPercentage = serverProgress.playedPercentage
-                        )
-                    }
-                }
-                item.takeIf { !it.isPlayed && it.progressFraction in RESUME_MIN_FRACTION..RESUME_MAX_FRACTION }
-            }.take(limit)
-
             Result.success(items)
         } catch (e: CancellationException) {
             throw e

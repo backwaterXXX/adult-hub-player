@@ -23,5 +23,5 @@ internal object RouteEncoder {
         return builder.toString()
     }
 
-    private val HEX = "0123456789ABCDEF"
+    private const val HEX = "0123456789ABCDEF"
 }

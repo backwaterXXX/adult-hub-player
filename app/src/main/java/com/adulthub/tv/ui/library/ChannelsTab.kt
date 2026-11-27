@@ -32,6 +32,7 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.focus.FocusRequester
 import androidx.compose.ui.focus.focusRequester
+import androidx.compose.ui.focus.focusRestorer
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.graphicsLayer
 import androidx.compose.ui.layout.ContentScale
@@ -91,6 +92,9 @@ fun ChannelsTab(
     val channelsGridState = rememberLazyGridState()
     val channelFocusRequesterMap = remember { mutableMapOf<String, FocusRequester>() }
     val videoFocusRequesterMap = remember { mutableMapOf<String, FocusRequester>() }
+    // Stale requesters of a reset list would otherwise stay in the maps forever.
+    LaunchedEffect(state.channels) { channelFocusRequesterMap.clear() }
+    LaunchedEffect(state.channelVideos) { videoFocusRequesterMap.clear() }
 
     LaunchedEffect(state.lastSelectedChannelId, state.selectedChannel) {
         if (state.selectedChannel == null) {
@@ -271,7 +275,7 @@ fun ChannelsTab(
                     contentPadding = PaddingValues(top = 4.dp, bottom = 48.dp),
                     horizontalArrangement = Arrangement.spacedBy(16.dp),
                     verticalArrangement = Arrangement.spacedBy(16.dp),
-                    modifier = Modifier.fillMaxSize()
+                    modifier = Modifier.fillMaxSize().focusRestorer()
                 ) {
                     items(
                         items = state.channelVideos,
@@ -410,7 +414,7 @@ fun ChannelsTab(
                         contentPadding = PaddingValues(top = 4.dp, bottom = 48.dp),
                         horizontalArrangement = Arrangement.spacedBy(16.dp),
                         verticalArrangement = Arrangement.spacedBy(16.dp),
-                        modifier = Modifier.fillMaxSize()
+                        modifier = Modifier.fillMaxSize().focusRestorer()
                     ) {
                         items(
                             items = state.channels,
