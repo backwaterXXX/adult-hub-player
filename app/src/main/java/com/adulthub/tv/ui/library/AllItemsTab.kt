@@ -448,6 +448,7 @@ fun AllItemsTab(
                                 filtersOpen = false
                                 true
                             }
+
                             FocusDirection.Right -> {
                                 if (hasGridItems) {
                                     filtersOpen = false
@@ -457,7 +458,9 @@ fun AllItemsTab(
                                     false
                                 }
                             }
+
                             FocusDirection.Left, FocusDirection.Down -> true
+
                             else -> false
                         }
                     },
