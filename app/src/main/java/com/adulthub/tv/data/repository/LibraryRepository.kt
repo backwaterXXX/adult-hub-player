@@ -321,11 +321,6 @@ open class LibraryRepository(
         }
     }
 
-    /**
-     * Adult Hub has no dedicated /similar endpoint, so the row is built from the
-     * strongest shared attribute of the open item: its first performer, then its
-     * studio. The open item itself never appears in the answer.
-     */
     open suspend fun getSimilarItems(itemId: String, limit: Int = 12): Result<List<TvItem>> = withContext(Dispatchers.IO) {
         try {
             if (itemId.isBlank() || limit <= 0) {
@@ -333,33 +328,8 @@ open class LibraryRepository(
             }
             val api = clientManager.getApi()
             val baseUrl = clientManager.currentServerUrl ?: ""
-            val detail = api.getVideoDetail(itemId)
-            val pageSize = (limit + 1).coerceAtMost(100)
-            val performer = detail.performers.firstOrNull { it.name.isNotBlank() }?.name
-            val studio = detail.studio?.takeIf { it.isNotBlank() }
-            val response = when {
-                performer != null -> api.getVideos(
-                    offset = 0,
-                    limit = pageSize,
-                    sort = "latest",
-                    performer = performer
-                )
-
-                studio != null -> api.getVideos(
-                    offset = 0,
-                    limit = pageSize,
-                    sort = "latest",
-                    studio = studio
-                )
-
-                else -> return@withContext Result.success(emptyList())
-            }
             Result.success(
-                response.items
-                    .filter { it.id != itemId }
-                    .map { it.toTvItem(baseUrl) }
-                    .distinctBy { it.id }
-                    .take(limit)
+                api.getSimilarVideos(itemId, limit.coerceIn(1, 24)).items.map { it.toTvItem(baseUrl) }
             )
         } catch (e: CancellationException) {
             throw e

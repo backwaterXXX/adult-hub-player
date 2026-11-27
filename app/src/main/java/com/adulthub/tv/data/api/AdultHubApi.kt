@@ -42,6 +42,9 @@ interface AdultHubApi {
         @Query("is_favorite") isFavorite: Boolean? = null
     ): CatalogVideoListResponseDto
 
+    @GET("api/v1/catalog/videos/{video_id}/similar")
+    suspend fun getSimilarVideos(@Path("video_id") videoId: String, @Query("limit") limit: Int): CatalogVideoListResponseDto
+
     @GET("api/v1/catalog/videos/{video_id}")
     suspend fun getVideoDetail(@Path("video_id") videoId: String): CatalogVideoItemDto
 

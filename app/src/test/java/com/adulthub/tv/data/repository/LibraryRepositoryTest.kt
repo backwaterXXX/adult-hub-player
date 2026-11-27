@@ -2,7 +2,6 @@ package com.adulthub.tv.data.repository
 
 import com.adulthub.tv.data.api.AdultHubApi
 import com.adulthub.tv.data.api.AdultHubClientManager
-import com.adulthub.tv.data.api.CatalogPerformerRefDto
 import com.adulthub.tv.data.api.CatalogTaxonomyItemDto
 import com.adulthub.tv.data.api.CatalogTaxonomyListResponseDto
 import com.adulthub.tv.data.api.CatalogVideoItemDto
@@ -143,61 +142,27 @@ class LibraryRepositoryTest {
     }
 
     @Test
-    fun `getSimilarItems queries the first performer and drops the open item`() = runTest {
-        coEvery { mockApi.getVideoDetail("video-1") } returns CatalogVideoItemDto(
-            id = "video-1",
-            title = "Open Item",
-            performers = listOf(CatalogPerformerRefDto(id = "name:Star One", name = "Star One"))
+    fun `getSimilarItems uses server recommendations`() = runTest {
+        coEvery { mockApi.getSimilarVideos("video-1", 8) } returns CatalogVideoListResponseDto(
+            items = listOf(CatalogVideoItemDto(id = "video-2", title = "Recommended"))
         )
-        coEvery {
-            mockApi.getVideos(offset = 0, limit = 9, sort = "latest", performer = "Star One")
-        } returns CatalogVideoListResponseDto(
-            items = listOf(
-                CatalogVideoItemDto(id = "video-1", title = "Open Item"),
-                CatalogVideoItemDto(id = "video-2", title = "Sibling"),
-                CatalogVideoItemDto(id = "video-2", title = "Sibling duplicate")
-            ),
-            totalCount = 3
-        )
-
-        val result = repository.getSimilarItems("video-1", limit = 8)
-
-        assertTrue(result.isSuccess)
-        val items = result.getOrThrow()
-        assertEquals(listOf("video-2"), items.map { it.id })
-        assertEquals("Sibling", items.single().title)
+        assertEquals(listOf("video-2"), repository.getSimilarItems("video-1", 8).getOrThrow().map { it.id })
+        coVerify(exactly = 0) { mockApi.getVideoDetail(any()) }
     }
 
     @Test
-    fun `getSimilarItems falls back to the studio when no performer is listed`() = runTest {
-        coEvery { mockApi.getVideoDetail("video-3") } returns CatalogVideoItemDto(
-            id = "video-3",
-            title = "Studio Only",
-            studio = "Acme Studio"
-        )
-        coEvery {
-            mockApi.getVideos(offset = 0, limit = 5, sort = "latest", studio = "Acme Studio")
-        } returns CatalogVideoListResponseDto(
-            items = listOf(CatalogVideoItemDto(id = "video-4", title = "Stable Mate")),
-            totalCount = 1
-        )
-
-        val items = repository.getSimilarItems("video-3", limit = 4).getOrThrow()
-
-        assertEquals(listOf("video-4"), items.map { it.id })
+    fun `getSimilarItems reports backend failure without fallback`() = runTest {
+        coEvery { mockApi.getSimilarVideos("video-1", 8) } throws IllegalStateException("unavailable")
+        assertTrue(repository.getSimilarItems("video-1", 8).isFailure)
+        coVerify(exactly = 0) { mockApi.getVideoDetail(any()) }
+        coVerify(exactly = 0) { mockApi.getVersion() }
     }
 
     @Test
-    fun `getSimilarItems reports an empty row without performers or studio`() = runTest {
-        coEvery { mockApi.getVideoDetail("video-5") } returns CatalogVideoItemDto(
-            id = "video-5",
-            title = "Anonymous"
-        )
-
-        val result = repository.getSimilarItems("video-5", limit = 8)
-
-        assertTrue(result.isSuccess)
-        assertEquals(emptyList<Any>(), result.getOrThrow())
+    fun `getSimilarItems caps limit to server maximum`() = runTest {
+        coEvery { mockApi.getSimilarVideos("video-1", 24) } returns CatalogVideoListResponseDto()
+        assertTrue(repository.getSimilarItems("video-1", 100).isSuccess)
+        coVerify(exactly = 1) { mockApi.getSimilarVideos("video-1", 24) }
     }
 
     @Test
